@@ -4,9 +4,42 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700&display=swap">
+    <script src="https://kit.fontawesome.com/4f48855ba9.js" crossorigin="anonymous"></script>
     <title>Makeyev Finance</title>
 </head>
     <body>
-        
+        <section class="header">
+            <nav>
+                <a href="index.html"><img src="images/logo.png"></a>
+                <div class="nav-links" id="menu">
+                    <i class="fas fa-times fa-2x" onclick="closeMenu()"></i>
+                    <ul>
+                        <li><a href="">home</a></li>
+                        <li><a href="">about</a></li>
+                        <li><a href="">services</a></li>
+                        <li><a href="">blog</a></li>
+                        <li><a href="">contact</a></li>
+                    </ul>
+                </div>
+                <i class="fas fa-bars fa-2x fa-rotate-180" onclick="openMenu()"></i> 
+            </nav>
+
+            <div class="text-box">
+                <h1>makeyev finance</h1>
+                <p>mortgage & financial advice <br> your savings, our expertise</p>
+                <a href="" class="hero-btn">schedule a free call now</a>
+            </div>
+
+
+
+        </section>
+
+
+        <script defer src="src/index.js"></script>
     </body>
 </html>

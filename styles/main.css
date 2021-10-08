@@ -1,0 +1,180 @@
+:root {
+    --soft-white: aliceblue;
+    --soft-blue: rgb(36, 168, 222);
+    --soft-black: rgb(15, 15, 15);
+    --soft-black-background: rgba(15, 15, 15, 0.5);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    font-family: 'Lato', sans-serif;
+}
+
+.header {
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-image: linear-gradient(
+        var(--soft-black-background),
+        var(--soft-black-background)
+    ), url(/images/cover.png);
+}
+
+nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2% 6%;
+}
+
+nav img {
+    width: 150px;
+}
+
+.nav-links {
+    flex: 1;
+    text-align: right;
+}
+
+.nav-links ul li {
+    list-style: none;
+    position: relative;
+    display: inline-block;
+    padding: 10px 15px;
+}
+
+.nav-links ul li::after {
+    content: '';
+    width: 0%;
+    height: 2px;
+    margin: auto;
+    display: block;
+    transition: 0.5s;
+    background: var(--soft-blue);
+}
+
+.nav-links ul li:hover::after {
+    width: 100%;
+}
+
+.nav-links ul li a {
+    font-size: 1.5rem;
+    text-decoration: none;
+    color: var(--soft-white);
+    text-transform: capitalize;
+}
+
+.text-box {
+    width: 90%;
+    position: absolute;
+    text-align: center;
+    color: var(--soft-white);
+    transform: translate(-50%, -50%);
+    top: 50%;
+    left: 50%;
+}
+
+.text-box h1 {
+    font-size: 5rem;
+    text-transform: capitalize;
+}
+
+.text-box p {
+    font-size: 2rem;
+    margin: 10px 0 40px;
+    color: var(--soft-white);
+}
+
+.hero-btn {
+    font-size: 2rem;
+    padding: 15px 35px;
+    position: relative;
+    display: inline-block;
+    text-decoration: none;
+    background: transparent;
+    color: var(--soft-white);
+    border: 1px solid var(--soft-white);
+    text-transform: capitalize;
+    cursor: pointer;
+}
+
+.hero-btn:hover {
+    background: var(--soft-blue);
+    border: 1px solid var(--soft-blue);
+    transition: linear 0.5s;
+}
+
+nav .fas {
+    display: none;
+}
+
+@media(max-width: 700px) {
+    body {
+        overflow-x: hidden;
+    }
+    .text-box h1 {
+        font-size: 3rem;
+    } 
+    .hero-btn, .text-box p {
+        font-size: 1.5rem;
+    }
+    .nav-links ul li {
+        display: block;
+    }
+    .nav-links {
+        top: 0;
+        right: -500px;
+        padding: 30px;
+        width: 150px;
+        height: 100vh;
+        text-align: left;
+        position: absolute;
+        background: var(--soft-blue);
+        transition: 1s;
+        z-index: 10;
+    }
+    nav .fas {
+        margin: 10px;
+        display: block;
+        cursor: pointer;
+        color: var(--soft-white);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
