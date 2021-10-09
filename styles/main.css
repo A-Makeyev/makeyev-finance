@@ -1,7 +1,7 @@
 :root {
     --soft-white: aliceblue;
     --soft-black: rgb(15, 15, 15);
-    --soft-blue: rgb(36, 168, 222);
+    --soft-blue: rgb(35, 170, 222);
     --soft-black-background: rgba(15, 15, 15, 0.5);
 }
 
@@ -179,6 +179,21 @@ nav .menu-icon .line {
     }
     nav :checked ~ .menu-icon .line:nth-child(3) {
         transform: translateY(-10px) rotate(-225deg);
+    }
+}
+
+@media screen and (max-width: 500px) {
+    nav {
+        height: 50px;
+    }
+    nav .logo-image {
+        width: 20%;
+    }
+    nav .nav-links {
+        top: 62px;
+    }
+    nav .nav-links a {
+        font-size: 20px;
     }
 }
 
