@@ -1,7 +1,7 @@
 :root {
     --soft-white: aliceblue;
-    --soft-blue: rgb(36, 168, 222);
     --soft-black: rgb(15, 15, 15);
+    --soft-blue: rgb(36, 168, 222);
     --soft-black-background: rgba(15, 15, 15, 0.5);
 }
 
@@ -34,7 +34,7 @@
 /* NAVIGATION */
 
 nav {
-    z-index: 10;
+    z-index: 99;
     padding: 2% 6%;
     position: fixed;
     height: 100px;
@@ -44,16 +44,17 @@ nav {
 }
 
 nav .logo {
-    width: 40%;
-    height: 100%;
     float: left;
     display: flex;
     align-items: center;
+    height: 100%;
+    width: 40%;
 }
 
-nav .logo img {
-    width: 40%;
+nav .logo-image {
+    content: url(/images/Logo-T.png);
     transition: 1s;
+    width: 30%;
 }
 
 nav .nav-links {
@@ -65,6 +66,7 @@ nav .nav-links {
     display: flex;
     align-items: center;
     justify-content: space-around;
+    transition: all ease-in-out 0.5s;
 }
 
 nav .nav-links li {
@@ -77,8 +79,27 @@ nav .nav-links a {
     font-size: 20px;
     font-weight: bold;
     text-decoration: none;
-    text-transform: capitalize;
     color: var(--soft-white);
+    text-transform: capitalize;
+    transition: 0.5s;
+}
+
+nav .nav-links a::after {
+    content: '';
+    width: 0;
+    height: 2px;
+    margin: 4px auto;
+    display: block;
+    transition: 0.5s;
+    background: var(--soft-white);
+}
+
+nav .nav-links a:hover::after {
+    width: 100%;
+}
+
+nav .nav-links a:hover {
+    color: var(--soft-blue);
 }
 
 #nav-toggle {
@@ -111,33 +132,41 @@ nav .menu-icon .line {
     nav .nav-links {
         position: fixed;
         float: none;
-        z-index: 0;
         left: 0;
         right: 0;
-        top: 100px;
+        top: 120px;
         bottom: 100%;
         height: auto;
         width: auto;
         overflow: hidden;
         flex-direction: column;
         justify-content: space-evenly;
-        background: var(--soft-black-background);
+        background: var(--soft-white);
     }
     nav .nav-links a {
-        font-size: 30px;
+        font-size: 25px;
+        color: var(--soft-black);
+    }
+    nav .nav-links a::after {
+        background: var(--soft-black);
     }
     nav .logo {
         float: none;
         width: auto;
         justify-content: center;
     }
-    nav .logo img {
+    nav .logo-image {
+        content: url(/images/Logo.png);
         display: block;
         margin: 0 auto;
-        width: 30%;
+        width: 25%;
     }
     nav .menu-icon {
         display: block;
+        cursor: pointer;
+    }
+    nav .menu-icon .line {
+        background: var(--soft-black);
     }
     nav :checked ~ .nav-links {
         bottom: 0;
