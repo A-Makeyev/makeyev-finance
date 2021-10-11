@@ -118,8 +118,8 @@ nav .menu-icon {
 
 nav .menu-icon .line {
     width: 30px;
-    height: 5px;
-    margin: 5px;
+    height: 4px;
+    margin: 6px;
     border-radius: 5px;
     background: var(--soft-white);
     transition: all ease-in-out 0.5s;
@@ -194,6 +194,11 @@ nav .menu-icon .line {
     }
     nav .nav-links a {
         font-size: 20px;
+    }
+    nav .menu-icon .line {
+        height: 2px;
+        margin: 8px;
+        border-radius: 5px;
     }
 }
 
