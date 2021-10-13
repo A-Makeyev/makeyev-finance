@@ -125,10 +125,17 @@ nav .menu-icon .line {
     transition: all ease-in-out 0.5s;
 }
 
+.navbar-scrolling {
+    color: var(--soft-black);
+    background: var(--soft-white);
+    transition: all ease-in-out 0.5s;
+}
+
+.nav-link:hover {
+    color: var(--soft-blue) !important;
+}
+
 @media screen and (max-width: 768px) {
-    nav {
-        background: var(--soft-white);
-    }
     nav .nav-links {
         position: fixed;
         float: none;
@@ -156,7 +163,6 @@ nav .menu-icon .line {
         justify-content: center;
     }
     nav .logo-image {
-        content: url(/images/Logo.png);
         display: block;
         margin: 0 auto;
         width: 25%;
@@ -166,7 +172,7 @@ nav .menu-icon .line {
         cursor: pointer;
     }
     nav .menu-icon .line {
-        background: var(--soft-black);
+        background: var(--soft-white);
     }
     nav :checked ~ .nav-links {
         bottom: 0;
