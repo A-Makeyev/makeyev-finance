@@ -145,14 +145,14 @@ nav .menu-icon .line {
         border-bottom: 2px solid var(--soft-white);
     }
     .nav-scrolling-resize {
-        padding: 0;
+        padding: 2% 5%;
     }
     nav #nav-links {
         position: fixed;
         float: none;
         left: 0;
         right: 0;
-        top: 130px;
+        top: 120px;
         bottom: 100%;
         height: auto;
         width: auto;
@@ -174,9 +174,10 @@ nav .menu-icon .line {
         justify-content: center;
     }
     nav .logo-image {
+        width: 20% !important;
+        z-index: 999;
         display: block;
         margin: 0 auto;
-        width: 25%;
     }
     nav .menu-icon {
         display: block;
@@ -201,13 +202,13 @@ nav .menu-icon .line {
 
 @media screen and (max-width: 500px) {
     nav {
-        height: 41px;
+        height: 70px;
     }
     nav .logo-image {
-        width: 19% !important;
+        width: 20% !important;
     }
     nav #nav-links {
-        top: 63px;
+        top: 83px;
     }
     nav #nav-links a {
         font-size: 20px;
