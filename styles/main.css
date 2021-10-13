@@ -57,7 +57,7 @@ nav .logo-image {
     width: 30%;
 }
 
-nav .nav-links {
+nav #nav-links {
     margin: 0;
     padding: 0;
     width: 42%;
@@ -69,11 +69,11 @@ nav .nav-links {
     transition: all ease-in-out 0.5s;
 }
 
-nav .nav-links li {
+nav #nav-links li {
     list-style: none;
 }
 
-nav .nav-links a {
+nav #nav-links a {
     padding: 10px;
     display: block;
     font-size: 20px;
@@ -84,7 +84,7 @@ nav .nav-links a {
     transition: 0.5s;
 }
 
-nav .nav-links a::after {
+nav #nav-links a::after {
     content: '';
     width: 0;
     height: 2px;
@@ -94,11 +94,11 @@ nav .nav-links a::after {
     background: var(--soft-white);
 }
 
-nav .nav-links a:hover::after {
+nav #nav-links a:hover::after {
     width: 100%;
 }
 
-nav .nav-links a:hover {
+nav #nav-links a:hover {
     color: var(--soft-blue);
 }
 
@@ -128,6 +128,7 @@ nav .menu-icon .line {
 .navbar-scrolling {
     color: var(--soft-black);
     background: var(--soft-white);
+    border-bottom: 2px solid var(--soft-blue);
     transition: all ease-in-out 0.5s;
 }
 
@@ -135,13 +136,16 @@ nav .menu-icon .line {
     color: var(--soft-blue) !important;
 }
 
-@media screen and (max-width: 768px) {
-    nav .nav-links {
+@media screen and (max-width: 770px) {
+    .navbar-scrolling {
+        border-bottom: 2px solid var(--soft-white);
+    }
+    nav #nav-links {
         position: fixed;
         float: none;
         left: 0;
         right: 0;
-        top: 120px;
+        top: 130px;
         bottom: 100%;
         height: auto;
         width: auto;
@@ -150,11 +154,11 @@ nav .menu-icon .line {
         justify-content: space-evenly;
         background: var(--soft-white);
     }
-    nav .nav-links a {
+    nav #nav-links a {
         font-size: 25px;
         color: var(--soft-black);
     }
-    nav .nav-links a::after {
+    nav #nav-links a::after {
         background: var(--soft-black);
     }
     nav .logo {
@@ -174,7 +178,7 @@ nav .menu-icon .line {
     nav .menu-icon .line {
         background: var(--soft-white);
     }
-    nav :checked ~ .nav-links {
+    nav :checked ~ #nav-links {
         bottom: 0;
     }
     nav :checked ~ .menu-icon .line:nth-child(1) {
@@ -193,12 +197,12 @@ nav .menu-icon .line {
         height: 50px;
     }
     nav .logo-image {
-        width: 19%;
+        width: 19% !important;
     }
-    nav .nav-links {
+    nav #nav-links {
         top: 63px;
     }
-    nav .nav-links a {
+    nav #nav-links a {
         font-size: 20px;
     }
     nav .menu-icon .line {
@@ -250,7 +254,7 @@ nav .menu-icon .line {
     color: var(--soft-white);
 }
 
-@media(max-width: 768px) {
+@media(max-width: 770px) {
     .text-box h1 {
         font-size: 3rem;
     } 
