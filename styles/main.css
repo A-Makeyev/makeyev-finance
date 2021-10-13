@@ -132,6 +132,10 @@ nav .menu-icon .line {
     transition: all ease-in-out 0.5s;
 }
 
+.nav-scrolling-resize {
+    padding: 0 5%;
+}
+
 .nav-link:hover {
     color: var(--soft-blue) !important;
 }
@@ -139,6 +143,9 @@ nav .menu-icon .line {
 @media screen and (max-width: 770px) {
     .navbar-scrolling {
         border-bottom: 2px solid var(--soft-white);
+    }
+    .nav-scrolling-resize {
+        padding: 0;
     }
     nav #nav-links {
         position: fixed;
@@ -194,7 +201,7 @@ nav .menu-icon .line {
 
 @media screen and (max-width: 500px) {
     nav {
-        height: 50px;
+        height: 41px;
     }
     nav .logo-image {
         width: 19% !important;
