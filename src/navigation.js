@@ -1,10 +1,17 @@
 const softWhite = 'aliceblue'
 const softBlack = 'rgb(15, 15, 15)'
 const solftBlue = 'rgb(35, 170, 222)'
+const body = document.querySelector('body')
+const menu = document.getElementById('menu')
 const nav = document.getElementById('navbar')
 const logo = document.querySelector('.logo-image')
 const navLinks = document.getElementsByClassName('nav-link')
 const navMenuLines = document.getElementsByClassName('line')
+
+menu.onclick = () => {
+    body.classList.contains('stop-scrolling') ?
+    body.classList.remove('stop-scrolling') : body.classList.add('stop-scrolling')
+}
 
 window.addEventListener('resize', () => {
     // navbar is on TOP on a device with MAX width of 770px

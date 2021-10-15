@@ -125,6 +125,10 @@ nav .menu-icon .line {
     transition: all ease-in-out 0.5s;
 }
 
+.stop-scrolling {
+    overflow: hidden;
+}
+
 .navbar-scrolling {
     color: var(--soft-black);
     background: var(--soft-white);
