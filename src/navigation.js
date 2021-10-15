@@ -9,8 +9,9 @@ const navLinks = document.getElementsByClassName('nav-link')
 const navMenuLines = document.getElementsByClassName('line')
 
 menu.onclick = () => {
-    body.classList.contains('stop-scrolling') ?
-    body.classList.remove('stop-scrolling') : body.classList.add('stop-scrolling')
+    body.classList.contains('stop-scrolling') 
+    ? body.classList.remove('stop-scrolling')
+    : body.classList.add('stop-scrolling')
 }
 
 window.addEventListener('resize', () => {
