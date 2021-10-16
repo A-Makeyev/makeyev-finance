@@ -22,7 +22,7 @@
 }
 
 .gradient-text-no-hover {
-    background: -webkit-linear-gradient(-85deg, var(--soft-white), var(--soft-blue));
+    background: -webkit-linear-gradient(45deg, var(--soft-white), var(--soft-blue));
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -110,6 +110,14 @@
     }
 }
 
+@media(max-width: 500px) {
+    .text-box h1 {
+        font-size: 2rem;
+    } 
+    .hero-btn, .text-box p {
+        font-size: 1rem;
+    }
+}
 
 /* MAIN */
 
