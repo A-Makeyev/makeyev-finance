@@ -1,13 +1,9 @@
 #loading-screen {
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
     margin: 0;
     opacity: 1;
     z-index: 999;
     min-width: 100%;
-    min-height: 100%;
+    min-height: 100vh;
     display: flex;
     position: absolute;
     align-items: center;
