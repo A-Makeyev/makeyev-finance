@@ -1,0 +1,65 @@
+#loading-screen {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    opacity: 1;
+    z-index: 999;
+    display: flex;
+    position: absolute;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+    background-color: white;
+    transition: all 1s ease-in-out;
+}
+
+#loader {
+    width: 8vmax;
+    height: 8vmax;
+    border-radius: 100%;
+    border-right: 4px solid var(--soft-blue);
+    animation: spinRight 1s linear infinite;
+  }
+  
+  #loader::before, #loader::after {
+    content: '';
+    width: 6vmax;
+    height: 6vmax;
+    display: block;
+    position: absolute;
+    top: calc(50% - 3vmax);
+    left: calc(50% - 3vmax);
+    border-radius: 100%;
+    border-left: 3px solid var(--soft-blue);
+    animation: spinLeft 1s linear infinite;
+  }
+  
+  #loader::after {
+    width: 4vmax;
+    height: 4vmax;
+    top: calc(50% - 2vmax);
+    left: calc(50% - 2vmax);
+    border: 0;
+    border-right: 2px solid var(--soft-blue);
+    animation: none;
+}
+
+@keyframes spinLeft {
+    from {
+        transform:rotate(0deg);
+    } to {
+        transform:rotate(720deg);
+    }
+}
+  
+@keyframes spinRight {
+    from {
+        transform:rotate(360deg);
+    } to {
+        transform:rotate(0deg);
+    }
+}
