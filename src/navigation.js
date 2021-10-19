@@ -4,7 +4,7 @@ const solftBlue = 'rgb(35, 170, 222)'
 
 const menu = document.getElementById('menu')
 const nav = document.getElementById('navbar')
-const logo = document.querySelector('.logo-image')
+const logo = document.getElementById('logo-image')
 const navLinks = document.getElementsByClassName('nav-link')
 const navMenuLines = document.getElementsByClassName('line')
 
@@ -36,7 +36,8 @@ window.addEventListener('scroll', () => {
     // navbar scrolling down
     if (window.scrollY > 0) {
         nav.classList.add('navbar-scrolling')
-        logo.style.content = 'url(/images/Logo.png)'
+        logo.classList.remove('logo-image-transparent')
+        logo.classList.add('logo-image')
 
         for (let link = 0; link < navLinks.length; link++) {
             navLinks[link].style.transition = 'all 0.5s'
@@ -56,7 +57,8 @@ window.addEventListener('scroll', () => {
     // navbar is on TOP
     } else if (window.scrollY === 0) {
         nav.classList.remove('navbar-scrolling')
-        logo.style.content = 'url(/images/Logo-T.png)'
+        logo.classList.remove('logo-image')
+        logo.classList.add('logo-image-transparent')
 
         if (window.matchMedia('(min-width: 770px)').matches && window.scrollY === 0) {
             nav.classList.remove('nav-scrolling-resize')

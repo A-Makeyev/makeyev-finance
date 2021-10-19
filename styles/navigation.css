@@ -16,7 +16,13 @@ nav .logo {
     width: 40%;
 }
 
-nav .logo-image {
+.logo-image {
+    content: url(/images/Logo.png);
+    transition: 1s;
+    width: 30%;
+}
+
+.logo-image-transparent {
     content: url(/images/Logo-T.png);
     transition: 1s;
     width: 30%;
@@ -138,7 +144,8 @@ nav .menu-icon .line {
         width: auto;
         justify-content: center;
     }
-    nav .logo-image {
+    .logo-image,
+    .logo-image-transparent {
         width: 20% !important;
         z-index: 999;
         display: block;
@@ -169,7 +176,8 @@ nav .menu-icon .line {
     nav {
         height: 70px;
     }
-    nav .logo-image {
+    .logo-image, 
+    .logo-image-transparent {
         width: 20% !important;
     }
     nav #nav-links {
