@@ -1,6 +1,8 @@
 const loader = document.getElementById('loader')
 const loadingScreen = document.getElementById('loading-screen')
 
+window.scrollTo({ top: 0, behavior: 'smooth' })
+
 const hidden = document.createElement('style')
 hidden.innerHTML = '.hidden { display: none !important; }'
 document.getElementsByTagName('head')[0].appendChild(hidden)
