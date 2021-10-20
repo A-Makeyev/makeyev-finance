@@ -5,7 +5,15 @@
     --soft-blue-background: rgba(35, 170, 222, 0.4);
     --soft-black-background: rgba(14, 14, 14, 0.4);
     --soft-white-background: rgba(255, 255, 255, 0.2);
-    --white-blue-gradient: -webkit-linear-gradient(90deg, var(--soft-white), var(--soft-blue));
+    --white-blue-gradient: -webkit-linear-gradient(85deg, var(--soft-white), var(--soft-blue));
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background: var(--soft-white);
 }
 
 * {
@@ -108,6 +116,7 @@
 }
 
 @media(max-width: 770px) {
+
     .text-box h1 {
         font-size: 3rem;
     } 
@@ -117,6 +126,9 @@
 }
 
 @media(max-width: 500px) {
+    .text-box {
+        top: 34%;
+    }
     .text-box h1 {
         font-size: 2.5rem;
     } 
