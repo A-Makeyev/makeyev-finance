@@ -2,8 +2,10 @@
     --soft-white: aliceblue;
     --soft-black: rgb(15, 15, 15);
     --soft-blue: rgb(35, 170, 222);
+    --soft-blue-background: rgba(35, 170, 222, 0.4);
     --soft-black-background: rgba(14, 14, 14, 0.4);
     --soft-white-background: rgba(255, 255, 255, 0.2);
+    --white-blue-gradient: -webkit-linear-gradient(90deg, var(--soft-white), var(--soft-blue));
 }
 
 * {
@@ -26,7 +28,7 @@
 }
 
 .gradient-text-no-hover {
-    background: -webkit-linear-gradient(45deg, var(--soft-white), var(--soft-blue));
+    background: var(--white-blue-gradient);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -34,7 +36,7 @@
 }
 
 .gradient-text {
-    background: -webkit-linear-gradient(-85deg, var(--soft-blue), var(--soft-white));
+    background: var(--white-blue-gradient);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -123,7 +125,7 @@
     }
 }
 
-/* MAIN */
+/* courses */
 
 .course {
     width: 80%;
@@ -137,6 +139,12 @@
     font-weight: bold;
 }
 
+.course h2 {
+    margin: 10px 0;
+    font-weight: 600;
+    text-align: center;
+}
+
 .course p {
     padding: 10px;
     font-size: 1em;
@@ -145,15 +153,68 @@
     color: var(--soft-black);
 }
 
+.course-row {
+    margin-top: 5%;
+    display: flex;
+    justify-content: space-between;
+}
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ */
+.course-col {
+    flex-basis: 30%;
+    margin-bottom: 5%;
+    padding: 20px 15px;
+    border-radius: 10px;
+    box-sizing: border-box;
+    transition: 0.5s ease-in-out;
+    background: var(--white-blue-gradient);
+}
+
+.course-col:hover {
+    box-shadow: 0 20px 10px 0 var(--soft-black-background);
+}
+
+@media (max-width: 700px) {
+    .course-row {
+        flex-direction: column;
+    }
+}
 
 
+/* campus */
 
+.campus {
+    width: 80%;
+    margin: auto;
+    text-align: center;
+    padding-top: 100px;
+}
 
+.campus-row {
+    margin-top: 5%;
+    display: flex;
+    justify-content: space-between;
+}
 
+.campus-col {
+    flex-basis: 30%;
+    margin-bottom: 5%;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+}
 
+.campus-col img {
+    width: 100%;
+}
 
+.layer {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    background: var(--soft-blue-background);
+}
 
 
 
