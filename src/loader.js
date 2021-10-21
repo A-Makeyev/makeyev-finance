@@ -1,7 +1,6 @@
 const loader = document.getElementById('loader')
 const loadingScreen = document.getElementById('loading-screen')
 
-document.body.scrollTop = 0
 document.documentElement.scrollTop = 0
 
 const hidden = document.createElement('style')
