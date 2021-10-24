@@ -124,6 +124,12 @@ p {
     background: var(--soft-blue);
 }
 
+.btn-blue {
+    background: transparent;
+    color: var(--soft-blue);
+    border: 1px solid var(--soft-blue);
+}
+
 @media(max-width: 770px) {
 
     .text-box h1 {
@@ -302,7 +308,6 @@ p {
     text-align: left !important;
     background: var(--soft-blue-background);
     text-align: center;
-    cursor: pointer;
 }   
 
 .testi-col img {
@@ -361,22 +366,37 @@ p {
 
 .footer {
     width: 100%;
-    padding: 30px 0;
+    padding: 10px 0;
     text-align: center;
+    color: var(--soft-white);
+    background: var(--soft-black);
+    border-top: 1px solid var(--soft-black);
 }
 
 .footer h2 {
     font-weight: 600;
-    margin-top: 20px;
-    margin-bottom: 25px;
+    margin: 5px 0;
 }
 
-.socials a {
-    margin: 0 15px;
-    padding: 20px 0;
-    color: var(--soft-black);
+.footer p {
+    color: var(--soft-white);
+}
+
+.socials, .socials a {
+    font-size: 1.5em;
+    margin: 5px 15px;
+    padding: 10px 0;
+    color: var(--soft-white);
+    background: var(--soft-black);
+    transition: 0.5s;
     cursor: pointer;
 }
+
+.socials a:hover {
+    color: var(--soft-blue);
+}
+
+
 
 
 
