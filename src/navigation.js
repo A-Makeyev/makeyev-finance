@@ -86,4 +86,11 @@ window.addEventListener('scroll', () => {
     }
 })
 
-trademark.innerHTML = `makeyev finance © ${new Date().getFullYear()} <br> your savings, our expertise`
+trademark.innerHTML =
+ `
+    <p style="margin-bottom: -15px;">
+        makeyev finance © ${new Date().getFullYear()} 
+        <br> 
+        your savings, our expertise
+    </p>
+`

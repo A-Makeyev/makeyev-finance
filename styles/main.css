@@ -45,6 +45,10 @@ p {
     color: var(--soft-black);
 }
 
+a {
+    text-decoration: none;
+}
+
 .gradient-text-no-hover {
     background: var(--white-blue-gradient);
     background-size: 200% auto;
@@ -374,7 +378,7 @@ p {
 }
 
 .footer p {
-    margin: 5px 0;
+    margin: 0;
     font-weight: 500;
     color: var(--soft-white);
     text-transform: capitalize;
@@ -383,7 +387,6 @@ p {
 .socials, .socials i {
     font-size: 30px;
     margin: 5px 15px;
-    padding-bottom: 10px;
     color: var(--soft-white);
     background: var(--soft-black);
     transition: 0.5s;
