@@ -5,6 +5,7 @@ const solftBlue = 'rgb(35, 170, 222)'
 const menu = document.getElementById('menu')
 const nav = document.getElementById('navbar')
 const logo = document.getElementById('logo-image')
+const trademark = document.getElementById('trademark')
 const navLinks = document.getElementsByClassName('nav-link')
 const navMenuLines = document.getElementsByClassName('line')
 
@@ -84,3 +85,5 @@ window.addEventListener('scroll', () => {
         }
     }
 })
+
+trademark.innerHTML = `makeyev finance © ${new Date().getFullYear()} <br> your savings, our expertise`

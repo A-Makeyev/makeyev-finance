@@ -1,19 +1,20 @@
 :root {
     --soft-white: aliceblue;
+    --soft-red: rgb(210, 60, 60);
     --soft-black: rgb(15, 15, 15);
     --soft-blue: rgb(35, 170, 222);
+    --soft-green: rgb(35, 210, 65);
     --soft-yellow: rgb(250, 205, 5);
+    --soft-orange: rgb(255, 125, 80);
+    --soft-dark-blue: rgb(65, 120, 235);
     --soft-blue-background: rgba(35, 170, 222, 0.4);
     --soft-black-background: rgba(14, 14, 14, 0.4);
     --soft-white-background: rgba(255, 255, 255, 0.2);
     --white-blue-gradient: -webkit-linear-gradient(85deg, var(--soft-white), var(--soft-blue));
 }
 
-html {
+html, body {
     scroll-behavior: smooth;
-}
-
-body {
     background: var(--soft-white);
 }
 
@@ -300,7 +301,7 @@ p {
 }
 
 .testi-col {
-    padding: 25px;
+    padding: 10px;
     display: flex;
     flex-basis: 45%;
     margin-bottom: 5%;
@@ -370,36 +371,48 @@ p {
     text-align: center;
     color: var(--soft-white);
     background: var(--soft-black);
-    border-top: 1px solid var(--soft-black);
-}
-
-.footer h2 {
-    font-weight: 600;
-    margin: 5px 0;
 }
 
 .footer p {
+    margin: 5px 0;
+    font-weight: 500;
     color: var(--soft-white);
+    text-transform: capitalize;
 }
 
-.socials, .socials a {
-    font-size: 1.5em;
+.socials, .socials i {
+    font-size: 30px;
     margin: 5px 15px;
-    padding: 10px 0;
+    padding-bottom: 10px;
     color: var(--soft-white);
     background: var(--soft-black);
     transition: 0.5s;
     cursor: pointer;
 }
 
-.socials a:hover {
+.socials i.facebook-fill:hover {
+    color: var(--soft-dark-blue);
+}
+
+.socials i.linkedin-fill:hover {
     color: var(--soft-blue);
 }
 
+.socials i.instagram-fill:hover {
+    color: var(--soft-orange);
+}
 
+.socials i.youtube-fill:hover {
+    color: var(--soft-red);
+}
 
+.socials i.email-fill:hover {
+    color: var(--soft-yellow);
+}
 
-
+.socials i.whatsapp-fill:hover {
+    color: var(--soft-green);
+}
 
 
 
