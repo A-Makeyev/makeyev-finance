@@ -386,7 +386,7 @@ a {
 
 .socials, .socials i {
     font-size: 30px;
-    margin: 5px 15px;
+    margin: 10px 10px;
     color: var(--soft-white);
     background: var(--soft-black);
     transition: 0.5s;
