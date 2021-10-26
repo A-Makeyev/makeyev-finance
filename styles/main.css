@@ -415,6 +415,7 @@ a {
 
 .location iframe {
     width: 100%;
+    border-radius: 5px;
 }
 
 .contact {
@@ -456,7 +457,6 @@ a {
 
 .contact-col form {
     margin-right: 50px;
-    margin-bottom: 200px;
 }
 
 .contact-col input, .contact-col textarea {
@@ -465,6 +465,7 @@ a {
     padding: 20px;
     margin-bottom: 10px;
     border-radius: 5px;
+    box-sizing: border-box;
     border: 1px solid var(--soft-blue);
 }
 
