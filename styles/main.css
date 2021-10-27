@@ -13,7 +13,7 @@
     --white-blue-gradient: -webkit-linear-gradient(85deg, var(--soft-white), var(--soft-blue));
 }
 
-html, body {
+body {
     scroll-behavior: smooth;
     background: var(--soft-white);
 }
@@ -26,7 +26,7 @@ html, body {
 }
 
 *::-webkit-scrollbar {
-    width: 0.10rem;
+    width: 5px;
 }
 
 *::-webkit-scrollbar-thumb {
@@ -410,7 +410,7 @@ a {
 .location {
     width: 80%;
     margin: auto;
-    padding: 100px 0;
+    padding: 0 0 100px;
 }
 
 .location iframe {
@@ -457,6 +457,7 @@ a {
 
 .contact-col form {
     margin-right: 50px;
+    margin-bottom: 50px;
 }
 
 .contact-col input, .contact-col textarea {
