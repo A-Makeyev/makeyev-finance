@@ -1,17 +1,3 @@
-.sub-header {
-    width: 100%;
-    height: 70vh;
-    position: relative;
-    text-align: center;
-    background-size: cover;
-    background-position: center;
-    color: var(--soft-white);
-    background-image: linear-gradient(
-        var(--soft-black-background),
-        var(--soft-black-background)
-    ), url(/images/services-background.jpg);
-}
-
 .services {
     width: 90%;
     margin: auto;
