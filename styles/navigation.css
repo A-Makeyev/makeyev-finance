@@ -29,9 +29,9 @@ nav .logo {
 }
 
 nav #nav-links {
-    margin: 0;
+    margin: 0 -75px;
     padding: 0;
-    width: 60%;
+    width: 45%;
     height: 100%;
     float: right;
     display: flex;
@@ -109,6 +109,12 @@ nav .menu-icon .line {
 
 .nav-link:hover {
     color: var(--soft-blue) !important;
+}
+
+@media screen and (max-width: 1250px) {
+    nav #nav-links {
+        float: none;
+    }
 }
 
 @media screen and (max-width: 770px) {
