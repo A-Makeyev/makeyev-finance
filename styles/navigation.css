@@ -111,6 +111,64 @@ nav .menu-icon .line {
     color: var(--soft-blue) !important;
 }
 
+.nav-icon {
+    display: flex;
+    flex-direction: row;
+}
+
+/* footer */
+
+.footer {
+    width: 100%;
+    padding: 10px 0;
+    text-align: center;
+    color: var(--soft-white);
+    background: var(--soft-black);
+}
+
+.footer span {
+    margin: 0;
+    font-weight: 500;
+    color: var(--soft-white);
+    text-transform: capitalize;
+}
+
+.socials, .socials i {
+    font-size: 30px;
+    margin: 10px 10px;
+    color: var(--soft-white);
+    background: var(--soft-black);
+    transition: 0.5s;
+}
+
+.socials i {
+    cursor: pointer;
+}
+
+.linkedin-fill:hover, .waze-fill:hover {
+    color: var(--soft-blue) !important;
+}
+
+.facebook-fill:hover {
+    color: var(--soft-dark-blue) !important;
+}
+
+.instagram-fill:hover {
+    color: var(--soft-yellow) !important;
+}
+
+.youtube-fill:hover {
+    color: var(--soft-red) !important;
+}
+
+.email-fill:hover {
+    color: var(--soft-orange) !important;
+}
+
+.whatsapp-fill:hover {
+    color: var(--soft-green) !important;
+}
+
 @media screen and (max-width: 1250px) {
     nav #nav-links {
         float: none;

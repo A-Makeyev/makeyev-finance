@@ -366,57 +366,6 @@ a {
     color: var(--soft-white);
 }
 
-/* footer */
-
-.footer {
-    width: 100%;
-    padding: 10px 0;
-    text-align: center;
-    color: var(--soft-white);
-    background: var(--soft-black);
-}
-
-.footer p {
-    margin: 0;
-    font-weight: 500;
-    color: var(--soft-white);
-    text-transform: capitalize;
-}
-
-.socials, .socials i {
-    font-size: 30px;
-    margin: 10px 10px;
-    color: var(--soft-white);
-    background: var(--soft-black);
-    transition: 0.5s;
-    cursor: pointer;
-}
-
-.linkedin-fill:hover, .waze-fill:hover {
-    color: var(--soft-blue) !important;
-}
-
-.facebook-fill:hover {
-    color: var(--soft-dark-blue) !important;
-}
-
-.instagram-fill:hover {
-    color: var(--soft-yellow) !important;
-}
-
-.youtube-fill:hover {
-    color: var(--soft-red) !important;
-}
-
-.email-fill:hover {
-    color: var(--soft-orange) !important;
-}
-
-.whatsapp-fill:hover {
-    color: var(--soft-green) !important;
-}
-
-
 /* contact  */
 
 .location {
