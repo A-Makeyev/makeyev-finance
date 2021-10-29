@@ -89,6 +89,7 @@ a {
 .header {
     width: 100%;
     min-height: 100vh;
+    transition: all 1s;
     position: relative;
     background-size: cover;
     background-position: center;
@@ -98,6 +99,20 @@ a {
     ), url(/images/cover.jpg);
 }
 
+.sub-header {
+    width: 100%;
+    height: 70vh;
+    transition: all 1s;
+    position: relative;
+    text-align: center;
+    background-size: cover;
+    background-position: center;
+    color: var(--soft-white);
+    background-image: linear-gradient(
+        var(--soft-black-background),
+        var(--soft-black-background)
+    ), url(/images/services-background.jpg);
+}
 
 /* HERO */
 
@@ -362,72 +377,16 @@ a {
     color: var(--soft-white);
 }
 
-/* contact  */
-
-.location {
-    width: 80%;
-    margin: auto;
-    padding: 0 0 100px;
-}
-
-.location iframe {
-    width: 100%;
-    border-radius: 5px;
-}
-
-.contact {
-    width: 80%;
-    margin: auto;
-}
-
-.contact-row {
-    margin-top: 5%;
-    display: flex;
-    justify-content: space-between;
-}
-
-.contact-col {
-    flex-basis: 50%;
-}
-
-.contact-col div {
-    display: flex;
-    align-items: center;
-    margin-bottom: 30px;
-}
-
-.contact-col span {
-    display: inline-block;
-}
-
-.contact-col i, .contact-col p {
-    font-size: 1em;
-    transition: 0.5s;
-}
-
-.contact-col div .contact-icons {
-    font-size: 30px;
-    font-weight: 600;
-    margin: 10px 10px;
-    color: var(--soft-black);
-}
-
-.contact-col form {
-    margin-right: 50px;
-    margin-bottom: 50px;
-}
-
-.contact-col input, .contact-col textarea {
-    width: 100%;
-    outline: none;
-    padding: 20px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    box-sizing: border-box;
-    border: 1px solid var(--soft-blue);
+@media (max-width: 1250px) {
+    .sub-header {
+        height: 50vh;
+    }
 }
 
 @media (max-width: 700px) {
+    .sub-header {
+        height: 40vh;
+    }
     .contact-row,
     .course-row, 
     .campus-row,
