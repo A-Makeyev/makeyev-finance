@@ -96,7 +96,7 @@ a {
     background-image: linear-gradient(
         var(--soft-black-background),
         var(--soft-black-background)
-    ), url(/images/cover.jpg);
+    ), url(/images/main-cover.jpg);
 }
 
 .sub-header {
@@ -111,7 +111,7 @@ a {
     background-image: linear-gradient(
         var(--soft-black-background),
         var(--soft-black-background)
-    ), url(/images/services-background.jpg);
+    ), url(/images/sub-cover.jpg);
 }
 
 /* HERO */
