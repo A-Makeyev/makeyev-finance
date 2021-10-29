@@ -1,6 +1,6 @@
 .sub-header {
     width: 100%;
-    height: 50vh;
+    height: 70vh;
     position: relative;
     text-align: center;
     background-size: cover;
@@ -9,46 +9,36 @@
     background-image: linear-gradient(
         var(--soft-black-background),
         var(--soft-black-background)
-    ), url(/images/background.jpg);
+    ), url(/images/services-background.jpg);
 }
 
-.about {
-    width: 80%;
+.services {
+    width: 90%;
     margin: auto;
-    padding-top: 50px;
     padding-bottom: 100px;
 }
 
-.about-row {
+.services-row {
     margin-top: 5%;
     display: flex;
     justify-content: space-between;
 }
 
-.about-col {
+.services-col {
     flex-basis: 50%;
-    padding: 30px 5px;
+    padding: 30px 15px;
 }
 
-.about-col p {
+.services-col p {
     padding: 15px 0 25px;
 }
 
-.about-col img {
+.services-col img {
     width: 100%;
 }
 
-
-@media (max-width: 700px) {
-    .about-row {
+@media (max-width: 1080px) {
+    .services-row {
         flex-direction: column;
     }
 }
-
-
-
-
-
-
-
-
