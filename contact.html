@@ -27,10 +27,10 @@
                 </div>
 
                 <ul id="nav-links">
-                    <li><a class="nav-link" href="/">home</a></li>
-                    <li><a class="nav-link" href="services">services</a></li>
-                    <li><a class="nav-link" href="articles">articles</a></li>
-                    <li><a class="nav-link" href="contact">contact</a></li>
+                    <li><a id="home" class="nav-link" href="/">home</a></li>
+                    <li><a id="services" class="nav-link" href="services">services</a></li>
+                    <li><a id="articles" class="nav-link" href="articles">articles</a></li>
+                    <li><a id="contact" class="nav-link" href="javascript: void(0)">contact</a></li>
                     <div class="nav-icon">
                         <li>
                             <a class="nav-link" href="https://wa.me/972527729974?text=I%27m%20interested%20in%20financial%20advice%21" target="_blank">
@@ -129,7 +129,31 @@
         <!-- FOOTER -->
 
         <section class="footer">
-            <p id="trademark"></p>
+            <div style="margin-bottom: -15px;">
+                <p id="trademark"></p>
+                <div class="footer-links">
+                    <p>
+                        <a class="footer-link"
+                           href="javascript: void(0)" 
+                           onclick="window.scrollTo({ top: 0, behavior: 'smooth' })">
+                           home
+                        </a>
+                    </p>
+                    <p><a class="footer-link" href="/">home</a></p>
+                    <span>&#183;</span>
+                    <p><a class="footer-link" href="services">services</a></p>
+                    <span>&#183;</span>
+                    <p><a class="footer-link" href="articles">articles</a></p>
+                    <span>&#183;</span>
+                    <p>
+                        <a class="footer-link"
+                           href="javascript: void(0)" 
+                           onclick="window.scrollTo({ top: 0, behavior: 'smooth' })">
+                           contact
+                        </a>
+                    </p>
+                </div>
+            </div>
 
             <div class="socials">
                 <!-- <a href="#" target="_blank">

@@ -133,9 +133,14 @@ nav .menu-icon .line {
     text-transform: capitalize;
 }
 
+.footer-links p {
+    margin-top: -10px;
+    display: inline-block;
+}
+
 .socials, .socials i {
     font-size: 30px;
-    margin: 10px 10px;
+    margin: 10px 10px 5px;
     color: var(--soft-white);
     background: var(--soft-black);
     transition: 0.5s;

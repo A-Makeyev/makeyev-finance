@@ -86,20 +86,11 @@ window.addEventListener('scroll', () => {
     }
 })
 
+/* footer */
+
 trademark.innerHTML =
  `
-    <div style="margin-bottom: -15px;">
-        <span>makeyev finance © ${new Date().getFullYear()}</span> 
-        <div style="margin-top: 10px;">
-            <a class="footer-link" href="/">home</a>
-            <span>&#183;</span>
-            <a class="footer-link" href="services">services</a>
-            <span>&#183;</span>
-            <a class="footer-link" href="articles">articles</a>
-            <span>&#183;</span>
-            <a class="footer-link" href="contact">contact</a>
-        </div>
-    </div>
+    <span>makeyev finance © ${new Date().getFullYear()}</span> 
 `
 
 var footerLinks = document.createElement('style')
@@ -112,7 +103,6 @@ footerLinks.innerHTML =
         color: var(--soft-white);
         transition: 0.5s; 
     }
-
 `
 
 footerLinksHover.innerHTML = 
@@ -120,7 +110,6 @@ footerLinksHover.innerHTML =
     .footer-link:hover { 
         color: var(--soft-blue); 
     }
-
 `
 
 document.getElementsByTagName('head')[0].appendChild(footerLinks)
