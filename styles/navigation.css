@@ -134,8 +134,10 @@ nav .menu-icon .line {
 }
 
 .footer-links p {
-    margin-top: -10px;
+    font-size: 15px;
     display: inline-block;
+    margin: -10px -5px 0 -5px;
+    text-transform: lowercase;
 }
 
 .socials, .socials i {
