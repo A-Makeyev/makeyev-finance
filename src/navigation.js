@@ -9,6 +9,17 @@ const trademark = document.getElementById('trademark')
 const navLinks = document.getElementsByClassName('nav-link')
 const navMenuLines = document.getElementsByClassName('line')
 
+function backToHeader() {
+    const scrollTop = () => {
+    let top = document.documentElement.scrollTop || document.body.scrollTop
+        if (top > 0) {
+            window.requestAnimationFrame(scrollTop)
+            window.scrollTo(0, top - top / 10)
+        }
+    }
+    scrollTop()
+}
+
 menu.onclick = () => {
     let body = document.querySelector('body')
     body.classList.contains('stop-scrolling') 
