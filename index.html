@@ -27,14 +27,14 @@
             <nav id="navbar">
                 <input id="nav-toggle" type="checkbox">
                 <div class="logo">
-                    <a href="javascript: void(0)" id="logo-image" class="logo-image-transparent"></a>
+                    <a id="logo-image" class="logo-image-transparent" href="javascript: void(0)" onclick="backToHeader()"></a>
                 </div>
 
                 <ul id="nav-links">
-                    <li><a id="home" class="nav-link" href="javascript: void(0)">home</a></li>
-                    <li><a id="services" class="nav-link" href="services">services</a></li>
-                    <li><a id="articles" class="nav-link" href="articles">articles</a></li>
-                    <li><a id="contact" class="nav-link" href="contact">contact</a></li>
+                    <li><a class="nav-link" href="javascript: void(0)" onclick="backToHeader()">home</a></li>
+                    <li><a class="nav-link" href="services">services</a></li>
+                    <li><a class="nav-link" href="articles">articles</a></li>
+                    <li><a class="nav-link" href="contact">contact</a></li>
                     <div class="nav-icon">
                         <li>
                             <a class="nav-link" href="https://wa.me/972527729974?text=I%27m%20interested%20in%20financial%20advice%21" target="_blank">
@@ -226,7 +226,7 @@
                     <p>
                         <a class="footer-link"
                            href="javascript: void(0)" 
-                           onclick="window.scrollTo({ top: 0, behavior: 'smooth' })">
+                           onclick="backToHeader()">
                            home
                         </a>
                     </p>
