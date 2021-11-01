@@ -1,5 +1,3 @@
-/* contact  */
-
 .location {
     width: 80%;
     margin: auto;
@@ -53,6 +51,10 @@
     margin-bottom: 50px;
 }
 
+.contact-col input {
+    font-size: 15px;
+}
+
 .contact-col input, .contact-col textarea {
     width: 100%;
     outline: none;
@@ -61,6 +63,14 @@
     border-radius: 5px;
     box-sizing: border-box;
     border: 1px solid var(--soft-blue);
+}
+
+#submit-status {
+    opacity: 0;
+    font-size: 30px;
+    display: inline;
+    transition: 0.5s;
+    color: var(--soft-green);
 }
 
 @media (max-width: 700px) {
