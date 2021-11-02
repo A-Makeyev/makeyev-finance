@@ -146,6 +146,7 @@ a {
     background: transparent;
     color: var(--soft-white);
     border: 1px solid var(--soft-white);
+    backdrop-filter: blur(10px);
     text-transform: capitalize;
     transition: all 0.5s;
     cursor: pointer;
