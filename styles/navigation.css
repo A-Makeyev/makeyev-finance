@@ -48,6 +48,7 @@ nav #nav-links a {
     padding: 10px;
     display: block;
     font-size: 20px;
+    margin-top: 10px;
     font-weight: bold;
     text-decoration: none;
     color: var(--soft-white);
