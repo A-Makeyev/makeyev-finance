@@ -401,23 +401,24 @@ a {
 }
 
 .popup {
-    width: 30%;
+    width: 40%;
+    bottom: 5%;
     padding: 20px;
     margin: 70px auto;
     border-radius: 5px;
+    transition: all 1s;
     position: relative;
     flex-direction: column;
     background: var(--soft-white);
-    transition: all 1s ease-in-out;
     border: 2px solid var(--soft-blue);
 }
 
-.popup h1, .popup p {
+.popup h2, .popup p {
     margin-top: 0;
     line-height: 1;
     text-align: center;
+    transition: all 1s;
     color: var(--soft-black);
-    transition: all 1s ease-in-out;
 }
 
 .popup .close-popup {
@@ -468,5 +469,8 @@ a {
     }
     .popup {
         width: 70%;
+    }
+    .popup p {
+        font-size: 20px !important;
     }
 }
