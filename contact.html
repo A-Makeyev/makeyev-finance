@@ -90,8 +90,21 @@
                             Message:
                             <textarea type="text" name="message" rows="10" placeholder="Tell us how can we help you"></textarea>
                         </label>
-                        <button type="submit" class="hero-btn btn-blue">send</button>
-                        <p id="submit-status"></p>
+                        <button type="submit" class="hero-btn btn-blue" onclick="location.href='#status-popup'">send</button>
+                        
+                        <!-- popup -->
+
+                        <div id="status-popup" class="overlay">
+                            <div class="popup">
+                                <h1 id="submit-status-header"></h1>
+                                <a class="close-popup" href="#">&times;</a>
+                                <div class="content-popup">  
+                                    <p id="submit-status"></p>
+                                    <div id="status-icon"></div>
+                                </div>
+                            </div>
+                        </div>
+
                     </form>
                     <!-- <form action="https://formsubmit.co/anatoly.makeyev@gmail.com" method="POST">
                         <input type="hidden" name="_next" value="https://makeyev-finance.netlify.app/redirect.html">
