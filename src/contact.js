@@ -12,6 +12,7 @@ form.addEventListener('submit', (event) => {
             'Accept': 'application/json'
         }
     }).then(response => {
+        status.style.color = 'var(--soft-green);'
         status.style.opacity = '1'
         status.innerHTML = 'Sent 😁'
         setTimeout(() => {
@@ -22,8 +23,9 @@ form.addEventListener('submit', (event) => {
             }, 1000)
         }, 2000)
     }).catch(error => {
+        status.style.color = 'var(--soft-red);'
         status.style.opacity = '1'
-        status.innerHTML = '&#9888;'
+        status.innerHTML = '⚠'
         setTimeout(() => {
             status.style.opacity = '0'
             setTimeout(() => {

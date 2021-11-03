@@ -70,7 +70,6 @@
     font-size: 30px;
     display: inline;
     transition: 0.5s;
-    color: var(--soft-green);
 }
 
 @media (max-width: 700px) {
