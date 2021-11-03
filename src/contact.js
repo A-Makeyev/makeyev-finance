@@ -1,4 +1,4 @@
-const url = location.href
+const url = window.location.href
 const softRed = 'rgb(210, 60, 60)'
 const softGreen = 'rgb(35, 210, 65)'
 
@@ -23,7 +23,7 @@ form.addEventListener('submit', (event) => {
         }
     }).then(response => {
         statusIcon.innerHTML = '&#129297;'
-        statusHeader.innerHTML = 'Your message has been sent!'
+        statusHeader.innerHTML = 'Message has been sent!'
         statusMessage.innerHTML = 'We will start saving you money as soon as possible'
         statusIcon.style.fontSize = '50px'
         statusIcon.style.color = softGreen
