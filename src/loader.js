@@ -17,7 +17,7 @@ function loadMainPage() {
 }
 
 if (window.attachEvent) {
-    window.attachEvent('onload', loadMainPage)
+    window.addEventListener('load', loadMainPage)
 } else {
     if (window.onload) {
         var curronload = window.onload
