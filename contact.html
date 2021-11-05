@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <script defer src="src/index.js"></script>
     <script defer src="src/navigation.js"></script>
-    <script async src="src/contact.js"></script>
+    <script defer src="src/contact.js"></script>
     <script async src="https://kit.fontawesome.com/4f48855ba9.js" crossorigin="anonymous"></script>
     <link rel="shortcut icon" type="image/x-icon" href="/images/icon.ico">
     <link rel="stylesheet" href="styles/navigation.css">
@@ -73,30 +74,20 @@
         <section class="contact">
             <div class="contact-row">
                 <div class="contact-col">
-                    <form id="contact-form" action="https://formspree.io/f/xleayjjd" method="POST">
-                        <label>
-                            Name:
-                            <input type="text" name="name" placeholder="Full name" required>
-                        </label>
-                        <label>
-                            Phone:
-                            <input type="text" name="phone" placeholder="Phone number" required>
-                        </label>
-                        <label>
-                            Email:
-                            <input type="email" name="email" placeholder="Email address">
-                        </label>
-                        <label>
-                            Message:
-                            <textarea type="text" name="message" rows="10" placeholder="Tell us how can we help you"></textarea>
-                        </label>
-                        <a type="submit"
-                           class="hero-btn btn-blue"
-                           href="javascript: void(0)"
-                           onclick="location.href='#status-popup'"
-                        >
-                          send
-                        </a>
+                    <form id="contact-form" action="https://formspree.io/f/xleayjjd" method="POST" autocomplete="off">
+                        <label for="name" class="form-label">name</label>
+                        <input type="text" name="name" class="form-input" required>
+                        
+                        <label for="phone" class="form-label">phone number</label>
+                        <input type="text" name="phone" class="form-input" required>
+                        
+                        <label for="email" class="form-label">email address</label>
+                        <input type="email" name="email" class="form-input">
+                        
+                        <label for="message" class="form-label">tell us how can we help</label>
+                        <textarea type="text" name="message" rows="10" class="form-input"></textarea>
+
+                        <button type="submit" class="hero-btn btn-blue" onclick="location.href='#status-popup'">send</button>
                         
                         <!-- popup -->
 
@@ -124,7 +115,7 @@
                     </form> -->
                 </div>
                 
-                <div class="contact-col">
+                <div class="contact-col contact-info">
                     <div>
                         <a href="tel:+972527729974" target="_blank">
                             <i class="fab fa-whatsapp whatsapp-fill contact-icons"></i>
