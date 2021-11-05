@@ -89,8 +89,10 @@ window.addEventListener('scroll', () => {
 /* footer */
 
 trademark.innerHTML =
- `
-    <span>makeyev finance © ${new Date().getFullYear()}</span> 
+`
+    <span>
+        makeyev finance © ${new Date().getFullYear()}
+    </span> 
 `
 
 var footerLinks = document.createElement('style')

@@ -119,6 +119,10 @@ nav .menu-icon .line {
 
 /* footer */
 
+#trademark {
+    font-size: 20px;
+}
+
 .footer {
     width: 100%;
     padding: 10px 0;
@@ -136,16 +140,16 @@ nav .menu-icon .line {
 
 .footer-links p {
     margin: -5px;
-    font-size: 15px;
+    font-size: 20px;
     display: inline-block;
 }
 
 .socials, .socials i {
     font-size: 30px;
+    transition: 0.5s;
     margin: 10px 10px 5px;
     color: var(--soft-white);
     background: var(--soft-black);
-    transition: 0.5s;
 }
 
 .socials i {
@@ -215,8 +219,7 @@ nav .menu-icon .line {
         width: auto;
         justify-content: center;
     }
-    .logo-image,
-    .logo-image-transparent {
+    .logo-image, .logo-image-transparent {
         width: 20% !important;
         z-index: 999;
         display: block;
@@ -241,14 +244,19 @@ nav .menu-icon .line {
     nav :checked ~ .menu-icon .line:nth-child(3) {
         transform: translateY(-10px) rotate(-225deg);
     }
+    #trademark, .footer-links p {
+        font-size: 15px;
+    }
+    .socials, .socials i {
+        font-size: 25px;
+    }
 }
 
 @media screen and (max-width: 500px) {
     nav {
         height: 70px;
     }
-    .logo-image, 
-    .logo-image-transparent {
+    .logo-image, .logo-image-transparent {
         width: 20% !important;
     }
     nav #nav-links {
