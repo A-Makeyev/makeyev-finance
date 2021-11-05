@@ -20,19 +20,24 @@ for (let x = 1; x <= inputs; x++) {
         getXPath(`(${label})[${x}]`).style.left = '0'
         getXPath(`(${label})[${x}]`).style.top = '0'
         setTimeout(() => { 
-            getXPath(`(${label})[${x}]`).innerHTML += ':'
+            if (getXPath(`(${label})[${x}]`).innerText.slice(-1) !== ':') {
+                getXPath(`(${label})[${x}]`).innerText += ':'
+            }
         }, 250)
     })
 
     getXPath(`(${input})[${x}]`).addEventListener('blur', () => {
-        getXPath(`(${input})[${x}]`).style.border = `1px solid ${softBlack}`
-        getXPath(`(${label})[${x}]`).style.color = softGrey
-        getXPath(`(${label})[${x}]`).style.left = '20px'
-        getXPath(`(${label})[${x}]`).style.top = '35px'
-        setTimeout(() => { 
-            let text = getXPath(`(${label})[${x}]`).innerText.slice(0, -1)
-            getXPath(`(${label})[${x}]`).innerText = text
-        }, 250)
+        let value = getXPath(`(${input})[${x}]`).value
+        if (value.length < 1 && value === '') {
+            getXPath(`(${input})[${x}]`).style.border = `1px solid ${softBlack}`
+            getXPath(`(${label})[${x}]`).style.color = softGrey
+            getXPath(`(${label})[${x}]`).style.left = '20px'
+            getXPath(`(${label})[${x}]`).style.top = '35px'
+            setTimeout(() => { 
+                let text = getXPath(`(${label})[${x}]`).innerText.slice(0, -1)
+                getXPath(`(${label})[${x}]`).innerText = text
+            }, 250)
+        }
     })
 }
 

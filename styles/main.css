@@ -175,10 +175,10 @@ a {
 
 @media(max-width: 500px) {
     .text-box h1 {
-        font-size: 2.5rem;
+        font-size: 2.5em;
     } 
     .hero-btn, .text-box p {
-        font-size: 1rem;
+        font-size: 1.5em;
     }
 }
 

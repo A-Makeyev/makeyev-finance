@@ -76,16 +76,18 @@
                 <div class="contact-col">
                     <form id="contact-form" action="https://formspree.io/f/xleayjjd" method="POST" autocomplete="off">
                         <label for="name" class="form-label">name</label>
-                        <input type="text" name="name" class="form-input" required>
-                        
+                        <input type="text" name="name" class="form-input" maxlength="99" required>
+                        <span class="asterisk"></span>
+
                         <label for="phone" class="form-label">phone number</label>
-                        <input type="text" name="phone" class="form-input" required>
-                        
+                        <input type="text" name="phone" class="form-input" maxlength="99" required>
+                        <span class="asterisk"></span>
+
                         <label for="email" class="form-label">email address</label>
-                        <input type="email" name="email" class="form-input">
+                        <input type="email" name="email" class="form-input" maxlength="99">
                         
                         <label for="message" class="form-label">tell us how can we help</label>
-                        <textarea type="text" name="message" rows="10" class="form-input"></textarea>
+                        <textarea type="text" name="message" class="form-input" rows="5" maxlength="999"></textarea>
 
                         <button type="submit" class="hero-btn btn-blue" onclick="location.href='#status-popup'">send</button>
                         

@@ -35,15 +35,17 @@
 }
 
 .contact-info {
+    font-size: 20px;
     margin-top: 15px;
 }
+
 .contact-col i, .contact-col p {
-    font-size: 1em;
+    font-size: 20px;
     transition: 0.5s;
 }
 
 .contact-col div .contact-icons {
-    font-size: 30px;
+    font-size: 20px;
     font-weight: 600;
     margin: 10px 10px;
     color: var(--soft-black);
@@ -83,10 +85,24 @@
     text-transform: capitalize;
 }
 
-@media (max-width: 700px) {
+form .hero-btn {
+    margin-top: 15px;
+}
+
+/* .form-input + .asterisk::after {
+    content: '*';
+    right: 22px;
+    bottom: 44px;
+    font-size: 25px;
+    font-weight: 600;
+    position: relative;
+    color: var(--soft-red);
+} */
+
+@media (max-width: 900px) {
     .contact-col input, .contact-col textarea {
         padding: 15px;
-        width: 120%;
+        width: 110%;
     }
     .contact-row {
         flex-direction: column;
@@ -97,4 +113,10 @@
         position: relative;
         transition: all 0.5;
     }
+    .form-label {
+        font-size: 15px;
+    }
+    /* .form-input + .asterisk::after {
+        bottom: 50px;
+    } */
 }
