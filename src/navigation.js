@@ -1,14 +1,3 @@
-const softWhite = 'aliceblue'
-const softBlack = 'rgb(15, 15, 15)'
-const solftBlue = 'rgb(35, 170, 222)'
-
-const menu = document.getElementById('menu')
-const nav = document.getElementById('navbar')
-const logo = document.getElementById('logo-image')
-const trademark = document.getElementById('trademark')
-const navLinks = document.getElementsByClassName('nav-link')
-const navMenuLines = document.getElementsByClassName('line')
-
 function backToHeader() {
     const scrollTop = () => {
     let top = document.documentElement.scrollTop || document.body.scrollTop
