@@ -4,6 +4,7 @@
     --soft-black: rgb(15, 15, 15);
     --soft-blue: rgb(35, 170, 222);
     --soft-green: rgb(35, 210, 65);
+    --soft-grey: rgb(200, 200, 200);
     --soft-yellow: rgb(250, 205, 5);
     --soft-orange: rgb(255, 125, 80);
     --soft-dark-blue: rgb(65, 120, 235);
@@ -390,7 +391,7 @@ a {
     height: 100vh;
     position: fixed;
     visibility: hidden;
-    transition: all 1s;
+    transition: all 0.5s;
     backdrop-filter: blur(5px);
     background: var(--soft-black-background);
 }
@@ -406,7 +407,7 @@ a {
     padding: 20px;
     margin: 70px auto;
     border-radius: 5px;
-    transition: all 1s;
+    transition: all 0.5s;
     position: relative;
     flex-direction: column;
     background: var(--soft-white);
@@ -417,7 +418,7 @@ a {
     margin-top: 0;
     line-height: 1;
     text-align: center;
-    transition: all 1s;
+    transition: all 0.5s;
     color: var(--soft-black);
 }
 
@@ -427,7 +428,7 @@ a {
     font-size: 30px;
     font-weight: bold;
     position: absolute;
-    transition: all 1s;
+    transition: all 0.5s;
     text-decoration: none;
     color: var(--soft-black);
 }
