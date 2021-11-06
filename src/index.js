@@ -1,28 +1,32 @@
+const 
+
 // colors
-const softWhite = 'aliceblue'
-const softRed = 'rgb(210, 60, 60)'
-const softBlack = 'rgb(15, 15, 15)'
-const softGreen = 'rgb(35, 210, 65)'
-const softBlue = 'rgb(35, 170, 222)'
-const softGrey = 'rgb(200, 200, 200)'
+softWhite = 'aliceblue',
+softRed = 'rgb(210, 60, 60)',
+softBlack = 'rgb(15, 15, 15)',
+softGreen = 'rgb(35, 210, 65)',
+softBlue = 'rgb(35, 170, 222)',
+softGrey = 'rgb(200, 200, 200)',
 
 // loader
-const loader = document.getElementById('loader')
-const loadingScreen = document.getElementById('loading-screen')
+loader = document.getElementById('loader'),
+loadingScreen = document.getElementById('loading-screen'),
 
 // navigation
-const menu = document.getElementById('menu')
-const nav = document.getElementById('navbar')
-const logo = document.getElementById('logo-image')
-const trademark = document.getElementById('trademark')
-const navLinks = document.getElementsByClassName('nav-link')
-const navMenuLines = document.getElementsByClassName('line')
+menu = document.getElementById('menu'),
+nav = document.getElementById('navbar'),
+logo = document.getElementById('logo-image'),
+trademark = document.getElementById('trademark'),
+navLinks = document.getElementsByClassName('nav-link'),
+navMenuLines = document.getElementsByClassName('line'),
 
 // contact
-const popUp = document.querySelector('.popup')
-const overlay = document.querySelector('.overlay')
-const form = document.getElementById('contact-form')
-const statusIcon = document.getElementById('status-icon')
-const statusPopup = document.getElementById('status-popup')
-const statusMessage = document.getElementById('submit-status')
-const statusHeader = document.getElementById('submit-status-header')
+inputName = document.getElementById('name'),
+overlay = document.getElementById('overlay'),
+inputPhone = document.getElementById('phone'),
+form = document.getElementById('contact-form'),
+submitForm = document.getElementById('submit-form'),
+modalBody = document.getElementById('modal-body-text'),
+modalTitle = document.getElementById('modal-title-text'),
+openModal = document.querySelectorAll('[data-modal-target]'),
+closeModal = document.querySelectorAll('[data-modal-close]')

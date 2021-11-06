@@ -55,6 +55,11 @@
     margin: 0 50px 50px 0;
 }
 
+textarea {
+    resize: none;
+    overflow: auto;
+}
+
 .contact-col input, .contact-col textarea {
     width: 100%;
     outline: none;
@@ -87,6 +92,76 @@
 
 form .hero-btn {
     margin-top: 15px;
+}
+
+#submit-form {
+    cursor: not-allowed;
+}
+
+/* modal */
+
+.modal {
+    top: 50%;
+    left: 50%;
+    width: 500px;
+    z-index: 9999;
+    max-width: 80%;
+    position: fixed;
+    border-radius: 5px;
+    transition: all 0.5s;
+    background: var(--soft-white);
+    border: 2px solid var(--soft-blue);
+    transform: translate(-50%, -50%) scale(0);
+}
+
+.modal.active {
+    transform: translate(-50%, -50%) scale(1) rotate(-360deg);
+}
+
+.modal-header {
+    display: flex;
+    padding: 10px 25px;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--soft-blue);
+}
+
+.modal-header .modal-close {
+    border: none;
+    outline: none;
+    cursor: pointer;
+    font-size: 30px;
+    font-weight: 600;
+    transition: 0.5s;
+    background: none;
+}
+
+.modal-close:hover {
+    color: var(--soft-red);
+    transform: rotate(360deg)
+}
+
+.modal-body {
+    padding: 10px 15px;
+}
+
+#overlay {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0;
+    z-index: 999;
+    position: fixed;
+    pointer-events: none;
+    transition: all 0.5s;
+    backdrop-filter: blur(5px);
+    background: var(--soft-black-background);
+}
+
+#overlay.active {
+    opacity: 1;
+    pointer-events: all;
 }
 
 /* .form-input + .asterisk::after {
