@@ -70,12 +70,30 @@
             <div class="text-box">
                 <h1 class="gradient-text-no-hover">mortgage & <br> financial advice</h1>
                 <p class="gradient-text-no-hover">your savings, our expertise</p>
-                <a href="" class="hero-btn btn-white">schedule a free call now</a>
+                <button data-modal-target="#modal" class="hero-btn btn-white">schedule a free call now</button>
             </div>
 
             <!-- modal -->
 
-
+            <div id="modal" class="modal">
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <h2 id="modal-title-text"></h2>
+                    </div>
+                    <button class="modal-close" data-modal-close>&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="modal-user"></p>
+                    <p id="modal-body-text"></p>
+                </div>
+                <div class="modal-links">
+                    <a href="/" class="hero-btn btn-black">home</a>
+                    <a href="services"class="hero-btn btn-black">services</a>
+                    <a href="articles" class="hero-btn btn-black">articles</a>
+                </div>
+            </div>
+    
+            <div id="overlay"></div>
 
         </section>
 
