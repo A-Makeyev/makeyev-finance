@@ -196,13 +196,10 @@ textarea {
     color: var(--soft-red);
 } */
 
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
     .contact-col input, .contact-col textarea {
         padding: 15px;
         width: 110%;
-    }
-    .contact-col i, .contact-col p {
-        font-size: 15px;
     }
     .contact-row {
         flex-direction: column;
@@ -221,7 +218,10 @@ textarea {
     .modal-links .hero-btn {
         padding: 5px;
     }
-    /* .form-input + .asterisk::after {
-        bottom: 50px;
-    } */
+}
+
+@media (max-width: 500px) {
+    .contact-col i, .contact-col p {
+        font-size: 15px;
+    }
 }

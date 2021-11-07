@@ -6,6 +6,16 @@ function getXPath(path) {
     ).singleNodeValue
 }
 
+// double click
+function doubleClick(target) {
+    let event = new MouseEvent('dblclick', {
+        'view': window,
+        'bubbles': true,
+        'cancelable': true
+    })
+    target.dispatchEvent(event)
+}
+
 // lift labels
 const inputs = document.getElementsByClassName('form-input').length
 
@@ -67,6 +77,8 @@ function validateForm() {
 form.addEventListener('submit', (event) => {
     event.preventDefault()
 
+    setTimeout(() => { submitForm.click() }, 500)
+
     let data = new FormData(event.target)
     fetch(event.target.action, {
         method: form.method,
@@ -81,7 +93,9 @@ form.addEventListener('submit', (event) => {
             'message sent! 🤑',
             'we will get back to you as soon as possible.'
         )
+
         console.log(response)
+        form.reset()
         
     }).catch(error => {
         displayModal(
@@ -89,7 +103,22 @@ form.addEventListener('submit', (event) => {
             'Oops! ⚠️',
             'There seems to be a problem with your internet connection, reconnect and try again.'
         )
-        console.log(error)
+
+        let savedName = inputName.value ? inputName.value : ''
+        let savedPhone = inputPhone.value ? inputPhone.value : ''
+        let savedEmail = inputEmail.value ? inputEmail.value : ''
+        let savedMessage = inputMessage.value ? inputMessage.value : ''
+
+        form.reset()
+
+        setTimeout(() => {
+            inputName.value = savedName
+            inputPhone.value = savedPhone
+            inputEmail.value = savedEmail
+            inputMessage.value = savedMessage
+        }, 500)
+
+        throw new Error(error)
     })
 })
 
@@ -111,11 +140,12 @@ function displayModal(status, title, body) {
                 modal.style.border = `2px solid ${softGreen}`
                 modalHeader.style.borderBottom = `2px solid ${softGreen}`
                 modalUser.innerText = `Thanks ${inputName.value},`
+
             } else if (status === 'failure') {
                 modalTitle.style.color = softRed
                 modal.style.border = `2px solid ${softRed}`
                 modalHeader.style.borderBottom = `2px solid ${softRed}`
-                modalUser.innerText = `Dear ${inputName.value},`
+                modalLinks[0].style.display = 'none'
             }
         })
     })
@@ -141,9 +171,8 @@ function displayModal(status, title, body) {
     })
 
     // add form reset when clicking on modal links
-    let modalLinks = document.getElementsByClassName('modal-link')
-    for (let x = 0; x < modalLinks.length; x++) {
-        modalLinks[x].setAttribute('onclick', () => { form.reset() })
+    for (let x = 0; x < modalLinks[0].children.length; x++) {
+        modalLinks[0].children[x].setAttribute('onclick', () => { form.reset() })
     }
 }
 
