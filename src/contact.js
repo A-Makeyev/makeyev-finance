@@ -6,17 +6,7 @@ function getXPath(path) {
     ).singleNodeValue
 }
 
-// double click
-function doubleClick(target) {
-    let event = new MouseEvent('dblclick', {
-        'view': window,
-        'bubbles': true,
-        'cancelable': true
-    })
-    target.dispatchEvent(event)
-}
-
-// lift labels
+// initialize input fields 
 const inputs = document.getElementsByClassName('form-input').length
 
 for (let x = 1; x <= inputs; x++) {
@@ -59,9 +49,10 @@ for (let x = 1; x <= inputs; x++) {
 // submit form
 function validateForm() {
     let validPhone = /^[0-9-+\s]+$/i.test(inputPhone.value)
+    let validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail.value)
     let validName = /^[a-zA-Z\u0590-\u05FF ,.'-]+$/i.test(inputName.value)
-
-    if (validPhone && validName) {
+    
+    if (validPhone && validEmail && validName) {
         submitForm.disabled = false
         submitForm.style.cursor = 'pointer'
         submitForm.classList.remove('btn-black')
@@ -74,10 +65,16 @@ function validateForm() {
     }
 }
 
+// only clickable after form is validated
+submitForm.addEventListener('click', () => {
+    setTimeout(() => {
+        modal.classList.add('active')
+        overlay.classList.add('active')
+    }, 500)
+})
+
 form.addEventListener('submit', (event) => {
     event.preventDefault()
-
-    setTimeout(() => { submitForm.click() }, 500)
 
     let data = new FormData(event.target)
     fetch(event.target.action, {
@@ -88,98 +85,94 @@ form.addEventListener('submit', (event) => {
         }
 
     }).then(response => {
-        displayModal(
+        displayModalContent(
             'success',
             'message sent! 🤑',
             'we will get back to you as soon as possible.'
         )
-
         console.log(response)
-        form.reset()
         
     }).catch(error => {
-        displayModal(
+        displayModalContent(
             'failure',
             'Oops! ⚠️',
             'There seems to be a problem with your internet connection, reconnect and try again.'
         )
-
-        let savedName = inputName.value ? inputName.value : ''
-        let savedPhone = inputPhone.value ? inputPhone.value : ''
-        let savedEmail = inputEmail.value ? inputEmail.value : ''
-        let savedMessage = inputMessage.value ? inputMessage.value : ''
-
-        form.reset()
-
-        setTimeout(() => {
-            inputName.value = savedName
-            inputPhone.value = savedPhone
-            inputEmail.value = savedEmail
-            inputMessage.value = savedMessage
-        }, 500)
-
         throw new Error(error)
     })
 })
 
 // display modal with a status
-function displayModal(status, title, body) {
-    openModal.forEach(button => {
-        button.addEventListener('click', () => {
-            let modal = document.querySelector(button.dataset.modalTarget)
-            if (modal == null) return
+function displayModalContent(status, title, body) {
+    modalTitle.innerText = title
+    modalBody.innerText = body
 
-            modal.classList.add('active')
-            overlay.classList.add('active')
+    if (status === 'success') {
+        modalTitle.style.color = softGreen
+        modal.style.border = `2px solid ${softGreen}`
+        modalHeader.style.borderBottom = `2px solid ${softGreen}`
+        modalUser.style.display = 'block'
+        modalUser.innerText = `Thanks ${inputName.value},`
+        modalLinks[0].style.display = 'block'
 
-            modalTitle.innerText = title
-            modalBody.innerText = body
-
-            if (status === 'success') {
-                modalTitle.style.color = softGreen
-                modal.style.border = `2px solid ${softGreen}`
-                modalHeader.style.borderBottom = `2px solid ${softGreen}`
-                modalUser.innerText = `Thanks ${inputName.value},`
-
-            } else if (status === 'failure') {
-                modalTitle.style.color = softRed
-                modal.style.border = `2px solid ${softRed}`
-                modalHeader.style.borderBottom = `2px solid ${softRed}`
-                modalLinks[0].style.display = 'none'
-            }
-        })
-    })
-    
-    closeModal.forEach(button => {
-        button.addEventListener('click', () => {
-            let modal = button.closest('.modal')
-            if (modal == null) return
-            modal.classList.remove('active')
-            overlay.classList.remove('active')
-            form.reset()
-        })
-    })
-    
-    overlay.addEventListener('click', () => {
-        const activeModals = document.querySelectorAll('.modal.active')
-        activeModals.forEach(modal => {
-            if (modal == null) return
-            modal.classList.remove('active')
-            overlay.classList.remove('active')
-            form.reset()
-        })
-    })
-
-    // add form reset when clicking on modal links
-    for (let x = 0; x < modalLinks[0].children.length; x++) {
-        modalLinks[0].children[x].setAttribute('onclick', () => { form.reset() })
+    } else if (status === 'failure') {
+        modalTitle.style.color = softRed
+        modal.style.border = `2px solid ${softRed}`
+        modalHeader.style.borderBottom = `2px solid ${softRed}`
+        modalUser.style.display = 'none'
+        modalLinks[0].style.display = 'none'
     }
 }
+
+// close modals when clicking on close modal button
+closeModal.forEach(button => {
+    button.addEventListener('click', () => {
+        let modal = button.closest('.modal')
+        if (modal == null) return
+        modal.classList.remove('active')
+        overlay.classList.remove('active')
+        resetForm()
+    })
+})
+
+// close modals when clicking on overlay
+overlay.addEventListener('click', () => {
+    const activeModals = document.querySelectorAll('.modal.active')
+    activeModals.forEach(modal => {
+        if (modal == null) return
+        modal.classList.remove('active')
+        overlay.classList.remove('active')
+        resetForm()
+    })
+})
 
 // close modal when pressing esc
 body.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') { 
         document.querySelector('.modal-close').click()
-        form.reset()
+        resetForm()
     }
 })
+
+// add form reset when clicking on modal links
+for (let x = 0; x < modalLinks[0].children.length; x++) {
+    modalLinks[0].children[x].onclick = () => { form.reset() }
+}
+
+// reset form and submit button
+function resetForm() {
+    form.reset()
+    submitForm.disabled = true
+    submitForm.classList.add('btn-black')
+    submitForm.style.cursor = 'not-allowed'
+}
+
+// double click
+function doubleClick(target) {
+    let event = new MouseEvent('dblclick', {
+        'view': window,
+        'bubbles': true,
+        'cancelable': true
+    })
+    target.dispatchEvent(event)
+}
