@@ -90,11 +90,8 @@ textarea {
     text-transform: capitalize;
 }
 
-form .hero-btn {
-    margin-top: 15px;
-}
-
 #submit-form {
+    margin-top: 15px;
     cursor: not-allowed;
 }
 
@@ -112,6 +109,7 @@ form .hero-btn {
     background: var(--soft-white);
     border: 2px solid var(--soft-blue);
     transform: translate(-50%, -50%) scale(0);
+    box-shadow: 0 10px 10px 0 var(--soft-black-background);
 }
 
 .modal.active {
@@ -122,6 +120,7 @@ form .hero-btn {
     display: flex;
     padding: 10px 25px;
     align-items: center;
+    text-transform: capitalize;
     justify-content: space-between;
     border-bottom: 2px solid var(--soft-blue);
 }
@@ -130,7 +129,7 @@ form .hero-btn {
     border: none;
     outline: none;
     cursor: pointer;
-    font-size: 30px;
+    font-size: 40px;
     font-weight: 600;
     transition: 0.5s;
     background: none;
@@ -143,6 +142,25 @@ form .hero-btn {
 
 .modal-body {
     padding: 10px 15px;
+}
+
+.modal-body p {
+    padding: 10px;
+    font-weight: 600;
+}
+
+.modal-links {
+    padding: 20px;
+    text-align: center;
+    transition: all 0.5s;
+}
+
+.modal-links .hero-btn {
+    margin: 1px;
+    padding: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    border-width: 2px;
 }
 
 #overlay {
@@ -179,6 +197,9 @@ form .hero-btn {
         padding: 15px;
         width: 110%;
     }
+    .contact-col i, .contact-col p {
+        font-size: 15px;
+    }
     .contact-row {
         flex-direction: column;
     }
@@ -190,6 +211,12 @@ form .hero-btn {
     }
     .form-label {
         font-size: 15px;
+    }
+    .modal-links {
+        padding: 10px;
+    }
+    .modal-links .hero-btn {
+        padding: 5px;
     }
     /* .form-input + .asterisk::after {
         bottom: 50px;

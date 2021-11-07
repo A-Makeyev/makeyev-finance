@@ -9,6 +9,7 @@ softBlue = 'rgb(35, 170, 222)',
 softGrey = 'rgb(200, 200, 200)',
 
 // loader
+body = document.querySelector('body'),
 loader = document.getElementById('loader'),
 loadingScreen = document.getElementById('loading-screen'),
 
@@ -25,8 +26,11 @@ inputName = document.getElementById('name'),
 overlay = document.getElementById('overlay'),
 inputPhone = document.getElementById('phone'),
 form = document.getElementById('contact-form'),
+modalUser = document.getElementById('modal-user'),
 submitForm = document.getElementById('submit-form'),
+modalHeader = document.querySelector('.modal-header'),
 modalBody = document.getElementById('modal-body-text'),
 modalTitle = document.getElementById('modal-title-text'),
 openModal = document.querySelectorAll('[data-modal-target]'),
 closeModal = document.querySelectorAll('[data-modal-close]')
+

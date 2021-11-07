@@ -39,10 +39,8 @@ body {
 }
 
 p {
-    padding: 10px;
     font-size: 20px;
     font-weight: 400;
-    line-height: 20px;
     color: var(--soft-black);
 }
 
@@ -153,15 +151,32 @@ a {
     cursor: pointer;
 }
 
-.hero-btn:hover {
+.btn-white {
+    background: transparent;
     color: var(--soft-white);
-    background: var(--soft-blue);
+    border: 1px solid var(--soft-white);
 }
 
 .btn-blue {
     background: transparent;
     color: var(--soft-blue);
     border: 1px solid var(--soft-blue);
+}
+
+.btn-blue:hover, .btn-white:hover {
+    color: var(--soft-white);
+    background: var(--soft-blue);
+}
+
+.btn-black {
+    background: transparent;
+    color: var(--soft-black);
+    border: 1px solid var(--soft-black);
+}
+
+.btn-black:hover {
+    color: var(--soft-white);
+    background: var(--soft-black);
 }
 
 @media(max-width: 770px) {

@@ -1,5 +1,4 @@
-const url = window.location.href
-
+// find element by xpath
 function getXPath(path) {
     return document.evaluate(
         path, document, null,
@@ -39,12 +38,20 @@ for (let x = 1; x <= inputs; x++) {
             }, 250)
         }
     })
+
+    getXPath(`(${input})[${x}]`).addEventListener('keyup', (event) => {
+        if (event.key === 'Enter') {
+            submitForm.click()
+        }
+    })
 }
 
 // submit form
 function validateForm() {
-    if ((inputName.value.length > 1 && inputName.value !== '')
-    && (inputPhone.value.length > 1 && inputPhone.value !== '')) {
+    let validPhone = /^[0-9-+\s]+$/i.test(inputPhone.value)
+    let validName = /^[a-zA-Z\u0590-\u05FF ,.'-]+$/i.test(inputName.value)
+
+    if (validPhone && validName) {
         submitForm.disabled = false
         submitForm.style.cursor = 'pointer'
     } else {
@@ -63,27 +70,49 @@ form.addEventListener('submit', (event) => {
         headers: {
             'Accept': 'application/json'
         }
-        
-    }).then(response => {
-        
-        console.log(response)
-    }).catch(error => {
 
+    }).then(response => {
+        displayModal(
+            'success',
+            'message sent! 🤑',
+            'we will get back to you as soon as possible'
+        )
+        console.log(response)
+        
+    }).catch(error => {
+        displayModal(
+            'failure',
+            'Oops! ⚠️',
+            'There seems to be a problem with your internet connection, reconnect and try again'
+        )
         console.log(error)
     })
-    
 })
 
-
-function displayModal(title, body) {
+// display modal with a status
+function displayModal(status, title, body) {
     openModal.forEach(button => {
         button.addEventListener('click', () => {
             let modal = document.querySelector(button.dataset.modalTarget)
             if (modal == null) return
+
             modal.classList.add('active')
             overlay.classList.add('active')
+
+            modalUser.style.marginBottom = '-15px'
+            modalUser.innerText = `Thanks ${inputName.value},`
             modalTitle.innerText = title
             modalBody.innerText = body
+
+            if (status === 'success') {
+                modalTitle.style.color = softGreen
+                modal.style.border = `2px solid ${softGreen}`
+                modalHeader.style.borderBottom = `2px solid ${softGreen}`
+            } else if (status === 'failure') {
+                modalTitle.style.color = softRed
+                modal.style.border = `2px solid ${softRed}`
+                modalHeader.style.borderBottom = `2px solid ${softRed}`
+            }
         })
     })
     
@@ -93,6 +122,7 @@ function displayModal(title, body) {
             if (modal == null) return
             modal.classList.remove('active')
             overlay.classList.remove('active')
+            form.reset()
         })
     })
     
@@ -102,50 +132,21 @@ function displayModal(title, body) {
             if (modal == null) return
             modal.classList.remove('active')
             overlay.classList.remove('active')
+            form.reset()
         })
     })
+
+    // add form reset when clicking on modal links
+    let modalLinks = document.getElementsByClassName('modal-link')
+    for (let x = 0; x < modalLinks.length; x++) {
+        modalLinks[x].setAttribute('onclick', () => { form.reset() })
+    }
 }
 
-
-
-        // statusIcon.innerHTML = '&#129297;'
-        // statusHeader.innerHTML = 'Message has been sent!'
-        // statusMessage.innerHTML = 'We will start saving you money as soon as possible'
-        // statusIcon.style.fontSize = '50px'
-        // statusIcon.style.color = softGreen
-        // statusHeader.style.color = softGreen
-        // popUp.style.border = `2px solid ${softGreen}`
-        // statusIcon.style.opacity = '1'
-        // statusHeader.style.opacity = '1'
-        // statusMessage.style.opacity = '1'
-        
-        // closePopUp.onclick = () => {
-        //     overlay.style.opacity = '0'
-        //     popUp.style.opacity = '0'
-        //     overlay.style.display = 'none'
-        //     popUp.style.display = 'none'
-        //     form.reset()
-        //     window.location.href = url
-        // }
-
-
-        // statusIcon.innerHTML = '&#9888;'
-        // statusHeader.innerHTML = 'Oops!'
-        // statusMessage.innerHTML = error
-        // statusIcon.style.fontSize = '50px'
-        // statusIcon.style.color = softRed
-        // statusHeader.style.color = softRed
-        // popUp.style.border = `2px solid ${softRed}`
-        // statusIcon.style.opacity = '1'
-        // statusHeader.style.opacity = '1'
-        // statusMessage.style.opacity = '1'
-        
-        // setTimeout(() => {
-        //     overlay.style.opacity = '0'
-        //     popUp.style.opacity = '0'
-        //     setTimeout(() => {
-        //         overlay.style.display = 'none'
-        //         popUp.style.display = 'none'
-        //         form.reset()
-        //     }, 1000)
-        // }, 3000)
+// close modal when pressing esc
+body.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') { 
+        document.querySelector('.modal-close').click()
+        form.reset()
+    }
+})

@@ -74,13 +74,13 @@
         <section class="contact">
             <div class="contact-row">
                 <div class="contact-col"> <!-- action="https://formspree.io/f/xleayjjd" -->
-                    <form id="contact-form"  method="POST" autocomplete="off">
+                    <form  method="POST" onkeyup="validateForm()" id="contact-form" autocomplete="off">
                         <label for="name" class="form-label">name</label>
-                        <input onkeyup="validateForm()" type="text" name="name" id="name" class="form-input" maxlength="99" required>
+                        <input  type="text" name="name" id="name" class="form-input" maxlength="99" required>
                         <span class="asterisk"></span>
 
                         <label for="phone" class="form-label">phone number</label>
-                        <input onkeyup="validateForm()" type="text" name="phone" id="phone" class="form-input" maxlength="99" required>
+                        <input type="text" name="phone" id="phone" class="form-input" maxlength="99" required>
                         <span class="asterisk"></span>
 
                         <label for="email" class="form-label">email address</label>
@@ -204,7 +204,13 @@
                 <button class="modal-close" data-modal-close>&times;</button>
             </div>
             <div class="modal-body">
+                <p id="modal-user"></p>
                 <p id="modal-body-text"></p>
+            </div>
+            <div class="modal-links">
+                <a href="/" class="hero-btn btn-black modal-link">home</a>
+                <a href="services"class="hero-btn btn-black modal-link">services</a>
+                <a href="articles" class="hero-btn btn-black modal-link">articles</a>
             </div>
         </div>
 

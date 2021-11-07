@@ -10,7 +10,6 @@ function backToHeader() {
 }
 
 menu.onclick = () => {
-    let body = document.querySelector('body')
     body.classList.contains('stop-scrolling') 
     ? body.classList.remove('stop-scrolling')
     : body.classList.add('stop-scrolling')
