@@ -7,6 +7,7 @@
 .location iframe {
     width: 100%;
     border-radius: 5px;
+    border: 1px solid var(--soft-black);
 }
 
 .contact {
@@ -36,7 +37,7 @@
 
 .contact-info {
     font-size: 20px;
-    margin-top: 15px;
+    margin-top: 20px;
 }
 
 .contact-col i, .contact-col p {
@@ -207,10 +208,9 @@ textarea {
         flex-direction: column;
     }
     .form-label {
-        top: 40px;
+        top: 37px;
         left: 20px;
         position: relative;
-        transition: all 0.5;
     }
     .form-label {
         font-size: 15px;

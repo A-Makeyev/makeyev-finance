@@ -54,9 +54,13 @@ function validateForm() {
     if (validPhone && validName) {
         submitForm.disabled = false
         submitForm.style.cursor = 'pointer'
+        submitForm.classList.remove('btn-black')
+        submitForm.classList.add('btn-blue')
     } else {
         submitForm.disabled = true
         submitForm.style.cursor = 'not-allowed'
+        submitForm.classList.remove('btn-blue')
+        submitForm.classList.add('btn-black')
     }
 }
 
@@ -75,7 +79,7 @@ form.addEventListener('submit', (event) => {
         displayModal(
             'success',
             'message sent! 🤑',
-            'we will get back to you as soon as possible'
+            'we will get back to you as soon as possible.'
         )
         console.log(response)
         
@@ -83,7 +87,7 @@ form.addEventListener('submit', (event) => {
         displayModal(
             'failure',
             'Oops! ⚠️',
-            'There seems to be a problem with your internet connection, reconnect and try again'
+            'There seems to be a problem with your internet connection, reconnect and try again.'
         )
         console.log(error)
     })
@@ -99,7 +103,6 @@ function displayModal(status, title, body) {
             modal.classList.add('active')
             overlay.classList.add('active')
 
-            modalUser.innerText = `Thanks ${inputName.value},`
             modalTitle.innerText = title
             modalBody.innerText = body
 
@@ -107,10 +110,12 @@ function displayModal(status, title, body) {
                 modalTitle.style.color = softGreen
                 modal.style.border = `2px solid ${softGreen}`
                 modalHeader.style.borderBottom = `2px solid ${softGreen}`
+                modalUser.innerText = `Thanks ${inputName.value},`
             } else if (status === 'failure') {
                 modalTitle.style.color = softRed
                 modal.style.border = `2px solid ${softRed}`
                 modalHeader.style.borderBottom = `2px solid ${softRed}`
+                modalUser.innerText = `Dear ${inputName.value},`
             }
         })
     })
