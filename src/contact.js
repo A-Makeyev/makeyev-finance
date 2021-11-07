@@ -99,7 +99,6 @@ function displayModal(status, title, body) {
             modal.classList.add('active')
             overlay.classList.add('active')
 
-            modalUser.style.marginBottom = '-15px'
             modalUser.innerText = `Thanks ${inputName.value},`
             modalTitle.innerText = title
             modalBody.innerText = body

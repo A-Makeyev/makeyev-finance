@@ -140,13 +140,17 @@ textarea {
     transform: rotate(360deg)
 }
 
+#modal-user {
+    font-weight: 600;
+    margin-bottom: -15px;
+}
+
 .modal-body {
     padding: 10px 15px;
 }
 
 .modal-body p {
     padding: 10px;
-    font-weight: 600;
 }
 
 .modal-links {
@@ -160,7 +164,6 @@ textarea {
     padding: 10px;
     font-size: 15px;
     font-weight: 600;
-    border-width: 2px;
 }
 
 #overlay {
