@@ -107,7 +107,7 @@ submitForm.addEventListener('click', () => {
     setTimeout(() => {
         modal.classList.add('active')
         overlay.classList.add('active')
-    }, 500)
+    }, 750)
 })
 
 form.addEventListener('submit', (event) => {
