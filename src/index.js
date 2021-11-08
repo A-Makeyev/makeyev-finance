@@ -1,5 +1,8 @@
 const 
 
+dev = 'http://127.0.0.1:5500/',
+prod = 'https://makeyev-finance.netlify.app'
+
 // colors
 softWhite = 'aliceblue',
 softRed = 'rgb(210, 60, 60)',

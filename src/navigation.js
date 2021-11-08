@@ -1,14 +1,18 @@
-function backToHeader() {
-    const scrollTop = () => {
-    let top = document.documentElement.scrollTop || document.body.scrollTop
-        if (top > 0) {
-            window.requestAnimationFrame(scrollTop)
-            window.scrollTo(0, top - top / 10)
-        }
-    }
-    scrollTop()
-}
+// change url's endings to .html on development server
+(function setLinks() {
+    let url = window.location.href
+    let links = document.getElementsByTagName('a')
 
+    if (url.includes(dev)) {
+        for (let x = 0; x < links.length; x++) {
+            if (links[x].href.includes('services')) links[x].href += '.html'
+            if (links[x].href.includes('articles')) links[x].href += '.html'
+            if (links[x].href.includes('contact')) links[x].href += '.html'
+        }
+    } 
+})()
+
+// stop scrolling when opening nav menu
 menu.onclick = () => {
     body.classList.contains('stop-scrolling') 
     ? body.classList.remove('stop-scrolling')
@@ -85,8 +89,7 @@ window.addEventListener('scroll', () => {
     }
 })
 
-/* footer */
-
+// footer
 trademark.innerHTML =
 `
     <span>
@@ -115,3 +118,14 @@ footerLinksHover.innerHTML =
 
 document.getElementsByTagName('head')[0].appendChild(footerLinks)
 document.getElementsByTagName('head')[0].appendChild(footerLinksHover)
+
+function backToHeader() {
+    const scrollTop = () => {
+    let top = document.documentElement.scrollTop || document.body.scrollTop
+        if (top > 0) {
+            window.requestAnimationFrame(scrollTop)
+            window.scrollTo(0, top - top / 10)
+        }
+    }
+    scrollTop()
+}
