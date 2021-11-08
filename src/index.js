@@ -1,7 +1,9 @@
 const 
 
 dev = 'http://127.0.0.1:5500/',
-prod = 'https://makeyev-finance.netlify.app'
+prod = 'https://makeyev-finance.netlify.app',
+formspree = 'https://formspree.io/f/xleayjjd',
+formsubmit = 'https://formsubmit.co/anatoly.makeyev@gmail.com',
 
 // colors
 softWhite = 'aliceblue',
@@ -36,6 +38,7 @@ submitForm = document.getElementById('submit-form'),
 modalHeader = document.querySelector('.modal-header'),
 modalBody = document.getElementById('modal-body-text'),
 modalTitle = document.getElementById('modal-title-text'),
+formInputs = document.getElementsByClassName('form-input'),
 modalLinks = document.getElementsByClassName('modal-links'),
 openModal = document.querySelectorAll('[data-modal-target]'),
 closeModal = document.querySelectorAll('[data-modal-close]')

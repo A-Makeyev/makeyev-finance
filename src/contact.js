@@ -1,3 +1,32 @@
+// add a button to fill form on dev environment
+(function fillForm() {
+    if (window.location.href.includes(dev)) {
+        let button = document.createElement('button')
+        button.setAttribute('id', 'dev-btn')
+        button.innerText = 'add test details'
+        button.className = 'hero-btn btn-orange'
+        document.querySelector('.contact-info').appendChild(button)
+
+        button.addEventListener('click', () => {
+            let labels = document.getElementsByClassName('form-label')
+            let details = [
+                'Estebon Villalon',
+                '+972-52-696-9696',
+                'villabon@este.lon',
+                'Baguette Du Fromage'
+            ]
+
+            for (let x = 0; x < labels.length; x++) {
+                setTimeout(() => {
+                    formInputs[x].focus()
+                    formInputs[x].value = details[x]
+                }, (x * 750))
+            }
+            allowSubmit()
+        })
+    }
+})()
+
 // find element by xpath
 function getXPath(path) {
     return document.evaluate(
@@ -53,16 +82,24 @@ function validateForm() {
     let validName = /^[a-zA-Z\u0590-\u05FF ,.'-]+$/i.test(inputName.value)
     
     if (validPhone && validEmail && validName) {
-        submitForm.disabled = false
-        submitForm.style.cursor = 'pointer'
-        submitForm.classList.remove('btn-black')
-        submitForm.classList.add('btn-blue')
+        allowSubmit()
     } else {
-        submitForm.disabled = true
-        submitForm.style.cursor = 'not-allowed'
-        submitForm.classList.remove('btn-blue')
-        submitForm.classList.add('btn-black')
+        preventSubmit()
     }
+}
+
+function allowSubmit() {
+    submitForm.disabled = false
+    submitForm.style.cursor = 'pointer'
+    submitForm.classList.remove('btn-black')
+    submitForm.classList.add('btn-blue')
+}
+
+function preventSubmit() {
+    submitForm.disabled = false
+    submitForm.style.cursor = 'pointer'
+    submitForm.classList.remove('btn-black')
+    submitForm.classList.add('btn-blue')
 }
 
 // only clickable after form is validated
@@ -75,12 +112,13 @@ submitForm.addEventListener('click', () => {
 
 form.addEventListener('submit', (event) => {
     event.preventDefault()
-
+    console.log(event.target.action)
     let data = new FormData(event.target)
     fetch(event.target.action, {
         method: form.method,
         body: data,
         headers: {
+            'Content-Type': 'application/json',
             'Accept': 'application/json'
         }
 
@@ -175,4 +213,9 @@ function doubleClick(target) {
         'cancelable': true
     })
     target.dispatchEvent(event)
+}
+
+function sleep(seconds) {
+    let time = new Date().getTime() + (seconds * 1000);
+    while (new Date().getTime() <= time) {}
 }

@@ -73,8 +73,8 @@
 
         <section class="contact">
             <div class="contact-row">
-                <div class="contact-col">
-                    <form action="https://formspree.io/f/xleayjjd" method="POST" onkeyup="validateForm()" id="contact-form" autocomplete="off">
+                <div class="contact-col"> 
+                    <!-- <form action="https://formspree.io/f/xleayjjd" method="POST" onkeyup="validateForm()" id="contact-form" autocomplete="off">
                         <label for="name" class="form-label">name</label>
                         <input  type="text" name="name" id="name" class="form-input" maxlength="99" required>
                         <span class="asterisk"></span>
@@ -90,19 +90,30 @@
                         <textarea type="text" name="message" id="message" class="form-input" rows="5" maxlength="999"></textarea>
 
                         <button type="submit" id="submit-form" class="hero-btn btn-black" disabled>send</button>
-                    </form>
+                    </form> -->
 
-                    <!-- <form action="https://formsubmit.co/anatoly.makeyev@gmail.com" method="POST">
+                    <form action="https://formsubmit.co/anatoly.makeyev@gmail.com" method="POST" onkeyup="validateForm()" id="contact-form" autocomplete="off">
                         <input type="hidden" name="_next" value="https://makeyev-finance.netlify.app/redirect.html">
                         <input type="hidden" name="_captcha" value="false">
                         <input type="hidden" name="_template" value="table">
                         <input type="hidden" name="_subject" value="New Customer">
-                        <input type="text" name="name" placeholder="Name" required>
-                        <input type="email" name="email" placeholder="Email" required>
-                        <input type="tel" name="phone" placeholder="Phone" required>
-                        <textarea rows="10" name="message" placeholder="Message" required></textarea>
-                        <button type="submit" class="hero-btn btn-blue">send</button>
-                    </form> -->
+
+                        <label for="name" class="form-label">name</label>
+                        <input  type="text" name="name" id="name" class="form-input" maxlength="99" required>
+                        <span class="asterisk"></span>
+
+                        <label for="phone" class="form-label">phone number</label>
+                        <input type="tel" name="phone" id="phone" class="form-input" maxlength="99" required>
+                        <span class="asterisk"></span>
+
+                        <label for="email" class="form-label">email address</label>
+                        <input type="email" name="email" id="email" class="form-input" maxlength="99">
+                        
+                        <label for="message" class="form-label">tell us how can we help</label>
+                        <textarea type="text" name="message" id="message" class="form-input" rows="5" maxlength="999"></textarea>
+
+                        <button type="submit" id="submit-form" class="hero-btn btn-black" disabled>send</button>
+                    </form>
 
                 </div>
                 

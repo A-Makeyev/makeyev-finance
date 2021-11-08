@@ -148,6 +148,7 @@ a {
     backdrop-filter: blur(10px);
     text-transform: capitalize;
     transition: all 0.5s;
+    border-radius: 5px;
     cursor: pointer;
 }
 
@@ -177,6 +178,39 @@ a {
 .btn-black:hover {
     color: var(--soft-white);
     background: var(--soft-black);
+}
+
+.btn-green {
+    background: transparent;
+    color: var(--soft-green);
+    border: 1px solid var(--soft-green);
+}
+
+.btn-green:hover {
+    color: var(--soft-white);
+    background: var(--soft-green);
+}
+
+.btn-red {
+    background: transparent;
+    color: var(--soft-red);
+    border: 1px solid var(--soft-red);
+}
+
+.btn-red:hover {
+    color: var(--soft-white);
+    background: var(--soft-red);
+}
+
+.btn-orange {
+    background: transparent;
+    color: var(--soft-orange);
+    border: 1px solid var(--soft-orange);
+}
+
+.btn-orange:hover {
+    color: var(--soft-white);
+    background: var(--soft-orange);
 }
 
 @media(max-width: 770px) {
