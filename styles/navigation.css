@@ -185,6 +185,12 @@ nav .menu-icon .line {
     nav #nav-links {
         float: none;
     }
+    #trademark, .footer-links p {
+        font-size: 15px;
+    }
+    .socials, .socials i {
+        font-size: 20px;
+    }
 }
 
 @media screen and (max-width: 770px) {
@@ -244,12 +250,6 @@ nav .menu-icon .line {
     }
     nav :checked ~ .menu-icon .line:nth-child(3) {
         transform: translateY(-10px) rotate(-225deg);
-    }
-    #trademark, .footer-links p {
-        font-size: 15px;
-    }
-    .socials, .socials i {
-        font-size: 25px;
     }
 }
 

@@ -12,6 +12,8 @@
     --soft-black-background: rgba(14, 14, 14, 0.4);
     --soft-white-background: rgba(255, 255, 255, 0.2);
     --white-blue-gradient: -webkit-linear-gradient(85deg, var(--soft-white), var(--soft-blue));
+    --desktop-text-size: '20px';
+    --mobile-text-size: '15px';
 }
 
 body {
@@ -131,13 +133,13 @@ a {
 }
 
 .text-box p {
-    font-size: 2rem;
+    font-size: 2em;
     margin: 10px 0 40px;
     color: var(--soft-white);
 }
 
 .hero-btn {
-    font-size: 2rem;
+    font-size: 1.5em;
     padding: 15px 35px;
     position: relative;
     display: inline-block;
@@ -150,6 +152,7 @@ a {
     transition: all 0.5s;
     border-radius: 5px;
     cursor: pointer;
+    outline: none;
 }
 
 .btn-white {
@@ -227,7 +230,7 @@ a {
         font-size: 2.5em;
     } 
     .hero-btn, .text-box p {
-        font-size: 1.5em;
+        font-size: 1em;
     }
 }
 
@@ -533,6 +536,15 @@ a {
 @media (max-width: 700px) {
     .sub-header {
         height: 30vh;
+    }
+    .text-box h1 {
+        font-size: 2rem;
+    }
+    .text-box p {
+        font-size: 1em;
+    }
+    .hero-btn {
+        font-size: 1em;
     }
     .contact-row,
     .course-row, 
