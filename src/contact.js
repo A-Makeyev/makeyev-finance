@@ -110,12 +110,12 @@ submitForm.addEventListener('click', () => {
     }, 750)
 })
 
-form.addEventListener('submit', (event) => {
+contactForm.addEventListener('submit', async (event) => {
     event.preventDefault()
-    console.log(event.target.action)
+
     let data = new FormData(event.target)
     fetch(event.target.action, {
-        method: form.method,
+        method: contactForm.method,
         body: data,
         headers: {
             'Content-Type': 'application/json',
@@ -194,12 +194,12 @@ body.addEventListener('keydown', (event) => {
 
 // add form reset when clicking on modal links
 for (let x = 0; x < modalLinks[0].children.length; x++) {
-    modalLinks[0].children[x].onclick = () => { form.reset() }
+    modalLinks[0].children[x].onclick = () => { contactForm.reset() }
 }
 
 // reset form and submit button
 function resetForm() {
-    form.reset()
+    contactForm.reset()
     submitForm.disabled = true
     submitForm.classList.add('btn-black')
     submitForm.style.cursor = 'not-allowed'
