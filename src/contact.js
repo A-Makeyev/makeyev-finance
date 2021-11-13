@@ -137,13 +137,13 @@ contactForm.addEventListener('submit', async (event) => {
             SecureToken: smtpToken,
             To: emailTo,
             From: emailFrom,
-            Subject: 'New Customer 🤑',
+            Subject: 'New Customer 🤩',
             Body: createEmailBody()
             
         }).then(response => {
             displayModalContent(
                 'success',
-                'message sent! ✔️',
+                'message sent! 🤑',
                 'we will get back to you as soon as possible.'
             )
             preventSubmit()
@@ -159,8 +159,8 @@ contactForm.addEventListener('submit', async (event) => {
         // user is offline
         displayModalContent(
             'failure',
-            'Oops! ⚠️',
-            'There seems to be a problem with your internet connection, reconnect and try again.'
+            'Oops! 😡',
+            'there seems to be a problem with your internet connection, reconnect and try again.'
         )
         allowSubmit()
         submitForm.textContent = 'Send'
@@ -248,13 +248,14 @@ function createEmailBody() {
 
     return `
             <div>
+                <span>( ° ᴗ ° )</span>
                 <h4>
                     <span>New submission from</span> 
                     <a href="${prod}" target="_blank" style="text-decoration: none;">
                         <span style="color: ${softBlue};">Makeyev Finance</span>
                     </a>
                 </h4>
-                <table style="border: 1px solid ${softGrey}; border-collapse: collapse; width: 50%;">
+                <table style="border: 1px solid ${softGrey}; border-collapse: collapse; width: 90%;">
                     <tbody style="font-family: 'Fira Code', sans-serif; font-size: 15px; color: ${softBlack}">
                         <tr style="border: 1px solid ${softBlue}; background: ${softBlue}; color: ${softWhite}; padding: 15px 10px;">
                             <td style="padding: 10px;"><strong>Details</strong></td>
