@@ -126,6 +126,7 @@ nav .menu-icon .line {
 .footer {
     width: 100%;
     padding: 10px 0;
+    user-select: none;
     text-align: center;
     color: var(--soft-white);
     background: var(--soft-black);
