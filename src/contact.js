@@ -248,7 +248,6 @@ function createEmailBody() {
 
     return `
             <div>
-                <span>( ° ᴗ ° )</span>
                 <h4>
                     <span>New submission from</span> 
                     <a href="${prod}" target="_blank" style="text-decoration: none;">
@@ -299,6 +298,7 @@ function createEmailBody() {
                     </tbody>
                 </table>
                 <h5 style="color: ${softBlack}">Sent on ${currentDate()}</h5>
+                <span>( ° ᴗ ° )</span>
             </div>
            `
 }
