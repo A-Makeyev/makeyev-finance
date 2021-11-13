@@ -12,6 +12,21 @@
     } 
 })()
 
+// display a message if the user is offline
+function handleConnectionChange(event) {
+    if (event.type == 'offline') {
+        offline.style.display = 'block'
+        offline.textContent = 'no internet connection'
+    }
+
+    if (event.type == 'online') {
+        offline.style.display = 'none'
+    }
+}
+
+window.addEventListener('online', handleConnectionChange)
+window.addEventListener('offline', handleConnectionChange)
+
 // stop scrolling when opening nav menu
 menu.onclick = () => {
     body.classList.contains('stop-scrolling') 

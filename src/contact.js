@@ -3,7 +3,7 @@
     if (window.location.href.includes(dev)) {
         let button = document.createElement('button')
         button.setAttribute('id', 'dev-btn')
-        button.innerText = 'add test details'
+        button.textContent = 'add test details'
         button.className = 'hero-btn btn-orange'
         document.querySelector('.contact-info').appendChild(button)
 
@@ -23,6 +23,11 @@
                 }, (x * 750))
             }
             allowSubmit()
+
+            if (window.navigator.onLine) {
+                offline.style.display = 'block'
+                offline.textContent = `<h1>Dear ${inputName.value}, you are offline</h1>`
+            }
         })
     }
 })()
@@ -48,8 +53,8 @@ for (let x = 1; x <= inputs; x++) {
         getXPath(`(${label})[${x}]`).style.left = '0'
         getXPath(`(${label})[${x}]`).style.top = '0'
         setTimeout(() => { 
-            if (getXPath(`(${label})[${x}]`).innerText.slice(-1) !== ':') {
-                getXPath(`(${label})[${x}]`).innerText += ':'
+            if (getXPath(`(${label})[${x}]`).textContent.slice(-1) !== ':') {
+                getXPath(`(${label})[${x}]`).textContent += ':'
             }
         }, 250)
     })
@@ -62,8 +67,8 @@ for (let x = 1; x <= inputs; x++) {
             getXPath(`(${label})[${x}]`).style.left = '20px'
             getXPath(`(${label})[${x}]`).style.top = '35px'
             setTimeout(() => { 
-                let text = getXPath(`(${label})[${x}]`).innerText.slice(0, -1)
-                getXPath(`(${label})[${x}]`).innerText = text
+                let text = getXPath(`(${label})[${x}]`).textContent.slice(0, -1)
+                getXPath(`(${label})[${x}]`).textContent = text
             }, 250)
         }
     })
@@ -77,9 +82,27 @@ for (let x = 1; x <= inputs; x++) {
 
 // submit form
 function validateForm() {
-    let validPhone = /^[0-9-+\s]+$/i.test(inputPhone.value)
-    let validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail.value)
-    let validName = /^[a-zA-Z\u0590-\u05FF ,.'-]+$/i.test(inputName.value)
+    const validPhone = /^[0-9-+\s]+$/i.test(inputPhone.value)
+    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail.value)
+    const validName = /^[a-zA-Z\u0590-\u05FF ,.'-]+$/i.test(inputName.value)
+    
+    inputPhone.onchange = () => {
+        if (!validPhone) {
+            inputPhone.style.borderColor = softRed
+        }
+    }
+
+    inputEmail.onchange = () => {
+        if (!validEmail) {
+            inputEmail.style.borderColor = softRed
+        }
+    }
+
+    inputName.onchange = () => {
+        if (!validName) {
+            inputName.style.borderColor = softRed
+        }
+    }
     
     if (validPhone && validEmail && validName) {
         allowSubmit()
@@ -102,55 +125,79 @@ function preventSubmit() {
     submitForm.classList.add('btn-blue')
 }
 
-// only clickable after form is validated
-submitForm.addEventListener('click', () => {
-    setTimeout(() => {
-        modal.classList.add('active')
-        overlay.classList.add('active')
-    }, 750)
-})
-
 contactForm.addEventListener('submit', async (event) => {
     event.preventDefault()
 
-    let data = new FormData(event.target)
-    fetch(event.target.action, {
-        method: contactForm.method,
-        body: data,
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
+    preventSubmit()
+    submitForm.textContent = 'Sending...'
+    submitForm.style.pointerEvents = 'none'
+    
+    function createEmailBody() {
+        let name = inputName.value
+        let phone = inputPhone.value
+        let email = inputEmail.value
+        let message = inputMessage.value
 
-    }).then(response => {
-        displayModalContent(
-            'success',
-            'message sent! 🤑',
-            'we will get back to you as soon as possible.'
-        )
-        console.log(response)
-        
-    }).catch(error => {
+        return 
+        `
+            <h1>${inputName.value}</h1>
+        `
+    }
+
+    if (window.navigator.onLine) {
+        Email.send({
+            // enable less secure apps
+            // https://myaccount.google.com/lesssecureapps
+            SecureToken: smtpToken,
+            To: emailTo,
+            From: emailFrom,
+            Subject: 'New Customer 🤑',
+            Body: createEmailBody()
+            
+        }).then(response => {
+            displayModalContent(
+                'success',
+                'message sent! 🤑',
+                'we will get back to you as soon as possible.'
+            )
+            allowSubmit()
+            submitForm.textContent = 'Send'
+            submitForm.style.pointerEvents = 'all'
+            console.log(response)
+    
+        }).catch(error => {
+            throw new Error(error)
+        })
+
+    } else {
+        // user is offline
         displayModalContent(
             'failure',
             'Oops! ⚠️',
             'There seems to be a problem with your internet connection, reconnect and try again.'
         )
-        throw new Error(error)
-    })
+        allowSubmit()
+        submitForm.textContent = 'Send'
+        submitForm.style.pointerEvents = 'all'
+
+        offline.style.display = 'block'
+        offline.textContent = `<h1>Dear ${inputName.value}, you are offline</h1>`
+
+    }
+    return false
 })
 
 // display modal with a status
 function displayModalContent(status, title, body) {
-    modalTitle.innerText = title
-    modalBody.innerText = body
+    modalTitle.textContent = title
+    modalBody.textContent = body
 
     if (status === 'success') {
         modalTitle.style.color = softGreen
         modal.style.border = `2px solid ${softGreen}`
         modalHeader.style.borderBottom = `2px solid ${softGreen}`
         modalUser.style.display = 'block'
-        modalUser.innerText = `Thanks ${inputName.value},`
+        modalUser.textContent = `Thanks ${inputName.value},`
         modalLinks[0].style.display = 'block'
 
     } else if (status === 'failure') {
@@ -160,6 +207,9 @@ function displayModalContent(status, title, body) {
         modalUser.style.display = 'none'
         modalLinks[0].style.display = 'none'
     }
+
+    modal.classList.add('active')
+    overlay.classList.add('active')
 }
 
 // close modals when clicking on close modal button
@@ -169,7 +219,7 @@ closeModal.forEach(button => {
         if (modal == null) return
         modal.classList.remove('active')
         overlay.classList.remove('active')
-        resetForm()
+        contactForm.reset()
     })
 })
 
@@ -180,7 +230,7 @@ overlay.addEventListener('click', () => {
         if (modal == null) return
         modal.classList.remove('active')
         overlay.classList.remove('active')
-        resetForm()
+        contactForm.reset()
     })
 })
 
@@ -188,34 +238,11 @@ overlay.addEventListener('click', () => {
 body.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') { 
         document.querySelector('.modal-close').click()
-        resetForm()
+        contactForm.reset()
     }
 })
 
 // add form reset when clicking on modal links
 for (let x = 0; x < modalLinks[0].children.length; x++) {
     modalLinks[0].children[x].onclick = () => { contactForm.reset() }
-}
-
-// reset form and submit button
-function resetForm() {
-    contactForm.reset()
-    submitForm.disabled = true
-    submitForm.classList.add('btn-black')
-    submitForm.style.cursor = 'not-allowed'
-}
-
-// double click
-function doubleClick(target) {
-    let event = new MouseEvent('dblclick', {
-        'view': window,
-        'bubbles': true,
-        'cancelable': true
-    })
-    target.dispatchEvent(event)
-}
-
-function sleep(seconds) {
-    let time = new Date().getTime() + (seconds * 1000);
-    while (new Date().getTime() <= time) {}
 }

@@ -2,8 +2,9 @@ const
 
 dev = 'http://127.0.0.1:5500/',
 prod = 'https://makeyev-finance.netlify.app',
-formspree = 'https://formspree.io/f/xleayjjd',
-formsubmit = 'https://formsubmit.co/anatoly.makeyev@gmail.com',
+smtpToken = 'f4f02643-1db4-40ed-b666-cb10d6add9d3',
+emailFrom = 'makeyev.finance@gmail.com',
+emailTo = 'anatoly.makeyev@gmail.com',
 
 // colors
 softWhite = 'aliceblue',
@@ -21,6 +22,7 @@ loadingScreen = document.getElementById('loading-screen'),
 // navigation
 menu = document.getElementById('menu'),
 nav = document.getElementById('navbar'),
+offline = document.getElementById('offline'),
 logo = document.getElementById('logo-image'),
 trademark = document.getElementById('trademark'),
 navLinks = document.getElementsByClassName('nav-link'),
@@ -42,3 +44,18 @@ formInputs = document.getElementsByClassName('form-input'),
 modalLinks = document.getElementsByClassName('modal-links'),
 openModal = document.querySelectorAll('[data-modal-target]'),
 closeModal = document.querySelectorAll('[data-modal-close]')
+
+// functions
+function doubleClick(target) {
+    let event = new MouseEvent('dblclick', {
+        'view': window,
+        'bubbles': true,
+        'cancelable': true
+    })
+    target.dispatchEvent(event)
+}
+
+function sleep(seconds) {
+    let time = new Date().getTime() + (seconds * 1000);
+    while (new Date().getTime() <= time) {}
+}
