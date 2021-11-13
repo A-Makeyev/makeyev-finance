@@ -90,7 +90,7 @@
 <body>
     <div class="container">
         <form method="POST" class="form" autocomplete="off">
-            <!-- <div class="form-group">
+            <div class="form-group">
                 <label for="name" class="form-label">Your Name</label>
                 <input type="text" class="form-control" id="name" name="name" placeholder="Jane Doe" tabindex="1" required>
             </div>
@@ -105,31 +105,29 @@
             <div class="form-group">
                 <label for="message" class="form-label">Message</label>
                 <textarea class="form-control" rows="5" cols="50" id="message" name="message" placeholder="Enter Message..." tabindex="4"></textarea>
-            </div> -->
+            </div>
             <div>
                 <button type="submit" class="btn" onclick="sendEmail()">Send Message!</button>
             </div>
         </form>
     </div>
     <script>
-        //$(function() {
-          //  $(".form-control").on('focus', function(){
-            //    $(this).parents(".form-group").addClass('focused');
-         //   });
-         //   $(".form-control").on('blur', function(){
-         //       $(this).parents(".form-group").removeClass('focused');
-        //    });
-      //  });
+        $(function() {
+          $(".form-control").on('focus', function(){
+                $(this).parents(".form-group").addClass('focused');
+            });
+            $(".form-control").on('blur', function(){
+              $(this).parents(".form-group").removeClass('focused');
+            });
+        });
 
         function sendEmail() {
             Email.send({
                 // enable less secure apps
                 // https://myaccount.google.com/lesssecureapps
-                Host : "smtp.gmail.com",
-                Username : "anatoly.makeyev@cloudbeat.io",
-                Password : "iLoveNasa69",
+                SecureToken : 'f4f02643-1db4-40ed-b666-cb10d6add9d3',
                 To : 'anatoly.makeyev@gmail.com',
-                From : "anatoly.makeyev@cloudbeat.io",
+                From : "makeyev.finance@gmail.com",
                 Subject : "This is the subject",
                 Body : "And this is the body"
             }).then(
