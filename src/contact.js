@@ -21,7 +21,7 @@
                 setTimeout(() => {
                     formInputs[x].focus()
                     formInputs[x].value = details[x]
-                }, (x * 750))
+                }, (x * 500))
             }
             allowSubmit()
         })
@@ -272,8 +272,10 @@ function createEmailBody() {
                             <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
                                 <strong>Phone</strong>
                             </td>
-                            <td style="padding: 10px;">
-                                <pre style="margin:0; white-space: pre-wrap;">${userPhone}</pre>
+                            <td style="padding: 10px; cursor: pointer;">
+                                <pre onclick="window.open('tel:${userPhone}')" style="margin: 0; white-space: pre-wrap;">
+                                    ${userPhone}
+                                </pre>
                             </td>
                         </tr>
 
@@ -281,8 +283,10 @@ function createEmailBody() {
                             <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
                                 <strong>Email</strong>
                             </td>
-                            <td style="padding: 10px;">
-                                <pre style="margin:0; white-space: pre-wrap;">${userEmail}</pre>
+                            <td style="padding: 10px; cursor: pointer;">
+                                <pre onclick="window.open('mailto:${userEmail}')" style="margin: 0; white-space: pre-wrap;">
+                                    ${userEmail}
+                                </pre>
                             </td>
                         </tr>
 
@@ -296,7 +300,7 @@ function createEmailBody() {
                         </tr>
                     </tbody>
                 </table>
-                <h4>Sent on ${currentDate()}</h4>
+                <h5>Sent on ${currentDate()}</h5>
             </div>
            `
 }

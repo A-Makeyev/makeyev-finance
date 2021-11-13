@@ -13,6 +13,9 @@ softBlack = 'rgb(15, 15, 15)',
 softGreen = 'rgb(35, 210, 65)',
 softBlue = 'rgb(35, 170, 222)',
 softGrey = 'rgb(200, 200, 200)',
+softYellow = 'rgb(250, 205, 5)',
+softOrange = 'rgb(255, 125, 80)',
+softDarkBlue = 'rgb(65, 120, 235)',
 
 // loader
 body = document.querySelector('body'),
