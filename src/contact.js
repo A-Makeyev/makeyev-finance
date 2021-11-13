@@ -5,7 +5,8 @@
         button.setAttribute('id', 'dev-btn')
         button.textContent = 'add test details'
         button.className = 'hero-btn btn-orange'
-        document.querySelector('.contact-info').appendChild(button)
+        button.style.marginLeft = '10px'
+        contactForm.appendChild(button)
 
         button.addEventListener('click', () => {
             let labels = document.getElementsByClassName('form-label')
@@ -23,11 +24,6 @@
                 }, (x * 750))
             }
             allowSubmit()
-
-            if (window.navigator.onLine) {
-                offline.style.display = 'block'
-                offline.textContent = `<h1>Dear ${inputName.value}, you are offline</h1>`
-            }
         })
     }
 })()
@@ -129,21 +125,10 @@ contactForm.addEventListener('submit', async (event) => {
     event.preventDefault()
 
     preventSubmit()
-    submitForm.textContent = 'Sending...'
+    submitForm.textContent = 'sending.. '
+    submitForm.innerHTML += '<i class="fas fa-paper-plane"></i>'
     submitForm.style.pointerEvents = 'none'
     
-    function createEmailBody() {
-        let name = inputName.value
-        let phone = inputPhone.value
-        let email = inputEmail.value
-        let message = inputMessage.value
-
-        return 
-        `
-            <h1>${inputName.value}</h1>
-        `
-    }
-
     if (window.navigator.onLine) {
         Email.send({
             // enable less secure apps
@@ -157,13 +142,13 @@ contactForm.addEventListener('submit', async (event) => {
         }).then(response => {
             displayModalContent(
                 'success',
-                'message sent! 🤑',
+                'message sent! ✔️',
                 'we will get back to you as soon as possible.'
             )
-            allowSubmit()
+            preventSubmit()
             submitForm.textContent = 'Send'
             submitForm.style.pointerEvents = 'all'
-            console.log(response)
+            console.log(`Email has been sent with status: ${response}`)
     
         }).catch(error => {
             throw new Error(error)
@@ -179,32 +164,29 @@ contactForm.addEventListener('submit', async (event) => {
         allowSubmit()
         submitForm.textContent = 'Send'
         submitForm.style.pointerEvents = 'all'
-
-        offline.style.display = 'block'
-        offline.textContent = `<h1>Dear ${inputName.value}, you are offline</h1>`
-
     }
     return false
 })
 
 // display modal with a status
 function displayModalContent(status, title, body) {
+    let firstName = inputName.value.split(' ')[0]
     modalTitle.textContent = title
     modalBody.textContent = body
-
+    
     if (status === 'success') {
         modalTitle.style.color = softGreen
         modal.style.border = `2px solid ${softGreen}`
         modalHeader.style.borderBottom = `2px solid ${softGreen}`
         modalUser.style.display = 'block'
-        modalUser.textContent = `Thanks ${inputName.value},`
+        modalUser.textContent = `Thanks ${firstName},`
         modalLinks[0].style.display = 'block'
 
     } else if (status === 'failure') {
         modalTitle.style.color = softRed
         modal.style.border = `2px solid ${softRed}`
         modalHeader.style.borderBottom = `2px solid ${softRed}`
-        modalUser.style.display = 'none'
+        modalUser.textContent = `Dear ${firstName},`
         modalLinks[0].style.display = 'none'
     }
 
@@ -219,7 +201,9 @@ closeModal.forEach(button => {
         if (modal == null) return
         modal.classList.remove('active')
         overlay.classList.remove('active')
-        contactForm.reset()
+        if (window.navigator.onLine) {
+            contactForm.reset()
+        }
     })
 })
 
@@ -230,7 +214,9 @@ overlay.addEventListener('click', () => {
         if (modal == null) return
         modal.classList.remove('active')
         overlay.classList.remove('active')
-        contactForm.reset()
+        if (window.navigator.onLine) {
+            contactForm.reset()
+        }
     })
 })
 
@@ -238,11 +224,79 @@ overlay.addEventListener('click', () => {
 body.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') { 
         document.querySelector('.modal-close').click()
-        contactForm.reset()
+        if (window.navigator.onLine) {
+            contactForm.reset()
+        }
     }
 })
 
 // add form reset when clicking on modal links
 for (let x = 0; x < modalLinks[0].children.length; x++) {
-    modalLinks[0].children[x].onclick = () => { contactForm.reset() }
+    modalLinks[0].children[x].onclick = () => { 
+        if (window.navigator.onLine) {
+            contactForm.reset()
+        }
+    }
+}
+
+function createEmailBody() {
+    let userName = inputName.value
+    let userPhone = inputPhone.value
+    let userEmail = inputEmail.value
+    let userMessage = inputMessage.value
+
+    return `
+            <div>
+                <h3>
+                    <span>New submission from</span> 
+                    <a href="${prod}" target="_blank" style="text-decoration: none;">
+                        <span style="color: ${softBlue};">Makeyev Finance</span>
+                    </a>
+                </h3>
+                <table style="border: 1px solid ${softGrey}; border-collapse: collapse; width: 50%;">
+                    <tbody style="font-family: 'Fira Code', sans-serif; font-size: 15px;">
+                        <tr style="border: 1px solid ${softBlue}; background: ${softBlue}; color: ${softWhite}; padding: 15px 10px;">
+                            <td style="padding: 10px;"><strong>Details</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr style="border: 1px solid ${softGrey};">
+                            <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
+                                <strong>Name</strong>
+                            </td>
+                            <td style="padding:10px;">
+                                <pre style="margin:0; white-space: pre-wrap;">${userName}</pre>
+                            </td>
+                        </tr>
+
+                        <tr style="border: 1px solid ${softGrey};">
+                            <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
+                                <strong>Phone</strong>
+                            </td>
+                            <td style="padding: 10px;">
+                                <pre style="margin:0; white-space: pre-wrap;">${userPhone}</pre>
+                            </td>
+                        </tr>
+
+                        <tr style="border: 1px solid ${softGrey};">
+                            <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
+                                <strong>Email</strong>
+                            </td>
+                            <td style="padding: 10px;">
+                                <pre style="margin:0; white-space: pre-wrap;">${userEmail}</pre>
+                            </td>
+                        </tr>
+
+                        <tr style="border: 1px solid ${softGrey};">
+                            <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
+                                <strong>Message</strong>
+                            </td>
+                            <td style="padding: 10px;">
+                                <pre style="margin:0; white-space: pre-wrap;">${userMessage}</pre>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h4>Sent on ${currentDate()}</h4>
+            </div>
+           `
 }
