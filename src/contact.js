@@ -273,9 +273,7 @@ function createEmailBody() {
                                 <strong>Phone</strong>
                             </td>
                             <td style="padding: 10px; cursor: pointer;">
-                                <pre onclick="window.open('tel:${userPhone}')" style="margin: 0; white-space: pre-wrap;">
-                                    ${userPhone}
-                                </pre>
+                                <pre onclick="window.open('tel:${userPhone}')" style="margin: 0; white-space: pre-wrap;">${userPhone}</pre>
                             </td>
                         </tr>
 
@@ -284,9 +282,7 @@ function createEmailBody() {
                                 <strong>Email</strong>
                             </td>
                             <td style="padding: 10px; cursor: pointer;">
-                                <pre onclick="window.open('mailto:${userEmail}')" style="margin: 0; white-space: pre-wrap;">
-                                    ${userEmail}
-                                </pre>
+                                <pre onclick="window.open('mailto:${userEmail}')" style="margin: 0; white-space: pre-wrap;">${userEmail}</pre>
                             </td>
                         </tr>
 
