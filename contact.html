@@ -73,8 +73,14 @@
 
         <section class="contact">
             <div class="contact-row">
-                <div class="contact-col"> 
-                    <form action="https://formspree.io/f/xleayjjd" method="POST" onkeyup="validateForm()" id="contact-form" autocomplete="off">
+                <div class="contact-col"> <!-- id="contact-form" -->
+                    <form action="https://formsubmit.co/anatoly.makeyev@gmail.com" method="POST" onkeyup="validateForm()" autocomplete="off"> 
+                        <input type="hidden" name="_next" value="http://127.0.0.1:5500/redirect.html">
+                        <input type="hidden" name="_subject" value="New Customer! 🤑">
+                        <input type="text" name="_honey" style="display:none">
+                        <input type="hidden" name="_template" value="table">
+                        <input type="hidden" name="_captcha" value="false">
+                        
                         <label for="name" class="form-label">name</label>
                         <input  type="text" name="name" id="name" class="form-input" maxlength="99" required>
                         <span class="asterisk"></span>
@@ -91,6 +97,25 @@
 
                         <button type="submit" id="submit-form" class="hero-btn btn-black" disabled>send</button>
                     </form>
+
+                    <!-- <form action="https://formspree.io/f/xleayjjd" method="POST" onkeyup="validateForm()" id="contact-form" autocomplete="off">
+                        <label for="name" class="form-label">name</label>
+                        <input  type="text" name="name" id="name" class="form-input" maxlength="99" required>
+                        <span class="asterisk"></span>
+
+                        <label for="phone" class="form-label">phone number</label>
+                        <input type="text" name="phone" id="phone" class="form-input" maxlength="99" required>
+                        <span class="asterisk"></span>
+
+                        <label for="email" class="form-label">email address</label>
+                        <input type="email" name="email" id="email" class="form-input" maxlength="99">
+                        
+                        <label for="message" class="form-label">tell us how can we help</label>
+                        <textarea type="text" name="message" id="message" class="form-input" rows="5" maxlength="999"></textarea>
+
+                        <button type="submit" id="submit-form" class="hero-btn btn-black" disabled>send</button>
+                    </form> -->
+                    
                 </div>
                 
                 <div class="contact-col contact-info">
