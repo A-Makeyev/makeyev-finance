@@ -14,11 +14,12 @@
                 'Estebon Villalon',
                 '+972-52-696-9696',
                 'villabon@este.lon',
-                'Baguette Du Fromage'
+                'Baguette Du Fromage '
             ]
 
             for (let x = 0; x < labels.length; x++) {
                 setTimeout(() => {
+                    if (x == 3) details[x] = details[x].repeat(16)
                     formInputs[x].focus()
                     formInputs[x].value = details[x]
                 }, (x * 500))
@@ -247,14 +248,14 @@ function createEmailBody() {
 
     return `
             <div>
-                <h3>
+                <h4>
                     <span>New submission from</span> 
                     <a href="${prod}" target="_blank" style="text-decoration: none;">
                         <span style="color: ${softBlue};">Makeyev Finance</span>
                     </a>
-                </h3>
+                </h4>
                 <table style="border: 1px solid ${softGrey}; border-collapse: collapse; width: 50%;">
-                    <tbody style="font-family: 'Fira Code', sans-serif; font-size: 15px;">
+                    <tbody style="font-family: 'Fira Code', sans-serif; font-size: 15px; color: ${softBlack}">
                         <tr style="border: 1px solid ${softBlue}; background: ${softBlue}; color: ${softWhite}; padding: 15px 10px;">
                             <td style="padding: 10px;"><strong>Details</strong></td>
                             <td></td>
@@ -264,7 +265,7 @@ function createEmailBody() {
                                 <strong>Name</strong>
                             </td>
                             <td style="padding:10px;">
-                                <pre style="margin:0; white-space: pre-wrap;">${userName}</pre>
+                                <pre style="margin: 0; white-space: pre-wrap;">${userName}</pre>
                             </td>
                         </tr>
 
@@ -272,8 +273,8 @@ function createEmailBody() {
                             <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
                                 <strong>Phone</strong>
                             </td>
-                            <td style="padding: 10px; cursor: pointer;">
-                                <pre onclick="window.open('tel:${userPhone}')" style="margin: 0; white-space: pre-wrap;">${userPhone}</pre>
+                            <td style="padding: 10px;">
+                                <a href="tel:${userPhone}" target="_blank" style="margin: 0; white-space: pre-wrap; text-decoration: none;">${userPhone}</a>
                             </td>
                         </tr>
 
@@ -281,8 +282,8 @@ function createEmailBody() {
                             <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
                                 <strong>Email</strong>
                             </td>
-                            <td style="padding: 10px; cursor: pointer;">
-                                <pre onclick="window.open('mailto:${userEmail}')" style="margin: 0; white-space: pre-wrap;">${userEmail}</pre>
+                            <td style="padding: 10px;">
+                                <a href="mailto:${userEmail}" target="_blank" style="margin: 0; white-space: pre-wrap; text-decoration: none;">${userEmail}</a>
                             </td>
                         </tr>
 
@@ -291,12 +292,12 @@ function createEmailBody() {
                                 <strong>Message</strong>
                             </td>
                             <td style="padding: 10px;">
-                                <pre style="margin:0; white-space: pre-wrap;">${userMessage}</pre>
+                                <pre style="margin: 0; white-space: pre-wrap;">${userMessage}</pre>
                             </td>
                         </tr>
                     </tbody>
                 </table>
-                <h5>Sent on ${currentDate()}</h5>
+                <h5 style="color: ${softBlack}">Sent on ${currentDate()}</h5>
             </div>
            `
 }

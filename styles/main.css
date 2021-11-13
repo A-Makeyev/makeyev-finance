@@ -28,6 +28,7 @@ body {
 }
 
 *::selection {
+    color: var(--soft-black);
     text-shadow: 5px 5px 5px var(--soft-blue);
 }
 
