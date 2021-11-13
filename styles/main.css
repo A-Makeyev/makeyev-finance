@@ -24,8 +24,11 @@ body {
 * {
     margin: 0;
     padding: 0;
-    user-select: none;
     font-family: 'Lato', sans-serif;
+}
+
+*::selection {
+    text-shadow: 5px 5px 5px var(--soft-blue);
 }
 
 *::-webkit-scrollbar {
@@ -61,6 +64,7 @@ a {
 }
 
 .gradient-text-no-hover {
+    user-select: none;
     background: var(--white-blue-gradient);
     background-size: 200% auto;
     -webkit-background-clip: text;
@@ -69,6 +73,7 @@ a {
 }
 
 .gradient-text {
+    user-select: none;
     background: var(--white-blue-gradient);
     background-size: 200% auto;
     -webkit-background-clip: text;
