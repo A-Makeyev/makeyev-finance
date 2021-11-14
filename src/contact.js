@@ -142,9 +142,7 @@ contactForm.addEventListener('submit', async (event) => {
             Body: createEmailBody()
             
         }).then(response => {
-            contactForm.reset()
             resetLabels()
-
             displayModalContent(
                 'success',
                 'message sent! 🤑',

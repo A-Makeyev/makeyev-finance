@@ -12,8 +12,6 @@
     --soft-black-background: rgba(14, 14, 14, 0.4);
     --soft-white-background: rgba(255, 255, 255, 0.2);
     --white-blue-gradient: -webkit-linear-gradient(85deg, var(--soft-white), var(--soft-blue));
-    --desktop-text-size: '20px';
-    --mobile-text-size: '15px';
 }
 
 body {
@@ -177,13 +175,18 @@ a {
     border: 1px solid var(--soft-white);
 }
 
+.btn-white:hover {
+    color: var(--soft-black);
+    background: var(--soft-white);
+}
+
 .btn-blue {
     background: transparent;
     color: var(--soft-blue);
     border: 1px solid var(--soft-blue);
 }
 
-.btn-blue:hover, .btn-white:hover {
+.btn-blue:hover {
     color: var(--soft-white);
     background: var(--soft-blue);
 }
