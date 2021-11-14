@@ -1,8 +1,9 @@
 nav {
-    z-index: 99;
-    padding: 2% 6%;
+    user-select: none;
     position: fixed;
+    padding: 2% 6%;
     height: 100px;
+    z-index: 99;
     right: 0;
     left: 0;
     top: 0;
