@@ -113,7 +113,7 @@ nav .menu-icon .line {
     color: var(--soft-blue) !important;
 }
 
-.nav-icon {
+.nav-icons {
     display: flex;
     flex-direction: row;
 }

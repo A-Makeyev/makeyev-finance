@@ -3,8 +3,16 @@ const
 dev = 'http://127.0.0.1:5500/',
 prod = 'https://makeyev-finance.netlify.app',
 smtpToken = 'f4f02643-1db4-40ed-b666-cb10d6add9d3',
-emailFrom = 'makeyev.finance@gmail.com',
-emailTo = 'anatoly.makeyev@gmail.com',
+facebookPage = 'https://www.facebook.com/makeyev.finance',
+companyMail = 'makeyev.finance@gmail.com',
+mainMail = 'anatoly.makeyev@gmail.com',
+mainPhone = '+972527729974',
+
+/* links */
+whatsAppLink = 'https://wa.me/' + mainPhone.slice(1) + '?text=What%27s%20up%3F',
+mailToLink = 'mailto:' + mainMail + '?subject=I%20need%20financial%20advice%21',
+wazeLink = 'https://ul.waze.com/ul?place=ChIJKeStYLy2HRURVhdAI9n1TqM&ll=32.81635130%2C35.11280030'
+         + '&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location',
 
 /* colors */
 softWhite = 'aliceblue',
@@ -27,6 +35,7 @@ menu = document.getElementById('menu'),
 nav = document.getElementById('navbar'),
 offline = document.getElementById('offline'),
 logo = document.getElementById('logo-image'),
+icons = document.getElementsByClassName('icon'),
 trademark = document.getElementById('trademark'),
 navLinks = document.getElementsByClassName('nav-link'),
 navMenuLines = document.getElementsByClassName('line'),

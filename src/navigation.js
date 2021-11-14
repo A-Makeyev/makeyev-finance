@@ -10,6 +10,14 @@
             if (links[x].href.includes('contact')) links[x].href += '.html'
         }
     } 
+
+    for (let x = 0; x < icons.length; x++) {
+        let sibling = icons[x].firstChild.nextSibling
+        if (sibling.classList.contains('fa-waze')) icons[x].href = wazeLink
+        if (sibling.classList.contains('fa-envelope')) icons[x].href = mailToLink
+        if (sibling.classList.contains('fa-whatsapp')) icons[x].href = whatsAppLink
+        if (sibling.classList.contains('fa-facebook-square')) icons[x].href = facebookPage
+    }
 })()
 
 // display a message if the user is offline

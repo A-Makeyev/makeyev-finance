@@ -136,8 +136,8 @@ contactForm.addEventListener('submit', async (event) => {
             // enable less secure apps
             // https://myaccount.google.com/lesssecureapps
             SecureToken: smtpToken,
-            To: emailTo,
-            From: emailFrom,
+            To: mainMail,
+            From: companyMail,
             Subject: 'New Customer 🤩',
             Body: createEmailBody()
             
