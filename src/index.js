@@ -6,7 +6,7 @@ smtpToken = 'f4f02643-1db4-40ed-b666-cb10d6add9d3',
 emailFrom = 'makeyev.finance@gmail.com',
 emailTo = 'anatoly.makeyev@gmail.com',
 
-// colors
+/* colors */
 softWhite = 'aliceblue',
 softRed = 'rgb(210, 60, 60)',
 softBlack = 'rgb(15, 15, 15)',
@@ -17,12 +17,12 @@ softYellow = 'rgb(250, 205, 5)',
 softOrange = 'rgb(255, 125, 80)',
 softDarkBlue = 'rgb(65, 120, 235)',
 
-// loader
+/* loader */
 body = document.querySelector('body'),
 loader = document.getElementById('loader'),
 loadingScreen = document.getElementById('loading-screen'),
 
-// navigation
+/* navigation */
 menu = document.getElementById('menu'),
 nav = document.getElementById('navbar'),
 offline = document.getElementById('offline'),
@@ -31,7 +31,7 @@ trademark = document.getElementById('trademark'),
 navLinks = document.getElementsByClassName('nav-link'),
 navMenuLines = document.getElementsByClassName('line'),
 
-// contact
+/* contact */
 inputName = document.getElementById('name'),
 overlay = document.getElementById('overlay'),
 inputEmail = document.getElementById('email'),
@@ -44,12 +44,26 @@ modalHeader = document.querySelector('.modal-header'),
 modalBody = document.getElementById('modal-body-text'),
 modalTitle = document.getElementById('modal-title-text'),
 formInputs = document.getElementsByClassName('form-input'),
+formLabels = document.getElementsByClassName('form-label'),
 modalLinks = document.getElementsByClassName('modal-links'),
 openModal = document.querySelectorAll('[data-modal-target]'),
-closeModal = document.querySelectorAll('[data-modal-close]')
+closeModal = document.querySelectorAll('[data-modal-close]'),
 
-// functions
-function currentDate() {
+/* locators */
+inputXPath = '//*[@class="form-input"]',
+labelXPath = '//*[@class="form-label"]'
+
+/* functions */
+// find element by xpath
+function getXPath(path) {
+    return document.evaluate(
+        path, document, null,
+        XPathResult.FIRST_ORDERED_NODE_TYPE, null
+    ).singleNodeValue
+}
+
+// get current date & time
+function currentDateTime() {
     let today = new Date()
     let dd = String(today.getDate()).padStart(2, "0")
     let mm = String(today.getMonth() + 1).padStart(2, "0")
@@ -61,6 +75,7 @@ function currentDate() {
     return `${dd}/${mm}/${yyyy} ~ ${hours}:${minutes}`
 }
 
+// double click event
 function doubleClick(target) {
     let event = new MouseEvent('dblclick', {
         'view': window,
@@ -70,6 +85,7 @@ function doubleClick(target) {
     target.dispatchEvent(event)
 }
 
+// pause thread
 function sleep(seconds) {
     let time = new Date().getTime() + (seconds * 1000);
     while (new Date().getTime() <= time) {}

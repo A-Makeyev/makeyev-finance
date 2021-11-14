@@ -9,7 +9,6 @@
         contactForm.appendChild(button)
 
         button.addEventListener('click', () => {
-            let labels = document.getElementsByClassName('form-label')
             let details = [
                 'Estebon Villalon',
                 '+972-52-696-9696',
@@ -17,7 +16,7 @@
                 'Baguette Du Fromage '
             ]
 
-            for (let x = 0; x < labels.length; x++) {
+            for (let x = 0; x < formLabels.length; x++) {
                 setTimeout(() => {
                     if (x == 3) details[x] = details[x].repeat(16)
                     formInputs[x].focus()
@@ -29,48 +28,45 @@
     }
 })()
 
-// find element by xpath
-function getXPath(path) {
-    return document.evaluate(
-        path, document, null,
-        XPathResult.FIRST_ORDERED_NODE_TYPE, null
-    ).singleNodeValue
+// reset labels after submit
+function resetLabels() {
+    for (let x = 1; x <= formInputs.length; x++) {
+        getXPath(`(${inputXPath})[${x}]`).style.border = `1px solid ${softBlack}`
+        getXPath(`(${labelXPath})[${x}]`).style.color = softGrey
+        getXPath(`(${labelXPath})[${x}]`).style.left = '20px'
+        getXPath(`(${labelXPath})[${x}]`).style.top = '35px'
+    }
 }
 
 // initialize input fields 
-const inputs = document.getElementsByClassName('form-input').length
-
-for (let x = 1; x <= inputs; x++) {
-    let input = '//*[@class="form-input"]'
-    let label = '//*[@class="form-label"]'
-
-    getXPath(`(${input})[${x}]`).addEventListener('focus', () => {
-        getXPath(`(${input})[${x}]`).style.border = `2px solid ${softBlue}`
-        getXPath(`(${label})[${x}]`).style.color = softBlue
-        getXPath(`(${label})[${x}]`).style.left = '0'
-        getXPath(`(${label})[${x}]`).style.top = '0'
+for (let x = 1; x <= formInputs.length; x++) {
+    getXPath(`(${inputXPath})[${x}]`).addEventListener('focus', () => {
+        getXPath(`(${inputXPath})[${x}]`).style.border = `2px solid ${softBlue}`
+        getXPath(`(${labelXPath})[${x}]`).style.color = softBlue
+        getXPath(`(${labelXPath})[${x}]`).style.left = '0'
+        getXPath(`(${labelXPath})[${x}]`).style.top = '0'
         setTimeout(() => { 
-            if (getXPath(`(${label})[${x}]`).textContent.slice(-1) !== ':') {
-                getXPath(`(${label})[${x}]`).textContent += ':'
+            if (getXPath(`(${labelXPath})[${x}]`).textContent.slice(-1) !== ':') {
+                getXPath(`(${labelXPath})[${x}]`).textContent += ':'
             }
         }, 250)
     })
 
-    getXPath(`(${input})[${x}]`).addEventListener('blur', () => {
-        let value = getXPath(`(${input})[${x}]`).value
+    getXPath(`(${inputXPath})[${x}]`).addEventListener('blur', () => {
+        let value = getXPath(`(${inputXPath})[${x}]`).value
         if (value.length < 1 && value === '') {
-            getXPath(`(${input})[${x}]`).style.border = `1px solid ${softBlack}`
-            getXPath(`(${label})[${x}]`).style.color = softGrey
-            getXPath(`(${label})[${x}]`).style.left = '20px'
-            getXPath(`(${label})[${x}]`).style.top = '35px'
+            getXPath(`(${inputXPath})[${x}]`).style.border = `1px solid ${softBlack}`
+            getXPath(`(${labelXPath})[${x}]`).style.color = softGrey
+            getXPath(`(${labelXPath})[${x}]`).style.left = '20px'
+            getXPath(`(${labelXPath})[${x}]`).style.top = '35px'
             setTimeout(() => { 
-                let text = getXPath(`(${label})[${x}]`).textContent.slice(0, -1)
-                getXPath(`(${label})[${x}]`).textContent = text
+                let text = getXPath(`(${labelXPath})[${x}]`).textContent.slice(0, -1)
+                getXPath(`(${labelXPath})[${x}]`).textContent = text
             }, 250)
         }
     })
 
-    getXPath(`(${input})[${x}]`).addEventListener('keyup', (event) => {
+    getXPath(`(${inputXPath})[${x}]`).addEventListener('keyup', (event) => {
         if (event.key === 'Enter') {
             submitForm.click()
         }
@@ -86,18 +82,21 @@ function validateForm() {
     inputPhone.onchange = () => {
         if (!validPhone) {
             inputPhone.style.borderColor = softRed
+            inputPhone.previousElementSibling.style.color = softRed
         }
     }
 
     inputEmail.onchange = () => {
         if (!validEmail) {
             inputEmail.style.borderColor = softRed
+            inputEmail.previousElementSibling.style.color = softRed
         }
     }
 
     inputName.onchange = () => {
         if (!validName) {
             inputName.style.borderColor = softRed
+            inputName.previousElementSibling.style.color = softRed
         }
     }
     
@@ -116,10 +115,10 @@ function allowSubmit() {
 }
 
 function preventSubmit() {
-    submitForm.disabled = false
-    submitForm.style.cursor = 'pointer'
-    submitForm.classList.remove('btn-black')
-    submitForm.classList.add('btn-blue')
+    submitForm.disabled = true
+    submitForm.style.cursor = 'not-allowed'
+    submitForm.classList.remove('btn-blue')
+    submitForm.classList.add('btn-black')
 }
 
 contactForm.addEventListener('submit', async (event) => {
@@ -129,6 +128,8 @@ contactForm.addEventListener('submit', async (event) => {
     submitForm.textContent = 'sending.. '
     submitForm.innerHTML += '<i class="fas fa-paper-plane"></i>'
     submitForm.style.pointerEvents = 'none'
+    submitForm.classList.remove('btn-black')
+    submitForm.classList.add('btn-blue')
     
     if (window.navigator.onLine) {
         Email.send({
@@ -141,11 +142,15 @@ contactForm.addEventListener('submit', async (event) => {
             Body: createEmailBody()
             
         }).then(response => {
+            contactForm.reset()
+            resetLabels()
+
             displayModalContent(
                 'success',
                 'message sent! 🤑',
                 'we will get back to you as soon as possible.'
             )
+            
             preventSubmit()
             submitForm.textContent = 'Send'
             submitForm.style.pointerEvents = 'all'
@@ -254,7 +259,7 @@ function createEmailBody() {
                         <span style="color: ${softBlue};">Makeyev Finance</span>
                     </a>
                 </h4>
-                <table style="border: 1px solid ${softGrey}; border-collapse: collapse; width: 90%;">
+                <table style="border: 1px solid ${softGrey}; border-collapse: collapse; width: 100%;">
                     <tbody style="font-family: 'Fira Code', sans-serif; font-size: 15px; color: ${softBlack}">
                         <tr style="border: 1px solid ${softBlue}; background: ${softBlue}; color: ${softWhite}; padding: 15px 10px;">
                             <td style="padding: 10px;"><strong>Details</strong></td>
@@ -297,7 +302,7 @@ function createEmailBody() {
                         </tr>
                     </tbody>
                 </table>
-                <h5 style="color: ${softBlack}">Sent on ${currentDate()}</h5>
+                <h5 style="color: ${softBlack}">Sent on ${currentDateTime()}</h5>
                 <span>( ° ᴗ ° )</span>
             </div>
            `
