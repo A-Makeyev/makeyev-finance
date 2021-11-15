@@ -24,12 +24,13 @@
 function handleConnectionChange(event) {
     if (event.type == 'offline') {
         offline.style.display = 'block'
-        offline.innerHTML = `
-                                <i class="fas fa-exclamation-circle"></i>
-                                <span style="margin-left: 5px;">
-                                    no internet connection
-                                </span>
-                            `
+        offline.innerHTML =
+        `
+            <i class="fas fa-exclamation-circle"></i>
+            <span style="margin-left: 5px;">
+                no internet connection
+            </span>
+        `
     }
 
     if (event.type == 'online') {
