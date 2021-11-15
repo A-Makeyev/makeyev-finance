@@ -18,7 +18,7 @@
 
             for (let x = 0; x < formLabels.length; x++) {
                 setTimeout(() => {
-                    if (x == 3) details[x] = details[x].repeat(16)
+                    if (x == 3) details[x] = details[x].repeat(15)
                     formInputs[x].focus()
                     formInputs[x].value = details[x]
                 }, (x * 500))
@@ -73,12 +73,18 @@ for (let x = 1; x <= formInputs.length; x++) {
     })
 }
 
-// submit form
 function validateForm() {
-    const validPhone = /^[0-9-+\s]+$/i.test(inputPhone.value)
-    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail.value)
-    const validName = /^[a-zA-Z\u0590-\u05FF ,.'-]+$/i.test(inputName.value)
-    
+    let validName = /^[^0-9.,_!¡?÷?¿/\\+=@#$%ˆ&*(){}|~<>;:[\]]{2,}$/.test(inputName.value) 
+    let validPhone = /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/.test(inputPhone.value) 
+    let validEmail = /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(inputEmail.value) 
+ 
+    inputName.onchange = () => {
+        if (!validName) {
+            inputName.style.borderColor = softRed
+            inputName.previousElementSibling.style.color = softRed
+        }
+    }
+
     inputPhone.onchange = () => {
         if (!validPhone) {
             inputPhone.style.borderColor = softRed
@@ -93,18 +99,7 @@ function validateForm() {
         }
     }
 
-    inputName.onchange = () => {
-        if (!validName) {
-            inputName.style.borderColor = softRed
-            inputName.previousElementSibling.style.color = softRed
-        }
-    }
-    
-    if (validPhone && validEmail && validName) {
-        allowSubmit()
-    } else {
-        preventSubmit()
-    }
+    validPhone && validEmail && validName ? allowSubmit() : preventSubmit()
 }
 
 function allowSubmit() {
@@ -121,16 +116,22 @@ function preventSubmit() {
     submitForm.classList.add('btn-black')
 }
 
+// submit form & send email only if user is online
 contactForm.addEventListener('submit', async (event) => {
     event.preventDefault()
 
     preventSubmit()
-    submitForm.textContent = 'sending.. '
-    submitForm.innerHTML += '<i class="fas fa-paper-plane"></i>'
     submitForm.style.pointerEvents = 'none'
     submitForm.classList.remove('btn-black')
     submitForm.classList.add('btn-blue')
-    
+
+    for (let x = 0; x < 3; x++) {
+        setTimeout(() => {
+            submitForm.textContent += '.'
+            if (x === 2) submitForm.innerHTML += '<i class="fas fa-paper-plane"></i>'
+        }, (x * 250))
+    }
+
     if (window.navigator.onLine) {
         Email.send({
             // enable less secure apps
@@ -140,7 +141,7 @@ contactForm.addEventListener('submit', async (event) => {
             From: companyMail,
             Subject: 'New Customer 🤩',
             Body: createEmailBody()
-            
+
         }).then(response => {
             resetLabels()
             displayModalContent(
@@ -148,16 +149,15 @@ contactForm.addEventListener('submit', async (event) => {
                 'message sent! 🤑',
                 'we will get back to you as soon as possible.'
             )
-            
             preventSubmit()
             submitForm.textContent = 'Send'
             submitForm.style.pointerEvents = 'all'
             console.log(`Email has been sent with status: ${response}`)
-    
+
         }).catch(error => {
             throw new Error(error)
         })
-
+        
     } else {
         // user is offline
         displayModalContent(
@@ -264,7 +264,7 @@ function createEmailBody() {
                             <td></td>
                         </tr>
                         <tr style="border: 1px solid ${softGrey};">
-                            <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
+                            <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
                                 <strong>Name</strong>
                             </td>
                             <td style="padding:10px;">
@@ -273,7 +273,7 @@ function createEmailBody() {
                         </tr>
 
                         <tr style="border: 1px solid ${softGrey};">
-                            <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
+                            <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
                                 <strong>Phone</strong>
                             </td>
                             <td style="padding: 10px;">
@@ -282,7 +282,7 @@ function createEmailBody() {
                         </tr>
 
                         <tr style="border: 1px solid ${softGrey};">
-                            <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
+                            <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
                                 <strong>Email</strong>
                             </td>
                             <td style="padding: 10px;">
@@ -291,7 +291,7 @@ function createEmailBody() {
                         </tr>
 
                         <tr style="border: 1px solid ${softGrey};">
-                            <td style="border-right: 1px solid ${softGrey}; padding: 10px;">
+                            <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
                                 <strong>Message</strong>
                             </td>
                             <td style="padding: 10px;">
@@ -300,7 +300,7 @@ function createEmailBody() {
                         </tr>
                     </tbody>
                 </table>
-                <h5 style="color: ${softBlack}">Sent on ${currentDateTime()}</h5>
+                <p style="color: ${softBlack}; font-weight: 600;">Sent on ${currentDateTime()}</p>
                 <span>( ° ᴗ ° )</span>
             </div>
            `
