@@ -81,11 +81,18 @@ textarea {
     margin: 25px 60px;
 }
 
+.header-line {
+    height: 1px;
+    width: 350px;
+    display: block; 
+    background: var(--soft-grey);
+}
+
 .contact-line {
     width: 1px;
     height: 370px;
     margin: 30px 0 0 30px;
-    background: var(--soft-blue) !important;
+    background: var(--soft-grey);
 }
 
 #submit-status {
@@ -124,13 +131,13 @@ textarea {
 @media (max-width: 1000px) {
     .contact-col input, .contact-col textarea {
         padding: 15px;
+        width: 115%;
     }
     .contact h1 {
         font-size: 25px;
     }
     .contact > p {
         font-size: 15px;
-        color: var(--soft-blue);
     }
     .contact-row {
         flex-direction: column;
@@ -150,12 +157,29 @@ textarea {
         margin: 0;
         width: 100%;
         height: 1px;
-        background: var(--soft-blue);
+    }
+    .header-line {
+        width: 260px;
     }
 }
 
 @media (max-width: 500px) {
+    .contact-col input, .contact-col textarea {
+        width: 120%;
+    }
     .contact-col i, .contact-col p {
         font-size: 15px;
+    }
+}
+
+@media (max-width: 320px) {
+    .contact h1 {
+        font-size: 20px;
+    }
+    .contact-col i, .contact-col p, .contact > p {
+        font-size: 12px;
+    }
+    .header-line {
+        width: 210px;
     }
 }
