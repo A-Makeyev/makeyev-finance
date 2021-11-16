@@ -560,6 +560,9 @@ a {
     .sub-header {
         height: 30vh;
     }
+    .text-box {
+        top: 40%;
+    }
     .text-box h1 {
         font-size: 2rem;
     }
