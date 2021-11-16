@@ -13,6 +13,15 @@
 .contact {
     width: 80%;
     margin: auto;
+    padding-top: 50px;
+}
+
+.contact h1 {
+    font-size: 2em;
+}
+
+.contact > p {
+    color: var(--soft-blue);
 }
 
 .contact-row {
@@ -68,6 +77,17 @@ textarea {
     border: 1px solid var(--soft-black);
 }
 
+.contact-info {
+    margin: 30px 60px;
+}
+
+.contact-line {
+    width: 1px;
+    height: 370px;
+    margin: 30px 0 0 30px;
+    background: var(--soft-blue) !important;
+}
+
 #submit-status {
     opacity: 0;
     font-size: 30px;
@@ -106,6 +126,13 @@ textarea {
         padding: 15px;
         width: 110%;
     }
+    .contact h1 {
+        font-size: 25px;
+    }
+    .contact > p {
+        font-size: 15px;
+        color: var(--soft-blue);
+    }
     .contact-row {
         flex-direction: column;
     }
@@ -116,6 +143,15 @@ textarea {
     }
     .form-label {
         font-size: 15px;
+    }
+    .contact-info {
+        margin-left: -5px;
+    }
+    .contact-line {
+        margin: 0;
+        width: 100%;
+        height: 1px;
+        background: var(--soft-blue) !important;
     }
 }
 
