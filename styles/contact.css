@@ -124,7 +124,6 @@ textarea {
 @media (max-width: 1000px) {
     .contact-col input, .contact-col textarea {
         padding: 15px;
-        width: 110%;
     }
     .contact h1 {
         font-size: 25px;
@@ -151,7 +150,7 @@ textarea {
         margin: 0;
         width: 100%;
         height: 1px;
-        background: var(--soft-blue) !important;
+        background: var(--soft-blue);
     }
 }
 

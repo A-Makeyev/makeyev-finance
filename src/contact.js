@@ -5,8 +5,18 @@
         button.setAttribute('id', 'dev-btn')
         button.textContent = 'add test details'
         button.className = 'hero-btn btn-orange'
-        button.style.marginLeft = '10px'
+        
         contactForm.appendChild(button)
+
+        window.addEventListener('resize', () => {
+            if (window.matchMedia('(max-width: 1300px)').matches) {
+                button.style.display = 'block'
+                button.style.margin = '20px 0'
+            } else {
+                button.style.display = 'inline-block'
+                button.style.margin = '0 10px 0'
+            }
+        })
 
         button.addEventListener('click', () => {
             let details = [
@@ -18,7 +28,7 @@
 
             for (let x = 0; x < formLabels.length; x++) {
                 setTimeout(() => {
-                    if (x == 3) details[x] = details[x].repeat(15)
+                    if (x == 3) details[x] = details[x].repeat(10)
                     formInputs[x].focus()
                     formInputs[x].value = details[x]
                 }, (x * 500))
