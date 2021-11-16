@@ -35,11 +35,6 @@
     display: inline-block;
 }
 
-.contact-info {
-    font-size: 20px;
-    margin-top: 20px;
-}
-
 .contact-col i, .contact-col p {
     font-size: 20px;
     transition: 0.5s;

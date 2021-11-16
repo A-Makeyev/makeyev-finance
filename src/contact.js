@@ -120,19 +120,19 @@ function preventSubmit() {
 contactForm.addEventListener('submit', async (event) => {
     event.preventDefault()
 
-    preventSubmit()
-    submitForm.style.pointerEvents = 'none'
-    submitForm.classList.remove('btn-black')
-    submitForm.classList.add('btn-blue')
-
-    for (let x = 0; x < 3; x++) {
-        setTimeout(() => {
-            submitForm.textContent += '.'
-            if (x === 2) submitForm.innerHTML += '<i class="fas fa-paper-plane"></i>'
-        }, (x * 250))
-    }
-
     if (window.navigator.onLine) {
+        preventSubmit()
+        submitForm.style.pointerEvents = 'none'
+        submitForm.classList.remove('btn-black')
+        submitForm.classList.add('btn-blue')
+    
+        for (let x = 0; x < 3; x++) {
+            setTimeout(() => {
+                submitForm.textContent += '.'
+                if (x === 2) submitForm.innerHTML += '<i class="fas fa-paper-plane"></i>'
+            }, (x * 250))
+        }
+        
         Email.send({
             // enable less secure apps
             // https://myaccount.google.com/lesssecureapps
