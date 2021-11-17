@@ -226,13 +226,12 @@ nav .menu-icon .line {
     nav .logo {
         float: none;
         width: auto;
-        justify-content: center;
     }
     .logo-image, .logo-image-transparent {
         width: 20% !important;
-        z-index: 999;
         display: block;
         margin: 0 auto;
+        z-index: 999;
     }
     nav .menu-icon {
         display: block;

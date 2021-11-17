@@ -133,6 +133,9 @@ textarea {
         padding: 15px;
         width: 115%;
     }
+    .contact {
+        padding-top: 30px;
+    }
     .contact h1 {
         font-size: 25px;
     }
