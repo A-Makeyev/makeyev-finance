@@ -158,7 +158,7 @@ contactForm.addEventListener('submit', async (event) => {
             resetLabels()
             displayModalContent(
                 'success',
-                'message sent! 🤑',
+                'message sent! 🙂',
                 'we will get back to you as soon as possible.'
             )
             preventSubmit()
@@ -174,7 +174,7 @@ contactForm.addEventListener('submit', async (event) => {
         // user is offline
         displayModalContent(
             'failure',
-            'Oops! 😡',
+            'Oops! 🙁',
             'there seems to be a problem with your internet connection, reconnect and try again.'
         )
         allowSubmit()
