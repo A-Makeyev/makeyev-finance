@@ -74,6 +74,7 @@ textarea {
     margin-bottom: 10px;
     transition: all 0.1s;
     box-sizing: border-box;
+    box-shadow: 0 4px 2px -2px var(--soft-black);
     border: 1px solid var(--soft-black);
 }
 
