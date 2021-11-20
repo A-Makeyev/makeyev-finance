@@ -43,6 +43,7 @@
 // reset labels after submit
 function resetLabels() {
     for (let x = 1; x <= formInputs.length; x++) {
+        getXPath(`(${inputXPath})[${x}]`).style.boxShadow = `0 4px 2px -2px ${softRed}`
         getXPath(`(${inputXPath})[${x}]`).style.border = `1px solid ${softBlack}`
         getXPath(`(${labelXPath})[${x}]`).style.color = softGrey
         getXPath(`(${labelXPath})[${x}]`).style.left = '20px'
@@ -96,6 +97,7 @@ function validateForm() {
         if (!validName) {
             inputName.style.borderColor = softRed
             inputName.previousElementSibling.style.color = softRed
+            inputName.style.boxShadow = `0 4px 2px -2px ${softRed}`
         }
     }
 
@@ -103,6 +105,7 @@ function validateForm() {
         if (!validPhone) {
             inputPhone.style.borderColor = softRed
             inputPhone.previousElementSibling.style.color = softRed
+            inputPhone.style.boxShadow = `0 4px 2px -2px ${softRed}`
         }
     }
 
@@ -110,6 +113,7 @@ function validateForm() {
         if (!validEmail) {
             inputEmail.style.borderColor = softRed
             inputEmail.previousElementSibling.style.color = softRed
+            inputEmail.style.boxShadow = `0 4px 2px -2px ${softRed}`
         }
     }
 
