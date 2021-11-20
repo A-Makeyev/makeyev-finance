@@ -168,6 +168,7 @@ contactForm.addEventListener('submit', async (event) => {
                 'we will get back to you as soon as possible.'
             )
             preventSubmit()
+            contactForm.reset()
             submitForm.textContent = 'Send'
             submitForm.style.pointerEvents = 'all'
             console.log(`Email has been sent with status: ${response}`)
