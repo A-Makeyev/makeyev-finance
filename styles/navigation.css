@@ -20,13 +20,13 @@ nav .logo {
 .logo-image {
     content: url(/images/Logo.png);
     transition: 1s;
-    width: 25%;
+    width: 30%;
 }
 
 .logo-image-transparent {
     content: url(/images/Logo-T.png);
     transition: 1s;
-    width: 25%;
+    width: 30%;
 }
 
 nav #nav-links {
@@ -255,6 +255,9 @@ nav .menu-icon .line {
 }
 
 @media screen and (max-width: 500px) {
+    .logo-image, .logo-image-transparent {
+        width: 20% !important;
+    }
     nav {
         height: 70px;
     }
