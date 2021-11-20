@@ -84,7 +84,7 @@ window.addEventListener('scroll', () => {
         // navbar scrolling down on a device with MIN width of 770px
         if (window.matchMedia('(min-width: 770px)').matches) {
             nav.classList.add('nav-scrolling-resize')
-            logo.style.width = '20%'
+            logo.style.width = '15%'
         }
 
     // navbar is on TOP
@@ -95,7 +95,7 @@ window.addEventListener('scroll', () => {
 
         if (window.matchMedia('(min-width: 770px)').matches && window.scrollY === 0) {
             nav.classList.remove('nav-scrolling-resize')
-            logo.style.width = '30%'
+            logo.style.width = '25%'
         }
 
         // navbar is on TOP on a device with MAX width of 770px
