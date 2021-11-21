@@ -3,15 +3,15 @@
     if (window.location.href.includes(dev)) {
         let button = document.createElement('button')
         button.className = 'hero-btn btn-orange'
+        button.textContent = 'add test details'
         button.setAttribute('id', 'dev-btn')
         button.style.marginLeft = '5px'
         contactForm.appendChild(button)
 
         function alignButton() {
             if (window.matchMedia('(max-width: 1300px)').matches) {
-                button.textContent = 'test'
+                button.style.display = 'none'
             } else {
-                button.textContent = 'add test details'
                 button.style.display = 'inline-block'
             }
         }
@@ -88,10 +88,12 @@ for (let x = 1; x <= formInputs.length; x++) {
 }
 
 function validateForm() {
-    let validName = /^[^0-9.,_!¡?÷?¿/\\+=@#$%ˆ&*(){}|~<>;:[\]]{2,}$/.test(inputName.value) 
-    let validPhone = /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/.test(inputPhone.value) 
-    let validEmail = /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(inputEmail.value) 
- 
+    let validName = nameRegex.test(inputName.value) 
+    let validPhone = phoneRegex.test(inputPhone.value)
+    
+    // remove email from quick action form
+    let actionForm = inputEmail === null
+
     inputName.onchange = () => {
         if (!validName) {
             inputName.style.borderColor = softRed
@@ -108,15 +110,23 @@ function validateForm() {
         }
     }
 
-    inputEmail.onchange = () => {
-        if (!validEmail) {
-            inputEmail.style.borderColor = softRed
-            inputEmail.previousElementSibling.style.color = softRed
-            inputEmail.style.boxShadow = `0 4px 2px -2px ${softRed}`
+    if (!actionForm) {
+        const validEmail = emailRegex.test(inputEmail.value) 
+        inputEmail.onchange = () => {
+            if (!validEmail) {
+                inputEmail.style.borderColor = softRed
+                inputEmail.previousElementSibling.style.color = softRed
+                inputEmail.style.boxShadow = `0 4px 2px -2px ${softRed}`
+            }
         }
     }
 
-    validPhone && validEmail && validName ? allowSubmit() : preventSubmit()
+    if (!actionForm) {
+        validName && validPhone && validEmail ? allowSubmit() : preventSubmit()
+    } else {
+        validName && validPhone ? allowSubmit() : preventSubmit()
+    }
+    
 }
 
 function allowSubmit() {
@@ -266,8 +276,11 @@ if (typeof modalLinks[0] !== 'undefined') {
 function createEmailBody() {
     let userName = inputName.value
     let userPhone = inputPhone.value
-    let userEmail = inputEmail.value
     let userMessage = inputMessage.value
+    let userEmail
+
+    if (inputEmail !== null) 
+        userEmail = inputEmail.value
 
     return `
             <div>
@@ -301,14 +314,18 @@ function createEmailBody() {
                             </td>
                         </tr>
 
-                        <tr style="border: 1px solid ${softGrey};">
-                            <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
-                                <strong>Email</strong>
-                            </td>
-                            <td style="padding: 10px;">
-                                <a href="mailto:${userEmail}" target="_blank" style="margin: 0; white-space: pre-wrap; text-decoration: none;">${userEmail}</a>
-                            </td>
-                        </tr>
+                        ${inputEmail !== null ?
+                        ` 
+                            <tr style="border: 1px solid ${softGrey};">
+                                <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
+                                    <strong>Email</strong>
+                                </td>
+                                <td style="padding: 10px;">
+                                    <a href="mailto:${userEmail}" target="_blank" style="margin: 0; white-space: pre-wrap; text-decoration: none;">${userEmail}</a>
+                                </td>
+                            </tr>
+                        `   
+                        : ``}
 
                         <tr style="border: 1px solid ${softGrey};">
                             <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">

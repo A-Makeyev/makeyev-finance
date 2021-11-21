@@ -25,6 +25,11 @@ softYellow = 'rgb(250, 205, 5)',
 softOrange = 'rgb(255, 125, 80)',
 softDarkBlue = 'rgb(65, 120, 235)',
 
+/* regex */
+nameRegex = /^[^0-9.,_!¡?÷?¿/\\+=@#$%ˆ&*(){}|~<>;:[\]]{2,}$/,
+phoneRegex = /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/,
+emailRegex = /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/,
+
 /* loader */
 body = document.querySelector('body'),
 loader = document.getElementById('loader'),
