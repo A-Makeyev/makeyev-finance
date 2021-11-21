@@ -2,18 +2,17 @@
 (function fillForm() {
     if (window.location.href.includes(dev)) {
         let button = document.createElement('button')
-        button.setAttribute('id', 'dev-btn')
-        button.textContent = 'add test details'
         button.className = 'hero-btn btn-orange'
+        button.setAttribute('id', 'dev-btn')
+        button.style.marginLeft = '5px'
         contactForm.appendChild(button)
 
         function alignButton() {
             if (window.matchMedia('(max-width: 1300px)').matches) {
-                button.style.display = 'block'
-                button.style.margin = '20px 0'
+                button.textContent = 'test'
             } else {
+                button.textContent = 'add test details'
                 button.style.display = 'inline-block'
-                button.style.margin = '0 10px 0'
             }
         }
 
@@ -254,10 +253,12 @@ body.addEventListener('keydown', (event) => {
 })
 
 // add form reset when clicking on modal links
-for (let x = 0; x < modalLinks[0].children.length; x++) {
-    modalLinks[0].children[x].onclick = () => { 
-        if (window.navigator.onLine) {
-            contactForm.reset()
+if (typeof modalLinks[0] !== 'undefined') {
+    for (let x = 0; x < modalLinks[0].children.length; x++) {
+        modalLinks[0].children[x].onclick = () => { 
+            if (window.navigator.onLine) {
+                contactForm.reset()
+            }
         }
     }
 }
@@ -324,3 +325,18 @@ function createEmailBody() {
             </div>
            `
 }
+
+
+document.getElementById('action').addEventListener('click', () => {
+    document.querySelector('.form-modal').classList.add('active')
+    overlay.classList.add('active')
+})
+
+// close modals when clicking on close modal button
+closeModal.forEach(button => {
+    button.addEventListener('click', () => {
+        document.querySelector('.form-modal').classList.remove('active')
+        overlay.classList.remove('active')
+    })
+})
+

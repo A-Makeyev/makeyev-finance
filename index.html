@@ -7,11 +7,14 @@
     <script defer src="src/index.js"></script>
     <script defer src="src/loader.js"></script>
     <script defer src="src/navigation.js"></script>
+    <script defer src="src/contact.js"></script>
+    <script async src="https://smtpjs.com/v3/smtp.js"></script>
     <script async src="https://kit.fontawesome.com/4f48855ba9.js" crossorigin="anonymous"></script>
     <link rel="shortcut icon" type="image/x-icon" href="/images/icon.ico">
     <link rel="stylesheet" href="styles/loader.css">
     <link rel="stylesheet" href="styles/navigation.css">
     <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/contact.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700&display=swap">
@@ -70,7 +73,7 @@
             <div class="text-box">
                 <h1 class="gradient-text-no-hover">mortgage & <br> financial advice</h1>
                 <p class="gradient-text-no-hover">your savings, our expertise</p>
-                <button data-modal-target="#modal" class="hero-btn btn-white">schedule a free call now</button>
+                <button data-modal-target="#modal" id="action" class="hero-btn btn-white">schedule a free call now</button>
             </div>
 
         </section>
@@ -268,23 +271,33 @@
             </div>
         </section>
 
-        <!-- modal -->
+        <!-- form modal -->
 
-        <div id="modal" class="modal">
-            <div class="modal-header">
-                <div class="modal-title">
-                    <h2 id="modal-title-text"></h2>
-                </div>
-                <button class="modal-close" data-modal-close>&times;</button>
+        <div class="form-modal">
+            <button class="modal-close" data-modal-close>&times;</button>
+            <div class="form-modal-header">
+                <h1>Leave your details</h1>
+                <p>we'll get back to you as soon as possible</p>
+                <span class="header-line"></span>
+                
             </div>
             <div class="modal-body">
-                <p id="modal-user"></p>
-                <p id="modal-body-text"></p>
-            </div>
-            <div class="modal-links">
-                <a href="/" class="hero-btn btn-black">home</a>
-                <a href="services"class="hero-btn btn-black">services</a>
-                <a href="articles" class="hero-btn btn-black">articles</a>
+                <div class="contact-col">
+                    <form method="POST" onkeyup="validateForm()" autocomplete="off" id="contact-form">      
+                        <label for="name" class="form-label">name</label>
+                        <input  type="text" name="name" id="name" class="form-input" maxlength="99" required>
+                        <span class="asterisk"></span>
+
+                        <label for="phone" class="form-label">phone number</label>
+                        <input type="text" name="phone" id="phone" class="form-input" maxlength="99" required>
+                        <span class="asterisk"></span>
+
+                        <label for="message" class="form-label">tell us how can we help</label>
+                        <textarea type="text" name="message" id="message" class="form-input" rows="3" maxlength="999"></textarea>
+
+                        <button type="submit" id="submit-form" class="hero-btn btn-black" disabled>send</button>
+                    </form>
+                </div>
             </div>
         </div>
 
