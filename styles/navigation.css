@@ -183,6 +183,13 @@ nav .menu-icon .line {
     color: var(--soft-green) !important;
 }
 
+
+@media screen and (min-width: 1980px) {
+    .nav-scrolling-resize {
+        padding: 1% 5% 1%;
+    }
+}
+
 @media screen and (max-width: 1250px) {
     nav #nav-links {
         float: none;
