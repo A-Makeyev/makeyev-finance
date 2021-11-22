@@ -201,10 +201,10 @@ contactForm.addEventListener('submit', async (event) => {
 })
 
 // display modal with a status
-function displayModalContent(status, title, body) {
+function displayModalContent(status, mailTitle, mailBody) {
     let firstName = inputName.value.split(' ')[0]
-    modalTitle.textContent = title
-    modalBody.textContent = body
+    modalTitle.textContent = mailTitle
+    modalBody.textContent = mailBody
     
     if (status === 'success') {
         modalTitle.style.color = softGreen
@@ -224,14 +224,17 @@ function displayModalContent(status, title, body) {
 
     modal.classList.add('active')
     overlay.classList.add('active')
+    body.classList.add('stop-scrolling')
 }
 
 // close modals when clicking on close modal button
 closeModal.forEach(button => {
     button.addEventListener('click', () => {
         let modal = button.closest('.modal')
-        if (modal == null) return
-        modal.classList.remove('active')
+        if (modal !== null) modal.classList.remove('active')
+        if (actionFormModal !== null) actionFormModal.classList.remove('active')
+        
+        body.classList.remove('stop-scrolling')
         overlay.classList.remove('active')
         if (window.navigator.onLine) {
             contactForm.reset()
@@ -241,7 +244,7 @@ closeModal.forEach(button => {
 
 // close modals when clicking on overlay
 overlay.addEventListener('click', () => {
-    const activeModals = document.querySelectorAll('.modal.active')
+    const activeModals = document.querySelectorAll('.active')
     activeModals.forEach(modal => {
         if (modal == null) return
         modal.classList.remove('active')
@@ -272,6 +275,14 @@ if (typeof modalLinks[0] !== 'undefined') {
         }
     }
 }
+
+// action form modal
+
+action.addEventListener('click', () => {
+    actionFormModal.classList.add('active')
+    body.classList.add('stop-scrolling')
+    overlay.classList.add('active')
+})
 
 function createEmailBody() {
     let userName = inputName.value
@@ -342,20 +353,3 @@ function createEmailBody() {
             </div>
            `
 }
-
-
-document.getElementById('action').addEventListener('click', () => {
-    document.querySelector('.form-modal').classList.add('active')
-    overlay.classList.add('active')
-    body.classList.add('stop-scrolling')
-})
-
-// close modals when clicking on close modal button
-closeModal.forEach(button => {
-    button.addEventListener('click', () => {
-        document.querySelector('.form-modal').classList.remove('active')
-        overlay.classList.remove('active')
-        body.classList.remove('stop-scrolling')
-    })
-})
-
