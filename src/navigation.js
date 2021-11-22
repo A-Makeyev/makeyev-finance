@@ -65,7 +65,10 @@ window.addEventListener('resize', () => {
     }
 })
 
-window.addEventListener('scroll', () => {
+window.addEventListener('scroll', handleNavBar)
+window.addEventListener('DOMContentLoaded', handleNavBar)
+
+function handleNavBar() {
     // navbar scrolling down
     if (window.scrollY > 0) {
         nav.classList.add('navbar-scrolling')
@@ -116,7 +119,7 @@ window.addEventListener('scroll', () => {
             navMenuLines[line].style.backgroundColor = softWhite
         }
     }
-})
+}
 
 // footer
 trademark.innerHTML =
