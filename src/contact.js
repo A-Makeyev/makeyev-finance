@@ -347,6 +347,7 @@ function createEmailBody() {
 document.getElementById('action').addEventListener('click', () => {
     document.querySelector('.form-modal').classList.add('active')
     overlay.classList.add('active')
+    body.classList.add('stop-scrolling')
 })
 
 // close modals when clicking on close modal button
@@ -354,6 +355,7 @@ closeModal.forEach(button => {
     button.addEventListener('click', () => {
         document.querySelector('.form-modal').classList.remove('active')
         overlay.classList.remove('active')
+        body.classList.remove('stop-scrolling')
     })
 })
 

@@ -556,7 +556,7 @@ img {
     position: fixed;
     user-select: none;
     border-radius: 5px;
-    transition: all 0.5s;
+    transition: all 250ms;
     background: var(--soft-white);
     border: 2px solid var(--soft-blue);
     transform: translate(-50%, -50%) scale(0);
@@ -564,7 +564,7 @@ img {
 }
 
 .form-modal.active {
-    transform: translate(-50%, -50%) scale(1) rotate(-360deg);
+    transform: translate(-50%, -50%) scale(1);
 }
 
 .form-modal-header {
@@ -593,6 +593,14 @@ img {
     background: none;
     margin-right: 10px;
     transition: all 0.5s;
+}
+
+@media (max-height: 500px) {
+    .form-modal {
+        top: 60%;
+        overflow-y: auto;
+        height: 100%;
+    }
 }
 
 @media (max-width: 1250px) {
