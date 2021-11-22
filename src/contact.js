@@ -45,6 +45,7 @@ function resetLabels() {
         getXPath(`(${inputXPath})[${x}]`).style.boxShadow = `0 4px 2px -2px ${softBlack}`
         getXPath(`(${inputXPath})[${x}]`).style.border = `1px solid ${softBlack}`
         getXPath(`(${labelXPath})[${x}]`).style.color = softGrey
+        getXPath(`(${labelXPath})[${x}]`).style.cursor = 'text'
         getXPath(`(${labelXPath})[${x}]`).style.left = '20px'
         getXPath(`(${labelXPath})[${x}]`).style.top = '35px'
     }
@@ -56,6 +57,7 @@ for (let x = 1; x <= formInputs.length; x++) {
         getXPath(`(${inputXPath})[${x}]`).style.boxShadow = `0 4px 2px -2px ${softBlue}`
         getXPath(`(${inputXPath})[${x}]`).style.border = `2px solid ${softBlue}`
         getXPath(`(${labelXPath})[${x}]`).style.color = softBlue
+        getXPath(`(${labelXPath})[${x}]`).style.cursor = 'default'
         getXPath(`(${labelXPath})[${x}]`).style.left = '0'
         getXPath(`(${labelXPath})[${x}]`).style.top = '0'
         setTimeout(() => { 
@@ -71,6 +73,7 @@ for (let x = 1; x <= formInputs.length; x++) {
             getXPath(`(${inputXPath})[${x}]`).style.boxShadow = `0 4px 2px -2px ${softBlack}`
             getXPath(`(${inputXPath})[${x}]`).style.border = `1px solid ${softBlack}`
             getXPath(`(${labelXPath})[${x}]`).style.color = softGrey
+            getXPath(`(${labelXPath})[${x}]`).style.cursor = 'text'
             getXPath(`(${labelXPath})[${x}]`).style.left = '20px'
             getXPath(`(${labelXPath})[${x}]`).style.top = '35px'
             setTimeout(() => { 

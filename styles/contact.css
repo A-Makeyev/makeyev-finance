@@ -106,6 +106,7 @@ textarea {
 .form-label {
     top: 35px;
     left: 20px;
+    cursor: text;
     font-size: 20px;
     font-weight: 600;
     position: relative;
