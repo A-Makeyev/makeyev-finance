@@ -546,14 +546,14 @@ img {
     pointer-events: all;
 }
 
-/* form modal */
+/* action form modal */
 
 .form-modal {
     top: 50%;
     left: 50%;
     z-index: 9999;
-    max-width: 30%;
     position: fixed;
+    max-width: 500px;
     user-select: none;
     border-radius: 5px;
     transition: all 250ms;
@@ -565,22 +565,6 @@ img {
 
 .form-modal.active {
     transform: translate(-50%, -50%) scale(1);
-}
-
-.form-modal-header {
-    display: flex;
-    padding: 10px 25px;
-    flex-direction: column;
-    text-transform: capitalize;
-    justify-content: space-between;
-}
-
-.form-modal-header p {
-    color: var(--soft-blue);
-}
-
-.form-modal-header span {
-    width: 370px;
 }
 
 .form-modal .modal-close {
@@ -595,30 +579,37 @@ img {
     transition: all 0.5s;
 }
 
-@media (max-height: 500px) {
-    .form-modal {
-        top: 60%;
-        overflow-y: auto;
-        height: 100%;
-    }
+.form-modal-header {
+    display: flex;
+    padding: 10px 25px;
+    flex-direction: column;
+    text-transform: capitalize;
+    justify-content: space-between;
 }
 
-@media (max-width: 1250px) {
+.form-modal-header h1 {
+    font-size: 25px;
+}
+
+.form-modal-header p {
+    color: var(--soft-blue);
+}
+
+.form-modal-header span {
+    width: 240px;
+}
+
+.form-modal .form-input {
+    width: 110%;
+}
+
+@media (max-width: 1300px) {
     .sub-header {
         height: 50vh;
     }
-    .modal-links {
-        padding: 10px;
-    }
-    .modal-links .hero-btn {
-        padding: 5px;
-    }
     #offline {
         font-size: 15px;
-    }
-    .form-modal {
-        max-width: 90%;
-    }
+    }    
 }
 
 @media (max-width: 700px) {
@@ -652,7 +643,7 @@ img {
         margin-right: 15px;
     }
     .form-modal-header h1 {
-        font-size: 1em;
+        font-size: 20px;
     }
     .form-modal-header p {
         font-size: 15px;
@@ -661,10 +652,31 @@ img {
     .form-modal-header span {
         width: 180px;
     }
-    .form-modal .form-input {
-        width: 125%;
-    }
+    .form-modal .form-input, 
     .form-modal .hero-btn {
-        width: 125%;
+        width: 122%;
+    }
+}
+
+@media (max-width: 500px) {
+    .modal-title h2 {
+        font-size: 20px;
+    }
+    .modal-body p {
+        font-size: 15px;
+    }
+    .modal-links {
+        padding: 10px;
+    }
+    .modal-links .hero-btn {
+        padding: 5px;
+    }
+}
+
+@media (max-height: 500px) {
+    .form-modal {
+        top: 60%;
+        overflow-y: auto;
+        height: 100%;
     }
 }
