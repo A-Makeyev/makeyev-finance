@@ -252,6 +252,7 @@ overlay.addEventListener('click', () => {
         if (modal == null) return
         modal.classList.remove('active')
         overlay.classList.remove('active')
+        body.classList.remove('stop-scrolling')
         if (window.navigator.onLine) {
             contactForm.reset()
         }
