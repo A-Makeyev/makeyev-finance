@@ -660,6 +660,9 @@ img {
 }
 
 @media (max-width: 500px) {
+    .form-modal {
+        width: 300px;
+    }
     .modal-title h2 {
         font-size: 20px;
     }
