@@ -129,7 +129,6 @@ function validateForm() {
     } else {
         validName && validPhone ? allowSubmit() : preventSubmit()
     }
-    
 }
 
 function allowSubmit() {
@@ -241,6 +240,8 @@ closeModal.forEach(button => {
         overlay.classList.remove('active')
         if (window.navigator.onLine) {
             contactForm.reset()
+            preventSubmit()
+            resetLabels()
         }
     })
 })
@@ -255,6 +256,8 @@ overlay.addEventListener('click', () => {
         body.classList.remove('stop-scrolling')
         if (window.navigator.onLine) {
             contactForm.reset()
+            preventSubmit()
+            resetLabels()
         }
     })
 })
@@ -265,6 +268,8 @@ body.addEventListener('keydown', (event) => {
         document.querySelector('.modal-close').click()
         if (window.navigator.onLine) {
             contactForm.reset()
+            preventSubmit()
+            resetLabels()
         }
     }
 })
