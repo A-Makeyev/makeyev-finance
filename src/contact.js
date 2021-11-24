@@ -226,7 +226,6 @@ function displayModalContent(status, mailTitle, mailBody) {
 
     modal.classList.add('active')
     overlay.classList.add('active')
-    body.classList.add('stop-scrolling')
 }
 
 // close modals when clicking on close modal button
@@ -236,7 +235,6 @@ closeModal.forEach(button => {
         if (modal !== null) modal.classList.remove('active')
         if (actionFormModal !== null) actionFormModal.classList.remove('active')
         
-        body.classList.remove('stop-scrolling')
         overlay.classList.remove('active')
         if (window.navigator.onLine) {
             contactForm.reset()
@@ -253,7 +251,6 @@ overlay.addEventListener('click', () => {
         if (modal == null) return
         modal.classList.remove('active')
         overlay.classList.remove('active')
-        body.classList.remove('stop-scrolling')
         if (window.navigator.onLine) {
             contactForm.reset()
             preventSubmit()
@@ -289,7 +286,6 @@ if (typeof modalLinks[0] !== 'undefined') {
 
 action.addEventListener('click', () => {
     actionFormModal.classList.add('active')
-    body.classList.add('stop-scrolling')
     overlay.classList.add('active')
 })
 
