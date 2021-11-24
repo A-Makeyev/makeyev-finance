@@ -93,9 +93,7 @@ for (let x = 1; x <= formInputs.length; x++) {
 function validateForm() {
     let validName = nameRegex.test(inputName.value) 
     let validPhone = phoneRegex.test(inputPhone.value)
-    
-    // remove email from quick action form
-    let actionForm = inputEmail === null
+    let validEmail // action form doesn't include email
 
     inputName.onchange = () => {
         if (!validName) {
@@ -113,8 +111,8 @@ function validateForm() {
         }
     }
 
-    if (!actionForm) {
-        const validEmail = emailRegex.test(inputEmail.value) 
+    if (inputEmail !== null) {
+        validEmail = emailRegex.test(inputEmail.value) 
         inputEmail.onchange = () => {
             if (!validEmail) {
                 inputEmail.style.borderColor = softRed
@@ -124,7 +122,7 @@ function validateForm() {
         }
     }
 
-    if (!actionForm) {
+    if (inputEmail !== null) {
         validName && validPhone && validEmail ? allowSubmit() : preventSubmit()
     } else {
         validName && validPhone ? allowSubmit() : preventSubmit()
@@ -283,11 +281,12 @@ if (typeof modalLinks[0] !== 'undefined') {
 }
 
 // action form modal
-
-action.addEventListener('click', () => {
-    actionFormModal.classList.add('active')
-    overlay.classList.add('active')
-})
+if (action !== null) {
+    action.addEventListener('click', () => {
+        actionFormModal.classList.add('active')
+        overlay.classList.add('active')
+    })
+}
 
 function createEmailBody() {
     let userName = inputName.value
@@ -343,14 +342,19 @@ function createEmailBody() {
                         `   
                         : ``}
 
-                        <tr style="border: 1px solid ${softGrey};">
-                            <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
-                                <strong>Message</strong>
-                            </td>
-                            <td style="padding: 10px;">
-                                <pre style="margin: 0; white-space: pre-wrap;">${userMessage}</pre>
-                            </td>
-                        </tr>
+                        ${userMessage.trim() !== '' ? 
+                        `
+                            <tr style="border: 1px solid ${softGrey};">
+                                <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
+                                    <strong>Message</strong>
+                                </td>
+                                <td style="padding: 10px;">
+                                    <pre style="margin: 0; white-space: pre-wrap;">${userMessage}</pre>
+                                </td>
+                            </tr>
+                        `
+                        : ``}
+
                     </tbody>
                 </table>
                 <p style="color: ${softBlack}; font-weight: 600;">Sent on ${currentDateTime()}</p>
