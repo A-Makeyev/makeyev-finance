@@ -517,9 +517,9 @@ img {
 }
 
 .modal-links {
-    padding: 20px;
     text-align: center;
     transition: all 0.5s;
+    padding: 20px 0 10px;
 }
 
 .modal-links .hero-btn {
@@ -588,6 +588,12 @@ img {
 
 .form-modal .form-input {
     width: 110%;
+}
+
+.modal-links .socials,
+.modal-links .socials i {
+    color: var(--soft-black);
+    background: var(--soft-white);
 }
 
 #overlay {
