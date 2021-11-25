@@ -170,12 +170,16 @@ contactForm.addEventListener('submit', async (event) => {
             Body: createEmailBody()
 
         }).then(response => {
+            if (action !== null) 
+                actionFormModal.classList.remove('active')
+
             resetLabels()
             displayModalContent(
                 'success',
                 'message sent! 🙂',
                 'we will get back to you as soon as possible.'
             )
+            
             preventSubmit()
             contactForm.reset()
             submitForm.textContent = 'Send'
@@ -186,13 +190,17 @@ contactForm.addEventListener('submit', async (event) => {
             throw new Error(error)
         })
         
-    } else {
-        // user is offline
+    // user is offline
+    } else { 
+        if (action !== null) 
+            actionFormModal.classList.remove('active')
+
         displayModalContent(
             'failure',
             'Oops! 🙁',
             'there seems to be a problem with your internet connection, reconnect and try again.'
         )
+
         allowSubmit()
         submitForm.textContent = 'Send'
         submitForm.style.pointerEvents = 'all'
@@ -222,8 +230,10 @@ function displayModalContent(status, mailTitle, mailBody) {
         modalLinks[0].style.display = 'none'
     }
 
-    modal.classList.add('active')
-    overlay.classList.add('active')
+    setTimeout(() => {
+        modal.classList.add('active')
+        overlay.classList.add('active')
+    }, 150)
 }
 
 // close modals when clicking on close modal button

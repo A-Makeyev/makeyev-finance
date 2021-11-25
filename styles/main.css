@@ -529,26 +529,6 @@ img {
     font-weight: 600;
 }
 
-#overlay {
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    opacity: 0;
-    z-index: 999;
-    position: fixed;
-    pointer-events: none;
-    transition: all 0.5s;
-    backdrop-filter: blur(5px);
-    filter: blur(5px);
-    background: var(--soft-black-background);
-}
-
-#overlay.active {
-    opacity: 1;
-    pointer-events: all;
-}
-
 /* action form modal */
 
 .form-modal {
@@ -608,6 +588,25 @@ img {
 
 .form-modal .form-input {
     width: 110%;
+}
+
+#overlay {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0;
+    z-index: 999;
+    position: fixed;
+    pointer-events: none;
+    transition: all 0.5s;
+    backdrop-filter: blur(5px);
+    background: var(--soft-black-background);
+}
+
+#overlay.active {
+    opacity: 1;
+    pointer-events: all;
 }
 
 @media (max-width: 1300px) {
