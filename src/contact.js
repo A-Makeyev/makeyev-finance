@@ -152,7 +152,8 @@ contactForm.addEventListener('submit', async (event) => {
         submitForm.style.pointerEvents = 'none'
         submitForm.classList.remove('btn-black')
         submitForm.classList.add('btn-blue')
-    
+        submitForm.textContent = 'Sending'
+
         for (let x = 0; x < 3; x++) {
             setTimeout(() => {
                 submitForm.textContent += '.'
