@@ -519,7 +519,7 @@ img {
 .modal-links {
     text-align: center;
     transition: all 0.5s;
-    padding: 20px 0 10px;
+    padding: 10px 0 10px;
 }
 
 .modal-links .hero-btn {
