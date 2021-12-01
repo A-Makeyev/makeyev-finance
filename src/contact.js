@@ -1,12 +1,12 @@
-// hide modal animation on page load
-(function hideModal() {
-    // messageModal.style.display = 'none'
-    // actionFormModal.style.display = 'none'
-    // window.addEventListener('load', () => {
-    //     messageModal.style.display = 'block'
-    //     actionFormModal.style.display = 'block'
-    // })
-})()
+// // hide modal animation on page load
+// (function hideModal() {
+//     // messageModal.style.display = 'none'
+//     // actionFormModal.style.display = 'none'
+//     // window.addEventListener('load', () => {
+//     //     messageModal.style.display = 'block'
+//     //     actionFormModal.style.display = 'block'
+//     // })
+// })()
 
 // add a button to fill form on dev environment
 (function fillForm() {
