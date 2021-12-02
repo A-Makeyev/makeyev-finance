@@ -1,6 +1,6 @@
 const 
 
-dev = 'http://127.0.0.1:5500/',
+dev = 'http://127.0.0.1:5500',
 prod = 'https://makeyev-finance.netlify.app',
 smtpToken = 'f4f02643-1db4-40ed-b666-cb10d6add9d3',
 facebookPage = 'https://www.facebook.com/makeyev.finance',
@@ -14,6 +14,11 @@ mailToLink = 'mailto:' + mainMail + '?subject=I%20need%20financial%20advice%21',
 wazeLink = 'https://ul.waze.com/ul?place=ChIJKeStYLy2HRURVhdAI9n1TqM&ll=32.81635130%2C35.11280030'
          + '&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location',
 
+/* regex */
+phoneRegex = /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/,
+nameRegex = /^[^0-9.,_!¡?÷?¿/\\+=@#$%ˆ&*(){}|~<>;:[\]]{2,}$/,
+emailRegex = /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/,
+
 /* colors */
 softWhite = 'aliceblue',
 softRed = 'rgb(210, 60, 60)',
@@ -24,11 +29,6 @@ softGrey = 'rgb(200, 200, 200)',
 softYellow = 'rgb(250, 205, 5)',
 softOrange = 'rgb(255, 125, 80)',
 softDarkBlue = 'rgb(65, 120, 235)',
-
-/* regex */
-phoneRegex = /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/,
-nameRegex = /^[^0-9.,_!¡?÷?¿/\\+=@#$%ˆ&*(){}|~<>;:[\]]{2,}$/,
-emailRegex = /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/,
 
 /* loader */
 body = document.querySelector('body'),
