@@ -1,9 +1,10 @@
 // prevent modal animation on page load
-messageModal.style.display = 'none'
-actionFormModal.style.display = 'none'
+if (messageModal) messageModal.style.display = 'none'
+if (actionFormModal) actionFormModal.style.display = 'none'
+
 setTimeout(() => {
-    messageModal.style.display = 'block'
-    actionFormModal.style.display = 'block'
+    if (messageModal) messageModal.style.display = 'block'
+    if (actionFormModal) actionFormModal.style.display = 'block'
 }, 2500)
 
 // add a button to fill form on dev environment
