@@ -1,20 +1,18 @@
-// // hide modal animation on page load
-// (function hideModal() {
-//     // messageModal.style.display = 'none'
-//     // actionFormModal.style.display = 'none'
-//     // window.addEventListener('load', () => {
-//     //     messageModal.style.display = 'block'
-//     //     actionFormModal.style.display = 'block'
-//     // })
-// })()
+// prevent modal animation on page load
+messageModal.style.display = 'none'
+actionFormModal.style.display = 'none'
+setTimeout(() => {
+    messageModal.style.display = 'block'
+    actionFormModal.style.display = 'block'
+}, 2500)
 
 // add a button to fill form on dev environment
-(function fillForm() {
+function fillForm() {
     if (window.location.href.includes(dev)) {
         let button = document.createElement('button')
         button.className = 'hero-btn btn-orange'
-        button.textContent = 'add test details'
         button.setAttribute('id', 'dev-btn')
+        button.textContent = 'add details'
         button.style.marginLeft = '5px'
         contactForm.appendChild(button)
 
@@ -47,7 +45,8 @@
             allowSubmit()
         })
     }
-})()
+}
+fillForm()
 
 // reset labels after submit
 function resetLabels() {
