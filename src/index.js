@@ -9,6 +9,7 @@ mainMail = 'anatoly.makeyev@gmail.com',
 mainPhone = '+972527729974',
 
 /* links */
+callTo = 'tel:' + mainPhone
 whatsAppLink = 'https://wa.me/' + mainPhone.slice(1) + '?text=What%27s%20up%3F',
 mailToLink = 'mailto:' + mainMail + '?subject=I%20need%20financial%20advice%21',
 wazeLink = 'https://ul.waze.com/ul?place=ChIJKeStYLy2HRURVhdAI9n1TqM&ll=32.81635130%2C35.11280030'

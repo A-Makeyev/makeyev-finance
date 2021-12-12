@@ -32,7 +32,7 @@ nav .logo {
 nav #nav-links {
     margin: 0 -75px;
     padding: 0;
-    width: 45%;
+    width: 50%;
     height: 100%;
     float: right;
     display: flex;
@@ -116,6 +116,7 @@ nav .menu-icon .line {
 .nav-icons {
     display: flex;
     flex-direction: row;
+    padding-left: 20px;
 }
 
 /* footer */
@@ -179,10 +180,9 @@ nav .menu-icon .line {
     color: var(--soft-orange) !important;
 }
 
-.whatsapp-fill:hover {
+.whatsapp-fill:hover, .phone-fill:hover {
     color: var(--soft-green) !important;
 }
-
 
 @media screen and (min-width: 1980px) {
     .nav-scrolling-resize {

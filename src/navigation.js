@@ -17,6 +17,10 @@
         if (sibling.classList.contains('fa-envelope')) icons[x].href = mailToLink
         if (sibling.classList.contains('fa-whatsapp')) icons[x].href = whatsAppLink
         if (sibling.classList.contains('fa-facebook-square')) icons[x].href = facebookPage
+        if (sibling.classList.contains('fa-phone-square-alt')
+        || sibling.classList.contains('fa-phone-alt')) {
+            icons[x].href = callTo
+        } 
     }
 })()
 
