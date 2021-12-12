@@ -282,13 +282,13 @@
             </div>
             <div class="modal-body">
                 <div class="contact-col">
-                    <form method="POST" onkeyup="validateForm()" autocomplete="off" id="contact-form">      
+                    <form method="POST" onkeyup="validateForm()" id="contact-form">      
                         <label for="name" class="form-label">name</label>
-                        <input  type="text" name="name" id="name" class="form-input" maxlength="99" required>
+                        <input  type="text" name="name" id="name" class="form-input" maxlength="99" autocomplete="name" required>
                         <span class="asterisk"></span>
 
                         <label for="phone" class="form-label">phone number</label>
-                        <input type="text" name="phone" id="phone" class="form-input" maxlength="99" required>
+                        <input type="text" name="phone" id="phone" class="form-input" maxlength="99" autocomplete="tel" required>
                         <span class="asterisk"></span>
 
                         <label for="message" class="form-label">tell us how can we help</label>
