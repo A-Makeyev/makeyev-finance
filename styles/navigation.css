@@ -102,8 +102,9 @@ nav .menu-icon .line {
 .navbar-scrolling {
     color: var(--soft-black);
     background: var(--soft-white);
-    border-bottom: 2px solid var(--soft-blue);
     transition: all ease-in-out 0.5s;
+    box-shadow: 0 5px 5px 0 var(--soft-black-background);
+    /* border-bottom: 1px solid var(--soft-blue-background); */
 }
 
 .nav-scrolling-resize {
