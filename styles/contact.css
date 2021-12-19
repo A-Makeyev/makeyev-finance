@@ -157,14 +157,14 @@ textarea {
     color: var(--soft-red);
 } */
 
-@media (max-width: 1200px) {
-    .contact-col input, .contact-col textarea {
-        width: 130%;
+@media (max-width: 1600px) {
+    #submit-form, .contact-col input, .contact-col textarea {
+        width: 120%;
     }
 }
 
-@media (max-width: 1000px) {
-    .contact-col input, .contact-col textarea {
+@media (max-width: 1100px) {
+    #submit-form, .contact-col input, .contact-col textarea {
         padding: 15px;
         width: 115%;
     }
@@ -182,11 +182,8 @@ textarea {
     }
     .form-label {
         top: 37px;
-        left: 20px;
-        position: relative;
-    }
-    .form-label {
         font-size: 15px;
+        left: 10% !important;
     }
     .contact-info {
         margin-left: -5px;
@@ -197,12 +194,12 @@ textarea {
         height: 1px;
     }
     .header-line {
-        width: 260px;
+        width: 225px;
     }
 }
 
 @media (max-width: 500px) {
-    .contact-col input, .contact-col textarea {
+    #submit-form, .contact-col input, .contact-col textarea {
         width: 120%;
     }
     .contact-col i, .contact-col p {
@@ -216,8 +213,5 @@ textarea {
     }
     .contact-col i, .contact-col p, .contact > p {
         font-size: 12px;
-    }
-    .header-line {
-        width: 210px;
     }
 }

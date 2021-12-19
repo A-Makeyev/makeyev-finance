@@ -42,6 +42,14 @@ body {
     overflow: hidden !important;
 }
 
+.spin {
+    animation: spin 1s infinite;
+}
+
+.scale {
+    animation: scale 1s infinite;
+}
+
 #offline {
     display: none;
     font-size: 20px;
@@ -85,24 +93,6 @@ img {
 
 .gradient-text:hover {
     animation: shine 1s;
-}
-
-@keyframes shine {
-    to {
-        background-position: 200% center;
-    }
-}
-
-.fadeIn {
-    animation: fadeIn 3s;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    } to {
-        opacity: 1;
-    }
 }
 
 .header {
@@ -237,24 +227,6 @@ img {
 .btn-orange:hover {
     color: var(--soft-white);
     background: var(--soft-orange);
-}
-
-@media(max-width: 770px) {
-    .text-box h1 {
-        font-size: 3rem;
-    } 
-    .hero-btn, .text-box p {
-        font-size: 1.5rem;
-    }
-}
-
-@media(max-width: 500px) {
-    .text-box h1 {
-        font-size: 2.5em;
-    } 
-    .hero-btn, .text-box p {
-        font-size: 1em;
-    }
 }
 
 /* courses */
@@ -484,6 +456,7 @@ img {
     padding: 10px 25px;
     align-items: center;
     text-transform: capitalize;
+    flex-direction: row-reverse;
     justify-content: space-between;
     border-bottom: 2px solid var(--soft-blue);
 }
@@ -509,11 +482,14 @@ img {
 }
 
 .modal-body {
+    display: flex;
     padding: 10px 15px;
+    flex-direction: column;
 }
 
 .modal-body p {
     padding: 10px;
+    text-align: center;
 }
 
 .modal-links {
@@ -571,6 +547,7 @@ img {
     padding: 10px 25px;
     flex-direction: column;
     text-transform: capitalize;
+    flex-direction: row-reverse;
     justify-content: space-between;
 }
 
@@ -624,6 +601,15 @@ img {
     }    
 }
 
+@media(max-width: 770px) {
+    .text-box h1 {
+        font-size: 3rem;
+    } 
+    .hero-btn, .text-box p {
+        font-size: 1.5rem;
+    }
+}
+
 @media (max-width: 700px) {
     .sub-header {
         height: 45vh;
@@ -671,6 +657,12 @@ img {
 }
 
 @media (max-width: 500px) {
+    .text-box h1 {
+        font-size: 2.5em;
+    } 
+    .hero-btn, .text-box p {
+        font-size: 1em;
+    }
     .form-modal {
         width: 300px;
     }
@@ -690,5 +682,43 @@ img {
         top: 60%;
         overflow-y: auto;
         height: 100%;
+    }
+}
+
+/* animations */
+
+@keyframes shine {
+    to {
+        background-position: 200% center;
+    }
+}
+
+.fadeIn {
+    animation: fadeIn 3s;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    } to {
+        opacity: 1;
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes scale {
+    from {
+        transform: scale(0.5);
+    }
+    to {
+        transform: scale(1);
     }
 }

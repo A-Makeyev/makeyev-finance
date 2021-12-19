@@ -116,6 +116,7 @@ textarea {
 }
 
 #submit-form {
+    width: 110%;
     margin-top: 15px;
     cursor: not-allowed;
 }
@@ -150,9 +151,6 @@ textarea {
     .form-label {
         top: 37px;
         left: 20px;
-        position: relative;
-    }
-    .form-label {
         font-size: 15px;
     }
     .contact-info {

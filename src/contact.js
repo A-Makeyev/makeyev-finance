@@ -14,18 +14,13 @@ function fillForm() {
         button.className = 'hero-btn btn-orange'
         button.setAttribute('id', 'dev-btn')
         button.textContent = 'add details'
-        
-        if (language == 'hebrew') {
-            button.style.width = '110%'
-            button.style.marginTop = '10px'
-        } else if (language == 'english') {
-            button.style.marginLeft = '5px'
-        }
+        button.style.marginTop = '10px'
+        button.style.width = '110%'
 
         contactForm.appendChild(button)
 
         function alignButton() {
-            if (window.matchMedia('(max-width: 1300px)').matches) {
+            if (window.matchMedia('(max-width: 1600px)').matches) {
                 button.style.display = 'none'
             } else {
                 button.style.display = 'inline-block'
@@ -186,12 +181,16 @@ contactForm.addEventListener('submit', async (event) => {
         } else if (language == 'english') {
             submitForm.textContent = 'Sending'
         }
-        // https://stackoverflow.com/questions/6094117/prepend-text-to-beginning-of-string
-        for (let x = 0; x < 3; x++) {
-            setTimeout(() => {
-                submitForm.textContent += '.'
-                if (x === 2) submitForm.innerHTML += '<i class="fas fa-paper-plane"></i>'
-            }, (x * 250))
+ 
+        if (language == 'hebrew') {
+            submitForm.innerHTML = '<i class="fas fa-paper-plane spin"></i>'
+        } else if (language == 'english') {
+            for (let x = 0; x < 3; x++) {
+                setTimeout(() => {
+                    submitForm.textContent += '.'
+                    if (x === 2) submitForm.innerHTML += '<i class="fas fa-paper-plane"></i>'
+                }, (x * 250))
+            }
         }
         
         Email.send({
@@ -208,11 +207,7 @@ contactForm.addEventListener('submit', async (event) => {
                 actionFormModal.classList.remove('active')
 
             resetLabels()
-            displayModalContent(
-                'success',
-                'message sent! 🙂',
-                'we will get back to you as soon as possible.'
-            )
+            displayModalContent('success')
             
             preventSubmit()
             contactForm.reset()
@@ -235,12 +230,7 @@ contactForm.addEventListener('submit', async (event) => {
         if (action !== null) 
             actionFormModal.classList.remove('active')
 
-        displayModalContent(
-            'failure',
-            'Oops! 🙁',
-            'there seems to be a problem with your internet connection, reconnect and try again.'
-        )
-
+        displayModalContent('failure')
         allowSubmit()
         
         if (language == 'hebrew') {
@@ -255,25 +245,39 @@ contactForm.addEventListener('submit', async (event) => {
 })
 
 // display modal with a status
-function displayModalContent(status, mailTitle, mailBody) {
+function displayModalContent(status) {
     let firstName = inputName.value.split(' ')[0]
-    modalTitle.textContent = mailTitle
-    modalBody.textContent = mailBody
-    
+
     if (status === 'success') {
         modalTitle.style.color = softGreen
         modal.style.border = `2px solid ${softGreen}`
         modalHeader.style.borderBottom = `2px solid ${softGreen}`
         modalUser.style.display = 'block'
-        modalUser.textContent = `Thanks ${firstName},`
         modalLinks[0].style.display = 'block'
+        
+        if (language == 'hebrew') {
+            modalTitle.textContent = '🙂 ההודעה נשלחה'
+            modalBody.textContent = 'נחזור אליכם בהקדם האפשרי'
+            modalUser.textContent = `תודה ${firstName}`
+        } else if (language == 'english') {
+            modalTitle.textContent = 'message sent! 🙂'
+            modalBody.textContent = 'we will get back to you as soon as possible.'
+            modalUser.textContent = `Thanks ${firstName},`
+        }
 
     } else if (status === 'failure') {
         modalTitle.style.color = softRed
         modal.style.border = `2px solid ${softRed}`
         modalHeader.style.borderBottom = `2px solid ${softRed}`
-        modalUser.textContent = `Dear ${firstName},`
         modalLinks[0].style.display = 'none'
+
+        if (language == 'hebrew') {
+            modalTitle.textContent = '🙁 אופס'
+            modalBody.textContent = 'נראה שיש לכם בעיה באינטרנט, תתחברו מחדש ותנסו שוב'
+        } else if (language == 'english') {
+            modalTitle.textContent = 'Oops! 🙁'
+            modalBody.textContent = 'there seems to be a problem with your internet connection, reconnect and try again.'
+        }
     }
 
     setTimeout(() => {
