@@ -32,7 +32,7 @@ function handleConnectionChange(event) {
         `
             <i class="fas fa-exclamation-circle"></i>
             <span style="margin-left: 5px;">
-                no internet connection
+                ${ language == 'hebrew' ? 'אין חיבור לרשת' : 'no internet connection' }
             </span>
         `
     }

@@ -16,12 +16,32 @@
     padding-top: 50px;
 }
 
-.contact h1 {
+.form-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.form-header h1 {
     font-size: 2em;
 }
 
-.contact > p {
+.form-header p {
     color: var(--soft-blue);
+}
+
+.header-line {
+    height: 1px;
+    width: 225px;
+    display: block; 
+    background: var(--soft-grey);
+}
+
+.contact-line {
+    width: 1px;
+    height: 370px;
+    margin: 30px 0 0 120px;
+    background: var(--soft-grey);
 }
 
 .contact-row {
@@ -66,34 +86,39 @@ textarea {
 }
 
 .contact-col input, .contact-col textarea {
-    width: 100%;
+    width: 110%;
     outline: none;
     padding: 10px;
     font-size: 20px;
+    text-align: right;
     border-radius: 5px;
     margin-bottom: 10px;
     transition: all 0.1s;
     box-sizing: border-box;
-    box-shadow: 0 4px 2px -2px var(--soft-black);
     border: 1px solid var(--soft-black);
+    box-shadow: 0 4px 2px -2px var(--soft-black);
+}
+
+#phone, #email {
+    direction: ltr;
+}
+
+#name, #message {
+    direction: rtl;
 }
 
 .contact-info {
     margin: 25px 60px;
 }
 
-.header-line {
-    height: 1px;
-    width: 350px;
-    display: block; 
-    background: var(--soft-grey);
+.contact-info a {
+    margin-left: 20px;
+    white-space: nowrap;
 }
 
-.contact-line {
-    width: 1px;
-    height: 370px;
-    margin: 30px 0 0 30px;
-    background: var(--soft-grey);
+.contact-info p {
+    margin-left: 10px;
+    white-space: nowrap;
 }
 
 #submit-status {
@@ -105,7 +130,8 @@ textarea {
 
 .form-label {
     top: 35px;
-    left: 20px;
+    left: 40px;
+    float: right;
     cursor: text;
     font-size: 20px;
     font-weight: 600;
@@ -116,6 +142,7 @@ textarea {
 }
 
 #submit-form {
+    width: 110%;
     margin-top: 15px;
     cursor: not-allowed;
 }
@@ -129,6 +156,12 @@ textarea {
     position: relative;
     color: var(--soft-red);
 } */
+
+@media (max-width: 1200px) {
+    .contact-col input, .contact-col textarea {
+        width: 130%;
+    }
+}
 
 @media (max-width: 1000px) {
     .contact-col input, .contact-col textarea {
@@ -160,7 +193,7 @@ textarea {
     }
     .contact-line {
         margin: 0;
-        width: 100%;
+        width: 105%;
         height: 1px;
     }
     .header-line {

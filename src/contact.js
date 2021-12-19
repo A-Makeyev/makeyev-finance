@@ -14,7 +14,14 @@ function fillForm() {
         button.className = 'hero-btn btn-orange'
         button.setAttribute('id', 'dev-btn')
         button.textContent = 'add details'
-        button.style.marginLeft = '5px'
+        
+        if (language == 'hebrew') {
+            button.style.width = '110%'
+            button.style.marginTop = '10px'
+        } else if (language == 'english') {
+            button.style.marginLeft = '5px'
+        }
+
         contactForm.appendChild(button)
 
         function alignButton() {
@@ -60,23 +67,28 @@ function resetLabels() {
         getXPath(`(${labelXPath})[${x}]`).style.top = '35px'
     }
 }
-
-// initialize input fields 
+ 
 for (let x = 1; x <= formInputs.length; x++) {
+    // input labels go up on focus 
     getXPath(`(${inputXPath})[${x}]`).addEventListener('focus', () => {
         getXPath(`(${inputXPath})[${x}]`).style.boxShadow = `0 4px 2px -2px ${softBlue}`
         getXPath(`(${inputXPath})[${x}]`).style.border = `2px solid ${softBlue}`
         getXPath(`(${labelXPath})[${x}]`).style.color = softBlue
         getXPath(`(${labelXPath})[${x}]`).style.cursor = 'default'
-        getXPath(`(${labelXPath})[${x}]`).style.left = '0'
         getXPath(`(${labelXPath})[${x}]`).style.top = '0'
-        setTimeout(() => { 
-            if (getXPath(`(${labelXPath})[${x}]`).textContent.slice(-1) !== ':') {
-                getXPath(`(${labelXPath})[${x}]`).textContent += ':'
-            }
-        }, 250)
+
+        if (language == 'english') {
+            getXPath(`(${labelXPath})[${x}]`).style.left = '0'
+        } 
+
+        // setTimeout(() => { 
+        //     if (getXPath(`(${labelXPath})[${x}]`).textContent.slice(-1) !== ':') {
+        //         getXPath(`(${labelXPath})[${x}]`).textContent += ':'
+        //     }
+        // }, 250)
     })
 
+    // input labels go down on blur 
     getXPath(`(${inputXPath})[${x}]`).addEventListener('blur', () => {
         let value = getXPath(`(${inputXPath})[${x}]`).value
         if (value.length < 1 && value === '') {
@@ -84,12 +96,18 @@ for (let x = 1; x <= formInputs.length; x++) {
             getXPath(`(${inputXPath})[${x}]`).style.border = `1px solid ${softBlack}`
             getXPath(`(${labelXPath})[${x}]`).style.color = softGrey
             getXPath(`(${labelXPath})[${x}]`).style.cursor = 'text'
-            getXPath(`(${labelXPath})[${x}]`).style.left = '20px'
             getXPath(`(${labelXPath})[${x}]`).style.top = '35px'
-            setTimeout(() => { 
-                let text = getXPath(`(${labelXPath})[${x}]`).textContent.slice(0, -1)
-                getXPath(`(${labelXPath})[${x}]`).textContent = text
-            }, 250)
+
+            if (language == 'hebrew') {
+                getXPath(`(${labelXPath})[${x}]`).style.left = '40px'
+            } else if (language == 'english') {
+                getXPath(`(${labelXPath})[${x}]`).style.left = '20px'
+            }
+
+            // setTimeout(() => { 
+            //     let text = getXPath(`(${labelXPath})[${x}]`).textContent.slice(0, -1)
+            //     getXPath(`(${labelXPath})[${x}]`).textContent = text
+            // }, 250)
         }
     })
 
@@ -162,8 +180,13 @@ contactForm.addEventListener('submit', async (event) => {
         submitForm.style.pointerEvents = 'none'
         submitForm.classList.remove('btn-black')
         submitForm.classList.add('btn-blue')
-        submitForm.textContent = 'Sending'
 
+        if (language == 'hebrew') {
+            submitForm.textContent = 'שולח'
+        } else if (language == 'english') {
+            submitForm.textContent = 'Sending'
+        }
+        // https://stackoverflow.com/questions/6094117/prepend-text-to-beginning-of-string
         for (let x = 0; x < 3; x++) {
             setTimeout(() => {
                 submitForm.textContent += '.'
@@ -193,7 +216,13 @@ contactForm.addEventListener('submit', async (event) => {
             
             preventSubmit()
             contactForm.reset()
-            submitForm.textContent = 'Send'
+            
+            if (language == 'hebrew') {
+                submitForm.textContent = 'שלחו'
+            } else if (language == 'english') {
+                submitForm.textContent = 'Send'
+            }
+
             submitForm.style.pointerEvents = 'all'
             console.log(`Email has been sent with status: ${response}`)
 
@@ -213,7 +242,13 @@ contactForm.addEventListener('submit', async (event) => {
         )
 
         allowSubmit()
-        submitForm.textContent = 'Send'
+        
+        if (language == 'hebrew') {
+            submitForm.textContent = 'שלחו'
+        } else if (language == 'english') {
+            submitForm.textContent = 'Send'
+        }
+
         submitForm.style.pointerEvents = 'all'
     }
     return false

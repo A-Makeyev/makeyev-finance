@@ -81,28 +81,36 @@
        <!-- contact -->
 
        <section class="contact">
-            <h1>השאירו פרטים</h1>
-            <p>ונחזור אליכם בהקדם האפשרי</p>
-            <span class="header-line"></span>
+            <div class="form-header">
+                <div>
+                    <h1>השאירו פרטים</h1>
+                </div>
+                <div>
+                    <p>ונחזור אליכם בהקדם האפשרי</p>
+                </div>
+                <div>
+                    <span class="header-line"></span>
+                </div>
+            </div>
             
             <div class="contact-row">
                 <div class="contact-col">
                     <form method="POST" onkeyup="validateForm()" id="contact-form">      
-                        <label for="name" class="form-label">name</label>
+                        <label for="name" class="form-label">שם</label>
                         <input  type="text" name="name" id="name" class="form-input" maxlength="99" autocomplete="name" required>
                         <span class="asterisk"></span>
 
-                        <label for="phone" class="form-label">phone number</label>
+                        <label for="phone" class="form-label">מספר</label>
                         <input type="text" name="phone" id="phone" class="form-input" maxlength="99" autocomplete="tel" required>
                         <span class="asterisk"></span>
 
-                        <label for="email" class="form-label">email address</label>
+                        <label for="email" class="form-label">אימייל</label>
                         <input type="text" name="email" id="email" class="form-input" maxlength="99" autocomplete="email" required>
                         
-                        <label for="message" class="form-label">tell us how can we help</label>
+                        <label for="message" class="form-label">איך נוכל לעזור לכם</label>
                         <textarea type="text" name="message" id="message" class="form-input" rows="5" maxlength="999"></textarea>
 
-                        <button type="submit" id="submit-form" class="hero-btn btn-black" disabled>send</button>
+                        <button type="submit" id="submit-form" class="hero-btn btn-black" disabled>שלחו</button>
                     </form>
                 </div>
                 
@@ -113,7 +121,7 @@
                         <a href="https://wa.me/+972527729974?text=What%27s%20up%3F" target="_blank">
                             <i class="fab fa-whatsapp whatsapp-fill contact-icons"></i>
                         </a>
-                        <a href="tel:+972527729974" target="_blank">
+                        <a href="tel:+972527729974" target="_blank" style="margin: 0;">
                             <p class="phone-fill">052-772-9974</p>
                         </a>
                     </div>
@@ -122,7 +130,7 @@
                         <a href="mailto:anatoly.makeyev@gmail.com" target="_blank">
                             <i class="far fa-envelope email-fill contact-icons"></i>
                             <span>
-                                <p class="email-fill">anatoly.makeyev@gmail.com</p>
+                                <p class="email-fill" style="margin-left: 5px;">anatoly.makeyev@gmail.com</p>
                             </span>
                         </a>
                     </div>

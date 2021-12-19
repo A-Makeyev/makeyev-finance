@@ -1,5 +1,9 @@
-const 
+var 
 
+// TODO 
+// add changing language to english
+
+language = 'hebrew',
 dev = 'http://127.0.0.1:5500',
 prod = 'https://makeyev-finance.netlify.app',
 smtpToken = 'f4f02643-1db4-40ed-b666-cb10d6add9d3',
