@@ -7,9 +7,12 @@ setTimeout(() => {
     if (actionFormModal) actionFormModal.style.display = 'block'
 }, 2500)
 
+// add map
+map.setAttribute('src', wazeMap)
+
 // add a button to fill form on dev environment
 function fillForm() {
-    if (window.location.href.includes(dev)) {
+    if (window.location.href.includes(`${dev}/contact`)) {
         let button = document.createElement('button')
         button.className = 'hero-btn btn-orange'
         button.setAttribute('id', 'dev-btn')
