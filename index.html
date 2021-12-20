@@ -35,10 +35,10 @@
                 </div>
 
                 <ul id="nav-links">
-                    <li><a class="nav-link" href="javascript: void(0)" onclick="backToHeader()">home</a></li>
-                    <li><a class="nav-link" href="services">services</a></li>
-                    <li><a class="nav-link" href="articles">articles</a></li>
-                    <li><a class="nav-link" href="contact">contact</a></li>
+                    <li><a class="nav-link" href="javascript: void(0)" onclick="backToHeader()">ראשי</a></li>
+                    <li><a id="services" class="nav-link" href="services">השירות שלנו</a></li>
+                    <li><a id="articles" class="nav-link" href="articles">מאמרים</a></li>
+                    <li><a id="contact" class="nav-link" href="contact">צרו קשר</a></li>
                     <div class="nav-icons">
                         <li>
                             <a class="nav-link icon" href="" target="_blank">
@@ -239,15 +239,15 @@
                         <a class="footer-link"
                            href="javascript: void(0)" 
                            onclick="backToHeader()">
-                           home
+                           ראשי
                         </a>
                     </p>
                     <span>&#183;</span>
-                    <p><a class="footer-link" href="services">services</a></p>
+                    <p><a class="footer-link" href="services">השירות שלנו</a></p>
                     <span>&#183;</span>
-                    <p><a class="footer-link" href="articles">articles</a></p>
+                    <p><a class="footer-link" href="articles">מאמרים</a></p>
                     <span>&#183;</span>
-                    <p><a class="footer-link" href="contact">contact</a></p>
+                    <p><a class="footer-link" href="contact">צרו קשר</a></p>
                 </div>
             </div>
 
@@ -291,18 +291,18 @@
             <div class="modal-body">
                 <div class="contact-col">
                     <form method="POST" onkeyup="validateForm()" id="contact-form">      
-                        <label for="name" class="form-label">name</label>
+                        <label for="name" class="form-label">שם</label>
                         <input  type="text" name="name" id="name" class="form-input" maxlength="99" autocomplete="name" required>
                         <span class="asterisk"></span>
 
-                        <label for="phone" class="form-label">phone number</label>
+                        <label for="phone" class="form-label">מספר</label>
                         <input type="text" name="phone" id="phone" class="form-input" maxlength="99" autocomplete="tel" required>
                         <span class="asterisk"></span>
 
-                        <label for="message" class="form-label">tell us how can we help</label>
+                        <label for="message" class="form-label">איך נוכל לעזור לכם</label>
                         <textarea type="text" name="message" id="message" class="form-input" rows="3" maxlength="999"></textarea>
 
-                        <button type="submit" id="submit-form" class="hero-btn btn-black" disabled>send</button>
+                        <button type="submit" id="submit-form" class="hero-btn btn-black" disabled>שלחו</button>
                     </form>
                 </div>
             </div>
