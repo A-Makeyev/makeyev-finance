@@ -43,11 +43,11 @@ body {
 }
 
 .spin {
-    animation: spin 1s infinite;
+    animation: spin 1.5s infinite;
 }
 
 .scale {
-    animation: scale 1s infinite;
+    animation: scale 1.5s infinite;
 }
 
 #offline {
@@ -668,11 +668,12 @@ img {
     .text-box h1 {
         font-size: 2.5em;
     } 
-    .hero-btn, .text-box p {
+    .hero-btn {
         font-size: 1em;
     }
     .text-box p {
         width: 300px;
+        font-size: 15px;
     }
     .form-modal {
         width: 300px;

@@ -10,9 +10,9 @@
     <script defer src="src/navigation.js"></script>
     <script async src="https://smtpjs.com/v3/smtp.js"></script>
     <script async src="https://kit.fontawesome.com/4f48855ba9.js" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="styles/loader.css">
-    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" rel="preload" as="style" href="styles/loader.css">
     <link rel="stylesheet" href="styles/navigation.css">
+    <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/contact.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -290,13 +290,13 @@
             </div>
             <div class="modal-body">
                 <div class="contact-col">
-                    <form method="POST" onkeyup="validateForm()" id="contact-form">      
+                    <form method="POST" onkeyup="validateForm()" autocomplete="off" id="contact-form">      
                         <label for="name" class="form-label">שם</label>
-                        <input  type="text" name="name" id="name" class="form-input" maxlength="99" autocomplete="name" required>
+                        <input  type="text" name="name" id="name" class="form-input" maxlength="99" required>
                         <span class="asterisk"></span>
 
                         <label for="phone" class="form-label">מספר</label>
-                        <input type="text" name="phone" id="phone" class="form-input" maxlength="99" autocomplete="tel" required>
+                        <input type="text" name="phone" id="phone" class="form-input" maxlength="99" required>
                         <span class="asterisk"></span>
 
                         <label for="message" class="form-label">איך נוכל לעזור לכם</label>

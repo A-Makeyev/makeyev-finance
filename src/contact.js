@@ -8,7 +8,18 @@ setTimeout(() => {
 }, 2500)
 
 // add map
-if (map) map.setAttribute('src', wazeMap)
+if (isMobileDevice) {
+    if (map) {
+        map.setAttribute('src', googleMap)
+    }
+} else {
+    if (map) {
+        map.setAttribute('src', wazeMap)
+        for (let x = 0 ; x < wazeAddresses.length; x++) {
+            wazeAddresses[x].setAttribute('href', wazeLink)
+        }
+    }
+}
 
 // add a button to fill form on dev environment
 function fillForm() {
@@ -35,7 +46,7 @@ function fillForm() {
 
         button.addEventListener('click', () => {
             let details = [
-                'Estebon Villalon',
+                language == 'hebrew' ? 'אסטבון וילאלון' : 'Estebon Villalon',
                 '+972-52-696-9696',
                 'villabon@este.lon',
                 'Baguette Du Fromage '
@@ -255,17 +266,17 @@ function displayModalContent(status) {
         modalTitle.style.color = softGreen
         modal.style.border = `2px solid ${softGreen}`
         modalHeader.style.borderBottom = `2px solid ${softGreen}`
-        modalUser.style.display = 'block'
         modalLinks[0].style.display = 'block'
+        modalUser.style.display = 'block'
         
         if (language == 'hebrew') {
-            modalTitle.textContent = '🙂 ההודעה נשלחה'
-            modalBody.textContent = 'נחזור אליכם בהקדם האפשרי'
-            modalUser.textContent = `תודה ${firstName}`
+            modalTitle.textContent = '🙂 ההודעה נשלחה בהצלחה'
+            modalUser.textContent = `תודה על פנייתך ${firstName}`
+            modalBody.textContent = 'נדאג שיחזרו אליך בהקדם האפשרי'
         } else if (language == 'english') {
             modalTitle.textContent = 'message sent! 🙂'
-            modalBody.textContent = 'we will get back to you as soon as possible.'
             modalUser.textContent = `Thanks ${firstName},`
+            modalBody.textContent = 'we will get back to you as soon as possible.'
         }
 
     } else if (status === 'failure') {
@@ -275,8 +286,8 @@ function displayModalContent(status) {
         modalLinks[0].style.display = 'none'
 
         if (language == 'hebrew') {
-            modalTitle.textContent = '🙁 אופס'
-            modalBody.textContent = 'נראה שיש לכם בעיה באינטרנט, תתחברו מחדש ותנסו שוב'
+            modalTitle.textContent = '🙁 אופס, ההודעה לא נשלחה'
+            modalBody.textContent = 'נראה שיש לכם בעיה באינטרנט, תתחברו מחדש ונסו שוב'
         } else if (language == 'english') {
             modalTitle.textContent = 'Oops! 🙁'
             modalBody.textContent = 'there seems to be a problem with your internet connection, reconnect and try again.'

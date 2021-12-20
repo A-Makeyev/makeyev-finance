@@ -10,6 +10,16 @@
     border: 1px solid var(--soft-black);
 }
 
+.iframe-link {
+    display: inline-block;
+    position: absolute;
+    height: 600px;
+    width: 100%;
+    z-index: 2;
+    left: 0;
+    top: 0; 
+}
+
 .contact {
     width: 80%;
     margin: auto;

@@ -20,13 +20,14 @@ wazeLink = 'https://ul.waze.com/'
          + '/ul?place=ChIJKeStYLy2HRURVhdAI9n1TqM&ll=32.81635130%2C35.11280030'
          + '&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location',
 
-wazeMap = `https://embed.waze.com/${language == 'hebrew' ? 'he' : ''}` + '/iframe?zoom=16&lat=32.816351&lon=35.112800&ct=livemap&pin=1'
+wazeMap = `https://embed.waze.com/${language == 'hebrew' ? 'he' : ''}` + '/iframe?zoom=16&lat=32.816351&lon=35.112800&ct=livemap&pin=1&desc=1&navigate=yes'
 googleMap = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3353.1086170345934!2d35.111040768466864!3d32.81588692267333!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151db6bc60ade429%3A0xa34ef5d923401756!2sSde%20Boker%20St%2039%2C%20Kiryat%20Ata%2C%20Israel!5e0!3m2!1sen!2sus!4v1635153183795!5m2!1sen!2sus"'
 
 /* regex */
 phoneRegex = /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/,
 nameRegex = /^[^0-9.,_!¡?÷?¿/\\+=@#$%ˆ&*(){}|~<>;:[\]]{2,}$/,
 emailRegex = /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/,
+isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
 /* colors */
 softWhite = 'aliceblue',
@@ -75,6 +76,7 @@ formLabels = document.getElementsByClassName('form-label'),
 modalLinks = document.getElementsByClassName('modal-links'),
 openModal = document.querySelectorAll('[data-modal-target]'),
 closeModal = document.querySelectorAll('[data-modal-close]'),
+wazeAddresses = document.getElementsByClassName('wazeAddress'),
 
 /* locators */
 inputXPath = '//*[@class="form-input"]',
@@ -117,3 +119,19 @@ function sleep(seconds) {
     let time = new Date().getTime() + (seconds * 1000);
     while (new Date().getTime() <= time) {}
 }
+
+// console.log(JSON.stringify({
+//     isAndroid: /Android/.test(navigator.userAgent),
+//     isCordova: !!window.cordova,
+//     isEdge: /Edge/.test(navigator.userAgent),
+//     isFirefox: /Firefox/.test(navigator.userAgent),
+//     isChrome: /Google Inc/.test(navigator.vendor),
+//     isChromeIOS: /CriOS/.test(navigator.userAgent),
+//     isChromiumBased: !!window.chrome && !/Edge/.test(navigator.userAgent),
+//     isIE: /Trident/.test(navigator.userAgent),
+//     isIOS: /(iPhone|iPad|iPod)/.test(navigator.platform),
+//     isOpera: /OPR/.test(navigator.userAgent),
+//     isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent),
+//     isTouchScreen: ('ontouchstart' in window) || window.DocumentTouch && document instanceof DocumentTouch,
+//     isWebComponentsSupported: 'registerElement' in document && 'import' in document.createElement('link') && 'content' in document.createElement('template')
+//   }, null, ' '))
