@@ -8,7 +8,7 @@ setTimeout(() => {
 }, 2500)
 
 // add map
-map.setAttribute('src', wazeMap)
+if (map) map.setAttribute('src', wazeMap)
 
 // add a button to fill form on dev environment
 function fillForm() {
