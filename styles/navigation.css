@@ -192,7 +192,7 @@ nav .menu-icon .line {
     }
 }
 
-@media screen and (max-width: 1250px) {
+@media screen and (max-width: 1350px) {
     nav #nav-links {
         float: none;
     }
@@ -204,7 +204,7 @@ nav .menu-icon .line {
     }
 }
 
-@media screen and (max-width: 770px) {
+@media screen and (max-width: 800px) {
     .navbar-scrolling {
         border-bottom: 2px solid var(--soft-white);
     }
@@ -212,14 +212,14 @@ nav .menu-icon .line {
         padding: 2% 5%;
     }
     nav #nav-links {
-        position: fixed;
-        float: none;
         left: 0;
         right: 0;
         top: 120px;
-        bottom: 100%;
-        height: auto;
+        float: none;
         width: auto;
+        height: auto;
+        bottom: 100%;
+        position: fixed;
         overflow: hidden;
         flex-direction: column;
         justify-content: space-evenly;
