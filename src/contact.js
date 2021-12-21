@@ -275,11 +275,11 @@ function displayModalContent(status) {
         modalUser.style.display = 'block'
         
         if (language == 'hebrew') {
-            modalTitle.textContent = '🙂 ההודעה נשלחה בהצלחה'
-            modalUser.textContent = `תודה על פנייתך ${firstName}`
+            modalTitle.textContent = 'ההודעה נשלחה'
+            modalUser.textContent = `תודה ${firstName}`
             modalBody.textContent = 'נדאג שיחזרו אליך בהקדם האפשרי'
         } else if (language == 'english') {
-            modalTitle.textContent = 'message sent! 🙂'
+            modalTitle.textContent = 'message sent!'
             modalUser.textContent = `Thanks ${firstName},`
             modalBody.textContent = 'we will get back to you as soon as possible.'
         }
@@ -291,10 +291,10 @@ function displayModalContent(status) {
         modalLinks[0].style.display = 'none'
 
         if (language == 'hebrew') {
-            modalTitle.textContent = '🙁 אופס, ההודעה לא נשלחה'
+            modalTitle.textContent = 'ההודעה לא נשלחה'
             modalBody.textContent = 'נראה שיש לכם בעיה באינטרנט, תתחברו מחדש ונסו שוב'
         } else if (language == 'english') {
-            modalTitle.textContent = 'Oops! 🙁'
+            modalTitle.textContent = 'Oops!'
             modalBody.textContent = 'there seems to be a problem with your internet connection, reconnect and try again.'
         }
     }

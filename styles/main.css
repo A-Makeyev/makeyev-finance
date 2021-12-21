@@ -482,6 +482,7 @@ img {
 #modal-user {
     font-weight: 600;
     margin-bottom: -15px;
+    word-break: break-word;
 }
 
 .modal-body {
@@ -599,11 +600,13 @@ img {
     .sub-header {
         height: 55vh;
     }
+    .text-box {
+        top: 65%;
+    }
     #offline {
         font-size: 15px;
     }    
 }
-
 
 @media(max-width: 770px) {
     .text-box h1 {
@@ -620,12 +623,6 @@ img {
 @media (max-width: 700px) {
     .sub-header {
         height: 45vh;
-    }
-    .sub-header .text-box {
-        top: 55%;
-    }
-    .text-box {
-        top: 40%;
     }
     .text-box h1 {
         font-size: 2rem;
@@ -680,6 +677,7 @@ img {
     }
     .modal-title h2 {
         font-size: 20px;
+        white-space: nowrap;
     }
     .modal-links {
         padding: 10px;
