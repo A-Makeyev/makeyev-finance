@@ -517,7 +517,7 @@ img {
     opacity: 0;
     z-index: 9999;
     position: fixed;
-    max-width: 500px;
+    max-width: 600px;
     max-height: 490px;
     user-select: none;
     border-radius: 5px;
@@ -535,9 +535,11 @@ img {
 }
 
 .form-modal .modal-close {
-    float: right;
+    float: left;
     border: none;
     outline: none;
+    margin-top: 10px;
+    margin-left: 20px;
     cursor: pointer;
     font-size: 40px;
     font-weight: 600;
@@ -548,10 +550,10 @@ img {
 
 .form-modal-header {
     display: flex;
+    text-align: right;
     padding: 10px 25px;
     flex-direction: column;
     text-transform: capitalize;
-    flex-direction: row-reverse;
     justify-content: space-between;
 }
 
@@ -620,6 +622,12 @@ img {
     }
     .text-box p {
         width: 550px;
+    }
+    .form-modal-header h1 {
+        font-size: 20px;
+    }
+    .form-modal-header p {
+        font-size: 15px;
     }
 }
 
