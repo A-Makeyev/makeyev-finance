@@ -276,7 +276,7 @@ function displayModalContent(status) {
         
         if (language == 'hebrew') {
             modalTitle.textContent = 'ההודעה נשלחה'
-            modalUser.textContent = `תודה ${firstName}`
+            modalUser.textContent = `🙂 תודה ${firstName}`
             modalBody.textContent = 'נדאג שיחזרו אליך בהקדם'
         } else if (language == 'english') {
             modalTitle.textContent = 'message sent!'
