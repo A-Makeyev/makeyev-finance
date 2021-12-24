@@ -287,7 +287,7 @@ function displayModalContent(status) {
 
         if (language == 'hebrew') {
             modalTitle.textContent = 'ההודעה נשלחה'
-            modalUser.textContent = `🙂 תודה על פנייתך ${firstName}`
+            modalUser.textContent = `תודה על פנייתך ${firstName}`
             modalBody.textContent = 'נדאג שיחזרו אליך בהקדם'
         } else if (language == 'english') {
             modalTitle.textContent = 'message sent!'
@@ -396,7 +396,7 @@ function createEmailBody() {
                     </a>
                 </h4>
                 <table style="border: 1px solid ${softGrey}; border-collapse: collapse; width: 100%;">
-                    <tbody style="font-family: 'Fira Code', sans-serif; font-size: 15px; color: ${softBlack}">
+                    <tbody style="font-family: 'Fira Code', sans-serif; font-size: 15px; text-align: center; color: ${softBlack}">
                         <tr style="border: 1px solid ${softBlue}; background: ${softBlue}; color: ${softWhite}; padding: 15px 10px;">
                             <td style="padding: 10px;"><strong>Details</strong></td>
                             <td></td>
