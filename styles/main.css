@@ -499,7 +499,7 @@ img {
 .modal-links {
     text-align: center;
     transition: all 0.5s;
-    padding: 10px 0 10px;
+    padding-bottom: 10px;
 }
 
 .modal-links .hero-btn {
@@ -517,7 +517,7 @@ img {
     opacity: 0;
     z-index: 9999;
     position: fixed;
-    max-width: 600px;
+    max-width: 550px;
     max-height: 490px;
     user-select: none;
     border-radius: 5px;
@@ -569,8 +569,8 @@ img {
     width: 240px;
 }
 
-.form-modal .form-input {
-    width: 110%;
+.form-modal-header .header-line {
+    width: 225px;
 }
 
 .modal-links .socials,
@@ -629,6 +629,13 @@ img {
     .form-modal-header p {
         font-size: 15px;
     }
+    .form-modal-header .header-line {
+        width: 170px;
+    }
+    .modal-body #submit-form,
+    .modal-body .form-input {
+        margin-left: 10px !important;
+    }
 }
 
 @media (max-width: 700px) {
@@ -656,20 +663,20 @@ img {
         margin-left: 0px;
         margin-right: 15px;
     }
+    .form-modal {
+        width: 300px;
+        height: 480px;
+    }
     .form-modal-header h1 {
         font-size: 20px;
     }
     .form-modal-header p {
         font-size: 15px;
-        width: 215px;
     }
     .form-modal-header span {
         width: 180px;
     }
-    .form-modal .form-input, 
-    .form-modal .hero-btn {
-        width: 122%;
-    }
+
 }
 
 @media (max-width: 500px) {
@@ -682,9 +689,6 @@ img {
     .text-box p {
         width: 300px;
         font-size: 14px;
-    }
-    .form-modal {
-        width: 300px;
     }
     .modal-title h2 {
         font-size: 20px;

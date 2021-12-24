@@ -42,7 +42,7 @@
 
 .header-line {
     height: 1px;
-    width: 250px;
+    width: 225px;
     display: block; 
     background: var(--soft-grey);
 }
@@ -169,14 +169,28 @@ textarea {
 
 @media (max-width: 1600px) {
     #submit-form, .contact-col input, .contact-col textarea {
-        width: 115%;
+        width: 120%;
+    }
+    .modal-body #submit-form,
+    .modal-body .form-input {
+        width: 110%;
+    }
+    .form-label {
+        left: 15% !important;
+    }
+    .modal-body .form-label {
+        left: 7% !important;
     }
 }
 
 @media (max-width: 1100px) {
     #submit-form, .contact-col input, .contact-col textarea {
+        width: 110%;
         padding: 15px;
-        
+    }
+    .modal-body #submit-form,
+    .modal-body .form-input {
+        margin-left: 5px;
     }
     .contact {
         padding-top: 30px;
@@ -193,7 +207,7 @@ textarea {
     .form-label {
         top: 37px;
         font-size: 15px;
-        left: 10% !important;
+        left: 7% !important;
     }
     .contact-info {
         margin-left: -5px;
@@ -203,6 +217,9 @@ textarea {
         width: 100%;
         height: 1px;
     }
+    .modal-body .form-label {
+        left: 8% !important;
+    }
 }
 
 @media (max-width: 500px) {
@@ -211,6 +228,9 @@ textarea {
     }
     .contact-col i, .contact-col p {
         font-size: 15px;
+    }
+    .form-label {
+        left: 15% !important;
     }
 }
 

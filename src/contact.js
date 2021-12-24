@@ -95,11 +95,13 @@ for (let x = 1; x <= formInputs.length; x++) {
             getXPath(`(${labelXPath})[${x}]`).style.left = '0'
         } 
 
-        // setTimeout(() => { 
-        //     if (getXPath(`(${labelXPath})[${x}]`).textContent.slice(-1) !== ':') {
-        //         getXPath(`(${labelXPath})[${x}]`).textContent += ':'
-        //     }
-        // }, 250)
+        if (language == 'english') {
+            setTimeout(() => { 
+                if (getXPath(`(${labelXPath})[${x}]`).textContent.slice(-1) !== ':') {
+                    getXPath(`(${labelXPath})[${x}]`).textContent += ':'
+                }
+            }, 250)
+        }
     })
 
     // input labels go down on blur 
@@ -118,10 +120,12 @@ for (let x = 1; x <= formInputs.length; x++) {
                 getXPath(`(${labelXPath})[${x}]`).style.left = '20px'
             }
 
-            // setTimeout(() => { 
-            //     let text = getXPath(`(${labelXPath})[${x}]`).textContent.slice(0, -1)
-            //     getXPath(`(${labelXPath})[${x}]`).textContent = text
-            // }, 250)
+            if (language == 'english') {
+                setTimeout(() => { 
+                    let text = getXPath(`(${labelXPath})[${x}]`).textContent.slice(0, -1)
+                    getXPath(`(${labelXPath})[${x}]`).textContent = text
+                }, 250)
+            }
         }
     })
 
@@ -273,10 +277,10 @@ function displayModalContent(status) {
         modalHeader.style.borderBottom = `2px solid ${softGreen}`
         modalLinks[0].style.display = 'block'
         modalUser.style.display = 'block'
-        
+
         if (language == 'hebrew') {
             modalTitle.textContent = 'ההודעה נשלחה'
-            modalUser.textContent = `🙂 תודה ${firstName}`
+            modalUser.textContent = `🙂 תודה על פנייתך ${firstName}`
             modalBody.textContent = 'נדאג שיחזרו אליך בהקדם'
         } else if (language == 'english') {
             modalTitle.textContent = 'message sent!'
