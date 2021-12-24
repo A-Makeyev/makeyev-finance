@@ -8,9 +8,17 @@
     --soft-yellow: rgb(250, 205, 5);
     --soft-orange: rgb(255, 125, 80);
     --soft-dark-blue: rgb(65, 120, 235);
-    --soft-blue-background: rgba(35, 170, 222, 0.4);
     --soft-black-background: rgba(15, 15, 15, 0.5);
+    --soft-blue-background: rgba(35, 170, 222, 0.4);
     --soft-white-background: rgba(255, 255, 255, 0.2);
+    --red-shadow: 0.5px 1px 1px 0.5px var(--soft-red);
+    --blue-shadow: 0.5px 1px 1px 0.5px var(--soft-blue);
+    --grey-shadow: 0.5px 1px 1px 0.5px var(--soft-grey);
+    --white-shadow: 0.5px 1px 1px 0.5px var(--soft-white);
+    --black-shadow: 0.5px 1px 1px 0.5px var(--soft-black);
+    --green-shadow: 0.5px 1px 1px 0.5px var(--soft-green);
+    --orange-shadow: 0.5px 1px 1px 0.5px var(--soft-orange);
+    --yellow-shadow: 0.5px 1px 1px 0.5px var(--soft-yellow);
     --white-blue-gradient: -webkit-linear-gradient(85deg, var(--soft-white), var(--soft-blue));
 }
 
@@ -150,86 +158,99 @@ img {
 }
 
 .hero-btn {
+    outline: none;
+    cursor: pointer;
     font-size: 1.5em;
     padding: 15px 35px;
     position: relative;
+    border-radius: 5px;
+    transition: all 0.5s;
     display: inline-block;
     text-decoration: none;
     background: transparent;
     color: var(--soft-white);
-    border: 1px solid var(--soft-white);
-    backdrop-filter: blur(10px);
     text-transform: capitalize;
-    transition: all 0.5s;
-    border-radius: 5px;
-    cursor: pointer;
-    outline: none;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--soft-white);
+    box-shadow: var(--black-shadow);
 }
 
 .btn-white {
     background: transparent;
     color: var(--soft-white);
+    box-shadow: var(--white-shadow);
     border: 1px solid var(--soft-white);
 }
 
 .btn-white:hover {
     color: var(--soft-black);
     background: var(--soft-white);
+    box-shadow: var(--black-shadow);
 }
 
 .btn-blue {
     background: transparent;
     color: var(--soft-blue);
+    box-shadow: var(--blue-shadow);
     border: 1px solid var(--soft-blue);
 }
 
 .btn-blue:hover {
     color: var(--soft-white);
     background: var(--soft-blue);
+    box-shadow: var(--white-shadow);
 }
 
 .btn-black {
     background: transparent;
     color: var(--soft-black);
+    box-shadow: var(--black-shadow);
     border: 1px solid var(--soft-black);
 }
 
 .btn-black:hover {
     color: var(--soft-white);
     background: var(--soft-black);
+    box-shadow: var(--white-shadow);
 }
 
 .btn-green {
     background: transparent;
     color: var(--soft-green);
+    box-shadow: var(--green-shadow);
     border: 1px solid var(--soft-green);
 }
 
 .btn-green:hover {
     color: var(--soft-white);
     background: var(--soft-green);
+    box-shadow: var(--white-shadow);
 }
 
 .btn-red {
     background: transparent;
     color: var(--soft-red);
+    box-shadow: var(--red-shadow);
     border: 1px solid var(--soft-red);
 }
 
 .btn-red:hover {
     color: var(--soft-white);
     background: var(--soft-red);
+    box-shadow: var(--white-shadow);
 }
 
 .btn-orange {
     background: transparent;
     color: var(--soft-orange);
+    box-shadow: var(--orange-shadow);
     border: 1px solid var(--soft-orange);
 }
 
 .btn-orange:hover {
     color: var(--soft-white);
     background: var(--soft-orange);
+    box-shadow: var(--white-shadow);
 }
 
 /* courses */
@@ -269,7 +290,7 @@ img {
 }
 
 .course-col:hover {
-    box-shadow: 0 10px 10px 0 var(--soft-black-background);
+    box-shadow: 0 5px 5px 0 var(--soft-black-background);
 }
 
 /* campus */
@@ -444,7 +465,7 @@ img {
     transition: all 0.5s;
     background: var(--soft-white);
     border: 2px solid var(--soft-blue);
-    box-shadow: 0 10px 10px 0 var(--soft-black-background);
+    box-shadow: 0 5px 5px 0 var(--soft-black-background);
     transform: translate3d(0, 0, 0) translate(-50%, -50%) scale(0);
     will-change: transform, opacity;
 }
@@ -499,7 +520,7 @@ img {
 .modal-links {
     text-align: center;
     transition: all 0.5s;
-    padding-bottom: 10px;
+    padding-bottom: 15px;
 }
 
 .modal-links .hero-btn {
@@ -524,7 +545,7 @@ img {
     transition: all 250ms;
     background: var(--soft-white);
     border: 2px solid var(--soft-blue); 
-    box-shadow: 0 10px 10px 0 var(--soft-black-background);
+    box-shadow: 0 5px 5px 0 var(--soft-black-background);
     transform: translate3d(0, 0, 0) translate(-50%, -50%) scale(0);
     will-change: transform, opacity;
 }
@@ -689,9 +710,6 @@ img {
     .modal-title h2 {
         font-size: 20px;
         white-space: nowrap;
-    }
-    .modal-links {
-        padding: 10px;
     }
     .modal-links .hero-btn {
         padding: 5px;

@@ -30,6 +30,7 @@ if (isMobileDevice) {
 function fillForm() {
     if (window.location.href.includes(`${dev}/contact`)) {
         let button = document.createElement('button')
+        button.style.boxShadow = 'var(--orange-shadow)'
         button.className = 'hero-btn btn-orange'
         button.setAttribute('id', 'dev-btn')
         button.textContent = 'add details'
@@ -73,7 +74,7 @@ fillForm()
 // reset labels after submit
 function resetLabels() {
     for (let x = 1; x <= formInputs.length; x++) {
-        getXPath(`(${inputXPath})[${x}]`).style.boxShadow = `0 4px 2px -2px ${softBlack}`
+        getXPath(`(${inputXPath})[${x}]`).style.boxShadow = 'var(--black-shadow)'
         getXPath(`(${inputXPath})[${x}]`).style.border = `1px solid ${softBlack}`
         getXPath(`(${labelXPath})[${x}]`).style.color = softGrey
         getXPath(`(${labelXPath})[${x}]`).style.cursor = 'text'
@@ -85,7 +86,7 @@ function resetLabels() {
 for (let x = 1; x <= formInputs.length; x++) {
     // input labels go up on focus 
     getXPath(`(${inputXPath})[${x}]`).addEventListener('focus', () => {
-        getXPath(`(${inputXPath})[${x}]`).style.boxShadow = `0 4px 2px -2px ${softBlue}`
+        getXPath(`(${inputXPath})[${x}]`).style.boxShadow = 'var(--blue-shadow)'
         getXPath(`(${inputXPath})[${x}]`).style.border = `2px solid ${softBlue}`
         getXPath(`(${labelXPath})[${x}]`).style.color = softBlue
         getXPath(`(${labelXPath})[${x}]`).style.cursor = 'default'
@@ -108,7 +109,7 @@ for (let x = 1; x <= formInputs.length; x++) {
     getXPath(`(${inputXPath})[${x}]`).addEventListener('blur', () => {
         let value = getXPath(`(${inputXPath})[${x}]`).value
         if (value.length < 1 && value === '') {
-            getXPath(`(${inputXPath})[${x}]`).style.boxShadow = `0 4px 2px -2px ${softBlack}`
+            getXPath(`(${inputXPath})[${x}]`).style.boxShadow = 'var(--black-shadow)'
             getXPath(`(${inputXPath})[${x}]`).style.border = `1px solid ${softBlack}`
             getXPath(`(${labelXPath})[${x}]`).style.color = softGrey
             getXPath(`(${labelXPath})[${x}]`).style.cursor = 'text'
@@ -145,7 +146,7 @@ function validateForm() {
         if (!validName) {
             inputName.style.borderColor = softRed
             inputName.previousElementSibling.style.color = softRed
-            inputName.style.boxShadow = `0 4px 2px -2px ${softRed}`
+            inputName.style.boxShadow = 'var(--red-shadow)'
         }
     }
 
@@ -153,7 +154,7 @@ function validateForm() {
         if (!validPhone) {
             inputPhone.style.borderColor = softRed
             inputPhone.previousElementSibling.style.color = softRed
-            inputPhone.style.boxShadow = `0 4px 2px -2px ${softRed}`
+            inputPhone.style.boxShadow = 'var(--red-shadow)'
         }
     }
 
@@ -163,7 +164,7 @@ function validateForm() {
             if (!validEmail) {
                 inputEmail.style.borderColor = softRed
                 inputEmail.previousElementSibling.style.color = softRed
-                inputEmail.style.boxShadow = `0 4px 2px -2px ${softRed}`
+                inputEmail.style.boxShadow = 'var(--red-shadow)'
             }
         }
     }
