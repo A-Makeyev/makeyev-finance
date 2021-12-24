@@ -256,9 +256,7 @@ contactForm.addEventListener('submit', async (event) => {
         }
 
         // don't include name with error message
-        if (/\S/.test(modalUser.textContent)) {
-            modalUser.textContent = ''
-        }
+        modalUser.style.display = 'none'
 
         displayModalContent('failure')
         allowSubmit()
@@ -292,7 +290,7 @@ function displayModalContent(status) {
         } else if (language == 'english') {
             modalTitle.textContent = 'message sent!'
             modalUser.textContent = `Thanks ${firstName},`
-            modalBody.textContent = 'we will get back to you as soon as possible.'
+            modalBody.textContent = 'we will get back to you as soon as possible'
         }
 
     } else if (status === 'failure') {
@@ -303,10 +301,10 @@ function displayModalContent(status) {
 
         if (language == 'hebrew') {
             modalTitle.textContent = 'ההודעה לא נשלחה'
-            modalBody.textContent = 'נראה שיש לכם בעיה באינטרנט, תתחברו מחדש ונסו שוב'
+            modalBody.textContent = `נראה שיש בעיה עם החיבור לאינטרנט, תרגישו בנוח להתקשר או לשלוח הודעה למספר ~ ${mainPhone}`
         } else if (language == 'english') {
             modalTitle.textContent = 'Oops!'
-            modalBody.textContent = 'there seems to be a problem with your internet connection, reconnect and try again.'
+            modalBody.textContent = `there seems to be a problem with your internet connection, feel free to reach us at ~ ${mainPhone}`
         }
     }
 

@@ -458,9 +458,8 @@ img {
     opacity: 0;
     width: 500px;
     z-index: 9999;
-    max-width: 80%;
     position: fixed;
-    user-select: none;
+    max-width: 500px;
     border-radius: 5px;
     transition: all 0.5s;
     background: var(--soft-white);
@@ -625,6 +624,9 @@ img {
     .main-heading {
         top: 50%;
     }
+    .modal {
+        max-width: 400px;
+    }
     #offline {
         font-size: 15px;
     }    
@@ -706,6 +708,9 @@ img {
     .text-box p {
         width: 300px;
         font-size: 14px;
+    }
+    .modal {
+        max-width: 250px;
     }
     .modal-title h2 {
         font-size: 20px;
