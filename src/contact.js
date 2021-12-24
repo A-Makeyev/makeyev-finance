@@ -251,8 +251,14 @@ contactForm.addEventListener('submit', async (event) => {
         
     // user is offline
     } else { 
-        if (action !== null) 
+        if (action !== null) {
             actionFormModal.classList.remove('active')
+        }
+
+        // don't include name with error message
+        if (/\S/.test(modalUser.textContent)) {
+            modalUser.textContent = ''
+        }
 
         displayModalContent('failure')
         allowSubmit()
