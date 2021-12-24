@@ -42,8 +42,8 @@
 
 .header-line {
     height: 1px;
-    width: 225px;
     display: block; 
+    width: 230px !important;
     background: var(--soft-grey);
 }
 
@@ -102,7 +102,7 @@ textarea {
     font-size: 20px;
     text-align: right;
     border-radius: 5px;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     transition: all 0.1s;
     box-sizing: border-box;
     border: 1px solid var(--soft-black);

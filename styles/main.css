@@ -569,10 +569,6 @@ img {
     width: 240px;
 }
 
-.form-modal-header .header-line {
-    width: 225px;
-}
-
 .modal-links .socials,
 .modal-links .socials i {
     color: var(--soft-black);
@@ -630,7 +626,7 @@ img {
         font-size: 15px;
     }
     .form-modal-header .header-line {
-        width: 170px;
+        width: 170px !important;
     }
     .modal-body #submit-form,
     .modal-body .form-input {
