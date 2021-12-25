@@ -20,8 +20,8 @@ wazeLink = 'https://ul.waze.com/'
          + '/ul?place=ChIJKeStYLy2HRURVhdAI9n1TqM&ll=32.81635130%2C35.11280030'
          + '&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location',
 
-wazeMap = `https://embed.waze.com/${language == 'hebrew' ? 'he' : ''}` + '/iframe?zoom=16&lat=32.816351&lon=35.112800&ct=livemap&pin=1&desc=1&navigate=yes'
-googleMap = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3353.1086170345934!2d35.111040768466864!3d32.81588692267333!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151db6bc60ade429%3A0xa34ef5d923401756!2sSde%20Boker%20St%2039%2C%20Kiryat%20Ata%2C%20Israel!5e0!3m2!1sen!2sus!4v1635153183795!5m2!1sen!2sus"'
+wazeMap = `https://embed.waze.com/${language == 'hebrew' ? 'he' : ''}` + '/iframe?zoom=14&lat=32.816351&lon=35.112800&ct=livemap&pin=1&desc=1&navigate=yes'
+googleMap = 'https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d53653.290380525286!2d35.118637!3d32.810003!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151db6bc60ade429%3A0xa34ef5d923401756!2sSde%20Boker%20St%2039%2C%20Kiryat%20Ata!5e0!3m2!1sen!2sil!4v1640391156734!5m2!1sen!2sil'
 
 /* regex */
 phoneRegex = /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/,
