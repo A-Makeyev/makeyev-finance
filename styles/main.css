@@ -649,7 +649,7 @@ img {
         font-size: 15px;
     }
     .form-modal-header .header-line {
-        width: 170px !important;
+        width: 175px !important;
     }
     .modal-body #submit-form,
     .modal-body .form-input {
@@ -710,7 +710,7 @@ img {
         font-size: 14px;
     }
     .modal {
-        max-width: 250px;
+        max-width: 290px;
     }
     .modal-title h2 {
         font-size: 20px;
