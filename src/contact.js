@@ -301,7 +301,7 @@ function displayModalContent(status) {
 
         if (language == 'hebrew') {
             modalTitle.textContent = 'ההודעה לא נשלחה'
-            modalBody.textContent = `נראה שיש לך בעיה עם החיבור לאינטרנט, אפשר ליצור איתנו קשר במספר ~ ${mainPhone}`
+            modalBody.textContent = `נראה שיש לך בעיה עם החיבור לאינטרנט, אפשר ליצור איתנו קשר במספר ${mainPhone}`
         } else if (language == 'english') {
             modalTitle.textContent = 'Oops!'
             modalBody.textContent = `there seems to be a problem with your internet connection, feel free to reach us at ~ ${mainPhone}`

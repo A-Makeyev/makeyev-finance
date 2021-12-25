@@ -44,7 +44,7 @@
 .header-line {
     height: 1px;
     display: block; 
-    width: 230px !important;
+    width: 225px !important;
     background: var(--soft-grey);
 }
 
