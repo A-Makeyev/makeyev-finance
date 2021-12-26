@@ -36,6 +36,7 @@
 .form-header h1 {
     font-size: 2em;
     white-space: nowrap;
+    color: var(--soft-black);
 }
 
 .form-header p {
@@ -43,12 +44,12 @@
     color: var(--soft-blue);
 }
 
-.header-line {
+/* .header-line {
     height: 1px;
     display: block; 
     width: 230px !important;
     background: var(--soft-grey);
-}
+} */
 
 .contact-line {
     width: 1px;

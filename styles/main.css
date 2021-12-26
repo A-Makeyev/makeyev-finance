@@ -580,6 +580,7 @@ img {
 .form-modal-header h1 {
     font-size: 25px;
     white-space: nowrap;
+    color: var(--soft-black);
 }
 
 .form-modal-header p {
@@ -646,13 +647,13 @@ img {
     .form-modal-header p {
         font-size: 15px;
     }
-    .form-modal-header .header-line {
-        width: 180px !important;
-    }
     .modal-body #submit-form,
     .modal-body .form-input {
         margin-left: 10px !important;
     }
+    /* .form-modal-header .header-line {
+        width: 180px !important;
+    } */
 }
 
 @media (max-width: 700px) {
