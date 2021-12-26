@@ -579,14 +579,12 @@ img {
 
 .form-modal-header h1 {
     font-size: 25px;
+    white-space: nowrap;
 }
 
 .form-modal-header p {
+    white-space: nowrap;
     color: var(--soft-blue);
-}
-
-.form-modal-header span {
-    width: 240px;
 }
 
 .modal-links .socials,
@@ -649,7 +647,7 @@ img {
         font-size: 15px;
     }
     .form-modal-header .header-line {
-        width: 180px !important;
+        width: 190px !important;
     }
     .modal-body #submit-form,
     .modal-body .form-input {

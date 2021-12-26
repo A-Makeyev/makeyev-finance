@@ -35,16 +35,18 @@
 
 .form-header h1 {
     font-size: 2em;
+    white-space: nowrap;
 }
 
 .form-header p {
+    white-space: nowrap;
     color: var(--soft-blue);
 }
 
 .header-line {
     height: 1px;
     display: block; 
-    width: 225px !important;
+    width: 250px !important;
     background: var(--soft-grey);
 }
 
