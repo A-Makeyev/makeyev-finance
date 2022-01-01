@@ -30,8 +30,8 @@ test.describe('Open Forms And Send Details', () => {
         await page.click(actionBtn)
 
         await expect(page.locator(actionForm)).toBeVisible()
-        await page.type(nameInput, 'Estabon')
-        await page.type(phoneInput, '0527729974')
+        await page.type(nameInput, 'Estabon Vilallon')
+        await page.type(phoneInput, '0505050505')
         await page.type(messageInput, 'Hello From Playwright')
 
         await page.click(submitBtn)

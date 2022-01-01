@@ -52,9 +52,9 @@ function fillForm() {
 
         button.addEventListener('click', () => {
             let details = [
-                language == 'hebrew' ? 'אסטבון וילאלון' : 'Estebon Villalon',
-                '+972-52-696-9696',
-                'villabon@este.lon',
+                randomName(),
+                randomPhone(),
+                randomEmail(),
                 'Baguette Du Fromage '
             ]
 

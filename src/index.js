@@ -84,7 +84,7 @@ labelXPath = '//*[@class="form-label"]'
 
 /* functions */
 // find element by xpath
-function getXPath(path) {
+getXPath = (path) => {
     return document.evaluate(
         path, document, null,
         XPathResult.FIRST_ORDERED_NODE_TYPE, null
@@ -92,7 +92,7 @@ function getXPath(path) {
 }
 
 // get current date & time
-function currentDateTime() {
+currentDateTime = () => {
     let today = new Date()
 	let	dd = String(today.getDate()).padStart(2, "0")
 	let	mm = String(today.getMonth() + 1).padStart(2, "0")
@@ -105,7 +105,7 @@ function currentDateTime() {
 }
 
 // double click event
-function doubleClick(target) {
+doubleClick = (target) => {
     let event = new MouseEvent('dblclick', {
         'view': window,
         'bubbles': true,
@@ -114,8 +114,28 @@ function doubleClick(target) {
     target.dispatchEvent(event)
 }
 
+//
+randomPhone = () => {
+    return String('052' + Math.random().toString().slice(2, 9)) 
+}
+
+randomEmail = () => {
+    let domains = ['gmail', 'hotmail', 'yahoo', 'live']
+    let names = ['tolik', 'macaroni', 'estabonbon', 'woody']
+    return names[Math.floor(Math.random() * domains.length)]
+    + '@' + domains[Math.floor(Math.random() * domains.length)] + '.com' 
+}
+
+randomName = () => {
+    let names = language == 'hebrew'  
+    ? ['פראנק וודס', 'אסטבון ויללון', 'רוני מיכאל', 'אנטולי מקייב']
+    : ['Anatoly Makeyev', 'Roni Michael', 'Estabon Villalon', 'Frank Woods']
+    let random = (min, max) => { return Math.floor(Math.random() * (max - min)) + min }
+    return names[random(0, names.length)]
+}
+
 // pause thread
-function sleep(seconds) {
+sleep = (seconds) => {
     let time = new Date().getTime() + (seconds * 1000);
     while (new Date().getTime() <= time) {}
 }
