@@ -1,6 +1,7 @@
 // https://playwright.dev/docs
 // npm i -D @playwright/test
 // npx playwright install
+// cd tests
 // npx playwright test 
 // npx playwright test --project=chromium --headed
 
@@ -20,6 +21,7 @@ test.describe('Open Forms And Send Details', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('https://makeyev-finance.netlify.app/')
         await expect(page.locator(logo)).toBeVisible()
+        await expect(page.locator(logo)).toHaveId('logo-image')
         await expect(page.locator(logo)).toHaveClass('logo-image-transparent')
     })
 
@@ -28,9 +30,9 @@ test.describe('Open Forms And Send Details', () => {
         await page.click(actionBtn)
 
         await expect(page.locator(actionForm)).toBeVisible()
-        await page.type(nameInput, 'Estabon', { delay: 100 })
-        await page.type(phoneInput, '0527729974', { delay: 100 })
-        await page.type(messageInput, 'Hello From Playwright', { delay: 100 })
+        await page.type(nameInput, 'Estabon')
+        await page.type(phoneInput, '0527729974')
+        await page.type(messageInput, 'Hello From Playwright')
 
         await page.click(submitBtn)
         await expect(page.locator(actionForm)).toBeVisible(messageModal)
