@@ -4,13 +4,15 @@
 
 // cd tests
 // npx playwright test 
-// npx playwright test --project=firefox --headed
+// npx playwright test --headed
 // npx playwright test --project=chromium --headed
 
 
 const { test, expect } = require('@playwright/test')
 
 test.describe('Open Forms And Send Details', () => {
+    test.setTimeout(240 * 1000)
+    
     const logo = '#logo-image'
     const actionBtn = '#action'
     const actionForm = '//div[@class="form-modal active"]'
@@ -33,8 +35,8 @@ test.describe('Open Forms And Send Details', () => {
         await page.click(actionBtn)
 
         await expect(page.locator(actionForm)).toBeVisible()
-        await page.type(nameInput, 'Estabon Vilallon', { delay: 100 })
-        await page.type(phoneInput, '0505050505', { delay: 100 })
+        await page.type(nameInput, 'Estabon Vilallon', { delay: 50 })
+        await page.type(phoneInput, '0505050505', { delay: 50 })
         await page.type(messageInput, 'Hello From Playwright')
 
         await page.click(submitBtn)
