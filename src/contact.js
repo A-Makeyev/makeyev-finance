@@ -223,7 +223,7 @@ contactForm.addEventListener('submit', async (event) => {
             SecureToken: smtpToken,
             To: mainMail,
             From: companyMail,
-            Subject: 'New Customer 🤩',
+            Subject: 'New Client 🤩',
             Body: createEmailBody()
 
         }).then(response => {
@@ -380,7 +380,7 @@ function createEmailBody() {
     let userName = inputName.value
     let userPhone = inputPhone.value
     let userMessage = inputMessage.value
-    let userEmail
+    let userEmail 
 
     if (inputEmail !== null) 
         userEmail = inputEmail.value
