@@ -142,7 +142,7 @@ function validateForm() {
     let validPhone = phoneRegex.test(inputPhone.value)
     let validEmail // action form doesn't include email
 
-    inputName.onchange = () => {
+    inputName.onblur = () => {
         if (!validName) {
             inputName.style.borderColor = softRed
             inputName.previousElementSibling.style.color = softRed
@@ -150,7 +150,7 @@ function validateForm() {
         }
     }
 
-    inputPhone.onchange = () => {
+    inputPhone.onblur = () => {
         if (!validPhone) {
             inputPhone.style.borderColor = softRed
             inputPhone.previousElementSibling.style.color = softRed
@@ -160,7 +160,7 @@ function validateForm() {
 
     if (inputEmail !== null) {
         validEmail = emailRegex.test(inputEmail.value) 
-        inputEmail.onchange = () => {
+        inputEmail.onblur = () => {
             if (!validEmail) {
                 inputEmail.style.borderColor = softRed
                 inputEmail.previousElementSibling.style.color = softRed
@@ -348,7 +348,7 @@ overlay.addEventListener('click', () => {
 // close modal when pressing esc
 body.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') { 
-        document.querySelector('.modal-close').click()
+        closeModal.forEach(btn => btn.click())
         if (window.navigator.onLine) {
             contactForm.reset()
             preventSubmit()
