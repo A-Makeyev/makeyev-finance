@@ -8,6 +8,16 @@
             if (links[x].href.includes('services')) links[x].href += '.html'
             if (links[x].href.includes('articles')) links[x].href += '.html'
             if (links[x].href.includes('contact')) links[x].href += '.html'
+            if (window.matchMedia('(max-width: 800px)').matches) {
+                if (links[x].href.includes('javascript: void(0)')  
+                && !links[x].classList.contains('footer-link')
+                && links[x].id != 'logo-image') {
+                    links[x].onclick = () => {
+                        backToHeader()
+                        menu.click()
+                    }
+                }
+            }
         }
     } 
 
