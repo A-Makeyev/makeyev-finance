@@ -8,19 +8,9 @@
             if (links[x].href.includes('services')) links[x].href += '.html'
             if (links[x].href.includes('articles')) links[x].href += '.html'
             if (links[x].href.includes('contact')) links[x].href += '.html'
-            if (window.matchMedia('(max-width: 800px)').matches) {
-                if (links[x].href.includes('javascript: void(0)')  
-                && !links[x].classList.contains('footer-link')
-                && links[x].id != 'logo-image') {
-                    links[x].onclick = () => {
-                        backToHeader()
-                        menu.click()
-                    }
-                }
-            }
         }
-    } 
-
+    }
+    
     for (let x = 0; x < icons.length; x++) {
         let sibling = icons[x].firstChild.nextSibling
         if (sibling.classList.contains('fa-waze')) icons[x].href = wazeLink
@@ -52,14 +42,26 @@ function handleConnectionChange(event) {
     }
 }
 
+function scrollTop() {
+    let top = document.documentElement.scrollTop || document.body.scrollTop
+    if (top > 0) {
+        window.requestAnimationFrame(scrollTop)
+        window.scrollTo(0, top - top / 10)
+    }
+}
+
 window.addEventListener('online', handleConnectionChange)
 window.addEventListener('offline', handleConnectionChange)
 
 // stop scrolling when opening nav menu
 menu.onclick = () => {
-    body.classList.contains('stop-scrolling') 
-    ? body.classList.remove('stop-scrolling')
-    : body.classList.add('stop-scrolling')
+    if (body.classList.contains('stop-scrolling')) {
+        body.classList.remove('stop-scrolling')
+        menuOpen = false
+    } else {
+        body.classList.add('stop-scrolling')
+        menuOpen = true
+    }
 }
 
 window.addEventListener('resize', () => {
@@ -166,12 +168,7 @@ document.getElementsByTagName('head')[0].appendChild(footerLinks)
 document.getElementsByTagName('head')[0].appendChild(footerLinksHover)
 
 function backToHeader() {
-    const scrollTop = () => {
-    let top = document.documentElement.scrollTop || document.body.scrollTop
-        if (top > 0) {
-            window.requestAnimationFrame(scrollTop)
-            window.scrollTo(0, top - top / 10)
-        }
+    if (!menuOpen) {
+        scrollTop()
     }
-    scrollTop()
 }
