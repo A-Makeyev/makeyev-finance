@@ -10,6 +10,10 @@ setTimeout(() => {
 // add a google map for mobile devices and a waze map for computers
 if (isMobileDevice) {
     if (map) {
+        map.setAttribute('src', wazeMap)
+    }
+} else {
+    if (map) {
         map.setAttribute('src', googleMap)
         for (let x = 0 ; x < wazeAddresses.length; x++) {
             if (wazeAddresses[x].classList.contains('iframe-link')) {
@@ -17,13 +21,10 @@ if (isMobileDevice) {
             }
         }
     }
-} else {
-    if (map) {
-        map.setAttribute('src', wazeMap)
-        for (let x = 0 ; x < wazeAddresses.length; x++) {
-            wazeAddresses[x].setAttribute('href', wazeLink)
-        }
-    }
+}
+
+for (let x = 0 ; x < wazeAddresses.length; x++) {
+    wazeAddresses[x].setAttribute('href', wazeLink)
 }
 
 // add a button to fill form on dev environment
@@ -217,37 +218,41 @@ contactForm.addEventListener('submit', async (event) => {
             }
         }
         
-        Email.send({
-            // enable less secure apps
-            // https://myaccount.google.com/lesssecureapps
-            SecureToken: smtpToken,
-            To: mainMail,
-            From: companyMail,
-            Subject: 'New Client 🤩',
-            Body: createEmailBody()
-
-        }).then(response => {
-            if (action !== null) 
-                actionFormModal.classList.remove('active')
-
-            resetLabels()
-            displayModalContent('success')
-            
-            preventSubmit()
-            contactForm.reset()
-            
-            if (language == 'hebrew') {
-                submitForm.textContent = 'שלחו'
-            } else if (language == 'english') {
-                submitForm.textContent = 'Send'
-            }
-
-            submitForm.style.pointerEvents = 'all'
-            console.log(`Email has been sent with status: ${response}`)
-
-        }).catch(error => {
-            throw new Error(error)
-        })
+        try {
+            Email.send({
+                // enable less secure apps
+                // https://myaccount.google.com/lesssecureapps
+                SecureToken: smtpToken,
+                To: mainMail,
+                From: companyMail,
+                Subject: 'New Client 🤩',
+                Body: createEmailBody()
+    
+            }).then(response => {
+                if (action !== null) 
+                    actionFormModal.classList.remove('active')
+    
+                resetLabels()
+                displayModalContent('success')
+                
+                preventSubmit()
+                contactForm.reset()
+                
+                if (language == 'hebrew') {
+                    submitForm.textContent = 'שלחו'
+                } else if (language == 'english') {
+                    submitForm.textContent = 'Send'
+                }
+    
+                submitForm.style.pointerEvents = 'all'
+                console.log(`Email has been sent with status: ${response}`)
+    
+            }).catch(error => {
+                throw new Error(error)
+            })
+        } catch(e) {
+            console.log(e)
+        }
         
     // user is offline
     } else { 
@@ -301,7 +306,15 @@ function displayModalContent(status) {
 
         if (language == 'hebrew') {
             modalTitle.textContent = 'ההודעה לא נשלחה'
-            modalBody.textContent = `נראה שיש לך בעיה עם החיבור לאינטרנט, אפשר ליצור איתנו קשר במספר ${mainPhone}`
+            modalBody.innerHTML = 
+            `<p>
+                נראה שיש לך בעיה עם החיבור לאינטרנט, אפשר ליצור איתנו קשר במספר 
+                <a href="tel:${mainPhone}" style="color: ${softRed}; text-decoration: underline;">
+                    ${mainPhone}
+                </a>
+            </p>
+            
+            `
         } else if (language == 'english') {
             modalTitle.textContent = 'Oops!'
             modalBody.textContent = `there seems to be a problem with your internet connection, feel free to reach us at ~ ${mainPhone}`
@@ -445,8 +458,7 @@ function createEmailBody() {
 
                     </tbody>
                 </table>
-                <p style="color: ${softBlack}; font-weight: 600;">Sent on ${currentDateTime()}</p>
-                <span>( ° ᴗ ° )</span>
+                <p style="color: ${softBlack}; font-weight: 600;">Sent on ${currentDateTime()} °ᴗ°</p>
             </div>
            `
 }
