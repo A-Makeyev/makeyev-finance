@@ -250,8 +250,8 @@ contactForm.addEventListener('submit', async (event) => {
             }).catch(error => {
                 throw new Error(error)
             })
-        } catch(e) {
-            console.log(e)
+        } catch(error) {
+            alert(error)
         }
         
     // user is offline
