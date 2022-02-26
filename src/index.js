@@ -135,6 +135,10 @@ randomName = () => {
     return names[random(0, names.length)]
 }
 
+function log(message, color) {
+    console.log(`%c${message}`, `color: ${color};`)
+}
+
 // pause thread
 sleep = (seconds) => {
     let time = new Date().getTime() + (seconds * 1000);
