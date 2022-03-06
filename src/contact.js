@@ -406,10 +406,7 @@ function createEmailBody() {
     let userName = inputName.value
     let userPhone = inputPhone.value
     let userMessage = inputMessage.value
-    let userEmail 
-
-    if (inputEmail !== null) 
-        userEmail = inputEmail.value
+    let userEmail = inputEmail !== null ? inputEmail.value : null
 
     return `
             <div>
