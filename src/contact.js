@@ -130,12 +130,6 @@ for (let x = 1; x <= formInputs.length; x++) {
             }
         }
     })
-
-    getXPath(`(${inputXPath})[${x}]`).addEventListener('keyup', (event) => {
-        if (event.key === 'Enter') {
-            submitForm.click()
-        }
-    })
 }
 
 function validateForm() {
