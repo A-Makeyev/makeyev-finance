@@ -90,6 +90,28 @@
     color: var(--soft-black);
 }
 
+.contact-text {
+    transition: all 0.1s;
+}
+
+.contact-text::after {
+    content: '';
+    width: 0;
+    height: 2px;
+    margin: 4px auto;
+    display: block;
+    transition: 0.5s;
+    background: var(--soft-grey);
+}
+
+.contact-text:hover::after {
+    width: 100%;
+}
+
+.contact-text:hover {
+    color: var(--soft-blue);
+}
+
 .contact-col form {
     margin: 0 50px 50px 0;
 }

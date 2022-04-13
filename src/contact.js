@@ -8,15 +8,14 @@ setTimeout(() => {
 }, 2500)
 
 // add contact details
-function addContactDetails(contact, text, link, color) {
+function addContactDetails(contact, text, link) {
     document.querySelector(contact + '-link').href = link
     document.querySelector(contact + '-text').textContent = text
-    document.querySelector(contact + '-color').style.color = color
 }
 
-addContactDetails('.main-phone', mainPhone, callTo, softGreen)
-addContactDetails('.main-email', mainEmail, mailToLink, softOrange)
-addContactDetails('.main-address', mainAddress, wazeLink, softBlue)
+addContactDetails('.main-phone', mainPhone, callTo)
+addContactDetails('.main-email', mainEmail, mailToLink)
+addContactDetails('.main-address', mainAddress, wazeLink)
 
 // add google maps
 if (map) {
