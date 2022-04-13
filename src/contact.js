@@ -7,21 +7,16 @@ setTimeout(() => {
     if (actionFormModal) actionFormModal.style.display = 'block'
 }, 2500)
 
-// add a google map for mobile devices and a waze map for computers
-if (isMobileDevice) {
-    if (map) {
-        map.setAttribute('src', wazeMap)
-    }
-} else {
-    if (map) {
-        map.setAttribute('src', googleMap)
-        for (let x = 0 ; x < wazeAddresses.length; x++) {
-            if (wazeAddresses[x].classList.contains('iframe-link')) {
-                wazeAddresses[x].classList.remove('iframe-link')
-            }
+// add google maps
+if (map) {
+    map.setAttribute('src', googleMap)
+    for (let x = 0 ; x < wazeAddresses.length; x++) {
+        if (wazeAddresses[x].classList.contains('iframe-link')) {
+            wazeAddresses[x].classList.remove('iframe-link')
         }
     }
 }
+
 
 for (let x = 0 ; x < wazeAddresses.length; x++) {
     wazeAddresses[x].setAttribute('href', wazeLink)
