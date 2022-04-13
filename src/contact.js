@@ -7,6 +7,17 @@ setTimeout(() => {
     if (actionFormModal) actionFormModal.style.display = 'block'
 }, 2500)
 
+// add contact details
+function addContactDetails(contact, text, link, color) {
+    document.querySelector(contact + '-link').href = link
+    document.querySelector(contact + '-text').textContent = text
+    document.querySelector(contact + '-color').style.color = color
+}
+
+addContactDetails('.main-phone', mainPhone, callTo, softGreen)
+addContactDetails('.main-email', mainEmail, mailToLink, softOrange)
+addContactDetails('.main-address', mainAddress, wazeLink, softBlue)
+
 // add google maps
 if (map) {
     map.setAttribute('src', googleMap)
@@ -16,7 +27,6 @@ if (map) {
         }
     }
 }
-
 
 for (let x = 0 ; x < wazeAddresses.length; x++) {
     wazeAddresses[x].setAttribute('href', wazeLink)
@@ -353,7 +363,7 @@ function sendEmail() {
         // enable less secure apps
         // https://myaccount.google.com/lesssecureapps
         SecureToken: smtpToken,
-        To: mainMail,
+        To: mainEmail,
         From: companyMail,
         Subject: 'New Client 🤩',
         Body: createEmailBody()

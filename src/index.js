@@ -10,13 +10,14 @@ prod = 'https://makeyev-finance.netlify.app',
 smtpToken = 'f4f02643-1db4-40ed-b666-cb10d6add9d3',
 facebookPage = 'https://www.facebook.com/makeyev.finance',
 companyMail = 'makeyev.finance@gmail.com',
-mainMail = 'anatoly.makeyev@gmail.com',
+mainAddress = 'Sde Boker 39 Kiryat Ata',
+mainEmail = 'anatoly.makeyev@gmail.com',
 mainPhone = '0527729974',
 
 /* links */
 callTo = 'tel:' + mainPhone
 whatsAppLink = 'https://wa.me/' + mainPhone.replace(mainPhone.charAt(0), '972') + '?text=What%27s%20up%3F',
-mailToLink = 'mailto:' + mainMail + '?subject=I%20need%20financial%20advice%21',
+mailToLink = 'mailto:' + mainEmail + '?subject=I%20need%20financial%20advice%21',
 wazeLink = 'https://ul.waze.com/'
          + '/ul?place=ChIJKeStYLy2HRURVhdAI9n1TqM&ll=32.81635130%2C35.11280030'
          + '&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location',
