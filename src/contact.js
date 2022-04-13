@@ -125,12 +125,6 @@ for (let x = 1; x <= formInputs.length; x++) {
             }
         }
     })
-
-    getXPath(`(${inputXPath})[${x}]`).addEventListener('keyup', (event) => {
-        if (event.key === 'Enter') {
-            submitForm.click()
-        }
-    })
 }
 
 function validateForm() {
@@ -214,39 +208,9 @@ contactForm.addEventListener('submit', async (event) => {
         }
         
         try {
-            Email.send({
-                // enable less secure apps
-                // https://myaccount.google.com/lesssecureapps
-                SecureToken: smtpToken,
-                To: mainMail,
-                From: companyMail,
-                Subject: 'New Client 🤩',
-                Body: createEmailBody()
-    
-            }).then(response => {
-                if (action !== null) 
-                    actionFormModal.classList.remove('active')
-    
-                resetLabels()
-                displayModalContent('success')
-                
-                preventSubmit()
-                contactForm.reset()
-                
-                if (language == 'hebrew') {
-                    submitForm.textContent = 'שלחו'
-                } else if (language == 'english') {
-                    submitForm.textContent = 'Send'
-                }
-    
-                submitForm.style.pointerEvents = 'all'
-                console.log(`Email has been sent with status: ${response}`)
-    
-            }).catch(error => {
-                throw new Error(error)
-            })
-        } catch(e) {
-            console.log(e)
+            sendEmail()
+        } catch(error) {
+            alert(error)
         }
         
     // user is offline
@@ -384,14 +348,54 @@ if (action !== null) {
     })
 }
 
+function sendEmail() {
+    Email.send({
+        // enable less secure apps
+        // https://myaccount.google.com/lesssecureapps
+        SecureToken: smtpToken,
+        To: mainMail,
+        From: companyMail,
+        Subject: 'New Client 🤩',
+        Body: createEmailBody()
+
+    }).then(response => {
+        // handle communication buffer resources
+        if (response.includes('deadlock victim')) {
+            log(response, softOrange)
+            log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
+            log(`Process (${response.match(/\d/g).join('')}) was deadlocked, resending email...`, softOrange)
+            log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
+            sendEmail()
+        } else {
+            if (action !== null) 
+            actionFormModal.classList.remove('active')
+
+            resetLabels()
+            displayModalContent('success')
+            
+            preventSubmit()
+            contactForm.reset()
+            
+            if (language == 'hebrew') {
+                submitForm.textContent = 'שלחו'
+            } else if (language == 'english') {
+                submitForm.textContent = 'Send'
+            }
+
+            submitForm.style.pointerEvents = 'all'
+            log(`Email has been sent with status: ${response}`, softGreen)
+        }
+
+    }).catch(error => {
+        throw new Error(error)
+    })
+}
+
 function createEmailBody() {
     let userName = inputName.value
     let userPhone = inputPhone.value
     let userMessage = inputMessage.value
-    let userEmail 
-
-    if (inputEmail !== null) 
-        userEmail = inputEmail.value
+    let userEmail = inputEmail !== null ? inputEmail.value : null
 
     return `
             <div>
@@ -453,7 +457,8 @@ function createEmailBody() {
 
                     </tbody>
                 </table>
-                <p style="color: ${softBlack}; font-weight: 600;">Sent on ${currentDateTime()} °ᴗ°</p>
+                <p style="color: ${softBlack}; font-weight: 600;">Sent on ${currentDateTime()}</p>
+                <!-- <strong>°ᴗ°</strong> -->
             </div>
            `
 }
