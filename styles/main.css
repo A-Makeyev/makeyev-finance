@@ -47,6 +47,10 @@ body {
     background-color: var(--soft-blue);
 }
 
+.hidden { 
+    display: none !important;
+}
+
 .stop-scrolling {
     overflow: hidden !important;
 }

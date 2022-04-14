@@ -1,9 +1,5 @@
 document.documentElement.scrollTop = 0
 
-const hidden = document.createElement('style')
-hidden.innerHTML = '.hidden { display: none !important; }'
-document.getElementsByTagName('head')[0].appendChild(hidden)
-
 function loadMainPage() {
     loadingScreen.style.opacity = '0'
     document.querySelector('body').classList.remove('stop-scrolling')

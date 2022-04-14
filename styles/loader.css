@@ -1,7 +1,7 @@
 #loading-screen {
     margin: 0;
     opacity: 1;
-    z-index: 999;
+    z-index: 99999;
     min-width: 100%;
     min-height: 100vh;
     display: flex;
@@ -10,7 +10,7 @@
     align-content: center;
     justify-content: center;
     background-color: white;
-    transition: all 1s ease-in-out;
+    transition: all 1.5s ease;
 }
 
 #loader {
@@ -19,7 +19,7 @@
     border-radius: 100%;
     border-right: 4px solid var(--soft-blue);
     animation: spinRight 1s linear infinite;
-  }
+}
   
   #loader::before, #loader::after {
     content: '';
@@ -32,9 +32,9 @@
     border-radius: 100%;
     border-left: 3px solid var(--soft-blue);
     animation: spinLeft 1s linear infinite;
-  }
+}
   
-  #loader::after {
+#loader::after {
     width: 4vmax;
     height: 4vmax;
     top: calc(50% - 2vmax);
