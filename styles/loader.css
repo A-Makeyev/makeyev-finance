@@ -2,15 +2,15 @@
     margin: 0;
     opacity: 1;
     z-index: 99999;
+    display: flex;
     min-width: 100%;
     min-height: 100vh;
-    display: flex;
     position: absolute;
     align-items: center;
     align-content: center;
     justify-content: center;
     background-color: white;
-    transition: all 1.5s ease;
+    transition: all 1s ease-in-out;
 }
 
 #loader {

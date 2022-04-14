@@ -9,8 +9,9 @@ setTimeout(() => {
 
 // add contact details
 function addContactDetails(contact, text, link) {
-    document.querySelector(contact + '-link').href = link
-    document.querySelector(contact + '-text').textContent = text
+    let select = (type) => { return document.querySelector(type) }
+    if (select(contact + '-link')) select(contact + '-link').href = link
+    if (select(contact + '-text')) select(contact + '-text').textContent = text
 }
 
 addContactDetails('.main-phone', mainPhone, callTo)
