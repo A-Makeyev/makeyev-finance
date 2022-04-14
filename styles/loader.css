@@ -1,7 +1,7 @@
 #loading-screen {
     margin: 0;
     opacity: 1;
-    z-index: 99999;
+    z-index: 999;
     display: flex;
     min-width: 100%;
     min-height: 100vh;
