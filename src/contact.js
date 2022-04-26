@@ -193,26 +193,23 @@ function preventSubmit() {
 // submit form & send email only if user is online
 contactForm.addEventListener('submit', async (event) => {
     event.preventDefault()
+    document.body.style.cursor = 'progress'
 
+    // user is online
     if (window.navigator.onLine) {
         preventSubmit()
         submitForm.style.pointerEvents = 'none'
         submitForm.classList.remove('btn-black')
         submitForm.classList.add('btn-blue')
-
-        if (language == 'hebrew') {
-            submitForm.textContent = 'שולח'
-        } else if (language == 'english') {
-            submitForm.textContent = 'Sending'
-        }
  
         if (language == 'hebrew') {
             submitForm.innerHTML = '<i class="fas fa-paper-plane spin"></i>'
         } else if (language == 'english') {
+            submitForm.textContent = 'Sending'
             for (let x = 0; x < 3; x++) {
                 setTimeout(() => {
                     submitForm.textContent += '.'
-                    if (x === 2) submitForm.innerHTML += '<i class="fas fa-paper-plane"></i>'
+                    if (x === 2) submitForm.innerHTML += '<i class="fas fa-paper-plane spin"></i>'
                 }, (x * 250))
             }
         }
@@ -231,7 +228,6 @@ contactForm.addEventListener('submit', async (event) => {
 
         // don't include name with error message
         modalUser.style.display = 'none'
-
         displayModalContent('failure')
         allowSubmit()
         
@@ -243,6 +239,7 @@ contactForm.addEventListener('submit', async (event) => {
 
         submitForm.style.pointerEvents = 'all'
     }
+
     return false
 })
 
@@ -293,6 +290,7 @@ function displayModalContent(status) {
     setTimeout(() => {
         modal.classList.add('active')
         overlay.classList.add('active')
+        document.body.style.cursor = 'default'
     }, 150)
 }
 
@@ -386,11 +384,13 @@ function sendEmail() {
             preventSubmit()
             contactForm.reset()
             
-            if (language == 'hebrew') {
-                submitForm.textContent = 'שלחו'
-            } else if (language == 'english') {
-                submitForm.textContent = 'Send'
-            }
+            setTimeout(() => {
+                if (language == 'hebrew') {
+                    submitForm.textContent = 'שלחו'
+                } else if (language == 'english') {
+                    submitForm.textContent = 'Send'
+                }
+            }, 1000)
 
             submitForm.style.pointerEvents = 'all'
             log(`Email has been sent with status: ${response}`, softGreen)
