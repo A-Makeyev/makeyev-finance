@@ -197,6 +197,25 @@ function preventSubmit() {
     submitForm.classList.add('btn-black')
 }
 
+function resetFormOnError() {
+    if (action !== null) {
+        actionFormModal.classList.remove('active')
+    }
+
+    // don't include name with error message
+    modalUser.style.display = 'none'
+    displayModalContent('failure')
+    allowSubmit()
+
+    if (language == 'hebrew') {
+        submitForm.textContent = 'שלחו'
+    } else if (language == 'english') {
+        submitForm.textContent = 'Send'
+    }
+
+    submitForm.style.pointerEvents = 'all'
+}
+
 // submit form & send email only if user is online
 contactForm.addEventListener('submit', async (event) => {
     event.preventDefault()
@@ -229,22 +248,7 @@ contactForm.addEventListener('submit', async (event) => {
         
     // user is offline
     } else { 
-        if (action !== null) {
-            actionFormModal.classList.remove('active')
-        }
-
-        // don't include name with error message
-        modalUser.style.display = 'none'
-        displayModalContent('failure')
-        allowSubmit()
-        
-        if (language == 'hebrew') {
-            submitForm.textContent = 'שלחו'
-        } else if (language == 'english') {
-            submitForm.textContent = 'Send'
-        }
-
-        submitForm.style.pointerEvents = 'all'
+        resetFormOnError()
     }
 
     return false
@@ -281,10 +285,11 @@ function displayModalContent(status) {
             modalTitle.textContent = 'ההודעה לא נשלחה'
             modalBody.innerHTML = 
             `<p>
-                נראה שיש לך בעיה עם החיבור לאינטרנט, אפשר ליצור איתנו קשר במספר 
-                <a href="tel:${mainPhone}" style="color: ${softRed}; text-decoration: underline;">
+                הייתה תקלה בשליחת ההודעה, אפשר ליצור איתנו קשר במספר
+                <a href="tel:${mainPhone}" class="modal-body-phone">
                     ${mainPhone}
                 </a>
+                ונחזור אליכם בהקדם
             </p>
             
             `
@@ -374,6 +379,7 @@ function sendEmail() {
         Body: createEmailBody()
 
     }).then(response => {
+        log(response)
         // handle communication buffer resources
         if (response.includes('deadlock victim')) {
             log(response, softOrange)
@@ -381,6 +387,8 @@ function sendEmail() {
             log(`Process (${response.match(/\d/g).join('')}) was deadlocked, resending email...`, softOrange)
             log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
             sendEmail()
+        } else if (response.includes('Only elasticemail is supported as an SMTP host')) { 
+            resetFormOnError()
         } else {
             if (action !== null) 
             actionFormModal.classList.remove('active')

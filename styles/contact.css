@@ -248,6 +248,15 @@ textarea {
     }
 }
 
+.modal-body-phone {
+    color: var(--soft-black);
+    transition: 0.5s;
+}
+
+.modal-body-phone:hover {
+    color: var(--soft-blue);
+}
+
 @media (max-width: 500px) {
     #submit-form, .contact-col input, .contact-col textarea {
         width: 120%;
