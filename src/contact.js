@@ -72,6 +72,9 @@ function fillForm() {
                 }, (x * 500))
             }
             allowSubmit()
+            setTimeout(() => { 
+                submitForm.click() 
+            }, 3000)
         })
     }
 }
@@ -370,8 +373,9 @@ if (action !== null) {
 
 function sendEmail() {
     Email.send({
-        // enable less secure apps
-        // https://myaccount.google.com/lesssecureapps
+        // https://smtpjs.com
+        // https://elasticemail.com
+        
         SecureToken: smtpToken,
         To: mainEmail,
         From: companyMail,
@@ -379,7 +383,6 @@ function sendEmail() {
         Body: createEmailBody()
 
     }).then(response => {
-        log(response)
         // handle communication buffer resources
         if (response.includes('deadlock victim')) {
             log(response, softOrange)
@@ -387,7 +390,8 @@ function sendEmail() {
             log(`Process (${response.match(/\d/g).join('')}) was deadlocked, resending email...`, softOrange)
             log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
             sendEmail()
-        } else if (response.includes('Only elasticemail is supported as an SMTP host')) { 
+        } else if (!response.includes('OK')) { 
+            log(response, softRed)
             resetFormOnError()
         } else {
             if (action !== null) 
