@@ -92,9 +92,10 @@ function resetLabels() {
 for (let x = 1; x <= formInputs.length; x++) {
     // input labels go up on focus 
     getXPath(`(${inputXPath})[${x}]`).addEventListener('focus', () => {
-        getXPath(`(${inputXPath})[${x}]`).style.boxShadow = 'var(--blue-shadow)'
-        getXPath(`(${inputXPath})[${x}]`).style.border = `2px solid ${softBlue}`
-        getXPath(`(${labelXPath})[${x}]`).style.color = softBlue
+        getXPath(`(${inputXPath})[${x}]`).style.boxShadow = 'var(--black-shadow)'
+        getXPath(`(${inputXPath})[${x}]`).style.border = `2px solid ${softBlack
+}`
+        getXPath(`(${labelXPath})[${x}]`).style.color = softBlack
         getXPath(`(${labelXPath})[${x}]`).style.cursor = 'default'
         getXPath(`(${labelXPath})[${x}]`).style.top = '0'
 
@@ -137,6 +138,12 @@ for (let x = 1; x <= formInputs.length; x++) {
     })
 }
 
+function changeColor(element, color) {
+    element.style.borderColor = color
+    element.previousElementSibling.style.color = color
+    element.style.boxShadow = color == softRed ? 'var(--red-shadow)' : 'var(--blue-shadow)'
+}
+
 function validateForm() {
     let validName = nameRegex.test(inputName.value) 
     let validPhone = phoneRegex.test(inputPhone.value)
@@ -144,28 +151,28 @@ function validateForm() {
 
     inputName.onblur = () => {
         if (!validName) {
-            inputName.style.borderColor = softRed
-            inputName.previousElementSibling.style.color = softRed
-            inputName.style.boxShadow = 'var(--red-shadow)'
+            changeColor(inputName, softRed)
+        } else {
+            changeColor(inputName, softBlue)
         }
     }
 
     inputPhone.onblur = () => {
         if (!validPhone) {
-            inputPhone.style.borderColor = softRed
-            inputPhone.previousElementSibling.style.color = softRed
-            inputPhone.style.boxShadow = 'var(--red-shadow)'
-        }
+            changeColor(inputPhone, softRed)
+        } else {
+            changeColor(inputPhone, softBlue)
+        } 
     }
 
     if (inputEmail !== null) {
         validEmail = emailRegex.test(inputEmail.value) 
         inputEmail.onblur = () => {
             if (!validEmail) {
-                inputEmail.style.borderColor = softRed
-                inputEmail.previousElementSibling.style.color = softRed
-                inputEmail.style.boxShadow = 'var(--red-shadow)'
-            }
+                changeColor(inputEmail, softRed)
+            } else {
+                changeColor(inputEmail, softBlue)
+            } 
         }
     }
 
