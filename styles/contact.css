@@ -53,7 +53,7 @@
 
 .contact-line {
     width: 1px;
-    height: 370px;
+    height: 450px;
     margin: 30px 0 0 120px;
     background: var(--soft-grey);
 }
@@ -257,6 +257,10 @@ textarea {
     color: var(--soft-blue);
 }
 
+.fb-page {
+    margin: -50px 0 0 30px;
+}
+
 @media (max-width: 500px) {
     #submit-form, .contact-col input, .contact-col textarea {
         width: 120%;
@@ -267,13 +271,19 @@ textarea {
     .form-label {
         left: 15% !important;
     }
+    .fb-page {
+        margin: -50px 0 0 -5px;
+    }
 }
 
-@media (max-width: 320px) {
+@media (max-width: 360px) {
     .contact h1 {
         font-size: 20px;
     }
     .contact-col i, .contact-col p, .contact > p {
         font-size: 12px;
+    }
+    .fb-page {
+        margin: -50px 0 0 -24px;
     }
 }
