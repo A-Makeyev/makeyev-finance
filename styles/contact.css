@@ -276,12 +276,6 @@ textarea {
     }
 }
 
-@media (max-width: 360px) {
-    .fb-page {
-        margin: -50px 0 0 -20px;
-    }
-}
-
 @media (max-width: 320px) {
     .contact h1 {
         font-size: 20px;
@@ -292,6 +286,6 @@ textarea {
         font-size: 12px;
     }
     .fb-page {
-        margin: -50px 0 0 -24px;
+        margin: -50px 0 0 -25px;
     }
 }
