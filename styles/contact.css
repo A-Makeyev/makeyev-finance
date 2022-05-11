@@ -271,9 +271,6 @@ textarea {
     .form-label {
         left: 15% !important;
     }
-    .fb-page {
-        margin: -50px 0 0 -5px;
-    }
 }
 
 @media (max-width: 320px) {
