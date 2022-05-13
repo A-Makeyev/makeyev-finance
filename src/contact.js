@@ -91,50 +91,49 @@ function resetLabels() {
         getXPath(`(${labelXPath})[${x}]`).style.top = '35px'
     }
 }
- 
-for (let x = 1; x <= formInputs.length; x++) {
-    // input labels go up on focus 
-    getXPath(`(${inputXPath})[${x}]`).addEventListener('focus', () => {
-        getXPath(`(${inputXPath})[${x}]`).style.boxShadow = 'var(--black-shadow)'
-        getXPath(`(${inputXPath})[${x}]`).style.border = `2px solid ${softBlack
-}`
-        getXPath(`(${labelXPath})[${x}]`).style.color = softBlack
-        getXPath(`(${labelXPath})[${x}]`).style.cursor = 'default'
-        getXPath(`(${labelXPath})[${x}]`).style.top = '0'
+
+for (let x = 0; x < formInputs.length; x++) {
+    // input labels go up on focus
+    formInputs[x].addEventListener('focus', () => {
+        formInputs[x].style.boxShadow = 'var(--black-shadow)'
+        formInputs[x].style.border = `2px solid ${softBlack}`
+        formLabels[x].style.color = softBlack
+        formLabels[x].style.cursor = 'default'
+        formLabels[x].style.top = '0'
 
         if (language == 'english') {
-            getXPath(`(${labelXPath})[${x}]`).style.left = '0'
-        } 
+            formLabels[x].style.left = '0'
+        }
 
         if (language == 'english') {
-            setTimeout(() => { 
-                if (getXPath(`(${labelXPath})[${x}]`).textContent.slice(-1) !== ':') {
-                    getXPath(`(${labelXPath})[${x}]`).textContent += ':'
+            setTimeout(() => {
+                if (formLabels[x].textContent.slice(-1) !== ':') {
+                    formLabels[x].textContent += ':'
                 }
             }, 250)
         }
     })
 
-    // input labels go down on blur 
-    getXPath(`(${inputXPath})[${x}]`).addEventListener('blur', () => {
-        let value = getXPath(`(${inputXPath})[${x}]`).value
+    // input labels go down on blur
+    formInputs[x].addEventListener('blur', () => {
+        let value = formInputs[x].value
         if (value.length < 1 && value === '') {
-            getXPath(`(${inputXPath})[${x}]`).style.boxShadow = 'var(--black-shadow)'
-            getXPath(`(${inputXPath})[${x}]`).style.border = `1px solid ${softBlack}`
-            getXPath(`(${labelXPath})[${x}]`).style.color = softGrey
-            getXPath(`(${labelXPath})[${x}]`).style.cursor = 'text'
-            getXPath(`(${labelXPath})[${x}]`).style.top = '35px'
+            formInputs[x].style.boxShadow = 'var(--black-shadow)'
+            formInputs[x].style.border = `1px solid ${softBlack}`
+            formLabels[x].style.color = softGrey
+            formLabels[x].style.cursor = 'text'
+            formLabels[x].style.top = '35px'
 
             if (language == 'hebrew') {
-                getXPath(`(${labelXPath})[${x}]`).style.left = '40px'
+                formLabels[x].style.left = '40px'
             } else if (language == 'english') {
-                getXPath(`(${labelXPath})[${x}]`).style.left = '20px'
+                formLabels[x].style.left = '20px'
             }
 
             if (language == 'english') {
-                setTimeout(() => { 
-                    let text = getXPath(`(${labelXPath})[${x}]`).textContent.slice(0, -1)
-                    getXPath(`(${labelXPath})[${x}]`).textContent = text
+                setTimeout(() => {
+                    let text = formLabels[x].textContent.slice(0, -1)
+                    formLabels[x].textContent = text
                 }, 250)
             }
         }
@@ -224,31 +223,31 @@ contactForm.addEventListener('submit', async (event) => {
     event.preventDefault()
     document.body.style.cursor = 'progress'
 
-    // user is online
-    if (window.navigator.onLine) {
-        preventSubmit()
-        submitForm.style.pointerEvents = 'none'
-        submitForm.classList.remove('btn-black')
-        submitForm.classList.add('btn-blue')
- 
-        if (language == 'hebrew') {
-            submitForm.innerHTML = '<i class="fas fa-paper-plane spin"></i>'
-        } else if (language == 'english') {
-            submitForm.textContent = 'Sending'
-            for (let x = 0; x < 3; x++) {
-                setTimeout(() => {
-                    submitForm.textContent += '.'
-                    if (x === 2) submitForm.innerHTML += '<i class="fas fa-paper-plane spin"></i>'
-                }, (x * 250))
-            }
+    preventSubmit()
+    submitForm.style.pointerEvents = 'none'
+    submitForm.classList.remove('btn-black')
+    submitForm.classList.add('btn-blue')
+
+    if (language == 'hebrew') {
+        submitForm.innerHTML = '<i class="fas fa-paper-plane spin"></i>'
+    } else if (language == 'english') {
+        submitForm.textContent = 'Sending'
+        for (let x = 0; x < 3; x++) {
+            setTimeout(() => {
+                submitForm.textContent += '.'
+                if (x === 2) submitForm.innerHTML += '<i class="fas fa-paper-plane spin"></i>'
+            }, (x * 250))
         }
-        
+    }
+
+    // user is online
+    if (window.navigator.onLine) {        
         try {
             sendEmail()
-        } catch(error) {
+        } catch (error) {
             alert(error)
         }
-        
+
     // user is offline
     } else { 
         resetFormOnError()
@@ -375,7 +374,7 @@ function sendEmail() {
     Email.send({
         // https://smtpjs.com
         // https://elasticemail.com
-        
+
         SecureToken: smtpToken,
         To: mainEmail,
         From: companyMail,
@@ -390,19 +389,19 @@ function sendEmail() {
             log(`Process (${response.match(/\d/g).join('')}) was deadlocked, resending email...`, softOrange)
             log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
             sendEmail()
-        } else if (!response.includes('OK')) { 
+        } else if (!response.includes('OK')) {
             log(response, softRed)
             resetFormOnError()
         } else {
-            if (action !== null) 
-            actionFormModal.classList.remove('active')
+            if (action !== null)
+                actionFormModal.classList.remove('active')
 
             resetLabels()
             displayModalContent('success')
-            
+
             preventSubmit()
             contactForm.reset()
-            
+
             setTimeout(() => {
                 if (language == 'hebrew') {
                     submitForm.textContent = 'שלחו'
