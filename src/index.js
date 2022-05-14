@@ -3,7 +3,7 @@ var
 // TODO 
 // add changing language to english
 
-menuOpen = false
+menuOpen = false,
 language = 'hebrew',
 dev = 'http://127.0.0.1:5500',
 prod = 'https://makeyev-finance.netlify.app',
@@ -15,21 +15,21 @@ mainEmail = 'anatoly.makeyev@gmail.com',
 mainPhone = '0527729974',
 
 /* links */
-callTo = 'tel:' + mainPhone
+callTo = 'tel:' + mainPhone,
 whatsAppLink = 'https://wa.me/' + mainPhone.replace(mainPhone.charAt(0), '972') + '?text=What%27s%20up%3F',
 mailToLink = 'mailto:' + mainEmail + '?subject=I%20need%20financial%20advice%21',
 wazeLink = 'https://ul.waze.com/'
          + '/ul?place=ChIJKeStYLy2HRURVhdAI9n1TqM&ll=32.81635130%2C35.11280030'
          + '&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location',
 
-wazeMap = `https://embed.waze.com/${language == 'hebrew' ? 'he' : ''}` + '/iframe?zoom=12&lat=32.816351&lon=35.112800&ct=livemap&pin=1&desc=1&navigate=yes'
-googleMap = 'https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d53653.290380525286!2d35.118637!3d32.810003!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151db6bc60ade429%3A0xa34ef5d923401756!2sSde%20Boker%20St%2039%2C%20Kiryat%20Ata!5e0!3m2!1sen!2sil!4v1640391156734!5m2!1sen!2sil'
+wazeMap = `https://embed.waze.com/${language == 'hebrew' ? 'he' : ''}` + '/iframe?zoom=12&lat=32.816351&lon=35.112800&ct=livemap&pin=1&desc=1&navigate=yes',
+googleMap = 'https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d53653.290380525286!2d35.118637!3d32.810003!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151db6bc60ade429%3A0xa34ef5d923401756!2sSde%20Boker%20St%2039%2C%20Kiryat%20Ata!5e0!3m2!1sen!2sil!4v1640391156734!5m2!1sen!2sil',
 
 /* regex */
 phoneRegex = /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/,
 nameRegex = /^[^0-9.,_!¡?÷?¿/\\+=@#$%ˆ&*(){}|~<>;:[\]]{2,}$/,
 emailRegex = /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/,
-isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
 
 /* colors */
 softWhite = 'aliceblue',
@@ -58,13 +58,13 @@ navLinks = document.getElementsByClassName('nav-link'),
 navMenuLines = document.getElementsByClassName('line'),
 
 /* contact */
-map = document.getElementById('map')
+map = document.getElementById('map'),
 action = document.getElementById('action'),
 inputName = document.getElementById('name'),
 overlay = document.getElementById('overlay'),
 inputEmail = document.getElementById('email'),
 inputPhone = document.getElementById('phone'),
-messageModal = document.querySelector('.modal')
+messageModal = document.querySelector('.modal'),
 inputMessage = document.getElementById('message'),
 modalUser = document.getElementById('modal-user'),
 submitForm = document.getElementById('submit-form'),
@@ -79,19 +79,6 @@ modalLinks = document.getElementsByClassName('modal-links'),
 openModal = document.querySelectorAll('[data-modal-target]'),
 closeModal = document.querySelectorAll('[data-modal-close]'),
 wazeAddresses = document.getElementsByClassName('wazeAddress'),
-
-/* locators */
-inputXPath = '//*[@class="form-input"]',
-labelXPath = '//*[@class="form-label"]'
-
-/* functions */
-// find element by xpath
-getXPath = (path) => {
-    return document.evaluate(
-        path, document, null,
-        XPathResult.FIRST_ORDERED_NODE_TYPE, null
-    ).singleNodeValue
-}
 
 // get current date & time
 currentDateTime = () => {

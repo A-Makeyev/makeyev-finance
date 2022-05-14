@@ -82,13 +82,13 @@ fillForm()
 
 // reset labels after submit
 function resetLabels() {
-    for (let x = 1; x <= formInputs.length; x++) {
-        getXPath(`(${inputXPath})[${x}]`).style.boxShadow = 'var(--black-shadow)'
-        getXPath(`(${inputXPath})[${x}]`).style.border = `1px solid ${softBlack}`
-        getXPath(`(${labelXPath})[${x}]`).style.color = softGrey
-        getXPath(`(${labelXPath})[${x}]`).style.cursor = 'text'
-        getXPath(`(${labelXPath})[${x}]`).style.left = '20px'
-        getXPath(`(${labelXPath})[${x}]`).style.top = '35px'
+    for (let x = 0; x < formInputs.length; x++) {
+        formInputs[x].style.boxShadow = 'var(--black-shadow)'
+        formInputs[x].style.border = `1px solid ${softBlack}`
+        formLabels[x].style.color = softGrey
+        formLabels[x].style.cursor = 'text'
+        formLabels[x].style.left = '20px'
+        formLabels[x].style.top = '35px'
     }
 }
 
@@ -415,7 +415,8 @@ function sendEmail() {
         }
 
     }).catch(error => {
-        throw new Error(error)
+        resetFormOnError()
+        alert(error)
     })
 }
 
