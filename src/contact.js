@@ -80,6 +80,17 @@ function fillForm() {
 }
 fillForm()
 
+function addMessage() {
+    if (inputMessage.value.trim() === '') {
+        inputMessage.focus()
+        if (language == 'hebrew') {
+            inputMessage.value = 'אשמח לייעוץ כללי'
+        } else if (language == 'english') {
+            inputMessage.value = 'I would like some advice'
+        }
+    }
+}
+
 // reset labels after submit
 function resetLabels() {
     for (let x = 0; x < formInputs.length; x++) {
@@ -243,7 +254,10 @@ contactForm.addEventListener('submit', async (event) => {
     // user is online
     if (window.navigator.onLine) {        
         try {
-            sendEmail()
+            addMessage()
+            setTimeout(() => {
+                sendEmail()
+            }, 1000)
         } catch (error) {
             alert(error)
         }
