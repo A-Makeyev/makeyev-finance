@@ -99,7 +99,6 @@ doubleClick = (target) => {
     target.dispatchEvent(event)
 }
 
-//
 randomPhone = () => {
     return String('052' + Math.random().toString().slice(2, 9)) 
 }
