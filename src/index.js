@@ -6,20 +6,17 @@ prod = 'https://makeyev-finance.netlify.app',
 smtpToken = '88263185-689f-4f54-8491-33a2ba3a1a48',
 facebookPage = 'https://www.facebook.com/makeyev.finance',
 companyMail = 'makeyev.finance@gmail.com',
-mainAddress = 'Sde Boker 39 Kiryat Ata',
+mainAddress = 'Florentin 23 Tel Aviv',
 mainEmail = 'anatoly.makeyev@gmail.com',
 mainPhone = '0527729974',
 
 /* links */
 callTo = 'tel:' + mainPhone,
-whatsAppLink = 'https://wa.me/' + mainPhone.replace(mainPhone.charAt(0), '972') + '?text=What%27s%20up%3F',
 mailToLink = 'mailto:' + mainEmail + '?subject=I%20need%20financial%20advice%21',
-wazeLink = 'https://ul.waze.com/'
-         + '/ul?place=ChIJKeStYLy2HRURVhdAI9n1TqM&ll=32.81635130%2C35.11280030'
-         + '&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location',
-
-wazeMap = `https://embed.waze.com/${language == 'hebrew' ? 'he' : ''}` + '/iframe?zoom=12&lat=32.816351&lon=35.112800&ct=livemap&pin=1&desc=1&navigate=yes',
-googleMap = 'https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d53653.290380525286!2d35.118637!3d32.810003!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151db6bc60ade429%3A0xa34ef5d923401756!2sSde%20Boker%20St%2039%2C%20Kiryat%20Ata!5e0!3m2!1sen!2sil!4v1640391156734!5m2!1sen!2sil',
+whatsAppLink = 'https://wa.me/' + mainPhone.replace(mainPhone.charAt(0), '972') + '?text=What%27s%20up%3F',
+wazeMap = `https://embed.waze.com/${language == 'hebrew' ? 'he' : ''}` + '/iframe?zoom=16&lat=32.056323&lon=34.769313&ct=livemap',
+wazeLink = 'https://ul.waze.com/ul?place=ChIJp9fIOZ9MHRURg5L4vD_YK1c&ll=32.05632250%2C34.76931260&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location'
+googleMap = 'https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d27051.822489683218!2d34.76055827048644!3d32.05632299999998!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151d4c9f39c8d7a7%3A0x572bd83fbcf89283!2sFlorentin%20St%2023%2C%20Tel%20Aviv-Yafo!5e0!3m2!1sen!2sil!4v1662889337932!5m2!1sen!2sil',
 
 /* regex */
 phoneRegex = /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/,
