@@ -1,4 +1,4 @@
-var 
+const
 menuOpen = false,
 language = 'hebrew',
 dev = 'http://127.0.0.1:5500',
@@ -96,7 +96,6 @@ doubleClick = (target) => {
     target.dispatchEvent(event)
 }
 
-//
 randomPhone = () => {
     return String('052' + Math.random().toString().slice(2, 9)) 
 }
