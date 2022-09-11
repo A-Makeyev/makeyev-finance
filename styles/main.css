@@ -47,6 +47,20 @@ body {
     background-color: var(--soft-blue);
 }
 
+.remove-highlight {
+    user-select: none;
+    -ms-user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.remove-highlight:focus {
+    outline: none !important;
+}
+
 .hidden { 
     display: none !important;
 }

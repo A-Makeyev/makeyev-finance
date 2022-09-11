@@ -36,8 +36,8 @@ for (let x = 0 ; x < wazeAddresses.length; x++) {
 function fillForm() {
     if (window.location.href.includes(`${dev}/contact`)) {
         let button = document.createElement('button')
+        button.className = 'hero-btn btn-orange remove-highlight'
         button.style.boxShadow = 'var(--orange-shadow)'
-        button.className = 'hero-btn btn-orange'
         button.setAttribute('id', 'dev-btn')
         button.textContent = 'add details'
         button.style.marginTop = '10px'
