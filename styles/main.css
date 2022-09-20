@@ -176,6 +176,10 @@ img {
     color: var(--soft-white);
 }
 
+.main-heading p {
+    font-size: 2.5em;
+}
+
 .hero-btn {
     outline: none;
     cursor: pointer;
@@ -655,10 +659,10 @@ img {
         font-size: 3rem;
     } 
     .hero-btn, .text-box p {
-        font-size: 1.5rem;
+        font-size: 1.5em;
     }
     .text-box p {
-        width: 550px;
+        width: 450px;
     }
     .form-modal-header h1 {
         font-size: 20px;
@@ -680,11 +684,11 @@ img {
         height: 45vh;
     }
     .text-box h1 {
-        font-size: 2rem;
+        font-size: 2.5rem;
     }
-    .text-box p {
+    .main-heading p {
         width: 350px;
-        font-size: 1em;
+        font-size: 1.5em;
     }
     .hero-btn {
         font-size: 1em;
@@ -720,15 +724,18 @@ img {
 }
 
 @media (max-width: 500px) {
-    .text-box h1 {
-        font-size: 2.5em;
-    } 
     .hero-btn {
         font-size: 1em;
     }
+    .text-box h1 {
+        font-size: 2.5em;
+    }  
     .text-box p {
         width: 300px;
-        font-size: 14px;
+        font-size: 1em;
+    } 
+    .main-heading p {
+        font-size: 1.5em;
     }
     .modal {
         max-width: 290px;
