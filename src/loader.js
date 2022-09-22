@@ -7,6 +7,19 @@ function loadMainPage() {
     setTimeout(() => {
         loadingScreen.classList.add('hidden')
     }, 1000)
+
+    const observer = new IntersectionObserver((enteries) => {
+        enteries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('faded-in')
+            } // else { entry.target.classList.remove('faded-in') }
+        })
+    })
+    
+    const elementsToFade = document.querySelectorAll('.fade-in')
+    elementsToFade.forEach((element) => {
+        observer.observe(element)
+    })
 }
 
 if (window.attachEvent) {

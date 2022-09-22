@@ -1,259 +1,248 @@
 <!DOCTYPE html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+        <link rel="stylesheet" rel="preload" as="style" href="styles/loader.css">
+        <link rel="stylesheet" href="styles/navigation.css">
+        <link rel="stylesheet" href="styles/main.css">
+        <link rel="stylesheet" href="styles/contact.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700&display=swap">
+        <link rel="shortcut icon" type="image/x-icon" href="/images/icon.ico">
+        <title>צרו קשר - Makeyev Finance</title>
+    </head>
+    <body class="stop-scrolling">
+        <script src="src/loader.js"></script>
 
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-    <link rel="stylesheet" rel="preload" as="style" href="styles/loader.css">
-    <link rel="stylesheet" href="styles/navigation.css">
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/contact.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700&display=swap">
-    <link rel="shortcut icon" type="image/x-icon" href="/images/icon.ico">
-    <title>צרו קשר - Makeyev Finance</title>
-</head>
-
-<body class="stop-scrolling">
-    <script src="src/loader.js"></script>
-
-    <div id="loading-screen">
-        <div id="loader"></div>
-    </div>
-
-    <!-- SUB HEADER -->
-
-    <section class="sub-header">
-        <nav id="navbar">
-            <input id="nav-toggle" type="checkbox">
-            <div class="logo">
-                <a href="/" id="logo-image" class="logo-image-transparent"></a>
-            </div>
-
-            <ul id="nav-links">
-                <li><a id="home" class="nav-link remove-highlight" href="/">ראשי</a></li>
-                <li><a id="services" class="nav-link remove-highlight" href="services">השירות שלנו</a></li>
-                <li><a id="articles" class="nav-link remove-highlight" href="articles">מאמרים</a></li>
-                <li><a id="contact" class="nav-link remove-highlight" href="javascript:void(0);"
-                        onclick="backToHeader()">צרו קשר</a>
-                </li>
-                <div class="nav-icons">
-                    <li>
-                        <a class="nav-link icon remove-highlight" href="" target="_blank">
-                            <i class="fas fa-phone-alt"></i>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link icon remove-highlight" href="" target="_blank">
-                            <i class="fab fa-whatsapp"></i>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link icon remove-highlight" href="" target="_blank">
-                            <i class="fab fa-waze"></i>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link icon remove-highlight" href="" target="_blank">
-                            <i class="far fa-envelope"></i>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link icon remove-highlight" href="" target="_blank">
-                            <i class="fab fa-facebook-square"></i>
-                        </a>
-                    </li>
-                </div>
-            </ul>
-
-            <label for="nav-toggle" class="menu-icon" id="menu">
-                <div class="line"></div>
-                <div class="line"></div>
-                <div class="line"></div>
-            </label>
-        </nav>
-
-        <div class="text-box">
-            <h1 class="gradient-text-no-hover">שיחת ייעוץ חינם</h1>
-            <p class="gradient-text-no-hover"><b>נראה כמה אפשר לחסוך לכם על משכנתא חדשה או נוכחית בתנאים שמתאימים לכם,
-                    לא לבנק</p>
-        </div>
-    </section>
-
-    <div id="offline"></div>
-
-    <!-- contact -->
-
-    <section class="contact">
-        <div class="form-header">
-            <h1>השאירו פרטים</h1>
-            <p>ונחזור אליכם בהקדם האפשרי</p>
-            <!-- <span class="header-line"></span> -->
+        <div id="loading-screen">
+            <div id="loader"></div>
         </div>
 
-        <div class="contact-row">
-            <div class="contact-col">
-                <form method="POST" onkeyup="validateForm()" autocomplete="on" id="contact-form">
-                    <label for="name" class="form-label">שם</label>
-                    <input type="text" name="name" id="name" class="form-input" maxlength="99" required>
-                    <!-- <span class="asterisk"></span> -->
+        <!-- SUB HEADER -->
 
-                    <label for="phone" class="form-label">מספר</label>
-                    <input type="text" name="phone" id="phone" class="form-input" maxlength="99" required>
-                    <!-- <span class="asterisk"></span> -->
+        <section class="sub-header">
+            <nav id="navbar">
+                <input id="nav-toggle" type="checkbox">
+                <div class="logo">
+                    <a href="/" id="logo-image" class="logo-image-transparent"></a>
+                </div>
 
-                    <!-- <label for="phone" class="form-label">מספר</label>
-                        <select name="phone" id="phone" class="form-input" required>
-                            <option value="volvo">Volvo</option>
-                            <option value="saab">Saab</option>
-                            <option value="opel">Opel</option>
-                            <option value="audi">Audi</option>
-                        </select> -->
+                <ul id="nav-links">
+                    <li><a id="home" class="nav-link remove-highlight" href="/">ראשי</a></li>
+                    <li><a id="services" class="nav-link remove-highlight" href="services">השירות שלנו</a></li>
+                    <li><a id="articles" class="nav-link remove-highlight" href="articles">מאמרים</a></li>
+                    <li><a id="contact" class="nav-link remove-highlight" href="javascript:void(0);"
+                            onclick="backToHeader()">צרו קשר</a>
+                    </li>
+                    <div class="nav-icons">
+                        <li>
+                            <a class="nav-link icon remove-highlight" href="" target="_blank">
+                                <i class="fas fa-phone-alt"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link icon remove-highlight" href="" target="_blank">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link icon remove-highlight" href="" target="_blank">
+                                <i class="fab fa-waze"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link icon remove-highlight" href="" target="_blank">
+                                <i class="far fa-envelope"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link icon remove-highlight" href="" target="_blank">
+                                <i class="fab fa-facebook-square"></i>
+                            </a>
+                        </li>
+                    </div>
+                </ul>
 
-                    <label for="email" class="form-label">אימייל</label>
-                    <input type="text" name="email" id="email" class="form-input" maxlength="99" required>
+                <label for="nav-toggle" class="menu-icon" id="menu">
+                    <div class="line"></div>
+                    <div class="line"></div>
+                    <div class="line"></div>
+                </label>
+            </nav>
 
-                    <label for="message" class="form-label">איך נוכל לעזור לכם</label>
-                    <textarea type="text" name="message" id="message" class="form-input" rows="5"
-                        maxlength="999"></textarea>
+            <div class="text-box">
+                <h1 class="gradient-text-no-hover">שיחת ייעוץ חינם</h1>
+                <p class="gradient-text-no-hover"><b>נראה כמה אפשר לחסוך לכם על משכנתא חדשה או נוכחית בתנאים שמתאימים לכם,
+                        לא לבנק</p>
+            </div>
+        </section>
 
-                    <button type="submit" id="submit-form" class="hero-btn btn-black remove-highlight" disabled>שלחו</button>
-                </form>
+        <div id="offline"></div>
+
+        <!-- contact -->
+
+        <section class="contact">
+            <div class="form-header">
+                <h1>השאירו פרטים</h1>
+                <p>ונחזור אליכם בהקדם האפשרי</p>
+                <!-- <span class="header-line"></span> -->
             </div>
 
-            <span class="contact-line"></span>
+            <div class="contact-row">
+                <div class="contact-col">
+                    <form method="POST" onkeyup="validateForm()" autocomplete="on" id="contact-form">
+                        <label for="name" class="form-label">שם</label>
+                        <input type="text" name="name" id="name" class="form-input" maxlength="99" required>
+                        <!-- <span class="asterisk"></span> -->
 
-            <div class="contact-col contact-info">
-                <div style="margin-bottom: 40px;">
-                    <i class="fab fa-whatsapp contact-icons" style="font-weight: 500; margin: 0 12px 6px 33px"></i>
-                    <a class="main-phone-link" href="" target="_blank" style="margin: 0;">
-                        <span>
-                            <p class="contact-text main-phone-text" style="margin-left: 8px;"></p>
-                        </span>
-                    </a>
+                        <label for="phone" class="form-label">מספר</label>
+                        <input type="text" name="phone" id="phone" class="form-input" maxlength="99" required>
+                        <!-- <span class="asterisk"></span> -->
+
+                        <!-- <label for="phone" class="form-label">מספר</label>
+                            <select name="phone" id="phone" class="form-input" required>
+                                <option value="volvo">Volvo</option>
+                                <option value="saab">Saab</option>
+                                <option value="opel">Opel</option>
+                                <option value="audi">Audi</option>
+                            </select> -->
+
+                        <label for="email" class="form-label">אימייל</label>
+                        <input type="text" name="email" id="email" class="form-input" maxlength="99" required>
+                        <label for="message" class="form-label">איך נוכל לעזור לכם</label>
+                        <textarea type="text" name="message" id="message" class="form-input" rows="5"maxlength="999" spellcheck="true"></textarea>
+                        <button type="submit" id="submit-form" class="hero-btn btn-black remove-highlight" disabled>שלחו</button>
+                    </form>
                 </div>
 
-                <div style="margin-bottom: 40px;">
-                    <i class="far fa-envelope contact-icons" style="margin: 0 10px 5px 30px;"></i>
-                    <a class="main-email-link" href="" target="_blank">
-                        <span>
-                            <p class="contact-text main-email-text" style="margin-left: -11px;"></p>
-                        </span>
-                    </a>
-                </div>
+                <span class="contact-line"></span>
 
-                <div>
-                    <div style="margin-left: 22px;">
-                        <i class="fas fa-map-marker-alt contact-icons" style="margin: 0 11px 10px;"></i>
-                        <a class="main-address-link" href="" target="_blank">
+                <div class="contact-col contact-info">
+                    <div style="margin-bottom: 40px;">
+                        <i class="fab fa-whatsapp contact-icons" style="font-weight: 500; margin: 0 12px 6px 33px"></i>
+                        <a class="main-phone-link" href="" target="_blank" style="margin: 0;">
                             <span>
-                                <p class="contact-text main-address-text" style="margin-left: -9px;"></p>
+                                <p class="contact-text main-phone-text" style="margin-left: 8px;"></p>
                             </span>
                         </a>
                     </div>
+
+                    <div style="margin-bottom: 40px;">
+                        <i class="far fa-envelope contact-icons" style="margin: 0 10px 5px 30px;"></i>
+                        <a class="main-email-link" href="" target="_blank">
+                            <span>
+                                <p class="contact-text main-email-text" style="margin-left: -11px;"></p>
+                            </span>
+                        </a>
+                    </div>
+
+                    <div>
+                        <div style="margin-left: 22px;">
+                            <i class="fas fa-map-marker-alt contact-icons" style="margin: 0 11px 10px;"></i>
+                            <a class="main-address-link" href="" target="_blank">
+                                <span>
+                                    <p class="contact-text main-address-text" style="margin-left: -9px;"></p>
+                                </span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div id="fb-root"></div>
+                    <div class="fb-page" data-href="https://www.facebook.com/makeyev.finance" data-tabs="timeline"
+                        data-width="315" data-height="235" data-small-header="true" data-adapt-container-width="true"
+                        data-hide-cover="false" data-show-facepile="true">
+                        <blockquote cite="https://www.facebook.com/makeyev.finance" class="fb-xfbml-parse-ignore">
+                            <a href="https://www.facebook.com/makeyev.finance">Makeyev Finance</a>
+                        </blockquote>
+                    </div>
+
                 </div>
+            </div>
+        </section>
 
-                <div id="fb-root"></div>
-                <div class="fb-page" data-href="https://www.facebook.com/makeyev.finance" data-tabs="timeline"
-                    data-width="315" data-height="235" data-small-header="true" data-adapt-container-width="true"
-                    data-hide-cover="false" data-show-facepile="true">
-                    <blockquote cite="https://www.facebook.com/makeyev.finance" class="fb-xfbml-parse-ignore">
-                        <a href="https://www.facebook.com/makeyev.finance">Makeyev Finance</a>
-                    </blockquote>
+        <!-- map -->
+
+        <section class="location">
+            <div style="position: relative;">
+                <iframe id="map" width="600" height="600" loading="lazy" allowfullscreen></iframe>
+                <a class="wazeAddress iframe-link"></a>
+            </div>
+        </section>
+
+        <!-- footer -->
+
+        <section class="footer">
+            <div style="margin-bottom: -15px;">
+                <div id="trademark"></div>
+                <div class="footer-links">
+                    <p><a class="footer-link remove-highlight" href="/">ראשי</a></p>
+                    <span>&#183;</span>
+                    <p><a class="footer-link remove-highlight" href="services">השירות שלנו</a></p>
+                    <span>&#183;</span>
+                    <p><a class="footer-link remove-highlight" href="articles">מאמרים</a></p>
+                    <span>&#183;</span>
+                    <p><a class="footer-link remove-highlight" href="javascript:void(0);" onclick="backToHeader()">צרו קשר</a></p>
                 </div>
+            </div>
 
+            <div class="socials">
+                <!-- <a class="icon remove-highlight"  href="" target="_blank">
+                        <i class="fa fa-linkedin-square linkedin-fill"></i>
+                    </a> 
+                    <a class="icon remove-highlight"  href="" target="_blank">
+                        <i class="fa fa-instagram instagram-fill"></i>
+                    </a> 
+                    <a class="icon remove-highlight"  href="" target="_blank">
+                        <i class="fa fa-youtube youtube-fill"></i>
+                    </a> -->
+                <a class="icon remove-highlight" href="" target="_blank">
+                    <i class="fab fa-facebook-square facebook-fill"></i>
+                </a>
+                <a class="icon remove-highlight" href="" target="_blank">
+                    <i class="far fa-envelope email-fill"></i>
+                </a>
+                <a class="icon remove-highlight" href="" target="_blank">
+                    <i class="fab fa-waze waze-fill"></i>
+                </a>
+                <a class="icon remove-highlight" href="" target="_blank">
+                    <i class="fab fa-whatsapp whatsapp-fill"></i>
+                </a>
+                <a class="icon remove-highlight" href="" target="_blank">
+                    <i class="fas fa-phone-square-alt phone-fill"></i>
+                </a>
+            </div>
+        </section>
+
+        <!-- message modal -->
+
+        <div id="modal" class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <h2 id="modal-title-text"></h2>
+                </div>
+                <button class="modal-close remove-highlight" data-modal-close>&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modal-user"></p>
+                <p id="modal-body-text"></p>
+            </div>
+            <div class="modal-links">
+                <a href="/" class="hero-btn btn-black">ראשי</a>
+                <a href="services" class="hero-btn btn-black">השירות שלנו</a>
+                <a href="articles" class="hero-btn btn-black">מאמרים</a>
             </div>
         </div>
-    </section>
 
-    <!-- map -->
+        <div id="overlay"></div>
 
-    <section class="location">
-        <div style="position: relative;">
-            <iframe id="map" width="600" height="600" loading="lazy" allowfullscreen></iframe>
-            <a class="wazeAddress iframe-link"></a>
-        </div>
-    </section>
-
-    <!-- FOOTER -->
-
-    <section class="footer">
-        <div style="margin-bottom: -15px;">
-            <div id="trademark"></div>
-            <div class="footer-links">
-                <p><a class="footer-link remove-highlight" href="/">ראשי</a></p>
-                <span>&#183;</span>
-                <p><a class="footer-link remove-highlight" href="services">השירות שלנו</a></p>
-                <span>&#183;</span>
-                <p><a class="footer-link remove-highlight" href="articles">מאמרים</a></p>
-                <span>&#183;</span>
-                <p>
-                    <a class="footer-link remove-highlight" href="javascript:void(0);" onclick="backToHeader()">
-                        צרו קשר
-                    </a>
-                </p>
-            </div>
-        </div>
-
-        <div class="socials">
-            <!-- <a class="icon remove-highlight"  href="" target="_blank">
-                    <i class="fa fa-linkedin-square linkedin-fill"></i>
-                </a> 
-                <a class="icon remove-highlight"  href="" target="_blank">
-                    <i class="fa fa-instagram instagram-fill"></i>
-                </a> 
-                <a class="icon remove-highlight"  href="" target="_blank">
-                    <i class="fa fa-youtube youtube-fill"></i>
-                </a> -->
-            <a class="icon remove-highlight" href="" target="_blank">
-                <i class="fab fa-facebook-square facebook-fill"></i>
-            </a>
-            <a class="icon remove-highlight" href="" target="_blank">
-                <i class="far fa-envelope email-fill"></i>
-            </a>
-            <a class="icon remove-highlight" href="" target="_blank">
-                <i class="fab fa-waze waze-fill"></i>
-            </a>
-            <a class="icon remove-highlight" href="" target="_blank">
-                <i class="fab fa-whatsapp whatsapp-fill"></i>
-            </a>
-            <a class="icon remove-highlight" href="" target="_blank">
-                <i class="fas fa-phone-square-alt phone-fill"></i>
-            </a>
-        </div>
-    </section>
-
-    <!-- message modal -->
-
-    <div id="modal" class="modal">
-        <div class="modal-header">
-            <div class="modal-title">
-                <h2 id="modal-title-text"></h2>
-            </div>
-            <button class="modal-close remove-highlight" data-modal-close>&times;</button>
-        </div>
-        <div class="modal-body">
-            <p id="modal-user"></p>
-            <p id="modal-body-text"></p>
-        </div>
-        <div class="modal-links">
-            <a href="/" class="hero-btn btn-black">ראשי</a>
-            <a href="services" class="hero-btn btn-black">השירות שלנו</a>
-            <a href="articles" class="hero-btn btn-black">מאמרים</a>
-        </div>
-    </div>
-
-    <div id="overlay"></div>
-
-    <script src="src/index.js"></script>
-    <script src="src/contact.js"></script>
-    <script src="src/navigation.js"></script>
-    <script src="https://smtpjs.com/v3/smtp.js"></script>
-    <script src="https://kit.fontawesome.com/4f48855ba9.js" crossorigin="anonymous"></script>
-    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_GB/sdk.js#xfbml=1&version=v13.0"
-        nonce="6FUkXWcO"></script>
-</body>
-
+        <script src="src/index.js"></script>
+        <script src="src/contact.js"></script>
+        <script src="src/navigation.js"></script>
+        <script src="https://smtpjs.com/v3/smtp.js"></script>
+        <script src="https://kit.fontawesome.com/4f48855ba9.js" crossorigin="anonymous"></script>
+        <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_GB/sdk.js#xfbml=1&version=v13.0" nonce="6FUkXWcO"></script>
+    </body>
 </html>
