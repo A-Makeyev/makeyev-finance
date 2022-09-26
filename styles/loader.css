@@ -9,7 +9,7 @@
     align-items: center;
     align-content: center;
     justify-content: center;
-    background-color: white;
+    background-color: var(--soft-white);
     transition: all 1s ease-in-out;
 }
 
@@ -29,17 +29,17 @@
     position: absolute;
     top: calc(50% - 3vmax);
     left: calc(50% - 3vmax);
-    border-radius: 100%;
     border-left: 3px solid var(--soft-blue);
     animation: spinLeft 1s linear infinite;
+    border-radius: 100%;
 }
   
 #loader::after {
+    border: 0;
     width: 4vmax;
     height: 4vmax;
     top: calc(50% - 2vmax);
     left: calc(50% - 2vmax);
-    border: 0;
     border-right: 2px solid var(--soft-blue);
     animation: none;
 }
