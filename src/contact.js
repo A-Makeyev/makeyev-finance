@@ -385,53 +385,57 @@ if (action !== null) {
 }
 
 function sendEmail() {
-    Email.send({
-        // https://smtpjs.com
-        // https://elasticemail.com
-
-        SecureToken: smtpToken,
-        To: mainEmail,
-        From: companyMail,
-        Subject: 'New Client 🤩',
-        Body: createEmailBody()
-
-    }).then(response => {
-        // handle communication buffer resources
-        if (response.includes('deadlock victim')) {
-            log(response, softOrange)
-            log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
-            log(`Process (${response.match(/\d/g).join('')}) was deadlocked, resending email...`, softOrange)
-            log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
-            sendEmail()
-        } else if (!response.includes('OK')) {
-            log(response, softRed)
+    try {
+        Email.send({
+            // https://smtpjs.com
+            // https://elasticemail.com
+    
+            SecureToken: smtpToken,
+            To: mainEmail,
+            From: companyMail,
+            Subject: 'New Client 🤩',
+            Body: createEmailBody()
+    
+        }).then(response => {
+            // handle communication buffer resources
+            if (response.includes('deadlock victim')) {
+                log(response, softOrange)
+                log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
+                log(`Process (${response.match(/\d/g).join('')}) was deadlocked, resending email...`, softOrange)
+                log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
+                sendEmail()
+            } else if (!response.includes('OK')) {
+                log(response, softRed)
+                resetFormOnError()
+            } else {
+                if (action !== null)
+                    actionFormModal.classList.remove('active')
+    
+                resetLabels()
+                displayModalContent('success')
+    
+                preventSubmit()
+                contactForm.reset()
+    
+                setTimeout(() => {
+                    if (language == 'hebrew') {
+                        submitForm.textContent = 'שלחו'
+                    } else if (language == 'english') {
+                        submitForm.textContent = 'Send'
+                    }
+                }, 1000)
+    
+                submitForm.style.pointerEvents = 'all'
+                log(`Email has been sent with status: ${response}`, softGreen)
+            }
+    
+        }).catch(error => {
             resetFormOnError()
-        } else {
-            if (action !== null)
-                actionFormModal.classList.remove('active')
-
-            resetLabels()
-            displayModalContent('success')
-
-            preventSubmit()
-            contactForm.reset()
-
-            setTimeout(() => {
-                if (language == 'hebrew') {
-                    submitForm.textContent = 'שלחו'
-                } else if (language == 'english') {
-                    submitForm.textContent = 'Send'
-                }
-            }, 1000)
-
-            submitForm.style.pointerEvents = 'all'
-            log(`Email has been sent with status: ${response}`, softGreen)
-        }
-
-    }).catch(error => {
-        resetFormOnError()
-        alert(error)
-    })
+            alert(error)
+        })
+    } catch(error) {
+        alert(`⚠️ Something is blocking the email service. Error: ${error}`)
+    }
 }
 
 function createEmailBody() {
