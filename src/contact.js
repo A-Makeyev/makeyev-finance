@@ -251,7 +251,7 @@ contactForm.addEventListener('submit', async (event) => {
 })
 
 // display modal with a status
-function displayModalContent(status, message) {
+function displayModalContent(status) {
     let firstName = inputName.value.split(' ')[0]
 
     if (status === 'success') {
@@ -287,7 +287,6 @@ function displayModalContent(status, message) {
                     </a>
                     ונחזור אליכם בהקדם
                 </p>
-                <span style="color: var(--soft-red);">${message}</span>
             `
         } else if (language == 'english') {
             modalTitle.textContent = 'Oops!'
@@ -411,7 +410,7 @@ function sendEmail() {
     
         })
     } catch(error) {
-        displayModalContent('failure', error)
+        displayModalContent('failure')
         resetFormOnError()
     }
 }
