@@ -80,17 +80,6 @@ function fillForm() {
 }
 fillForm()
 
-function addMessage() {
-    if (inputMessage.value.trim() === '') {
-        inputMessage.focus()
-        if (language == 'hebrew') {
-            inputMessage.value = 'אשמח לייעוץ כללי'
-        } else if (language == 'english') {
-            inputMessage.value = 'I would like some advice'
-        }
-    }
-}
-
 // reset labels after submit
 function resetLabels() {
     for (let x = 0; x < formInputs.length; x++) {
@@ -253,25 +242,16 @@ contactForm.addEventListener('submit', async (event) => {
 
     // user is online
     if (window.navigator.onLine) {        
-        try {
-            addMessage()
-            setTimeout(() => {
-                sendEmail()
-            }, 1000)
-        } catch (error) {
-            alert(error)
-        }
-
+        sendEmail()
     // user is offline
     } else { 
         resetFormOnError()
     }
-
     return false
 })
 
 // display modal with a status
-function displayModalContent(status) {
+function displayModalContent(status, message) {
     let firstName = inputName.value.split(' ')[0]
 
     if (status === 'success') {
@@ -290,7 +270,6 @@ function displayModalContent(status) {
             modalUser.textContent = `Thanks ${firstName},`
             modalBody.textContent = 'we will get back to you as soon as possible'
         }
-
     } else if (status === 'failure') {
         modalTitle.style.color = softRed
         modal.style.border = `2px solid ${softRed}`
@@ -300,20 +279,21 @@ function displayModalContent(status) {
         if (language == 'hebrew') {
             modalTitle.textContent = 'ההודעה לא נשלחה'
             modalBody.innerHTML = 
-            `<p>
-                הייתה תקלה בשליחת ההודעה, אפשר ליצור איתנו קשר במספר
-                <a href="tel:${mainPhone}" class="modal-body-phone">
-                    ${mainPhone}
-                </a>
-                ונחזור אליכם בהקדם
-            </p>
-            
+            `
+                <p>
+                    הייתה תקלה בשליחת ההודעה, אפשר ליצור איתנו קשר במספר
+                    <a href="tel:${mainPhone}" class="modal-body-phone">
+                        ${mainPhone}
+                    </a>
+                    ונחזור אליכם בהקדם
+                </p>
+                <span style="color: var(--soft-red);">${message}</span>
             `
         } else if (language == 'english') {
             modalTitle.textContent = 'Oops!'
             modalBody.textContent = `there seems to be a problem with your internet connection, feel free to reach us at ~ ${mainPhone}`
         }
-    }
+    } 
 
     setTimeout(() => {
         modal.classList.add('active')
@@ -429,12 +409,10 @@ function sendEmail() {
                 log(`Email has been sent with status: ${response}`, softGreen)
             }
     
-        }).catch(error => {
-            resetFormOnError()
-            alert(error)
         })
     } catch(error) {
-        alert(`⚠️ Something is blocking the email service. Error: ${error}`)
+        displayModalContent('failure', error)
+        resetFormOnError()
     }
 }
 
@@ -443,6 +421,14 @@ function createEmailBody() {
     let userPhone = inputPhone.value
     let userMessage = inputMessage.value
     let userEmail = inputEmail !== null ? inputEmail.value : null
+
+    if (userMessage.trim() === '') {
+        if (language == 'hebrew') {
+            userMessage = 'אשמח לייעוץ כללי'
+        } else if (language == 'english') {
+            userMessage = 'I would like some advice'
+        }
+    }
 
     return `
             <div>
