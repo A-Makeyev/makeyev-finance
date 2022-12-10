@@ -24,7 +24,7 @@ test.describe('Open Forms And Send Details', () => {
     const submitBtn = '#submit-form'
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('https://makeyev-finance.netlify.app/')
+        await page.goto('https://makeyev-finance.onrender.com/')
         await expect(page.locator(logo)).toBeVisible()
         await expect(page.locator(logo)).toHaveId('logo-image')
         await expect(page.locator(logo)).toHaveClass('logo-image-transparent')
