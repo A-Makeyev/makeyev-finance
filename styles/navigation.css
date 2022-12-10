@@ -18,13 +18,13 @@ nav .logo {
 }
 
 .logo-image {
-    content: url(/images/Logo.png);
+    content: url(../images/Logo.png);
     transition: 1s;
     width: 30%;
 }
 
 .logo-image-transparent {
-    content: url(/images/Logo-T.png);
+    content: url(../images/Logo-T.png);
     transition: 1s;
     width: 30%;
 }

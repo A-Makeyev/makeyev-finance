@@ -282,10 +282,8 @@ function displayModalContent(status) {
             `
                 <p>
                     הייתה תקלה בשליחת ההודעה, אפשר ליצור איתנו קשר במספר
-                    <a href="tel:${mainPhone}" class="modal-body-phone">
-                        ${mainPhone}
-                    </a>
-                    ונחזור אליכם בהקדם
+                    <a href="tel:${mainPhone}" class="modal-body-phone">${mainPhone}</a>
+                    ונדאג לחזור אליכם בהקדם
                 </p>
             `
         } else if (language == 'english') {
