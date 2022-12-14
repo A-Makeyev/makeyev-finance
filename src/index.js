@@ -74,16 +74,31 @@ closeModal = document.querySelectorAll('[data-modal-close]'),
 wazeAddresses = document.getElementsByClassName('wazeAddress'),
 
 // get current date & time
-currentDateTime = () => {
+currentDateTime = (type) => {
     let today = new Date()
-	let	dd = String(today.getDate()).padStart(2, "0")
-	let	mm = String(today.getMonth() + 1).padStart(2, "0")
-	let	yyyy = today.getFullYear()
+	let	day = String(today.getDate()).padStart(2, "0")
+	let	month = String(today.getMonth() + 1).padStart(2, "0")
+	let	year = today.getFullYear()
     let	hours = today.getHours()
     let	minutes = today.getMinutes()
+    
 	hours = hours < 10 ? `0${hours}` : hours
 	minutes = minutes < 10 ? `0${minutes}` : minutes
-    return `${dd}/${mm}/${yyyy} ~ ${hours}:${minutes}`
+
+    switch (type) {
+        case 'day':
+            return day
+        case 'month':
+            return month
+        case 'year':
+            return year
+        case 'hours':
+            return hours 
+        case 'minutes':
+            return minutes
+        default:
+            return `${day}/${month}/${year} ~ ${hours}:${minutes}`
+    }
 }
 
 // double click event

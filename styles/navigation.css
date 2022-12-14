@@ -1,3 +1,16 @@
+.indexes {
+    width: 90%;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    position: fixed;
+}
+
+.indexes p {
+    margin-left: 50px;
+    color: var(--soft-white);
+}
+
 nav {
     user-select: none;
     position: fixed;

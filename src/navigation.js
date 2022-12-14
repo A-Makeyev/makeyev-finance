@@ -172,3 +172,47 @@ function backToHeader() {
         scrollTop()
     }
 }
+
+// display indexes
+
+// const timePeriod = `&startPeriod=01-${currentDateTime('year')}&endPeriod=12-${currentDateTime('year')}`
+// const consumerPriceIndexUrl = `https://api.cbs.gov.il/index/data/price?id=200010&format=xml&download=false${timePeriod}`
+// const commercialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=800010&format=xml&download=false${timePeriod}`
+// const residentialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=120010&format=xml&download=false${timePeriod}`
+
+// function parseXmlToJson(xmlString) {
+//     const json = {}
+//     for (const res of xmlString.matchAll(/(?:<(\w*)(?:\s[^>]*)*>)((?:(?!<\1).)*)(?:<\/\1>)|<(\w*)(?:\s*)*\/>/gm)) {
+//         const key = res[1] || res[3]
+//         const value = res[2] && parseXmlToJson(res[2])
+//         json[key] = ((value && Object.keys(value).length) ? value : res[2]) || null
+//     }
+//     return json
+// }
+
+// function getXmlValue(xml, key) {
+//     return xml.substring(
+//         xml.lastIndexOf('<' + key + '>') + ('<' + key + '>').length,
+//         xml.lastIndexOf('</' + key + '>')
+//     )
+// }
+
+// function displayXMLData(url) {
+//     fetch(url)
+//     .then(response => response.text())
+//     .then(xmlString => {
+//         const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '')
+//         const currentMonth = xmlString.split('<DateMonth>')[1]
+//         console.log(parseXmlToJson(currentMonth))
+
+//         const indexes = document.querySelector('.indexes')
+//         indexes.innerHTML += 
+//         `
+//             <p>${indexName}</p>
+//         `
+//     })
+// }
+
+// displayXMLData(consumerPriceIndexUrl)
+// displayXMLData(commercialConstructionIndexUrl)
+// displayXMLData(residentialConstructionIndexUrl)
