@@ -141,7 +141,7 @@ function handleNavBar() {
 trademark.innerHTML =
 `
     <span>
-        makeyev finance © ${new Date().getFullYear()}
+        makeyev finance © ${currentDateTime('year')}
     </span> 
 `
 
@@ -174,45 +174,45 @@ function backToHeader() {
 }
 
 // display indexes
+const timePeriod = `&startPeriod=01-${currentDateTime('year')}&endPeriod=12-${currentDateTime('year')}`
+const consumerPriceIndexUrl = `https://api.cbs.gov.il/index/data/price?id=200010&format=xml&download=false${timePeriod}`
+const commercialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=800010&format=xml&download=false${timePeriod}`
+const residentialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=120010&format=xml&download=false${timePeriod}`
 
-// const timePeriod = `&startPeriod=01-${currentDateTime('year')}&endPeriod=12-${currentDateTime('year')}`
-// const consumerPriceIndexUrl = `https://api.cbs.gov.il/index/data/price?id=200010&format=xml&download=false${timePeriod}`
-// const commercialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=800010&format=xml&download=false${timePeriod}`
-// const residentialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=120010&format=xml&download=false${timePeriod}`
+function parseXmlToJson(xmlString) {
+    const json = {}
+    for (const res of xmlString.matchAll(/(?:<(\w*)(?:\s[^>]*)*>)((?:(?!<\1).)*)(?:<\/\1>)|<(\w*)(?:\s*)*\/>/gm)) {
+        const key = res[1] || res[3]
+        const value = res[2] && parseXmlToJson(res[2])
+        json[key] = ((value && Object.keys(value).length) ? value : res[2]) || null
+    }
+    return json
+}
 
-// function parseXmlToJson(xmlString) {
-//     const json = {}
-//     for (const res of xmlString.matchAll(/(?:<(\w*)(?:\s[^>]*)*>)((?:(?!<\1).)*)(?:<\/\1>)|<(\w*)(?:\s*)*\/>/gm)) {
-//         const key = res[1] || res[3]
-//         const value = res[2] && parseXmlToJson(res[2])
-//         json[key] = ((value && Object.keys(value).length) ? value : res[2]) || null
-//     }
-//     return json
-// }
+function getXmlValue(xml, key) {
+    return xml.substring(
+        xml.lastIndexOf('<' + key + '>') + ('<' + key + '>').length,
+        xml.lastIndexOf('</' + key + '>')
+    )
+}
 
-// function getXmlValue(xml, key) {
-//     return xml.substring(
-//         xml.lastIndexOf('<' + key + '>') + ('<' + key + '>').length,
-//         xml.lastIndexOf('</' + key + '>')
-//     )
-// }
+function displayXMLData(urls) {
+    urls.forEach(url => {
+        fetch(url)
+        .then(response => response.text())
+        .then(xmlString => {
+            const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '')
+            const currentMonth = parseXmlToJson(xmlString.split('<DateMonth>')[1])
+            const indexes = document.querySelector('.indexes')
+    
+            indexes.innerHTML += 
+            `
+                <a href="https://google.com/search?q=${indexName.split(' ').join('+').substring(0, indexName.length - 1)}" target="_blank" class="nav-link">
+                    ${indexName} : ${currentMonth.value} ~ שינוי חודשי : ${currentMonth.percent}% ~ שינוי מתחילת שנה : ${currentMonth.percentYear}%
+                </a>
+            `
+        })
+    })
+}
 
-// function displayXMLData(url) {
-//     fetch(url)
-//     .then(response => response.text())
-//     .then(xmlString => {
-//         const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '')
-//         const currentMonth = xmlString.split('<DateMonth>')[1]
-//         console.log(parseXmlToJson(currentMonth))
-
-//         const indexes = document.querySelector('.indexes')
-//         indexes.innerHTML += 
-//         `
-//             <p>${indexName}</p>
-//         `
-//     })
-// }
-
-// displayXMLData(consumerPriceIndexUrl)
-// displayXMLData(commercialConstructionIndexUrl)
-// displayXMLData(residentialConstructionIndexUrl)
+displayXMLData([consumerPriceIndexUrl, commercialConstructionIndexUrl, residentialConstructionIndexUrl])

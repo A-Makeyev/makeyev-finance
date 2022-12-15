@@ -15,7 +15,7 @@ callTo = 'tel:' + mainPhone,
 mailToLink = 'mailto:' + mainEmail + '?subject=I%20need%20financial%20advice%21',
 whatsAppLink = 'https://wa.me/' + mainPhone.replace(mainPhone.charAt(0), '972') + '?text=What%27s%20up%3F',
 wazeMap = `https://embed.waze.com/${language == 'hebrew' ? 'he' : ''}` + '/iframe?zoom=16&lat=32.056323&lon=34.769313&ct=livemap',
-wazeLink = 'https://ul.waze.com/ul?place=ChIJp9fIOZ9MHRURg5L4vD_YK1c&ll=32.05632250%2C34.76931260&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location'
+wazeLink = 'https://ul.waze.com/ul?place=ChIJp9fIOZ9MHRURg5L4vD_YK1c&ll=32.05632250%2C34.76931260&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location',
 googleMap = 'https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d27051.822489683218!2d34.76055827048644!3d32.05632299999998!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151d4c9f39c8d7a7%3A0x572bd83fbcf89283!2sFlorentin%20St%2023%2C%20Tel%20Aviv-Yafo!5e0!3m2!1sen!2sil!4v1662889337932!5m2!1sen!2sil',
 
 /* regex */

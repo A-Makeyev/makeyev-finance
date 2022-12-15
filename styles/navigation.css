@@ -1,14 +1,22 @@
 .indexes {
-    width: 90%;
     display: flex;
     flex-direction: row;
-    justify-content: flex-end;
+    justify-content: space-evenly;
+    background-color: var(--soft-black);
     position: fixed;
+    height: 25px;
+    z-index: 99;
+    right: 0;
+    left: 0;
+    top: 0;
 }
 
-.indexes p {
-    margin-left: 50px;
-    color: var(--soft-white);
+.indexes a {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--soft-white) !important;
+    transition: all 0.25s ease;
+    cursor: pointer;
 }
 
 nav {
@@ -17,9 +25,9 @@ nav {
     padding: 2% 6%;
     height: 100px;
     z-index: 99;
+    top: 25px;
     right: 0;
     left: 0;
-    top: 0;
 }
 
 nav .logo {
@@ -117,7 +125,6 @@ nav .menu-icon .line {
     background: var(--soft-white);
     transition: all ease-in-out 0.5s;
     box-shadow: 0 5px 5px 0 var(--soft-black-background);
-    /* border-bottom: 1px solid var(--soft-blue-background); */
 }
 
 .nav-scrolling-resize {
@@ -197,6 +204,15 @@ nav .menu-icon .line {
 
 .whatsapp-fill:hover, .phone-fill:hover {
     color: var(--soft-green) !important;
+}
+
+@media screen and (max-width: 1800px) {
+    .indexes {
+        display: none;
+    }
+    nav {
+        top: 0;
+    }
 }
 
 @media screen and (min-width: 1980px) {
