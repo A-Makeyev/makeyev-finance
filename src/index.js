@@ -2,12 +2,12 @@ const
 menuOpen = false,
 language = 'hebrew',
 dev = 'http://127.0.0.1:5500',
-prod = 'https://makeyev-finance.netlify.app',
+prod = 'https://makeyev-finance.onrender.com',
 smtpToken = '88263185-689f-4f54-8491-33a2ba3a1a48',
 facebookPage = 'https://www.facebook.com/makeyev.finance',
 companyMail = 'makeyev.finance@gmail.com',
-mainAddress = 'Florentin 23 Tel Aviv',
 mainEmail = 'anatoly.makeyev@gmail.com',
+mainAddress = 'Florentin 23 Tel Aviv',
 mainPhone = '0527729974',
 
 /* links */
