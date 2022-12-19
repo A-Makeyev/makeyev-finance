@@ -367,9 +367,9 @@ function sendEmail() {
             // https://smtpjs.com
             // https://elasticemail.com
     
-            SecureToken: smtpToken,
+            SecureToken: mainSmtpToken,
             To: mainEmail,
-            From: companyMail,
+            From: mainEmail,
             Subject: 'New Client 🤩',
             Body: createEmailBody()
     
@@ -488,7 +488,7 @@ function createEmailBody() {
                     </tbody>
                 </table>
                 <p style="color: ${softBlack}; font-weight: 600;">Sent on ${currentDateTime()}</p>
-                <!-- <strong>°ᴗ°</strong> -->
+                <img src="${prod}/images/Logo.png" style="max-width: 165px">
             </div>
            `
 }
