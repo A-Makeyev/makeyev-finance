@@ -435,6 +435,7 @@ function createEmailBody() {
                         <span style="color: ${softBlue};">Makeyev Finance</span>
                     </a>
                 </h4>
+                <p style="color: ${softBlack}; font-weight: 600;">Sent on ${currentDateTime()}</p>
                 <table style="border: 1px solid ${softGrey}; border-collapse: collapse; width: 100%;">
                     <tbody style="font-family: 'Fira Code', sans-serif; font-size: 15px; text-align: center; color: ${softBlack}">
                         <tr style="border: 1px solid ${softBlue}; background: ${softBlue}; color: ${softWhite}; padding: 15px 10px;">
@@ -487,8 +488,9 @@ function createEmailBody() {
 
                     </tbody>
                 </table>
-                <p style="color: ${softBlack}; font-weight: 600;">Sent on ${currentDateTime()}</p>
-                <img src="${prod}/images/Logo.png" style="max-width: 165px">
+                <div style="text-align: center; margin-top: 50px;">
+                    <img src="${prod}/images/Logo.png" style="max-width: 250px;">
+                </div>
             </div>
            `
 }
