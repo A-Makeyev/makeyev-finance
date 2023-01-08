@@ -203,7 +203,6 @@ function displayXMLData(urls) {
         fetch(url)
         .then(response => response.text())
         .then(xmlString => {
-            
             const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '')
             const currentMonth = parseXmlToJson(xmlString.split('<DateMonth>')[1])
             const indexes = document.querySelector('.indexes')
