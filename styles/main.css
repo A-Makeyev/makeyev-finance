@@ -103,7 +103,12 @@ body {
 } */
 
 #offline {
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 100;
     display: none;
+    position: fixed;
     font-size: 20px;
     font-weight: 600;
     text-align: center;

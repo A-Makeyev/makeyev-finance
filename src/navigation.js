@@ -181,12 +181,14 @@ const residentialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price
 
 function parseXmlToJson(xmlString) {
     const json = {}
-    for (const res of xmlString.matchAll(/(?:<(\w*)(?:\s[^>]*)*>)((?:(?!<\1).)*)(?:<\/\1>)|<(\w*)(?:\s*)*\/>/gm)) {
-        const key = res[1] || res[3]
-        const value = res[2] && parseXmlToJson(res[2])
-        json[key] = ((value && Object.keys(value).length) ? value : res[2]) || null
+    if (xmlString) {
+        for (const res of xmlString.matchAll(/(?:<(\w*)(?:\s[^>]*)*>)((?:(?!<\1).)*)(?:<\/\1>)|<(\w*)(?:\s*)*\/>/gm)) {
+            const key = res[1] || res[3]
+            const value = res[2] && parseXmlToJson(res[2])
+            json[key] = ((value && Object.keys(value).length) ? value : res[2]) || null
+        }
+        return json
     }
-    return json
 }
 
 function getXmlValue(xml, key) {
@@ -201,16 +203,18 @@ function displayXMLData(urls) {
         fetch(url)
         .then(response => response.text())
         .then(xmlString => {
+            
             const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '')
             const currentMonth = parseXmlToJson(xmlString.split('<DateMonth>')[1])
             const indexes = document.querySelector('.indexes')
-    
-            indexes.innerHTML += 
-            `
-                <a href="https://google.com/search?q=${indexName.split(' ').join('+').substring(0, indexName.length - 1)}" target="_blank" class="nav-link">
-                    ${indexName} : ${currentMonth.value} ~ שינוי חודשי : ${currentMonth.percent}% ~ שינוי מתחילת שנה : ${currentMonth.percentYear}%
-                </a>
-            `
+            if (currentMonth) {
+                indexes.innerHTML += 
+                `
+                    <a href="https://google.com/search?q=${indexName.split(' ').join('+').substring(0, indexName.length - 1)}" target="_blank" class="nav-link">
+                        ${indexName} : ${currentMonth.value} ~ שינוי חודשי : ${currentMonth.percent}% ~ שינוי מתחילת שנה : ${currentMonth.percentYear}%
+                    </a>
+                `
+            }
         })
     })
 }
