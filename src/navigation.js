@@ -213,6 +213,9 @@ function displayXMLData(urls) {
                         ${indexName} : ${currentMonth.value} ~ שינוי חודשי : ${currentMonth.percent}% ~ שינוי מתחילת שנה : ${currentMonth.percentYear}%
                     </a>
                 `
+            } else {
+                indexes.style.display = 'none'
+                nav.style.top = '0'
             }
         })
     })
