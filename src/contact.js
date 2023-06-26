@@ -366,11 +366,11 @@ function sendEmail() {
         Email.send({
             // https://smtpjs.com
             // https://elasticemail.com
-    
+            // SMTP Host & Domain -> smtp.elasticemail.com
             SecureToken: mainSmtpToken,
             To: mainEmail,
             From: mainEmail,
-            Subject: 'New Client 🤩',
+            Subject: 'New Client 🤑',
             Body: createEmailBody()
     
         }).then(response => {
