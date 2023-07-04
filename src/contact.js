@@ -203,12 +203,7 @@ function resetFormOnError() {
     if (action !== null) {
         actionFormModal.classList.remove('active')
     }
-
-    // don't include name with error message
-    modalUser.style.display = 'none'
-    displayModalContent('failure')
-    allowSubmit()
-
+    
     if (language == 'hebrew') {
         submitForm.textContent = 'שלחו'
     } else if (language == 'english') {
@@ -216,6 +211,7 @@ function resetFormOnError() {
     }
 
     submitForm.style.pointerEvents = 'all'
+    allowSubmit()
 }
 
 // submit form & send email only if user is online
@@ -245,13 +241,18 @@ contactForm.addEventListener('submit', async (event) => {
         sendEmail()
     // user is offline
     } else { 
+        if (language == 'hebrew') {
+            displayModalContent('failure', 'אין חיבור לרשת')
+        } else if (language == 'english') {
+            displayModalContent('failure', 'No internet connection')
+        }
         resetFormOnError()
     }
     return false
 })
 
 // display modal with a status
-function displayModalContent(status) {
+function displayModalContent(status, message) {
     let firstName = inputName.value.split(' ')[0]
 
     if (status === 'success') {
@@ -271,6 +272,9 @@ function displayModalContent(status) {
             modalBody.textContent = 'we will get back to you as soon as possible'
         }
     } else if (status === 'failure') {
+        // don't include name with error message
+        modalUser.style.display = 'none'
+
         modalTitle.style.color = softRed
         modal.style.border = `2px solid ${softRed}`
         modalHeader.style.borderBottom = `2px solid ${softRed}`
@@ -291,6 +295,16 @@ function displayModalContent(status) {
             modalBody.textContent = `there seems to be a problem with your internet connection, feel free to reach us at ~ ${mainPhone}`
         }
     } 
+
+    if (message) {
+        let color = status === 'success' ? softGreen : status === 'failure' ? softRed : softGrey
+        modalBody.innerHTML += 
+        `
+            <div style="border-top: 2px solid ${color}; margin-top: 5px;">
+                <p style="color: ${color}; margin-bottom: 5px;">${message}</p>
+            </div>
+        `
+    }
 
     setTimeout(() => {
         modal.classList.add('active')
@@ -363,52 +377,59 @@ if (action !== null) {
 
 function sendEmail() {
     try {
-        Email.send({
-            // https://smtpjs.com
-            // https://elasticemail.com
-            // SMTP Host & Domain -> smtp.elasticemail.com
-            SecureToken: mainSmtpToken,
-            To: mainEmail,
-            From: mainEmail,
-            Subject: 'New Client 🤑',
-            Body: createEmailBody()
-    
-        }).then(response => {
-            // handle communication buffer resources
-            if (response.includes('deadlock victim')) {
-                log(response, softOrange)
-                log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
-                log(`Process (${response.match(/\d/g).join('')}) was deadlocked, resending email...`, softOrange)
-                log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
-                sendEmail()
-            } else if (!response.includes('OK')) {
-                log(response, softRed)
-                resetFormOnError()
-            } else {
-                if (action !== null)
-                    actionFormModal.classList.remove('active')
-    
-                resetLabels()
-                displayModalContent('success')
-    
-                preventSubmit()
-                contactForm.reset()
-    
-                setTimeout(() => {
-                    if (language == 'hebrew') {
-                        submitForm.textContent = 'שלחו'
-                    } else if (language == 'english') {
-                        submitForm.textContent = 'Send'
-                    }
-                }, 1000)
-    
-                submitForm.style.pointerEvents = 'all'
-                log(`Email has been sent with status: ${response}`, softGreen)
+        if (typeof Email == 'undefined') {
+            if (language == 'hebrew') {
+                displayModalContent('failure', 'משהו פה חוסם אותנו מלשלוח אימיילים')
+            } else if (language == 'english') {
+                displayModalContent('failure', 'Something is blocking us from sending emails on this device')
             }
-    
-        })
+            resetFormOnError()
+        } else {
+            Email.send({
+                // https://smtpjs.com
+                // https://elasticemail.com
+                // SMTP Host & Domain -> smtp.elasticemail.com
+                SecureToken: mainSmtpToken,
+                To: mainEmail,
+                From: mainEmail,
+                Subject: 'New Client 🤑',
+                Body: createEmailBody()
+        
+            }).then(response => {
+                // handle communication buffer resources
+                if (response.includes('deadlock victim')) {
+                    log(response, softOrange)
+                    log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
+                    log(`Process (${response.match(/\d/g).join('')}) was deadlocked, resending email...`, softOrange)
+                    log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
+                    sendEmail()
+                } else if (!response.includes('OK')) {
+                    displayModalContent('failure', response)
+                    resetFormOnError()
+                } else {
+                    if (action !== null) actionFormModal.classList.remove('active')
+        
+                    resetLabels()
+                    displayModalContent('success')
+        
+                    preventSubmit()
+                    contactForm.reset()
+        
+                    setTimeout(() => {
+                        if (language == 'hebrew') {
+                            submitForm.textContent = 'שלחו'
+                        } else if (language == 'english') {
+                            submitForm.textContent = 'Send'
+                        }
+                    }, 1000)
+        
+                    submitForm.style.pointerEvents = 'all'
+                    log(`Email has been sent with status: ${response}`, softGreen)
+                }
+            })
+        }
     } catch(error) {
-        displayModalContent('failure')
+        displayModalContent('failure', error)
         resetFormOnError()
     }
 }
