@@ -176,8 +176,9 @@ function backToHeader() {
 // display indexes
 const timePeriod = `&startPeriod=01-${currentDateTime('year')}&endPeriod=12-${currentDateTime('year')}`
 const consumerPriceIndexUrl = `https://api.cbs.gov.il/index/data/price?id=200010&format=xml&download=false${timePeriod}`
-const commercialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=800010&format=xml&download=false${timePeriod}`
 const residentialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=120010&format=xml&download=false${timePeriod}`
+const commercialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=800010&format=xml&download=false${timePeriod}`
+const indexUrls = [consumerPriceIndexUrl, residentialConstructionIndexUrl, commercialConstructionIndexUrl]
 
 function parseXmlToJson(xmlString) {
     const json = {}
@@ -198,27 +199,32 @@ function getXmlValue(xml, key) {
     )
 }
 
-function displayXMLData(urls) {
-    urls.forEach(url => {
-        fetch(url)
-        .then(response => response.text())
-        .then(xmlString => {
-            const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '')
-            const currentMonth = parseXmlToJson(xmlString.split('<DateMonth>')[1])
-            const indexes = document.querySelector('.indexes')
-            if (currentMonth) {
-                indexes.innerHTML += 
-                `
-                    <a href="https://google.com/search?q=${indexName.split(' ').join('+').substring(0, indexName.length - 1)}" target="_blank" class="nav-link">
-                        ${indexName} : ${currentMonth.value} ~ שינוי חודשי : ${currentMonth.percent}% ~ שינוי מתחילת שנה : ${currentMonth.percentYear}%
-                    </a>
-                `
-            } else {
-                indexes.style.display = 'none'
-                nav.style.top = '0'
-            }
-        })
+indexUrls.forEach(url => {
+    fetch(url)
+    .then(response => response.text())
+    .then(xmlString => {
+        const indexes = document.querySelector('.indexes')
+        const lastMonth = parseXmlToJson(xmlString.split('<DateMonth>')[2])
+        const currentMonth = parseXmlToJson(xmlString.split('<DateMonth>')[1])
+        const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '')
+        const indexQuery = indexName.split(' ').join('+').substring(0, indexName.length - 1)
+        const indexOrder = indexName.includes('צרכן') ? '3' : indexName.includes('מגורים') ? '2' : '1'
+        const indexValue = currentMonth.value > lastMonth.value ? '🠙' : currentMonth.value < lastMonth.value ? '🠛' : ''
+        const indexColor = currentMonth.value > lastMonth.value ? softRed : currentMonth.value < lastMonth.value ? softGreen : softGrey
+        
+        if (currentMonth) {
+            indexes.innerHTML += 
+            `
+                <a href="https://google.com/search?q=${indexQuery}" target="_blank" style="order: ${indexOrder};">
+                    ${indexName}: <span style="color: ${indexColor} !important;">${currentMonth.value}</span>
+                    שינוי חודשי: <span style="color: ${indexColor} !important;">${indexValue} ${currentMonth.percent}%</span>
+                    מתחילת שנה: <span style="color: ${indexColor} !important;">${indexValue} ${currentMonth.percentYear}%</span>
+                </a>
+            `
+        } else {
+            indexes.style.display = 'none'
+            nav.style.top = '0'
+        }
     })
-}
+})
 
-displayXMLData([consumerPriceIndexUrl, commercialConstructionIndexUrl, residentialConstructionIndexUrl])

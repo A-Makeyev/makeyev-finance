@@ -9,7 +9,7 @@
     right: 0;
     left: 0;
     top: 0;
-}
+} 
 
 .indexes a {
     font-size: 16px;
@@ -206,7 +206,7 @@ nav .menu-icon .line {
     color: var(--soft-green) !important;
 }
 
-@media screen and (max-width: 1800px) {
+@media screen and (max-width: 1650px) {
     .indexes {
         display: none;
     }
