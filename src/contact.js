@@ -510,7 +510,7 @@ function createEmailBody() {
                     </tbody>
                 </table>
                 <div style="text-align: center; margin-top: 50px;">
-                    <img src="${prod}/images/M-LIGHT.png" style="max-width: 250px;">
+                    <img src="${prod}/images/M-LIGHT-T.png" style="max-width: 250px;">
                 </div>
             </div>
            `
