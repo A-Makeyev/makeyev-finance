@@ -65,15 +65,15 @@ menu.onclick = () => {
 }
 
 window.addEventListener('resize', () => {
-    // navbar is on TOP on a device with MAX width of 770px
-    if (window.matchMedia('(max-width: 770px)').matches && window.scrollY === 0) {
+    // navbar is on TOP on a device with MAX width of 800px
+    if (window.matchMedia('(max-width: 800px)').matches && window.scrollY === 0) {
         for (let link = 0; link < navLinks.length; link++) {
             navLinks[link].style.transition = 'all 0.5s'
             navLinks[link].style.color = softBlack
         }
 
-    // navbar is on TOP on a device with MIN width of 770px
-    } else if (window.matchMedia('(min-width: 770px)').matches && window.scrollY === 0) {
+    // navbar is on TOP on a device with MIN width of 800px
+    } else if (window.matchMedia('(min-width: 800px)').matches && window.scrollY === 0) {
         for (let link = 0; link < navLinks.length; link++) {
             navLinks[link].style.transition = 'all 0.5s'
             navLinks[link].style.color = softWhite
@@ -170,6 +170,8 @@ document.getElementsByTagName('head')[0].appendChild(footerLinksHover)
 function backToHeader() {
     if (!menuOpen) {
         scrollTop()
+    } else {
+        menu.click()
     }
 }
 
@@ -218,7 +220,7 @@ indexUrls.forEach(url => {
                 <a href="https://google.com/search?q=${indexQuery}" target="_blank" style="order: ${indexOrder};">
                     ${indexName}: <span style="color: ${indexColor} !important;">${currentMonth.value}</span>
                     שינוי חודשי: <span style="color: ${indexColor} !important;">${indexValue} ${currentMonth.percent}%</span>
-                    מתחילת שנה: <span style="color: ${indexColor} !important;">${indexValue} ${currentMonth.percentYear}%</span>
+                    שינוי שנתי: <span style="color: ${indexColor} !important;">${indexValue} ${currentMonth.percentYear}%</span>
                 </a>
             `
         } else {
@@ -227,4 +229,3 @@ indexUrls.forEach(url => {
         }
     })
 })
-
