@@ -208,17 +208,17 @@ indexUrls.forEach(url => {
         const indexes = document.querySelector('.indexes')
         const lastMonth = parseXmlToJson(xmlString.split('<DateMonth>')[2])
         const currentMonth = parseXmlToJson(xmlString.split('<DateMonth>')[1])
-        const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '')
+        const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '').replace('מחירי תשומה', 'תשומה')
         const indexQuery = indexName.split(' ').join('+').substring(0, indexName.length - 1)
         const indexOrder = indexName.includes('צרכן') ? '3' : indexName.includes('מגורים') ? '2' : '1'
         const indexValue = currentMonth.value > lastMonth.value ? '🠙' : currentMonth.value < lastMonth.value ? '🠛' : ''
         const indexColor = currentMonth.value > lastMonth.value ? softRed : currentMonth.value < lastMonth.value ? softGreen : softGrey
-        
+
         if (currentMonth) {
             indexes.innerHTML += 
             `
                 <a href="https://google.com/search?q=${indexQuery}" target="_blank" style="order: ${indexOrder};">
-                    ${indexName}: <span style="color: ${indexColor} !important;">${currentMonth.value}</span>
+                    ${indexName}: <span style="color: ${indexColor} !important;">${currentMonth.value}</span> <span class="line-break"></span>
                     שינוי חודשי: <span style="color: ${indexColor} !important;">${indexValue} ${currentMonth.percent}%</span>
                     שינוי שנתי: <span style="color: ${indexColor} !important;">${indexValue} ${currentMonth.percentYear}%</span>
                 </a>

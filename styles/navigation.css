@@ -5,6 +5,7 @@
     background-color: var(--soft-black);
     position: fixed;
     height: 25px;
+    padding: 5px;
     z-index: 99;
     right: 0;
     left: 0;
@@ -25,7 +26,7 @@ nav {
     padding: 2% 6%;
     height: 100px;
     z-index: 99;
-    top: 25px;
+    top: 35px;
     right: 0;
     left: 0;
 }
@@ -206,12 +207,60 @@ nav .menu-icon .line {
     color: var(--soft-green) !important;
 }
 
-@media screen and (max-width: 1650px) {
+@media screen and (max-width: 1690px) {
+    nav {
+        margin-top: 20px;
+    }
+
     .indexes {
+        height: 45px;
+    }
+    
+    .indexes a {
+        width: 370px;
+        text-align: center;
+    }
+
+    .line-break::before {
+        content: 'hiddentext';
+        line-height: 0; 
+        display: block;
+        font-size: 0;
+    }
+}
+
+@media screen and (max-width: 1150px) {
+    nav {
+        margin-top: 40px;
+    }
+
+    .indexes {
+        height: 65px;
+        align-items: center;
+        flex-direction: column;
+    }
+
+    .indexes a {
+        width: 100%;
+
+    }
+
+    .line-break::before {
         display: none;
     }
+}
+
+@media screen and (max-width: 650px) {
     nav {
-        top: 0;
+        margin-top: 40px;
+    }
+
+    .indexes {
+        height: 65px;
+    }
+
+    .indexes a {
+        font-size: 10px;
     }
 }
 
