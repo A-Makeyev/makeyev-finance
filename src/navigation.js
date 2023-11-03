@@ -214,8 +214,6 @@ indexUrls.forEach(url => {
         const indexValue = currentMonth.value > lastMonth.value ? '🠙' : currentMonth.value < lastMonth.value ? '🠛' : ''
         const indexColor = currentMonth.value > lastMonth.value ? softRed : currentMonth.value < lastMonth.value ? softGreen : softGrey
         if (currentMonth) {
-            indexes.style.display = 'flex'
-            nav.style.top = '35px'
             indexes.innerHTML += 
             `
                 <a href="https://google.com/search?q=${indexQuery}" target="_blank" style="order: ${indexOrder};">
@@ -225,5 +223,9 @@ indexUrls.forEach(url => {
                 </a>
             `
         } 
-    }).catch(error => { console.log(error) })
+    }).catch(error => { 
+        indexes.style.display = 'none'
+        nav.style.top = '0'
+        console.log(error) 
+    })
 })
