@@ -1,5 +1,5 @@
 .indexes {
-    display: flex;
+    display: none;
     flex-direction: row;
     justify-content: space-evenly;
     background-color: var(--soft-black);
@@ -26,9 +26,9 @@ nav {
     padding: 2% 6%;
     height: 100px;
     z-index: 99;
-    top: 35px;
     right: 0;
     left: 0;
+    top: 0;
 }
 
 nav .logo {
