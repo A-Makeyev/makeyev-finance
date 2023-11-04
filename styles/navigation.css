@@ -1,5 +1,5 @@
 .indexes {
-    display: flex;
+    display: none;
     flex-direction: row;
     justify-content: space-evenly;
     background-color: var(--soft-black);
@@ -26,9 +26,9 @@ nav {
     padding: 2% 6%;
     height: 100px;
     z-index: 99;
-    top: 35px;
     right: 0;
     left: 0;
+    top: 0;
 }
 
 nav .logo {
@@ -37,6 +37,10 @@ nav .logo {
     align-items: center;
     height: 100%;
     width: 40%;
+}
+
+.adjust-nav {
+    top: 35px;
 }
 
 .logo-image {
@@ -208,7 +212,7 @@ nav .menu-icon .line {
 }
 
 @media screen and (max-width: 1690px) {
-    nav {
+    .adjust-nav {
         margin-top: 20px;
     }
 
@@ -230,7 +234,7 @@ nav .menu-icon .line {
 }
 
 @media screen and (max-width: 1150px) {
-    nav {
+    .adjust-nav {
         margin-top: 40px;
     }
 
@@ -250,7 +254,7 @@ nav .menu-icon .line {
 }
 
 @media screen and (max-width: 650px) {
-    nav {
+    .adjust-nav {
         margin-top: 40px;
     }
 
@@ -273,9 +277,11 @@ nav .menu-icon .line {
     nav #nav-links {
         float: none;
     }
+
     #trademark, .footer-links p {
         font-size: 15px;
     }
+
     .socials, .socials i {
         font-size: 20px;
     }
@@ -285,9 +291,11 @@ nav .menu-icon .line {
     .navbar-scrolling {
         border-bottom: 2px solid var(--soft-white);
     }
+
     .nav-scrolling-resize {
         padding: 2% 5%;
     }
+
     nav #nav-links {
         left: 0;
         right: 0;
@@ -302,39 +310,49 @@ nav .menu-icon .line {
         justify-content: space-evenly;
         background: var(--soft-white);
     }
+
     nav #nav-links a {
         font-size: 25px;
         color: var(--soft-black);
     }
+
     nav #nav-links a::after {
         background: var(--soft-black);
     }
+
     nav .logo {
         float: none;
         width: auto;
     }
+
     .logo-image, .logo-image-transparent {
         width: 20% !important;
         display: block;
         margin: 0 auto;
         z-index: 999;
     }
+
     nav .menu-icon {
         display: block;
         cursor: pointer;
     }
+
     nav .menu-icon .line {
         background: var(--soft-white);
     }
+
     nav :checked ~ #nav-links {
         bottom: 0;
     }
+    
     nav :checked ~ .menu-icon .line:nth-child(1) {
         transform: translateY(10px) rotate(225deg);
     }
+
     nav :checked ~ .menu-icon .line:nth-child(2) {
         opacity: 0;
     }
+
     nav :checked ~ .menu-icon .line:nth-child(3) {
         transform: translateY(-10px) rotate(-225deg);
     }
@@ -344,15 +362,19 @@ nav .menu-icon .line {
     .logo-image, .logo-image-transparent {
         width: 20% !important;
     }
-    nav {
+    
+    .adjust-nav {
         height: 70px;
     }
+
     nav #nav-links {
         top: 83px;
     }
+
     nav #nav-links a {
         font-size: 20px;
     }
+
     nav .menu-icon .line {
         height: 2px;
         margin: 8px;
