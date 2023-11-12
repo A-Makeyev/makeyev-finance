@@ -166,7 +166,7 @@ img {
 
 .sub-header {
     width: 100%;
-    height: 80vh;
+    height: 85vh;
     transition: all 1s;
     position: relative;
     text-align: center;
@@ -666,9 +666,6 @@ img {
 }
 
 @media (max-width: 1300px) {
-    .sub-header {
-        height: 55vh;
-    }
     .text-box {
         top: 60%;
     }
@@ -709,9 +706,6 @@ img {
 }
 
 @media (max-width: 700px) {
-    .sub-header {
-        height: 45vh;
-    }
     .text-box h1 {
         font-size: 2.5rem;
     }
