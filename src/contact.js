@@ -369,10 +369,12 @@ if (typeof modalLinks[0] !== 'undefined') {
 
 // action form modal
 if (action !== null) {
-    action.addEventListener('click', () => {
-        actionFormModal.classList.add('active')
-        overlay.classList.add('active')
-    })
+    Array.from(action).forEach(btn => {
+        btn.addEventListener('click', () => {
+            actionFormModal.classList.add('active')
+            overlay.classList.add('active')
+        })
+    }) 
 }
 
 function sendEmail() {
