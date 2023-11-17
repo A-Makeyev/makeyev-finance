@@ -1,5 +1,5 @@
 .indexes {
-    display: none;
+    display: block;
     flex-direction: row;
     justify-content: space-evenly;
     background-color: var(--soft-black);
@@ -55,23 +55,23 @@ nav .logo {
     width: 30%;
 }
 
-nav #nav-links {
-    margin: 0 -75px;
+nav #nav-list {
     padding: 0;
     width: 50%;
     height: 100%;
     float: right;
     display: flex;
+    margin: 0 -50px;
     align-items: center;
     justify-content: space-around;
     transition: all ease-in-out 0.5s;
 }
 
-nav #nav-links li {
+nav #nav-list li {
     list-style: none;
 }
 
-nav #nav-links a {
+nav #nav-list a {
     padding: 10px;
     display: block;
     font-size: 20px;
@@ -81,24 +81,24 @@ nav #nav-links a {
     color: var(--soft-white);
     text-transform: capitalize;
     white-space: nowrap;
-    transition: 0.5s;
+    transition: all 0.5s;
 }
 
-nav #nav-links a::after {
+nav #nav-list a::after {
     content: '';
     width: 0;
     height: 2px;
-    margin: 4px auto;
     display: block;
-    transition: 0.5s;
+    margin: 4px auto;
+    transition: all 0.5s;
     background: var(--soft-white);
 }
 
-nav #nav-links a:hover::after {
+nav #nav-list a:hover::after {
     width: 100%;
 }
 
-nav #nav-links a:hover {
+nav #nav-list a:hover {
     color: var(--soft-blue);
 }
 
@@ -128,7 +128,6 @@ nav .menu-icon .line {
 .navbar-scrolling {
     color: var(--soft-black);
     background: var(--soft-white);
-    transition: all ease-in-out 0.5s;
     box-shadow: 0 5px 5px 0 var(--soft-black-background);
 }
 
@@ -274,7 +273,7 @@ nav .menu-icon .line {
 }
 
 @media screen and (max-width: 1350px) {
-    nav #nav-links {
+    nav #nav-list {
         float: none;
     }
 
@@ -296,7 +295,7 @@ nav .menu-icon .line {
         padding: 2% 5%;
     }
 
-    nav #nav-links {
+    nav #nav-list {
         left: 0;
         right: 0;
         top: 120px;
@@ -311,12 +310,12 @@ nav .menu-icon .line {
         background: var(--soft-white);
     }
 
-    nav #nav-links a {
+    nav #nav-list a {
         font-size: 25px;
         color: var(--soft-black);
     }
 
-    nav #nav-links a::after {
+    nav #nav-list a::after {
         background: var(--soft-black);
     }
 
@@ -341,7 +340,7 @@ nav .menu-icon .line {
         background: var(--soft-white);
     }
 
-    nav :checked ~ #nav-links {
+    nav :checked ~ #nav-list {
         bottom: 0;
     }
     
@@ -367,11 +366,11 @@ nav .menu-icon .line {
         height: 70px;
     }
 
-    nav #nav-links {
+    nav #nav-list {
         top: 83px;
     }
 
-    nav #nav-links a {
+    nav #nav-list a {
         font-size: 20px;
     }
 

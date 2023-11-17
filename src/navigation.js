@@ -50,6 +50,65 @@ function scrollTop() {
     }
 }
 
+function adjustMenuOpen() {
+    document.querySelector('#nav-list a')
+    logo.classList.remove('logo-image-transparent')
+    nav.classList.add('navbar-scrolling')
+    logo.classList.add('logo-image')
+
+    for (let link = 0; link < navLinks.length; link++) {
+        navLinks[link].style.transition = 'all 0.5s'
+        navLinks[link].style.color = softBlack
+    }
+
+    for (let line = 0; line < navMenuLines.length; line++) {
+        navMenuLines[line].style.backgroundColor = softBlack
+    }
+
+    // navbar scrolling down on a device with MIN width of 770px
+    if (window.matchMedia('(min-width: 770px)').matches) {
+        nav.classList.add('nav-scrolling-resize')
+        logo.style.width = '20%'
+    }
+}
+
+function adjustMenuClosed() {
+    logo.classList.remove('logo-image')
+    nav.classList.remove('navbar-scrolling')
+    logo.classList.add('logo-image-transparent')
+    nav.style.transition = 'all ease-in-out 0.5s'
+
+    if (window.scrollY > 0) {
+        logo.classList.add('logo-image')
+        nav.classList.add('navbar-scrolling')
+        logo.classList.remove('logo-image-transparent')
+    } else {
+        if (window.matchMedia('(min-width: 770px)').matches && window.scrollY === 0) {
+            nav.classList.remove('nav-scrolling-resize')
+            logo.style.width = '30%'
+        }
+    
+        // navbar is on TOP on a device with MAX width of 770px
+        if (window.matchMedia('(max-width: 770px)').matches && window.scrollY === 0) {
+            for (let link = 0; link < navLinks.length; link++) {
+                navLinks[link].style.transition = 'all 0.5s'
+                navLinks[link].style.color = softBlack
+            }
+    
+        // navbar is on top on a device with MIN width of 770px
+        } else {
+            for (let link = 0; link < navLinks.length; link++) {
+                navLinks[link].style.transition = 'all 0.5s'
+                navLinks[link].style.color = softWhite
+            }
+        }
+        for (let line = 0; line < navMenuLines.length; line++) {
+            navMenuLines[line].style.backgroundColor = softWhite
+        }
+    }
+
+}
+
 window.addEventListener('online', handleConnectionChange)
 window.addEventListener('offline', handleConnectionChange)
 
@@ -57,9 +116,15 @@ window.addEventListener('offline', handleConnectionChange)
 menu.onclick = () => {
     if (body.classList.contains('stop-scrolling')) {
         body.classList.remove('stop-scrolling')
+        nav.classList.add('adjust-nav')
+        setTimeout(() => { 
+            adjustMenuClosed() 
+        }, 500)
         menuOpen = false
     } else {
         body.classList.add('stop-scrolling')
+        nav.classList.remove('adjust-nav')
+        adjustMenuOpen()
         menuOpen = true
     }
 }
@@ -79,6 +144,7 @@ window.addEventListener('resize', () => {
             navLinks[link].style.color = softWhite
         }
     }
+    menuOpen && menu.click()
 })
 
 window.addEventListener('scroll', handleNavBar)
@@ -87,53 +153,11 @@ window.addEventListener('DOMContentLoaded', handleNavBar)
 function handleNavBar() {
     // navbar scrolling down
     if (window.scrollY > 0) {
-        nav.classList.add('navbar-scrolling')
-        logo.classList.remove('logo-image-transparent')
-        logo.classList.add('logo-image')
-
-        for (let link = 0; link < navLinks.length; link++) {
-            navLinks[link].style.transition = 'all 0.5s'
-            navLinks[link].style.color = softBlack
-        }
-
-        for (let line = 0; line < navMenuLines.length; line++) {
-            navMenuLines[line].style.backgroundColor = softBlack
-        }
-
-        // navbar scrolling down on a device with MIN width of 770px
-        if (window.matchMedia('(min-width: 770px)').matches) {
-            nav.classList.add('nav-scrolling-resize')
-            logo.style.width = '20%'
-        }
-
+        adjustMenuOpen()
+        
     // navbar is on TOP
     } else if (window.scrollY === 0) {
-        nav.classList.remove('navbar-scrolling')
-        logo.classList.remove('logo-image')
-        logo.classList.add('logo-image-transparent')
-
-        if (window.matchMedia('(min-width: 770px)').matches && window.scrollY === 0) {
-            nav.classList.remove('nav-scrolling-resize')
-            logo.style.width = '30%'
-        }
-
-        // navbar is on TOP on a device with MAX width of 770px
-        if (window.matchMedia('(max-width: 770px)').matches && window.scrollY === 0) {
-            for (let link = 0; link < navLinks.length; link++) {
-                navLinks[link].style.transition = 'all 0.5s'
-                navLinks[link].style.color = softBlack
-            }
-
-        // navbar is on top on a device with MIN width of 770px
-        } else {
-            for (let link = 0; link < navLinks.length; link++) {
-                navLinks[link].style.transition = 'all 0.5s'
-                navLinks[link].style.color = softWhite
-            }
-        }
-        for (let line = 0; line < navMenuLines.length; line++) {
-            navMenuLines[line].style.backgroundColor = softWhite
-        }
+        adjustMenuClosed()
     }
 }
 

@@ -47,6 +47,7 @@ nav = document.getElementById('navbar'),
 offline = document.getElementById('offline'),
 logo = document.getElementById('logo-image'),
 indexes = document.querySelector('.indexes'),
+navList = document.getElementById('nav-list')
 icons = document.getElementsByClassName('icon'),
 trademark = document.getElementById('trademark'),
 navLinks = document.getElementsByClassName('nav-link'),

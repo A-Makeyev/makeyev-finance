@@ -182,20 +182,20 @@ img {
 /* HERO */
 
 .text-box {
-    position: absolute;
-    text-align: center;
-    color: var(--soft-white);
-    text-transform: capitalize;
-    display: flex;
-    flex-direction: column;
-    align-items: center !important;
-    transform: translate(-50%, -50%);
     top: 50%;
     left: 50%;
+    display: flex;
+    position: absolute;
+    text-align: center;
+    flex-direction: column;
+    color: var(--soft-white);
+    text-transform: capitalize;
+    align-items: center !important;
+    transform: translate(-50%, -50%);
 }
 
 .text-box h1 {
-    font-size: 5rem;
+    font-size: 5em;
 }
 
 .text-box p {
@@ -668,6 +668,7 @@ img {
 @media (max-width: 1300px) {
     .text-box {
         top: 60%;
+        font-size: 12px;
     }
     .main-heading {
         top: 55%;
@@ -684,9 +685,6 @@ img {
     .text-box h1 {
         font-size: 3rem;
     } 
-    .hero-btn, .text-box p {
-        font-size: 1.5em;
-    }
     .text-box p {
         width: 450px;
     }
@@ -700,9 +698,6 @@ img {
     .modal-body .form-input {
         margin-left: 10px !important;
     }
-    /* .form-modal-header .header-line {
-        width: 180px !important;
-    } */
 }
 
 @media (max-width: 700px) {
@@ -711,10 +706,10 @@ img {
     }
     .main-heading p {
         width: 350px;
-        font-size: 1.5em;
+        font-size: 2em;
     }
     .hero-btn {
-        font-size: 1em;
+        font-size: 1rem;
     }
     .contact-row,
     .course-row, 
