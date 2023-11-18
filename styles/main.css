@@ -540,7 +540,7 @@ img {
     border: none;
     outline: none;
     cursor: pointer;
-    font-size: 40px;
+    font-size: 30px;
     font-weight: 600;
     background: none;
     transition: all 0.5s;
@@ -613,7 +613,7 @@ img {
     margin-top: 10px;
     margin-left: 20px;
     cursor: pointer;
-    font-size: 40px;
+    font-size: 30px;
     font-weight: 600;
     background: none;
     margin-right: 10px;
