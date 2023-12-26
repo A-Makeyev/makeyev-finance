@@ -225,6 +225,15 @@ function getXmlValue(xml, key) {
     )
 }
 
+function adjustMinus(str) {
+    if (str.includes('-')) {
+        let minus = str.substring(0, 1)
+        let value = str.substring(1)
+        return value + '%' + minus  
+    }
+    return str
+}
+
 indexUrls.forEach(url => {
     fetch(url)
     .then(response => response.text())
@@ -245,8 +254,8 @@ indexUrls.forEach(url => {
             `
                 <a href="https://google.com/search?q=${indexQuery}" target="_blank" style="order: ${indexOrder};">
                     ${indexName}: <span style="color: ${indexMonthColor} !important;">${currentMonth.value}</span> <span class="line-break"></span>
-                    שינוי חודשי: <span style="color: ${indexMonthColor} !important;">${indexMonthValue} ${currentMonth.percent}%</span>
-                    שינוי שנתי: <span style="color: ${indexYearColor} !important;">${indexYearValue} ${currentMonth.percentYear}%</span>
+                    שינוי חודשי: <span style="color: ${indexMonthColor} !important;">${indexMonthValue} ${adjustMinus(currentMonth.percent)}</span>
+                    שינוי שנתי: <span style="color: ${indexYearColor} !important;">${indexYearValue} ${adjustMinus(currentMonth.percentYear)}%</span>
                 </a>
             `
         } 
