@@ -258,6 +258,9 @@ indexUrls.forEach(url => {
                     שינוי שנתי: <span style="color: ${indexYearColor} !important;">${indexYearValue} ${adjustMinus(currentMonth.percentYear)}%</span>
                 </a>
             `
-        } 
-    }).catch(error => console.log(error))
+        }
+    }).catch((error) => {
+        indexes.style.display = 'none'
+        console.log(error)
+    })
 })

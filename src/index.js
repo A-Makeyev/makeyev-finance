@@ -1,7 +1,7 @@
 var
 menuOpen = false,
 language = 'hebrew',
-dev = 'http://127.0.0.1:5500',
+dev = 'http://127.0.0.1:5501',
 prod = 'https://makeyev-finance.onrender.com',
 mainSmtpToken = 'b52b8a29-d8bb-4e74-bff5-3c1dbf06d967',
 companySmtpToken = '88263185-689f-4f54-8491-33a2ba3a1a48',
