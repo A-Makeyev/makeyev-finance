@@ -200,7 +200,7 @@ function backToHeader() {
 }
 
 // display indexes
-const timePeriod = `&startPeriod=01-${currentDateTime('year')}&endPeriod=12-${currentDateTime('year')}`
+const timePeriod = `&startPeriod=01-${currentDateTime('year') - 1}&endPeriod=12-${currentDateTime('year')}`
 const consumerPriceIndexUrl = `https://api.cbs.gov.il/index/data/price?id=200010&format=xml&download=false${timePeriod}`
 const residentialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=120010&format=xml&download=false${timePeriod}`
 const commercialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=800010&format=xml&download=false${timePeriod}`
