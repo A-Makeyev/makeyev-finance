@@ -26,11 +26,11 @@ emailRegex = /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]
 isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
 
 /* colors */
+softBlue = 'lightblue', 
 softWhite = 'aliceblue',
 softRed = 'rgb(210, 60, 60)',
 softBlack = 'rgb(15, 15, 15)',
 softGreen = 'rgb(35, 210, 65)',
-softBlue = 'rgb(35, 170, 222)',
 softGrey = 'rgb(200, 200, 200)',
 softYellow = 'rgb(250, 205, 5)',
 softOrange = 'rgb(255, 125, 80)',
