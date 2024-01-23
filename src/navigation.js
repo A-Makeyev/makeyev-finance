@@ -260,7 +260,6 @@ indexUrls.forEach(url => {
             `
         }
     }).catch((error) => {
-        indexes.style.display = 'none'
         console.log(error)
     })
 })
