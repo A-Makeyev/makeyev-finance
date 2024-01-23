@@ -244,9 +244,9 @@ indexUrls.forEach(url => {
         const indexQuery = indexName.split(' ').join('+').substring(0, indexName.length - 1)
         const indexOrder = indexName.includes('צרכן') ? '3' : indexName.includes('מגורים') ? '2' : '1'
         const indexMonthValue = currentMonth.value > lastMonth.value ? '⭡' : currentMonth.value < lastMonth.value ? '⭣' : ''
-        const indexMonthColor = currentMonth.value > lastMonth.value ? softRed : currentMonth.value < lastMonth.value ? softGreen : softGrey
+        const indexMonthColor = currentMonth.value > lastMonth.value ? softRed : currentMonth.value < lastMonth.value ? softGreen : softBlue
         const indexYearValue = currentMonth.percentYear > lastMonth.percentYear ? '⭡' : currentMonth.percentYear < lastMonth.percentYear ? '⭣' : ''
-        const indexYearColor = currentMonth.percentYear > lastMonth.percentYear ? softRed : currentMonth.percentYear < lastMonth.percentYear ? softGreen : softGrey
+        const indexYearColor = currentMonth.percentYear > lastMonth.percentYear ? softRed : currentMonth.percentYear < lastMonth.percentYear ? softGreen : softBlue
         if (currentMonth) {
             nav.classList.add('adjust-nav')
             indexes.style.display = 'flex'
