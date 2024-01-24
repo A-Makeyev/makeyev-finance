@@ -116,14 +116,14 @@ window.addEventListener('offline', handleConnectionChange)
 menu.onclick = () => {
     if (body.classList.contains('stop-scrolling')) {
         body.classList.remove('stop-scrolling')
-        nav.classList.add('adjust-nav')
+        fetchedIndexes && nav.classList.add('adjust-nav')
         setTimeout(() => { 
             adjustMenuClosed() 
         }, 500)
         menuOpen = false
     } else {
         body.classList.add('stop-scrolling')
-        nav.classList.remove('adjust-nav')
+        fetchedIndexes && nav.classList.remove('adjust-nav')
         adjustMenuOpen()
         menuOpen = true
     }
@@ -248,6 +248,7 @@ indexUrls.forEach(url => {
         const indexYearValue = currentMonth.percentYear > lastMonth.percentYear ? '⭡' : currentMonth.percentYear < lastMonth.percentYear ? '⭣' : ''
         const indexYearColor = currentMonth.percentYear > lastMonth.percentYear ? softRed : currentMonth.percentYear < lastMonth.percentYear ? softGreen : softBlue
         if (currentMonth) {
+            fetchedIndexes = true
             nav.classList.add('adjust-nav')
             indexes.style.display = 'flex'
             indexes.innerHTML += 

@@ -10,6 +10,7 @@ companyMail = 'makeyev.finance@gmail.com',
 mainEmail = 'anatoly.makeyev@gmail.com',
 mainAddress = 'Florentin 23 Tel Aviv',
 mainPhone = '0527729974',
+fetchedIndexes = false,
 
 /* links */
 callTo = 'tel:' + mainPhone,
