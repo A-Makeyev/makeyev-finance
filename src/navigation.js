@@ -10,7 +10,7 @@
             if (links[x].href.includes('contact')) links[x].href += '.html'
         }
     }
-    
+
     for (let x = 0; x < icons.length; x++) {
         let sibling = icons[x].firstChild.nextSibling
         if (sibling.classList.contains('fa-waze')) icons[x].href = wazeLink
@@ -18,9 +18,9 @@
         if (sibling.classList.contains('fa-whatsapp')) icons[x].href = whatsAppLink
         if (sibling.classList.contains('fa-facebook-square')) icons[x].href = facebookPage
         if (sibling.classList.contains('fa-phone-square-alt')
-        || sibling.classList.contains('fa-phone-alt')) {
+            || sibling.classList.contains('fa-phone-alt')) {
             icons[x].href = callTo
-        } 
+        }
     }
 })()
 
@@ -29,10 +29,10 @@ function handleConnectionChange(event) {
     if (event.type == 'offline') {
         offline.style.display = 'block'
         offline.innerHTML =
-        `
+            `
             <i class="fas fa-exclamation-circle"></i>
             <span style="margin-left: 5px;">
-                ${ language == 'hebrew' ? 'אין חיבור לרשת' : 'no internet connection' }
+                ${language == 'hebrew' ? 'אין חיבור לרשת' : 'no internet connection'}
             </span>
         `
     }
@@ -87,15 +87,15 @@ function adjustMenuClosed() {
             nav.classList.remove('nav-scrolling-resize')
             logo.style.width = '30%'
         }
-    
+
         // navbar is on TOP on a device with MAX width of 770px
         if (window.matchMedia('(max-width: 770px)').matches && window.scrollY === 0) {
             for (let link = 0; link < navLinks.length; link++) {
                 navLinks[link].style.transition = 'all 0.5s'
                 navLinks[link].style.color = softBlack
             }
-    
-        // navbar is on top on a device with MIN width of 770px
+
+            // navbar is on top on a device with MIN width of 770px
         } else {
             for (let link = 0; link < navLinks.length; link++) {
                 navLinks[link].style.transition = 'all 0.5s'
@@ -117,8 +117,8 @@ menu.onclick = () => {
     if (body.classList.contains('stop-scrolling')) {
         body.classList.remove('stop-scrolling')
         fetchedIndexes && nav.classList.add('adjust-nav')
-        setTimeout(() => { 
-            adjustMenuClosed() 
+        setTimeout(() => {
+            adjustMenuClosed()
         }, 500)
         menuOpen = false
     } else {
@@ -137,7 +137,7 @@ window.addEventListener('resize', () => {
             navLinks[link].style.color = softBlack
         }
 
-    // navbar is on TOP on a device with MIN width of 800px
+        // navbar is on TOP on a device with MIN width of 800px
     } else if (window.matchMedia('(min-width: 800px)').matches && window.scrollY === 0) {
         for (let link = 0; link < navLinks.length; link++) {
             navLinks[link].style.transition = 'all 0.5s'
@@ -154,8 +154,8 @@ function handleNavBar() {
     // navbar scrolling down
     if (window.scrollY > 0) {
         adjustMenuOpen()
-        
-    // navbar is on TOP
+
+        // navbar is on TOP
     } else if (window.scrollY === 0) {
         adjustMenuClosed()
     }
@@ -163,7 +163,7 @@ function handleNavBar() {
 
 // footer
 trademark.innerHTML =
-`
+    `
     <span>
         makeyev finance © ${currentDateTime('year')}
     </span> 
@@ -172,8 +172,8 @@ trademark.innerHTML =
 var footerLinks = document.createElement('style')
 var footerLinksHover = document.createElement('style')
 
-footerLinks.innerHTML = 
-`
+footerLinks.innerHTML =
+    `
     .footer-link { 
         text-transform: capitalize;
         color: var(--soft-white);
@@ -181,8 +181,8 @@ footerLinks.innerHTML =
     }
 `
 
-footerLinksHover.innerHTML = 
-`
+footerLinksHover.innerHTML =
+    `
     .footer-link:hover { 
         color: var(--soft-blue); 
     }
@@ -229,38 +229,39 @@ function adjustMinus(str) {
     if (str.includes('-')) {
         let minus = str.substring(0, 1)
         let value = str.substring(1)
-        return value + '%' + minus  
+        return value + '%' + minus
+    } else {
+        return str + '%'
     }
-    return str
 }
 
 indexUrls.forEach(url => {
     fetch(url)
-    .then(response => response.text())
-    .then(xmlString => {
-        const lastMonth = parseXmlToJson(xmlString.split('<DateMonth>')[2])
-        const currentMonth = parseXmlToJson(xmlString.split('<DateMonth>')[1])
-        const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '').replace('מחירי תשומה', 'תשומה')
-        const indexQuery = indexName.split(' ').join('+').substring(0, indexName.length - 1)
-        const indexOrder = indexName.includes('צרכן') ? '3' : indexName.includes('מגורים') ? '2' : '1'
-        const indexMonthValue = currentMonth.value > lastMonth.value ? '⭡' : currentMonth.value < lastMonth.value ? '⭣' : ''
-        const indexMonthColor = currentMonth.value > lastMonth.value ? softRed : currentMonth.value < lastMonth.value ? softGreen : softBlue
-        const indexYearValue = currentMonth.percentYear > lastMonth.percentYear ? '⭡' : currentMonth.percentYear < lastMonth.percentYear ? '⭣' : ''
-        const indexYearColor = currentMonth.percentYear > lastMonth.percentYear ? softRed : currentMonth.percentYear < lastMonth.percentYear ? softGreen : softBlue
-        if (currentMonth) {
-            fetchedIndexes = true
-            nav.classList.add('adjust-nav')
-            indexes.style.display = 'flex'
-            indexes.innerHTML += 
-            `
+        .then(response => response.text())
+        .then(xmlString => {
+            const lastMonth = parseXmlToJson(xmlString.split('<DateMonth>')[2])
+            const currentMonth = parseXmlToJson(xmlString.split('<DateMonth>')[1])
+            const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '').replace('מחירי תשומה', 'תשומה')
+            const indexQuery = indexName.split(' ').join('+').substring(0, indexName.length - 1)
+            const indexOrder = indexName.includes('צרכן') ? '3' : indexName.includes('מגורים') ? '2' : '1'
+            const indexMonthValue = currentMonth.value > lastMonth.value ? '⭡' : currentMonth.value < lastMonth.value ? '⭣' : ''
+            const indexMonthColor = currentMonth.value > lastMonth.value ? softRed : currentMonth.value < lastMonth.value ? softGreen : softBlue
+            const indexYearValue = currentMonth.percentYear > lastMonth.percentYear ? '⭡' : currentMonth.percentYear < lastMonth.percentYear ? '⭣' : ''
+            const indexYearColor = currentMonth.percentYear > lastMonth.percentYear ? softRed : currentMonth.percentYear < lastMonth.percentYear ? softGreen : softBlue
+            if (currentMonth) {
+                fetchedIndexes = true
+                nav.classList.add('adjust-nav')
+                indexes.style.display = 'flex'
+                indexes.innerHTML +=
+                    `
                 <a href="https://google.com/search?q=${indexQuery}" target="_blank" style="order: ${indexOrder};">
                     ${indexName}: <span style="color: ${indexMonthColor} !important;">${currentMonth.value}</span> <span class="line-break"></span>
                     שינוי חודשי: <span style="color: ${indexMonthColor} !important;">${indexMonthValue} ${adjustMinus(currentMonth.percent)}</span>
-                    שינוי שנתי: <span style="color: ${indexYearColor} !important;">${indexYearValue} ${adjustMinus(currentMonth.percentYear)}%</span>
+                    שינוי שנתי: <span style="color: ${indexYearColor} !important;">${indexYearValue} ${adjustMinus(currentMonth.percentYear)}</span>
                 </a>
             `
-        }
-    }).catch((error) => {
-        console.log(error)
-    })
+            }
+        }).catch((error) => {
+            console.log(error)
+        })
 })
