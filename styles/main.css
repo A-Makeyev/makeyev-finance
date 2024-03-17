@@ -544,7 +544,7 @@ img {
     font-weight: 600;
     background: none;
     transition: all 0.5s;
-    color: var(soft-black);
+    color: var(--soft-black);
 }
 
 .modal-close:hover {
@@ -619,7 +619,7 @@ img {
     margin-left: 25px;
     margin-right: 10px;
     transition: all 0.5s;
-    color: var(soft-black);
+    color: var(--soft-black);
 }
 
 .form-modal-header {
