@@ -1,6 +1,5 @@
 // https://playwright.dev/docs
-// npm i -D @playwright/test
-// npx playwright install
+// npx playwright install && npm i -D @playwright/test
 
 // cd tests
 // npx playwright test 
