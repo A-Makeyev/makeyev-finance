@@ -1,9 +1,10 @@
-const { devices } = require('@playwright/test')
+const { devices, defineConfig } = require('@playwright/test')
 
 const config = {
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  use: {
+  reporter: process.env.CI ? 'dot' : 'list',
+   use: {
     trace: 'on-first-retry',
   },
   projects: [

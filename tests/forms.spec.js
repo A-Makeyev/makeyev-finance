@@ -3,17 +3,19 @@
 
 // cd tests
 // npx playwright test 
+// npx playwright test --ui
 // npx playwright test --headed
-// npx playwright test --project=chromium --headed
+// npx playwright test forms.spec.js --headed 
+// npx playwright test --project=chromium --headed --reporter=list
 
 
 const { test, expect } = require('@playwright/test')
 
 test.describe('Open Forms And Send Details', () => {
-    test.setTimeout(240 * 1000)
+    test.setTimeout(25 * 1000)
     
     const logo = '#logo-image'
-    const actionBtn = '#action'
+    const actionBtn = '.header .action-btn'
     const actionForm = '//div[@class="form-modal active"]'
     const messageModal = '//div[@class="modal active"]'
     const messageModalTitle = '#modal-title-text'
