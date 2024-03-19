@@ -548,8 +548,8 @@ img {
 }
 
 .modal-close:hover {
-    color: var(--soft-red);
     transform: rotate(90deg);
+    color: var(--soft-red) !important;
 }
 
 #modal-user {
