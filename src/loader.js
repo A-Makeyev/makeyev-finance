@@ -1,6 +1,8 @@
 document.documentElement.scrollTop = 0
 
 function loadMainPage() {
+    if (window.location.href.includes('/?fbclid=')) window.location.replace('/')
+    
     loadingScreen.style.opacity = '0'
     document.querySelector('body').classList.remove('stop-scrolling')
 
