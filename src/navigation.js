@@ -253,13 +253,13 @@ indexUrls.forEach(url => {
                 nav.classList.add('adjust-nav')
                 indexes.style.display = 'flex'
                 indexes.innerHTML +=
-                    `
-                <a href="https://google.com/search?q=${indexQuery}" target="_blank" style="order: ${indexOrder};">
-                    ${indexName}: <span style="color: ${indexMonthColor} !important;">${currentMonth.value}</span> <span class="line-break"></span>
-                    שינוי חודשי: <span style="color: ${indexMonthColor} !important;">${indexMonthValue} ${adjustMinus(currentMonth.percent)}</span>
-                    שינוי שנתי: <span style="color: ${indexYearColor} !important;">${indexYearValue} ${adjustMinus(currentMonth.percentYear)}</span>
-                </a>
-            `
+                `
+                    <a href="https://google.com/search?q=${indexQuery}" target="_blank" style="order: ${indexOrder};">
+                        ${indexName} <span style="color: ${indexMonthColor} !important;">${currentMonth.value}</span><span class="line-break"></span>
+                        שינוי חודשי <span style="color: ${indexMonthColor} !important;">${indexMonthValue} ${adjustMinus(currentMonth.percent)}</span>
+                        שינוי שנתי <span style="color: ${indexYearColor} !important;">${indexYearValue} ${adjustMinus(currentMonth.percentYear)}</span>
+                    </a>
+                `
             }
         }).catch((error) => {
             console.log(error)
