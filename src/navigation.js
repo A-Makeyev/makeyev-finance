@@ -201,8 +201,8 @@ function backToHeader() {
 
 // display indexes
 const timePeriod = `&startPeriod=01-${currentDateTime('year') - 1}&endPeriod=12-${currentDateTime('year')}`
-const consumerPriceIndexUrl = `https://api.cbs.gov.il/index/data/price?id=200010&format=xml&download=false${timePeriod}`
-const residentialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=120010&format=xml&download=false${timePeriod}`
+const consumerPriceIndexUrl = `https://api.cbs.gov.il/index/data/price?id=120010&format=xml&download=false${timePeriod}`
+const residentialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=200010&format=xml&download=false${timePeriod}` 
 const commercialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=800010&format=xml&download=false${timePeriod}`
 const indexUrls = [consumerPriceIndexUrl, residentialConstructionIndexUrl, commercialConstructionIndexUrl]
 
@@ -239,6 +239,8 @@ indexUrls.forEach(url => {
     fetch(url)
         .then(response => response.text())
         .then(xmlString => {
+            const lastYear = parseXmlToJson(xmlString.split('<DateMonth>')[10])
+            console.log(lastYear.percentYear)
             const lastMonth = parseXmlToJson(xmlString.split('<DateMonth>')[2])
             const currentMonth = parseXmlToJson(xmlString.split('<DateMonth>')[1])
             const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '').replace('מחירי תשומה', 'תשומה')
