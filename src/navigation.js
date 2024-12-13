@@ -240,7 +240,6 @@ indexUrls.forEach(url => {
         .then(response => response.text())
         .then(xmlString => {
             const lastYear = parseXmlToJson(xmlString.split('<DateMonth>')[10])
-            console.log(lastYear.percentYear)
             const lastMonth = parseXmlToJson(xmlString.split('<DateMonth>')[2])
             const currentMonth = parseXmlToJson(xmlString.split('<DateMonth>')[1])
             const indexName = getXmlValue(xmlString, 'name').replace('- כללי', '').replace('מחירי תשומה', 'תשומה')
