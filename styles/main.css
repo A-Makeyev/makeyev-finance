@@ -560,7 +560,7 @@ img {
 
 .modal-body {
     display: flex;
-    padding: 10px;
+    padding-top: 10px;
     flex-direction: column;
 }
 
