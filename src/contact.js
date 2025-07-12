@@ -142,7 +142,6 @@ for (let x = 0; x < formInputs.length; x++) {
 
 function changeColor(element, color) {
     element.style.borderColor = color
-    element.previousElementSibling.style.color = color
     element.style.boxShadow = color == softRed ? 'var(--red-shadow)' : 'var(--blue-shadow)'
 }
 
@@ -187,6 +186,7 @@ function validateForm() {
 
 function allowSubmit() {
     submitForm.disabled = false
+    submitForm.style.pointerEvents = 'auto'
     submitForm.style.cursor = 'pointer'
     submitForm.classList.remove('btn-black')
     submitForm.classList.add('btn-blue')
@@ -194,6 +194,7 @@ function allowSubmit() {
 
 function preventSubmit() {
     submitForm.disabled = true
+    submitForm.style.pointerEvents = 'none'
     submitForm.style.cursor = 'not-allowed'
     submitForm.classList.remove('btn-blue')
     submitForm.classList.add('btn-black')
@@ -409,7 +410,7 @@ function sendEmail() {
                     displayModalContent('failure', response)
                     resetFormOnError()
                 } else {
-                    if (action !== null) actionFormModal.classList.remove('active')
+                    if (action !== null && actionFormModal !== null) actionFormModal.classList.remove('active')
         
                     resetLabels()
                     displayModalContent('success')

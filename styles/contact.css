@@ -172,7 +172,7 @@ textarea {
     font-weight: 600;
     position: relative;
     transition: all 0.5s;
-    left: 35px !important;
+    left: 8% !important;
     color: var(--soft-grey);
     text-transform: capitalize;
 }
@@ -180,7 +180,7 @@ textarea {
 #submit-form {
     width: 110%;
     margin-top: 15px;
-    cursor: not-allowed;
+    pointer-events: none;
 }
 
 /* .form-input + .asterisk::after {
@@ -202,7 +202,7 @@ textarea {
         width: 110%;
     }
     .form-label {
-        left: 15% !important;
+        left: 17% !important;
     }
     .modal-body .form-label {
         left: 7% !important;
@@ -233,7 +233,7 @@ textarea {
     .form-label {
         top: 37px;
         font-size: 15px;
-        left: 7% !important;
+        left: 8% !important;
     }
     .contact-info {
         margin-left: -5px;
@@ -272,7 +272,7 @@ textarea {
         font-size: 15px;
     }
     .form-label {
-        left: 15% !important;
+        left: 18% !important;
     }
 }
 

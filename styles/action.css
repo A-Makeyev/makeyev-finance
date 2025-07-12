@@ -84,7 +84,7 @@ textarea {
 }
 
 .focused > .form-label {
-    opacity:1;
+    opacity: 1;
     transform:translateX(0px);
 
 }
