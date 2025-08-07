@@ -42,14 +42,6 @@ function handleConnectionChange(event) {
     }
 }
 
-function scrollTop() {
-    let top = document.documentElement.scrollTop || document.body.scrollTop
-    if (top > 0) {
-        window.requestAnimationFrame(scrollTop)
-        window.scrollTo(0, top - top / 10)
-    }
-}
-
 function adjustMenuOpen() {
     document.querySelector('#nav-list a')
     logo.classList.remove('logo-image-transparent')
@@ -193,7 +185,7 @@ document.getElementsByTagName('head')[0].appendChild(footerLinksHover)
 
 function backToHeader() {
     if (!menuOpen) {
-        scrollTop()
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
         menu.click()
     }
