@@ -202,13 +202,15 @@ function preventSubmit() {
 
 function resetFormOnError() {
     if (action !== null) {
-        actionFormModal.classList.remove('active')
+        actionFormModal !== null && actionFormModal.classList.remove('active')
     }
     
-    if (language == 'hebrew') {
-        submitForm.textContent = 'שלחו'
-    } else if (language == 'english') {
-        submitForm.textContent = 'Send'
+    if (submitForm !== null) {
+        if (language == 'hebrew') {
+            submitForm.textContent = 'שלחו'
+        } else if (language == 'english') {
+            submitForm.textContent = 'Send'
+        }
     }
 
     submitForm.style.pointerEvents = 'all'
@@ -380,34 +382,39 @@ if (action !== null) {
 
 function sendEmail() {
     try {
-        if (typeof Email == 'undefined') {
+        if (typeof emailjs == 'undefined') {
             if (language == 'hebrew') {
-                displayModalContent('failure', 'משהו פה חוסם אותנו מלשלוח אימיילים')
+                displayModalContent('failure', 'משהו על המכשיר שלכם חוסם  אותנו מלשלוח הודעות')
             } else if (language == 'english') {
-                displayModalContent('failure', 'Something is blocking us from sending emails on this device')
+                displayModalContent('failure', 'Something on this device is blocking us from sending messages')
             }
             resetFormOnError()
         } else {
-            Email.send({
-                // https://smtpjs.com
-                // https://elasticemail.com
-                // SMTP Host & Domain -> smtp.elasticemail.com
-                SecureToken: mainSmtpToken,
-                To: mainEmail,
-                From: mainEmail,
-                Subject: 'New Client 🤑',
-                Body: createEmailBody()
-        
+            const params = {
+                subject: 'New Client 🤑',
+                name: inputName.value,
+                phone: inputPhone.value,
+                email: inputEmail !== null && inputEmail.value.trim() !== '' 
+                    ? inputEmail.value 
+                    : (language === 'hebrew' ? 'לא צויין' : language === 'english' ? 'Was not included' : ''),
+                message: inputMessage !== null && inputMessage.value.trim() === '' 
+                    ? (language === 'hebrew' ? 'אשמח לייעוץ כללי' : language === 'english' ? 'I would like some advice' : inputMessage.value)
+                    : inputMessage.value
+            }
+
+            emailjs.send(
+                'service_k2c0eve', 
+                'template_kmxsnuc',
+                params, {
             }).then(response => {
-                // handle communication buffer resources
-                if (response.includes('deadlock victim')) {
+                if (response.text.includes('deadlock victim')) {
                     log(response, softOrange)
                     log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
                     log(`Process (${response.match(/\d/g).join('')}) was deadlocked, resending email...`, softOrange)
                     log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', softYellow)
                     sendEmail()
-                } else if (!response.includes('OK')) {
-                    displayModalContent('failure', response)
+                } else if (response.status !== 200) {
+                    displayModalContent('failure', response.text)
                     resetFormOnError()
                 } else {
                     if (action !== null && actionFormModal !== null) actionFormModal.classList.remove('active')
@@ -427,7 +434,7 @@ function sendEmail() {
                     }, 1000)
         
                     submitForm.style.pointerEvents = 'all'
-                    log(`Email has been sent with status: ${response}`, softGreen)
+                    log(`Email has been sent with status: ${response.text}`, softGreen)
                 }
             })
         }
@@ -435,86 +442,4 @@ function sendEmail() {
         displayModalContent('failure', error)
         resetFormOnError()
     }
-}
-
-function createEmailBody() {
-    let userName = inputName.value
-    let userPhone = inputPhone.value
-    let userMessage = inputMessage.value
-    let userEmail = inputEmail !== null ? inputEmail.value : null
-
-    if (userMessage.trim() === '') {
-        if (language == 'hebrew') {
-            userMessage = 'אשמח לייעוץ כללי'
-        } else if (language == 'english') {
-            userMessage = 'I would like some advice'
-        }
-    }
-
-    return `
-            <div>
-                <h4>
-                    <span>New submission from</span> 
-                    <a href="${prod}" target="_blank" style="text-decoration: none;">
-                        <span style="color: ${softBlue};">Makeyev Finance</span>
-                    </a>
-                </h4>
-                <p style="color: ${softBlack}; font-weight: 600;">Sent on ${currentDateTime()}</p>
-                <table style="border: 1px solid ${softGrey}; border-collapse: collapse; width: 100%;">
-                    <tbody style="font-family: 'Fira Code', sans-serif; font-size: 15px; text-align: center; color: ${softBlack}">
-                        <tr style="border: 1px solid ${softBlue}; background: ${softBlue}; color: ${softWhite}; padding: 15px 10px;">
-                            <td style="padding: 10px;"><strong>Details</strong></td>
-                            <td></td>
-                        </tr>
-                        <tr style="border: 1px solid ${softGrey};">
-                            <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
-                                <strong>Name</strong>
-                            </td>
-                            <td style="padding:10px;">
-                                <pre style="margin: 0; white-space: pre-wrap;">${userName}</pre>
-                            </td>
-                        </tr>
-
-                        <tr style="border: 1px solid ${softGrey};">
-                            <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
-                                <strong>Phone</strong>
-                            </td>
-                            <td style="padding: 10px;">
-                                <a href="tel:${userPhone}" target="_blank" style="margin: 0; white-space: pre-wrap; text-decoration: none;">${userPhone}</a>
-                            </td>
-                        </tr>
-
-                        ${inputEmail !== null ?
-                        ` 
-                            <tr style="border: 1px solid ${softGrey};">
-                                <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
-                                    <strong>Email</strong>
-                                </td>
-                                <td style="padding: 10px;">
-                                    <a href="mailto:${userEmail}" target="_blank" style="margin: 0; white-space: pre-wrap; text-decoration: none;">${userEmail}</a>
-                                </td>
-                            </tr>
-                        `   
-                        : ``}
-
-                        ${userMessage.trim() !== '' ? 
-                        `
-                            <tr style="border: 1px solid ${softGrey};">
-                                <td style="width: 20%; border-right: 1px solid ${softGrey}; padding: 10px;">
-                                    <strong>Message</strong>
-                                </td>
-                                <td style="padding: 10px;">
-                                    <pre style="margin: 0; white-space: pre-wrap;">${userMessage}</pre>
-                                </td>
-                            </tr>
-                        `
-                        : ``}
-
-                    </tbody>
-                </table>
-                <div style="text-align: center; margin-top: 50px;">
-                    <img src="${prod}/images/M-LIGHT-T.png" style="max-width: 250px;">
-                </div>
-            </div>
-           `
 }

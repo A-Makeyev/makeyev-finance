@@ -1,339 +1,265 @@
 <!DOCTYPE html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+        <link rel="stylesheet" rel="preload" as="style" href="styles/loader.css">
+        <link rel="stylesheet" href="styles/navigation.css">
+        <link rel="stylesheet" href="styles/main.css">
+        <link rel="stylesheet" href="styles/contact.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700&display=swap">
+        <link rel="shortcut icon" type="image/x-icon" href="/images/icon.ico">
+        <title>Makeyev Finance</title>
+    </head>
+    <body class="stop-scrolling">
+        <script src="src/loader.js"></script>
 
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-    <link rel="stylesheet" rel="preload" as="style" href="styles/loader.css">
-    <link rel="stylesheet" href="styles/navigation.css">
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/contact.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700&display=swap">
-    <link rel="shortcut icon" type="image/x-icon" href="/images/icon.ico">
-    <title>Makeyev Finance</title>
-</head>
-
-<body class="stop-scrolling">
-    <script src="src/loader.js"></script>
-
-    <div id="loading-screen">
-        <div id="loader"></div>
-    </div>
-
-    <!-- HEADER -->
-
-    <section class="header">
-        <div class="indexes"></div>
-        <nav id="navbar">
-            <input id="nav-toggle" type="checkbox">
-            <div class="logo">
-                <a id="logo-image" class="logo-image-transparent" href="javascript:void(0);"
-                    onclick="backToHeader()"></a>
-            </div>
-
-            <ul id="nav-list">
-                <li><a class="nav-link remove-highlight" href="javascript:void(0);" onclick="backToHeader()">ראשי</a>
-                </li>
-                <li><a id="services" class="nav-link remove-highlight" href="services.html">השירות שלנו</a></li>
-                <li><a id="articles" class="nav-link remove-highlight" href="articles.html">מאמרים</a></li>
-                <li><a id="contact" class="nav-link remove-highlight" href="contact.html">צרו קשר</a></li>
-                <div class="nav-icons">
-                    <li>
-                        <a class="nav-link icon remove-highlight" href="" target="_blank">
-                            <i class="fas fa-phone-alt"></i>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link icon remove-highlight" href="" target="_blank">
-                            <i class="fab fa-whatsapp"></i>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link icon remove-highlight" href="" target="_blank">
-                            <i class="fab fa-waze"></i>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link icon remove-highlight" href="" target="_blank">
-                            <i class="far fa-envelope"></i>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link icon remove-highlight" href="" target="_blank">
-                            <i class="fab fa-facebook-square"></i>
-                        </a>
-                    </li>
-                </div>
-            </ul>
-
-            <label for="nav-toggle" class="menu-icon" id="menu">
-                <div class="line"></div>
-                <div class="line"></div>
-                <div class="line"></div>
-            </label>
-
-        </nav>
-
-        <div class="text-box main-heading">
-            <h1 class="gradient-text-no-hover">Mortgage & <br> Financial Advice</h1>
-            <p class="gradient-text-no-hover">ייעוץ משכנתאות ופיננסים</p>
-            <button data-modal-target="#modal" class="action-btn hero-btn btn-white remove-highlight">תתאמו שיחת ייעוץ
-                חינם</button>
+        <div id="loading-screen">
+            <div id="loader"></div>
         </div>
 
-    </section>
+        <!-- HEADER -->
 
-    <div id="offline"></div>
+        <section class="header">
+            <div class="indexes"></div>
+            <nav id="navbar">
+                <input id="nav-toggle" type="checkbox">
+                <div class="logo">
+                    <a id="logo-image" class="logo-image-transparent" href="javascript:void(0);"
+                        onclick="backToHeader()"></a>
+                </div>
 
-    <!-- courses -->
+                <ul id="nav-list">
+                    <li><a class="nav-link remove-highlight" href="javascript:void(0);" onclick="backToHeader()">ראשי</a>
+                    </li>
+                    <li><a id="services" class="nav-link remove-highlight" href="services.html">השירות שלנו</a></li>
+                    <li><a id="articles" class="nav-link remove-highlight" href="articles.html">מאמרים</a></li>
+                    <li><a id="contact" class="nav-link remove-highlight" href="contact.html">צרו קשר</a></li>
+                    <div class="nav-icons">
+                        <li>
+                            <a class="nav-link icon remove-highlight" href="" target="_blank">
+                                <i class="fas fa-phone-alt"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link icon remove-highlight" href="" target="_blank">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link icon remove-highlight" href="" target="_blank">
+                                <i class="fab fa-waze"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link icon remove-highlight" href="" target="_blank">
+                                <i class="far fa-envelope"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link icon remove-highlight" href="" target="_blank">
+                                <i class="fab fa-facebook-square"></i>
+                            </a>
+                        </li>
+                    </div>
+                </ul>
 
-    <section class="course">
-        <h1>Courses</h1>
-        <p>lorem ipsums sin omitt lorem ipsums sin omitt</p>
+                <label for="nav-toggle" class="menu-icon" id="menu">
+                    <div class="line"></div>
+                    <div class="line"></div>
+                    <div class="line"></div>
+                </label>
 
-        <div class="course-row">
-            <div class="course-col fade-in">
-                <h2>intermediate</h2>
-                <p>
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                </p>
+            </nav>
+
+            <div class="text-box main-heading">
+                <h1 class="gradient-text-no-hover">Mortgage & <br> Financial Advice</h1>
+                <p class="gradient-text-no-hover">ייעוץ משכנתאות ופיננסים</p>
+                <button data-modal-target="#modal" class="action-btn hero-btn btn-white remove-highlight">תתאמו שיחת ייעוץ
+                    חינם</button>
             </div>
 
-            <div class="course-col fade-in">
-                <h2>degree</h2>
-                <p>
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                </p>
-            </div>
+        </section>
 
-            <div class="course-col fade-in">
-                <h2>post grad</h2>
-                <p>
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                    asd asd asd asd asd asd asd asd asd asd asd asd asd asd
-                </p>
-            </div>
-        </div>
-    </section>
+        <div id="offline"></div>
 
-    <!-- campus -->
+        <!-- courses -->
 
-    <section class="campus">
-        <h1>Global campus</h1>
-        <p>lorem ipsums sin omitt lorem ipsums sin omitt</p>
+        <section class="course">
+            <h1>Courses</h1>
+            <p>lorem ipsums sin omitt lorem ipsums sin omitt</p>
 
-        <div class="campus-row">
-            <div class="campus-col">
-                <img src="/images/newyork.png">
-                <div class="layer">
-                    <h2>new york</h2>
+            <div class="course-row">
+                <div class="course-col fade-in">
+                    <h2>intermediate</h2>
+                    <p>
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                    </p>
+                </div>
+
+                <div class="course-col fade-in">
+                    <h2>degree</h2>
+                    <p>
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                    </p>
+                </div>
+
+                <div class="course-col fade-in">
+                    <h2>post grad</h2>
+                    <p>
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                        asd asd asd asd asd asd asd asd asd asd asd asd asd asd
+                    </p>
                 </div>
             </div>
+        </section>
 
-            <div class="campus-col">
-                <img src="/images/london.png">
-                <div class="layer">
-                    <h2>london</h2>
+        <!-- campus -->
+
+        <section class="campus">
+            <h1>Global campus</h1>
+            <p>lorem ipsums sin omitt lorem ipsums sin omitt</p>
+
+            <div class="campus-row">
+                <div class="campus-col">
+                    <img src="/images/newyork.png">
+                    <div class="layer">
+                        <h2>new york</h2>
+                    </div>
+                </div>
+
+                <div class="campus-col">
+                    <img src="/images/london.png">
+                    <div class="layer">
+                        <h2>london</h2>
+                    </div>
+                </div>
+
+                <div class="campus-col">
+                    <img src="/images/washington.png">
+                    <div class="layer">
+                        <h2>washington</h2>
+                    </div>
                 </div>
             </div>
+        </section>
 
-            <div class="campus-col">
-                <img src="/images/washington.png">
-                <div class="layer">
-                    <h2>washington</h2>
-                </div>
-            </div>
-        </div>
-    </section>
+        <!-- facilities -->
 
-    <!-- facilities -->
+        <section class="fac">
+            <h1>facilities</h1>
+            <p>lorem ipsums sin omitt lorem ipsums sin omitt</p>
 
-    <section class="fac">
-        <h1>facilities</h1>
-        <p>lorem ipsums sin omitt lorem ipsums sin omitt</p>
-
-        <div class="fac-row">
-            <div class="fac-col">
-                <img src="/images/library.png">
-                <h2>world class library</h2>
-                <p>asd asd asd asd asd asd asd asd asd asd asd asd asd asd</p>
-            </div>
-
-            <div class="fac-col">
-                <img src="/images/basketball.png">
-                <h2>largest playground</h2>
-                <p>asd asd asd asd asd asd asd asd asd asd asd asd asd asd</p>
-            </div>
-
-            <div class="fac-col">
-                <img src="/images/cafeteria.png">
-                <h2>huge ass cafeteria</h2>
-                <p>asd asd asd asd asd asd asd asd asd asd asd asd asd asd</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- testimonials -->
-
-    <section class="testi">
-        <h1>testimonials</h1>
-        <p>lorem ipsums sin omitt lorem ipsums sin omitt</p>
-
-        <div class="testi-row">
-            <div class="testi-col">
-                <img src="/images/user1.jpg">
-                <div>
+            <div class="fac-row">
+                <div class="fac-col">
+                    <img src="/images/library.png">
+                    <h2>world class library</h2>
                     <p>asd asd asd asd asd asd asd asd asd asd asd asd asd asd</p>
-                    <h3>Kriso</h3>
-                    <i class="fas fa-star"></i>
-                    <i class="fas fa-star"></i>
-                    <i class="fas fa-star"></i>
-                    <i class="fas fa-star"></i>
-                    <i class="fas fa-star"></i>
                 </div>
-            </div>
 
-            <div class="testi-col">
-                <img src="/images/user2.jpg">
-                <div>
+                <div class="fac-col">
+                    <img src="/images/basketball.png">
+                    <h2>largest playground</h2>
                     <p>asd asd asd asd asd asd asd asd asd asd asd asd asd asd</p>
-                    <h3>Esterbon</h3>
-                    <i class="fas fa-star"></i>
-                    <i class="fas fa-star"></i>
-                    <i class="fas fa-star"></i>
-                    <i class="fas fa-star-half-alt"></i>
-                    <i class="far fa-star"></i>
+                </div>
+
+                <div class="fac-col">
+                    <img src="/images/cafeteria.png">
+                    <h2>huge ass cafeteria</h2>
+                    <p>asd asd asd asd asd asd asd asd asd asd asd asd asd asd</p>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- action -->
+        <!-- testimonials -->
 
-    <section class="action">
-        <h1>Schedule a free call now</h1>
-        <button data-modal-target="#modal" class="action-btn hero-btn btn-white remove-highlight">contact us</button>
-    </section>
+        <section class="testi">
+            <h1>testimonials</h1>
+            <p>lorem ipsums sin omitt lorem ipsums sin omitt</p>
 
-    <!-- FOOTER -->
+            <div class="testi-row">
+                <div class="testi-col">
+                    <img src="/images/user1.jpg">
+                    <div>
+                        <p>asd asd asd asd asd asd asd asd asd asd asd asd asd asd</p>
+                        <h3>Kriso</h3>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
 
-    <section class="footer">
-        <div style="margin-bottom: -15px;">
-            <div id="trademark"></div>
-            <div class="footer-links">
-                <p>
-                    <a class="footer-link remove-highlight" href="javascript:void(0);" onclick="backToHeader()">
-                        ראשי
-                    </a>
-                </p>
-                <span>&#183;</span>
-                <p><a class="footer-link remove-highlight" href="services.html">השירות שלנו</a></p>
-                <span>&#183;</span>
-                <p><a class="footer-link remove-highlight" href="articles.html">מאמרים</a></p>
-                <span>&#183;</span>
-                <p><a class="footer-link remove-highlight" href="contact.html">צרו קשר</a></p>
+                <div class="testi-col">
+                    <img src="/images/user2.jpg">
+                    <div>
+                        <p>asd asd asd asd asd asd asd asd asd asd asd asd asd asd</p>
+                        <h3>Esterbon</h3>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star-half-alt"></i>
+                        <i class="far fa-star"></i>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div class="socials">
-            <!-- <a class="icon remove-highlight"  href="" target="_blank">
-                        <i class="fa fa-linkedin-square linkedin-fill"></i>
-                    </a> 
-                    <a class="icon remove-highlight"  href="" target="_blank">
-                        <i class="fa fa-instagram instagram-fill"></i>
-                    </a> 
-                    <a class="icon remove-highlight"  href="" target="_blank">
-                        <i class="fa fa-youtube youtube-fill"></i>
-                    </a> -->
-            <a class="icon remove-highlight" href="" target="_blank">
-                <i class="fab fa-facebook-square facebook-fill"></i>
-            </a>
-            <a class="icon remove-highlight" href="" target="_blank">
-                <i class="far fa-envelope email-fill"></i>
-            </a>
-            <a class="icon remove-highlight" href="" target="_blank">
-                <i class="fab fa-waze waze-fill"></i>
-            </a>
-            <a class="icon remove-highlight" href="" target="_blank">
-                <i class="fab fa-whatsapp whatsapp-fill"></i>
-            </a>
-            <a class="icon remove-highlight" href="" target="_blank">
-                <i class="fas fa-phone-square-alt phone-fill"></i>
-            </a>
-        </div>
-    </section>
+        <!-- action -->
 
-    <!-- action form modal -->
+        <section class="action">
+            <h1>Schedule a free call now</h1>
+            <button data-modal-target="#modal" class="action-btn hero-btn btn-white remove-highlight">contact us</button>
+        </section>
 
-    <div class="form-modal">
-        <button class="modal-close remove-highlight" data-modal-close>&#215;</button>
-        <div class="form-modal-header">
-            <h1>השאירו פרטים</h1>
-            <p>ונחזור אליכם בהקדם האפשרי</p>
-        </div>
-        <div class="modal-body">
-            <div class="contact-col">
-                <form method="POST" onkeyup="validateForm()" autocomplete="on" id="contact-form">
-                    <label for="name" class="form-label">שם</label>
-                    <input type="text" name="name" id="name" class="form-input" maxlength="99" required>
-                    <span class="asterisk"></span>
+        <!-- FOOTER -->
 
-                    <label for="phone" class="form-label">מספר</label>
-                    <input type="text" name="phone" id="phone" class="form-input" maxlength="99" required>
-                    <span class="asterisk"></span>
-
-                    <label for="message" class="form-label">איך נוכל לעזור לכם</label>
-                    <textarea type="text" name="message" id="message" class="form-input" rows="3"
-                        maxlength="999"></textarea>
-
-                    <button type="submit" id="submit-form" class="hero-btn btn-black remove-highlight"
-                        disabled>שלחו</button>
-                </form>
+        <section class="footer">
+            <div style="margin-bottom: -15px;">
+                <div id="trademark"></div>
+                <div class="footer-links">
+                    <p>
+                        <a class="footer-link remove-highlight" href="javascript:void(0);" onclick="backToHeader()">
+                            ראשי
+                        </a>
+                    </p>
+                    <span>&#183;</span>
+                    <p><a class="footer-link remove-highlight" href="services.html">השירות שלנו</a></p>
+                    <span>&#183;</span>
+                    <p><a class="footer-link remove-highlight" href="articles.html">מאמרים</a></p>
+                    <span>&#183;</span>
+                    <p><a class="footer-link remove-highlight" href="contact.html">צרו קשר</a></p>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <!-- message modal -->
-
-    <div id="modal" class="modal">
-        <div class="modal-header">
-            <div class="modal-title">
-                <h2 id="modal-title-text"></h2>
-            </div>
-            <button class="modal-close remove-highlight" data-modal-close>&#215;</button>
-        </div>
-        <div class="modal-body">
-            <p id="modal-user"></p>
-            <p id="modal-body-text"></p>
-        </div>
-        <div class="modal-links">
             <div class="socials">
                 <!-- <a class="icon remove-highlight"  href="" target="_blank">
-                    <i class="fa fa-linkedin-square linkedin-fill"></i>
-                </a> 
-                <a class="icon remove-highlight"  href="" target="_blank">
-                    <i class="fa fa-instagram instagram-fill"></i>
-                </a> 
-                <a class="icon remove-highlight"  href="" target="_blank">
-                    <i class="fa fa-youtube youtube-fill"></i>
-                </a> -->
+                            <i class="fa fa-linkedin-square linkedin-fill"></i>
+                        </a> 
+                        <a class="icon remove-highlight"  href="" target="_blank">
+                            <i class="fa fa-instagram instagram-fill"></i>
+                        </a> 
+                        <a class="icon remove-highlight"  href="" target="_blank">
+                            <i class="fa fa-youtube youtube-fill"></i>
+                        </a> -->
                 <a class="icon remove-highlight" href="" target="_blank">
                     <i class="fab fa-facebook-square facebook-fill"></i>
                 </a>
@@ -350,16 +276,94 @@
                     <i class="fas fa-phone-square-alt phone-fill"></i>
                 </a>
             </div>
+        </section>
+
+        <!-- action form modal -->
+
+        <div class="form-modal">
+            <button class="modal-close remove-highlight" data-modal-close>&#215;</button>
+            <div class="form-modal-header">
+                <h1>השאירו פרטים</h1>
+                <p>ונחזור אליכם בהקדם האפשרי</p>
+            </div>
+            <div class="modal-body">
+                <div class="contact-col">
+                    <form method="POST" onkeyup="validateForm()" autocomplete="on" id="contact-form">
+                        <label for="name" class="form-label">שם</label>
+                        <input type="text" name="name" id="name" class="form-input" maxlength="99" required>
+                        <span class="asterisk"></span>
+
+                        <label for="phone" class="form-label">מספר</label>
+                        <input type="text" name="phone" id="phone" class="form-input" maxlength="99" required>
+                        <span class="asterisk"></span>
+
+                        <label for="message" class="form-label">איך נוכל לעזור לכם</label>
+                        <textarea type="text" name="message" id="message" class="form-input" rows="3"
+                            maxlength="999"></textarea>
+
+                        <button type="submit" id="submit-form" class="hero-btn btn-black remove-highlight"
+                            disabled>שלחו</button>
+                    </form>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div id="overlay"></div>
+        <!-- message modal -->
 
-    <script src="src/index.js"></script>
-    <script src="src/contact.js"></script>
-    <script src="src/navigation.js"></script>
-    <script src="https://smtpjs.com/v3/smtp.js"></script>
-    <script src="https://kit.fontawesome.com/4f48855ba9.js" crossorigin="anonymous"></script>
-</body>
+        <div id="modal" class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <h2 id="modal-title-text"></h2>
+                </div>
+                <button class="modal-close remove-highlight" data-modal-close>&#215;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modal-user"></p>
+                <p id="modal-body-text"></p>
+            </div>
+            <div class="modal-links">
+                <div class="socials">
+                    <!-- <a class="icon remove-highlight"  href="" target="_blank">
+                        <i class="fa fa-linkedin-square linkedin-fill"></i>
+                    </a> 
+                    <a class="icon remove-highlight"  href="" target="_blank">
+                        <i class="fa fa-instagram instagram-fill"></i>
+                    </a> 
+                    <a class="icon remove-highlight"  href="" target="_blank">
+                        <i class="fa fa-youtube youtube-fill"></i>
+                    </a> -->
+                    <a class="icon remove-highlight" href="" target="_blank">
+                        <i class="fab fa-facebook-square facebook-fill"></i>
+                    </a>
+                    <a class="icon remove-highlight" href="" target="_blank">
+                        <i class="far fa-envelope email-fill"></i>
+                    </a>
+                    <a class="icon remove-highlight" href="" target="_blank">
+                        <i class="fab fa-waze waze-fill"></i>
+                    </a>
+                    <a class="icon remove-highlight" href="" target="_blank">
+                        <i class="fab fa-whatsapp whatsapp-fill"></i>
+                    </a>
+                    <a class="icon remove-highlight" href="" target="_blank">
+                        <i class="fas fa-phone-square-alt phone-fill"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
 
+        <div id="overlay"></div>
+
+        <script src="src/index.js"></script>
+        <script src="src/contact.js"></script>
+        <script src="src/navigation.js"></script>
+        <script src="https://kit.fontawesome.com/4f48855ba9.js" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+        <script type="text/javascript">
+            (function() {
+                emailjs.init({
+                    publicKey: '2y064p5z9qRvVxOHN'
+                })
+            })()
+        </script>
+    </body>
 </html>
