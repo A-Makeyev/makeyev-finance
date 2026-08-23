@@ -21,6 +21,7 @@
 }
 
 nav {
+    direction: ltr;
     user-select: none;
     position: fixed;
     padding: 2% 6%;
@@ -295,7 +296,7 @@ nav .menu-icon .line:hover {
     }
 }
 
-@media screen and (max-width: 900px) {
+@media screen and (max-width: 1200px) {
     .navbar-scrolling {
         border-bottom: 2px solid var(--soft-white);
     }
@@ -390,5 +391,25 @@ nav .menu-icon .line:hover {
         height: 2px;
         margin: 8px;
         border-radius: 5px;
+    }
+}
+
+@media screen and (max-width: 1600px) and (min-width: 1201px) {
+    nav .logo {
+        width: 35%;
+    }
+
+    nav #nav-list {
+        width: 62%;
+        margin: 0;
+    }
+
+    nav #nav-list a {
+        padding: 8px 5px;
+        font-size: 16px;
+    }
+
+    .nav-icons {
+        padding-left: 5px;
     }
 }

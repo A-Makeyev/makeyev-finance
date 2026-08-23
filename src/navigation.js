@@ -6,13 +6,15 @@
     if (url.includes(dev)) {
         for (let x = 0; x < links.length; x++) {
             if (links[x].href.includes('services')) links[x].href += '.html'
+            if (links[x].href.includes('calculators')) links[x].href += '.html'
             if (links[x].href.includes('articles')) links[x].href += '.html'
             if (links[x].href.includes('contact')) links[x].href += '.html'
         }
     }
 
     for (let x = 0; x < icons.length; x++) {
-        let sibling = icons[x].firstChild.nextSibling
+        let sibling = icons[x].querySelector('i')
+        if (!sibling) continue
         if (sibling.classList.contains('fa-waze')) icons[x].href = wazeLink
         if (sibling.classList.contains('fa-envelope')) icons[x].href = mailToLink
         if (sibling.classList.contains('fa-whatsapp')) icons[x].href = whatsAppLink
@@ -194,7 +196,7 @@ function backToHeader() {
 // display indexes
 const timePeriod = `&startPeriod=01-${currentDateTime('year') - 1}&endPeriod=12-${currentDateTime('year')}`
 const consumerPriceIndexUrl = `https://api.cbs.gov.il/index/data/price?id=120010&format=xml&download=false${timePeriod}`
-const residentialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=200010&format=xml&download=false${timePeriod}` 
+const residentialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=200010&format=xml&download=false${timePeriod}`
 const commercialConstructionIndexUrl = `https://api.cbs.gov.il/index/data/price?id=800010&format=xml&download=false${timePeriod}`
 const indexUrls = [consumerPriceIndexUrl, residentialConstructionIndexUrl, commercialConstructionIndexUrl]
 
@@ -242,11 +244,19 @@ indexUrls.forEach(url => {
             const indexYearValue = currentMonth.percentYear > lastMonth.percentYear ? '⭡' : currentMonth.percentYear < lastMonth.percentYear ? '⭣' : ''
             const indexYearColor = currentMonth.percentYear > lastMonth.percentYear ? softRed : currentMonth.percentYear < lastMonth.percentYear ? softGreen : softBlue
             if (currentMonth) {
+                if (indexName.includes('צרכן')) {
+                    window.mortgageIndexData = {
+                        annualChange: Number(currentMonth.percentYear) / 100,
+                        value: Number(currentMonth.value),
+                        updatedAt: currentMonth.date || null
+                    }
+                    window.dispatchEvent(new CustomEvent('mortgage-index-updated'))
+                }
                 fetchedIndexes = true
                 nav.classList.add('adjust-nav')
                 indexes.style.display = 'flex'
                 indexes.innerHTML +=
-                `
+                    `
                     <a href="https://google.com/search?q=${indexQuery}" target="_blank" style="order: ${indexOrder};">
                         ${indexName} <span style="color: ${indexMonthColor} !important;">${currentMonth.value}</span><span class="line-break"></span>
                         שינוי חודשי <span style="color: ${indexMonthColor} !important;">${indexMonthValue} ${adjustMinus(currentMonth.percent)}</span>

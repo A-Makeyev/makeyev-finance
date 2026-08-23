@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="styles/loader.css">
+    <link rel="stylesheet" href="styles/navigation.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/calculators.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=Lato:wght@300;400;700&display=swap">
+
+    <link rel="shortcut icon" type="image/x-icon" href="/images/icon.ico">
+
+    <title>מחשבון משכנתא | Makeyev Finance</title>
+</head>
+
+<body class="calculator-page stop-scrolling">
+
+    <script src="src/loader.js"></script>
+
+    <div id="loading-screen">
+        <div id="loader"></div>
+    </div>
+
+    <section class="header">
+
+        <div class="indexes"></div>
+
+        <nav id="navbar">
+
+            <input id="nav-toggle" type="checkbox">
+
+            <div class="logo">
+                <a id="logo-image"
+                    class="logo-image-transparent"
+                    href="/"
+                    onclick="backToHeader()">
+                </a>
+            </div>
+
+            <ul id="nav-list">
+
+                <li>
+                    <a class="nav-link remove-highlight" href="/">
+                        ראשי
+                    </a>
+                </li>
+
+                <li>
+                    <a id="services"
+                        class="nav-link remove-highlight"
+                        href="services.html">
+                        השירות שלנו
+                    </a>
+                </li>
+
+                <li>
+                    <a id="calculators"
+                        class="nav-link remove-highlight"
+                        href="javascript:void(0);"
+                        onclick="backToHeader()">
+                        מחשבון משכנתא
+                    </a>
+                </li>
+
+                <li>
+                    <a id="articles"
+                        class="nav-link remove-highlight"
+                        href="articles.html">
+                        מאמרים
+                    </a>
+                </li>
+
+                <li>
+                    <a id="contact"
+                        class="nav-link remove-highlight"
+                        href="contact.html">
+                        צרו קשר
+                    </a>
+                </li>
+
+                <div class="nav-icons">
+
+                    <li>
+                        <a class="nav-link icon remove-highlight"
+                            href=""
+                            target="_blank">
+                            <i class="fas fa-phone-alt"></i>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="nav-link icon remove-highlight"
+                            href=""
+                            target="_blank">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="nav-link icon remove-highlight"
+                            href=""
+                            target="_blank">
+                            <i class="fab fa-waze"></i>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="nav-link icon remove-highlight"
+                            href=""
+                            target="_blank">
+                            <i class="far fa-envelope"></i>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="nav-link icon remove-highlight"
+                            href=""
+                            target="_blank">
+                            <i class="fab fa-facebook-square"></i>
+                        </a>
+                    </li>
+
+                </div>
+            </ul>
+
+            <label for="nav-toggle" class="menu-icon" id="menu">
+                <div class="line"></div>
+                <div class="line"></div>
+                <div class="line"></div>
+            </label>
+
+        </nav>
+
+        <div class="text-box main-heading">
+            <h1 class="gradient-text-no-hover">
+                מחשבון משכנתא
+            </h1>
+
+            <p class="gradient-text-no-hover">
+                חישוב ההחזר החודשי וסך הריבית
+            </p>
+        </div>
+
+    </section>
+
+    <main class="calculator-shell">
+
+        <section class="calculator-panel" aria-label="מחשבון משכנתא">
+
+            <div class="panel-heading">
+
+                <div>
+                    <h2>
+                        הזינו את נתוני המשכנתא
+                    </h2>
+                </div>
+
+                <button id="reset-calculator"
+                    class="reset-button"
+                    type="button">
+                    איפוס נתונים
+                </button>
+
+            </div>
+
+            <form id="mortgage-form" novalidate>
+
+                <div class="starting-point">
+
+                    <label class="starting-amount">
+                        סכום המשכנתא
+
+                        <div class="input-wrap">
+                            <input id="starting-amount"
+                                type="text"
+                                inputmode="decimal"
+                                value="1000000">
+
+                            <span>₪</span>
+                        </div>
+                    </label>
+
+                    <label class="term-slider">
+                        משכנתא לתקופה בשנים
+
+                        <div class="term-slider-wrap">
+
+                            <span class="slider-label">
+                                1
+                            </span>
+
+                            <input id="term-years"
+                                type="range"
+                                min="1"
+                                max="30"
+                                value="30"
+                                aria-valuemin="1"
+                                aria-valuemax="30">
+
+                            <span class="slider-label">
+                                30
+                            </span>
+
+                        </div>
+                    </label>
+
+                    <button class="calculate-button starting-calculate-button"
+                        type="submit">
+
+                        <span>
+                            חשב את ההחזר
+                        </span>
+
+                        <span aria-hidden="true">
+                            ←
+                        </span>
+
+                    </button>
+
+                </div>
+
+                <div class="preset-heading">
+
+                    <span>
+                        בחירת תמהיל
+                    </span>
+
+                    <small>
+                        דוגמאות לתמהילים נפוצים
+                    </small>
+
+                </div>
+
+                <div class="preset-list"
+                    role="group"
+                    aria-label="תמהילי משכנתא">
+
+                    <button class="preset-button active"
+                        type="button"
+                        data-preset="basket1">
+                        תמהיל 1
+                    </button>
+
+                    <button class="preset-button"
+                        type="button"
+                        data-preset="basket2">
+                        תמהיל 2
+                    </button>
+
+                    <button class="preset-button"
+                        type="button"
+                        data-preset="basket3">
+                        תמהיל 3
+                    </button>
+
+                </div>
+
+                <div id="tracks-list"></div>
+
+                <button id="add-track"
+                    class="add-track-button"
+                    type="button">
+                    + הוספת מסלול
+                </button>
+
+                <p id="form-error"
+                    class="form-error"
+                    role="alert"
+                    hidden>
+                </p>
+
+                <p class="regulatory-note">
+                    <strong>חשוב:</strong>
+                    בהתאם להוראות בנק ישראל, חלק המסלולים בריבית משתנה
+                    לא יעלה על 66.66% מסך המשכנתא.
+                </p>
+
+            </form>
+
+        </section>
+
+        <section class="results-layout" aria-live="polite">
+
+            <div class="results-card primary-result">
+
+                <p>
+                    ההחזר החודשי הראשון
+                </p>
+
+                <strong id="monthly-payment">
+                    ₪0
+                </strong>
+
+                <span id="payment-note">
+                    בהנחת ריבית קבועה לאורך כל התקופה
+                </span>
+
+            </div>
+
+            <div class="results-card">
+
+                <p>
+                    סך הריבית
+                </p>
+
+                <strong id="total-interest">
+                    ₪0
+                </strong>
+
+                <span>
+                    עלות הריבית לכל התקופה
+                </span>
+
+            </div>
+
+            <div class="results-card">
+
+                <p id="highest-payment-label">
+                    ההחזר החודשי הגבוה ביותר (משוער)
+                </p>
+
+                <strong id="highest-payment">
+                    ₪0
+                </strong>
+
+                <span>
+                    לפי ההצמדה
+                </span>
+
+            </div>
+
+            <div class="results-card">
+
+            <p class="total-payment-label" id="total-payment-label">
+                <span class="total-payment-text">
+                    סך ההחזר ל-<span class="term-years-value">30</span> שנים
+                </span>
+            </p>
+
+                <strong id="total-payment">
+                    ₪0
+                </strong>
+
+                <span>
+                    קרן בתוספת ריבית
+                </span>
+
+            </div>
+
+        </section>
+
+        <section class="schedule-section">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <h2>
+                       טבלת החזרים צפויים
+                    </h2>
+
+                </div>
+
+                <p id="schedule-summary"></p>
+
+            </div>
+
+            <div class="schedule-content">
+
+                <div class="table-wrap">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+                                <th>שנה</th>
+                                <th>קרן</th>
+                                <th>ריבית</th>
+                                <th>יתרת</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="schedule-body"></tbody>
+
+                    </table>
+
+                </div>
+
+                <aside class="schedule-aside">
+
+                    <p>
+                        תשלום שנתי ראשון
+                    </p>
+
+                    <strong id="annual-payment">
+                        ₪0
+                    </strong>
+
+                    <span>
+                        סך התשלומים ב-12 החודשים הראשונים
+                    </span>
+
+                </aside>
+
+            </div>
+
+            <button id="expand-schedule"
+                class="expand-schedule-button"
+                type="button">
+                הצג פירוט עד 30 שנים
+            </button>
+
+            <p class="disclaimer">
+                החישוב הוא הערכה כללית ואינו כולל עמלות, ביטוחים
+                או שינויים עתידיים בריבית.
+            </p>
+
+            <p class="legal-note">
+
+                הנתונים להמחשה בלבד ואינם הצעה או אישור להלוואה.
+                הריביות והתחזיות עשויות להשתנות, והאישור כפוף לתנאי הבנק.
+
+                <br />
+
+                אי עמידה בהחזרים עלולה לגרור ריבית פיגורים והליכי גבייה.
+
+            </p>
+
+        </section>
+
+    </main>
+
+    <div id="offline"></div>
+
+    <section class="footer">
+
+        <div style="margin-bottom: -15px;">
+
+            <div id="trademark"></div>
+
+            <div class="footer-links">
+
+                <p>
+                    <a class="footer-link remove-highlight" href="/">
+                        ראשי
+                    </a>
+                </p>
+
+                <span>&#183;</span>
+
+                <p>
+                    <a class="footer-link remove-highlight"
+                        href="services.html">
+                        השירות שלנו
+                    </a>
+                </p>
+
+                <span>&#183;</span>
+
+                <p>
+                    <a class="footer-link remove-highlight"
+                        href="javascript:void(0);"
+                        onclick="backToHeader()">
+                        מאמרים
+                    </a>
+                </p>
+
+                <span>&#183;</span>
+
+                <p>
+                    <a class="footer-link remove-highlight"
+                        href="contact.html">
+                        צרו קשר
+                    </a>
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="socials">
+
+            <a class="icon remove-highlight"
+                href=""
+                target="_blank">
+                <i class="fab fa-facebook-square facebook-fill"></i>
+            </a>
+
+            <a class="icon remove-highlight"
+                href=""
+                target="_blank">
+                <i class="far fa-envelope email-fill"></i>
+            </a>
+
+            <a class="icon remove-highlight"
+                href=""
+                target="_blank">
+                <i class="fab fa-waze waze-fill"></i>
+            </a>
+
+            <a class="icon remove-highlight"
+                href=""
+                target="_blank">
+                <i class="fab fa-whatsapp whatsapp-fill"></i>
+            </a>
+
+            <a class="icon remove-highlight"
+                href=""
+                target="_blank">
+                <i class="fas fa-phone-square-alt phone-fill"></i>
+            </a>
+
+        </div>
+
+    </section>
+
+    <script src="src/index.js"></script>
+    <script src="src/navigation.js"></script>
+    <script src="src/calculator.js"></script>
+
+    <script src="https://kit.fontawesome.com/4f48855ba9.js"
+        crossorigin="anonymous">
+    </script>
+
+</body>
+</html>
