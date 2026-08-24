@@ -335,7 +335,7 @@
     function updateIncomePlaceholder(firstMonthPayment) {
         if (firstMonthPayment > 0) {
             const suggested = Math.ceil(firstMonthPayment * 2 / 500) * 500
-            monthlyIncomeInput.placeholder = `מינימום: ${currency.format(suggested)}`
+            monthlyIncomeInput.placeholder = currency.format(suggested)
         }
     }
 
