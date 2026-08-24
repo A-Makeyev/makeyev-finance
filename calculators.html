@@ -27,7 +27,7 @@
         <div id="loader"></div>
     </div>
 
-    <section class="header">
+    <section class="sub-header">
 
         <div class="indexes"></div>
 
@@ -36,10 +36,7 @@
             <input id="nav-toggle" type="checkbox">
 
             <div class="logo">
-                <a id="logo-image"
-                    class="logo-image-transparent"
-                    href="/"
-                    onclick="backToHeader()">
+                <a id="logo-image" class="logo-image-transparent" href="/" onclick="backToHeader()">
                 </a>
             </div>
 
@@ -52,34 +49,26 @@
                 </li>
 
                 <li>
-                    <a id="services"
-                        class="nav-link remove-highlight"
-                        href="services.html">
+                    <a id="services" class="nav-link remove-highlight" href="services.html">
                         השירות שלנו
                     </a>
                 </li>
 
                 <li>
-                    <a id="calculators"
-                        class="nav-link remove-highlight"
-                        href="javascript:void(0);"
+                    <a id="calculators" class="nav-link remove-highlight" href="javascript:void(0);"
                         onclick="backToHeader()">
                         מחשבון משכנתא
                     </a>
                 </li>
 
                 <li>
-                    <a id="articles"
-                        class="nav-link remove-highlight"
-                        href="articles.html">
+                    <a id="articles" class="nav-link remove-highlight" href="articles.html">
                         מאמרים
                     </a>
                 </li>
 
                 <li>
-                    <a id="contact"
-                        class="nav-link remove-highlight"
-                        href="contact.html">
+                    <a id="contact" class="nav-link remove-highlight" href="contact.html">
                         צרו קשר
                     </a>
                 </li>
@@ -87,41 +76,31 @@
                 <div class="nav-icons">
 
                     <li>
-                        <a class="nav-link icon remove-highlight"
-                            href=""
-                            target="_blank">
+                        <a class="nav-link icon remove-highlight" href="" target="_blank">
                             <i class="fas fa-phone-alt"></i>
                         </a>
                     </li>
 
                     <li>
-                        <a class="nav-link icon remove-highlight"
-                            href=""
-                            target="_blank">
+                        <a class="nav-link icon remove-highlight" href="" target="_blank">
                             <i class="fab fa-whatsapp"></i>
                         </a>
                     </li>
 
                     <li>
-                        <a class="nav-link icon remove-highlight"
-                            href=""
-                            target="_blank">
+                        <a class="nav-link icon remove-highlight" href="" target="_blank">
                             <i class="fab fa-waze"></i>
                         </a>
                     </li>
 
                     <li>
-                        <a class="nav-link icon remove-highlight"
-                            href=""
-                            target="_blank">
+                        <a class="nav-link icon remove-highlight" href="" target="_blank">
                             <i class="far fa-envelope"></i>
                         </a>
                     </li>
 
                     <li>
-                        <a class="nav-link icon remove-highlight"
-                            href=""
-                            target="_blank">
+                        <a class="nav-link icon remove-highlight" href="" target="_blank">
                             <i class="fab fa-facebook-square"></i>
                         </a>
                     </li>
@@ -141,10 +120,6 @@
             <h1 class="gradient-text-no-hover">
                 מחשבון משכנתא
             </h1>
-
-            <p class="gradient-text-no-hover">
-                חישוב ההחזר החודשי וסך הריבית
-            </p>
         </div>
 
     </section>
@@ -157,13 +132,11 @@
 
                 <div>
                     <h2>
-                        הזינו את נתוני המשכנתא
+                        תכנון ההחזר החודשי והסכום הכולל 
                     </h2>
                 </div>
 
-                <button id="reset-calculator"
-                    class="reset-button"
-                    type="button">
+                <button id="reset-calculator" class="reset-button" type="button">
                     איפוס נתונים
                 </button>
 
@@ -177,10 +150,7 @@
                         סכום המשכנתא
 
                         <div class="input-wrap">
-                            <input id="starting-amount"
-                                type="text"
-                                inputmode="decimal"
-                                value="1000000">
+                            <input id="starting-amount" type="text" inputmode="decimal" value="1,000,000">
 
                             <span>₪</span>
                         </div>
@@ -195,12 +165,7 @@
                                 1
                             </span>
 
-                            <input id="term-years"
-                                type="range"
-                                min="1"
-                                max="30"
-                                value="30"
-                                aria-valuemin="1"
+                            <input id="term-years" type="range" min="1" max="30" value="30" aria-valuemin="1"
                                 aria-valuemax="30">
 
                             <span class="slider-label">
@@ -210,75 +175,121 @@
                         </div>
                     </label>
 
-                    <button class="calculate-button starting-calculate-button"
-                        type="submit">
+                    <button class="calculate-button starting-calculate-button" type="submit">
 
                         <span>
-                            חשב את ההחזר
+                            הצג את ההחזרים
                         </span>
 
                         <span aria-hidden="true">
-                            ←
+                            🡠
                         </span>
 
                     </button>
 
                 </div>
 
-                <div class="preset-heading">
+                <div class="limits-row">
 
-                    <span>
-                        בחירת תמהיל
-                    </span>
+                    <label class="input-group">
+                        תכלית הרכישה
+                        <div class="select-wrap">
+                            <select id="property-purpose">
+                                <option value="first">
+                                    דירה ראשונה (75% מימון)
+                                </option>
+                                <option value="upgrade">
+                                    שדרוג דירה (70% מימון)
+                                </option>
+                                <option value="investment">
+                                    דירה להשקעה (50% מימון)
+                                </option>
+                            </select>
 
-                    <small>
-                        דוגמאות לתמהילים נפוצים
-                    </small>
+                            <span class="select-chevron"></span>
+                        </div>
+                    </label>
+
+                    <label class="input-group">
+                        שווי הנכס
+                        <div class="input-wrap">
+                            <input id="property-value" type="text" inputmode="numeric">
+
+                            <span>₪</span>
+                        </div>
+                    </label>
+
+                    <label class="input-group">
+                        הון עצמי
+                        <div class="input-wrap">
+                            <input id="initial-capital" type="text" inputmode="numeric">
+
+                            <span>₪</span>
+                        </div>
+                    </label>
+
+                    <label class="input-group">
+                        הכנסה פנויה נטו לחודש
+                        <div class="input-wrap">
+                            <input id="monthly-income" type="text" inputmode="numeric">
+
+                            <span>₪</span>
+                        </div>
+                    </label>
 
                 </div>
 
-                <div class="preset-list"
-                    role="group"
-                    aria-label="תמהילי משכנתא">
+                <p id="equity-note" class="info-note" hidden>
+                </p>
 
-                    <button class="preset-button active"
-                        type="button"
-                        data-preset="basket1">
+                <p id="limits-warning" class="limits-warning" hidden>
+                </p>
+
+                <div class="preset-heading">
+                    <span>
+                        בחירת תמהיל
+                    </span>
+                </div>
+
+                <div class="preset-list" role="group" aria-label="תמהילי משכנתא">
+
+                    <button class="preset-button active" type="button" data-preset="basket1">
                         תמהיל 1
                     </button>
 
-                    <button class="preset-button"
-                        type="button"
-                        data-preset="basket2">
+                    <button class="preset-button" type="button" data-preset="basket2">
                         תמהיל 2
                     </button>
 
-                    <button class="preset-button"
-                        type="button"
-                        data-preset="basket3">
+                    <button class="preset-button" type="button" data-preset="basket3">
                         תמהיל 3
+                    </button>
+
+                    <button class="preset-button" type="button" data-preset="basket4">
+                        תמהיל מומלץ
                     </button>
 
                 </div>
 
                 <div id="tracks-list"></div>
 
-                <button id="add-track"
-                    class="add-track-button"
-                    type="button">
-                    + הוספת מסלול
+                <button id="add-track" class="add-track-button" type="button">
+                    הוספת מסלול +
                 </button>
 
-                <p id="form-error"
-                    class="form-error"
-                    role="alert"
-                    hidden>
+                <p id="form-error" class="form-error" role="alert" hidden>
                 </p>
 
+                <button id="autofix-mix" class="autofix-button" type="button" hidden>
+                    תיקון תמהיל אוטומטית
+                </button>
+
                 <p class="regulatory-note">
-                    <strong>חשוב:</strong>
-                    בהתאם להוראות בנק ישראל, חלק המסלולים בריבית משתנה
-                    לא יעלה על 66.66% מסך המשכנתא.
+                    <strong>
+                        💡
+                    </strong>
+                    ריבית משתנה עלולה לעלות — לכן בנק ישראל מחייב שלפחות
+                    שליש מהמשכנתא תישאר בריבית קבועה, ליציבות ההחזר שלכם.
                 </p>
 
             </form>
@@ -305,22 +316,6 @@
 
             <div class="results-card">
 
-                <p>
-                    סך הריבית
-                </p>
-
-                <strong id="total-interest">
-                    ₪0
-                </strong>
-
-                <span>
-                    עלות הריבית לכל התקופה
-                </span>
-
-            </div>
-
-            <div class="results-card">
-
                 <p id="highest-payment-label">
                     ההחזר החודשי הגבוה ביותר (משוער)
                 </p>
@@ -337,11 +332,27 @@
 
             <div class="results-card">
 
-            <p class="total-payment-label" id="total-payment-label">
-                <span class="total-payment-text">
-                    סך ההחזר ל-<span class="term-years-value">30</span> שנים
+                <p>
+                    סך הריבית
+                </p>
+
+                <strong id="total-interest">
+                    ₪0
+                </strong>
+
+                <span>
+                    עלות הריבית לכל התקופה
                 </span>
-            </p>
+
+            </div>
+
+            <div class="results-card">
+
+                <p class="total-payment-label" id="total-payment-label">
+                    <span class="total-payment-text">
+                        סך ההחזר ל-<span class="term-years-value">30</span> שנים
+                    </span>
+                </p>
 
                 <strong id="total-payment">
                     ₪0
@@ -362,7 +373,7 @@
                 <div>
 
                     <h2>
-                       טבלת החזרים צפויים
+                        טבלת החזרים צפויים
                     </h2>
 
                 </div>
@@ -383,7 +394,7 @@
                                 <th>שנה</th>
                                 <th>קרן</th>
                                 <th>ריבית</th>
-                                <th>יתרת</th>
+                                <th>יתרה</th>
                             </tr>
 
                         </thead>
@@ -412,9 +423,7 @@
 
             </div>
 
-            <button id="expand-schedule"
-                class="expand-schedule-button"
-                type="button">
+            <button id="expand-schedule" class="expand-schedule-button" type="button">
                 הצג פירוט עד 30 שנים
             </button>
 
@@ -457,8 +466,7 @@
                 <span>&#183;</span>
 
                 <p>
-                    <a class="footer-link remove-highlight"
-                        href="services.html">
+                    <a class="footer-link remove-highlight" href="services.html">
                         השירות שלנו
                     </a>
                 </p>
@@ -466,9 +474,7 @@
                 <span>&#183;</span>
 
                 <p>
-                    <a class="footer-link remove-highlight"
-                        href="javascript:void(0);"
-                        onclick="backToHeader()">
+                    <a class="footer-link remove-highlight" href="javascript:void(0);" onclick="backToHeader()">
                         מאמרים
                     </a>
                 </p>
@@ -476,8 +482,7 @@
                 <span>&#183;</span>
 
                 <p>
-                    <a class="footer-link remove-highlight"
-                        href="contact.html">
+                    <a class="footer-link remove-highlight" href="contact.html">
                         צרו קשר
                     </a>
                 </p>
@@ -488,33 +493,23 @@
 
         <div class="socials">
 
-            <a class="icon remove-highlight"
-                href=""
-                target="_blank">
+            <a class="icon remove-highlight" href="" target="_blank">
                 <i class="fab fa-facebook-square facebook-fill"></i>
             </a>
 
-            <a class="icon remove-highlight"
-                href=""
-                target="_blank">
+            <a class="icon remove-highlight" href="" target="_blank">
                 <i class="far fa-envelope email-fill"></i>
             </a>
 
-            <a class="icon remove-highlight"
-                href=""
-                target="_blank">
+            <a class="icon remove-highlight" href="" target="_blank">
                 <i class="fab fa-waze waze-fill"></i>
             </a>
 
-            <a class="icon remove-highlight"
-                href=""
-                target="_blank">
+            <a class="icon remove-highlight" href="" target="_blank">
                 <i class="fab fa-whatsapp whatsapp-fill"></i>
             </a>
 
-            <a class="icon remove-highlight"
-                href=""
-                target="_blank">
+            <a class="icon remove-highlight" href="" target="_blank">
                 <i class="fas fa-phone-square-alt phone-fill"></i>
             </a>
 
@@ -526,9 +521,9 @@
     <script src="src/navigation.js"></script>
     <script src="src/calculator.js"></script>
 
-    <script src="https://kit.fontawesome.com/4f48855ba9.js"
-        crossorigin="anonymous">
+    <script src="https://kit.fontawesome.com/4f48855ba9.js" crossorigin="anonymous">
     </script>
 
 </body>
+
 </html>

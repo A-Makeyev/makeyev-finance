@@ -72,6 +72,42 @@
     flex-direction: column;
 }
 
+.limits-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.6fr) minmax(120px, .8fr) minmax(120px, .8fr) minmax(140px, 1fr);
+    gap: 18px;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--calc-line);
+}
+
+.limits-row .input-wrap,
+.limits-row .select-wrap {
+    margin-top: 7px;
+}
+
+.info-note {
+    color: var(--calc-muted);
+    font-size: .88rem;
+    margin-top: 12px;
+}
+
+.info-note.equity-bad {
+    color: #bb3a3a;
+}
+
+.info-note.equity-good {
+    color: var(--calc-accent);
+}
+
+.limits-warning {
+    color: #b36b00;
+    font-size: .88rem;
+    line-height: 1.5;
+    margin-top: 12px;
+    white-space: pre-line;
+}
+
 .starting-amount {
     color: var(--calc-muted);
     font-size: .95rem;
@@ -111,8 +147,8 @@
 
 .slider-label {
     font-size: 0.85rem;
-    color: var(--calc-muted);
-    font-weight: 600;
+    color: var(--calc-ink);
+    font-weight: 800;
     min-width: 24px;
     text-align: center;
 }
@@ -123,11 +159,37 @@
     flex: 1 1 auto;
     min-width: 0;
     width: 100%;
+    height: 22px;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    outline: none;
+}
+
+.term-slider-wrap input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(to left,
+        transparent 0%,
+        transparent var(--slider-start, 4.4%),
+        var(--calc-accent) var(--slider-start, 4.4%),
+        var(--calc-accent) var(--slider-fill, 50%),
+        var(--calc-line) var(--slider-fill, 50%),
+        var(--calc-line) var(--slider-end, 95.6%),
+        transparent var(--slider-end, 95.6%),
+        transparent 100%);
+}
+
+.term-slider-wrap input[type="range"]::-moz-range-progress {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--calc-accent);
+}
+
+.term-slider-wrap input[type="range"]::-moz-range-track {
     height: 6px;
     border-radius: 999px;
     background: var(--calc-line);
-    cursor: pointer;
-    outline: none;
 }
 
 .term-slider-wrap input[type="range"]::-webkit-slider-thumb {
@@ -165,12 +227,6 @@
     transform: scale(1.1);
 }
 
-.term-slider-wrap input[type="range"]::-moz-range-track {
-    height: 6px;
-    border-radius: 999px;
-    background: transparent;
-}
-
 #tracks-list {
     display: grid;
     gap: 14px;
@@ -182,7 +238,7 @@
     align-items: baseline;
     color: var(--calc-ink);
     font-weight: 700;
-    margin: 4px 0 10px;
+    margin: 15px 0 10px;
 }
 
 .preset-heading small {
@@ -193,6 +249,7 @@
 
 .preset-list {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 16px;
 }
@@ -234,6 +291,21 @@
     padding: 0 8px;
 }
 
+.mortgage-track.variable-limit-flag {
+    border-color: rgba(211, 47, 47, .6);
+}
+
+.mortgage-track.variable-limit-flag legend,
+.mortgage-track.variable-limit-flag .track-type {
+    color: #d32f2f;
+}
+
+.mortgage-track.variable-limit-flag legend::after {
+    content: ' *';
+    color: #d32f2f;
+    font-weight: 800;
+}
+
 .remove-track {
     position: absolute;
     left: 12px;
@@ -270,7 +342,7 @@
 
 .input-wrap {
     display: flex;
-    direction: ltr;
+    direction: rtl;
     align-items: center;
     border: 1px solid var(--calc-line);
     margin-top: 7px;
@@ -278,8 +350,7 @@
     transition: border-color .2s, box-shadow .2s;
 }
 
-.input-wrap:focus-within,
-select:focus {
+.input-wrap:focus-within {
     border-color: var(--calc-teal);
     box-shadow: 0 0 0 3px rgba(8, 127, 120, .12);
     outline: none;
@@ -300,17 +371,53 @@ select:focus {
     background: transparent;
     color: var(--calc-ink);
     font: inherit;
-    font-size: 1.05rem;
+    font-size: 0.95rem;
     padding: 12px;
 }
 
-.calculator-panel select {
-    border: 1px solid var(--calc-line);
+.calculator-panel input:disabled {
+    background: #f3f5f4;
+    color: var(--calc-muted);
+    cursor: not-allowed;
+}
+
+.select-wrap {
+    position: relative;
     margin-top: 7px;
-    height: 50px;
+}
+
+.select-wrap select {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid var(--calc-line);
+    background: white;
+    height: 44px;
     cursor: pointer;
-    background-position: left 12px center;
-    padding-left: 35px;
+    padding: 0 12px 0 36px;
+    text-overflow: ellipsis;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.select-wrap select:focus {
+    border-color: var(--calc-teal);
+    box-shadow: 0 0 0 3px rgba(8, 127, 120, .12);
+}
+
+.select-chevron {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--calc-muted);
+    border-bottom: 2px solid var(--calc-muted);
+    transform: translateY(-70%) rotate(45deg);
+    transition: transform .25s ease;
+    pointer-events: none;
+}
+
+.select-wrap.open .select-chevron {
+    transform: translateY(-30%) rotate(225deg);
 }
 
 .calculate-button {
@@ -351,10 +458,6 @@ select:focus {
     transform: translateY(-2px);
     box-shadow: 0 10px 22px rgba(8, 127, 120, .25);
 }
-
-/* =========================
-   RESULTS
-   ========================= */
 
 .results-layout {
     display: grid;
@@ -524,22 +627,42 @@ tbody tr:hover {
     margin: 12px 0 0;
 }
 
+.autofix-button {
+    border: 1px dashed var(--calc-accent);
+    color: var(--calc-accent);
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    font-size: .85rem;
+    font-weight: 700;
+    margin-top: 12px;
+    padding: 6px 12px;
+    transition: background .2s, color .2s;
+}
+
+.autofix-button:hover {
+    color: white;
+    background: var(--calc-accent);
+}
+
 .regulatory-note,
 .legal-note {
     color: var(--calc-muted);
     font-size: .82rem;
+    font-weight: 600;
     line-height: 1.6;
 }
 
 .regulatory-note {
     border-right: 3px solid var(--calc-accent);
-    margin: 16px 0 0;
+    margin: 20px 0 0;
     padding: 8px 12px;
     background: #f0faf8;
 }
 
 .regulatory-note strong {
     color: var(--calc-ink);
+    margin-left: 4px;
 }
 
 .legal-note {
@@ -598,6 +721,11 @@ tbody tr:hover {
     .starting-point {
         grid-template-columns: 1fr;
         gap: 18px;
+    }
+
+    .limits-row {
+        grid-template-columns: 1fr;
+        gap: 14px;
     }
 
     .starting-amount,
