@@ -10,7 +10,7 @@ tested, CI-gated React application.
 | Concern          | Choice                                                                                                                                                   |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Build            | Vite 5 + React 18 + TypeScript (`strict`)                                                                                                                |
-| Package manager  | pnpm                                                                                                                                                     |
+| Package manager  | npm                                                                                                                                                      |
 | Routing          | React Router v7 (SPA, 5 routes mapped 1:1 from legacy pages)                                                                                             |
 | Calculator state | Zustand (+ immer) — mirrors the legacy state machine exactly                                                                                             |
 | Data fetching    | TanStack Query wrapping native `fetch` (BOI prime rate, CBS indexes) with **silent-fail** semantics identical to the legacy site                         |
@@ -23,48 +23,61 @@ tested, CI-gated React application.
 ## Getting started
 
 ```bash
-pnpm install
+npm install
 cp .env.example .env      # then fill real values (dev placeholders work too)
-pnpm dev                  # http://localhost:5173
+npm run dev               # http://localhost:5173 (Vite, HMR)
+
+# Full stack, production-like:
+npm run build && npm run dev:all   # Express on http://localhost:3000, Vite on :5173
 ```
+
+`npm run dev:all` runs Vite (UI) and the Express server (serves the built
+`client/dist/` SPA) side by side; run `npm run build` first so Express has
+files to serve.
 
 ## Scripts
 
 | Script                              | Purpose                                                       |
 | ----------------------------------- | ------------------------------------------------------------- |
-| `pnpm dev`                          | Vite dev server                                               |
-| `pnpm build`                        | Typecheck (both tsconfigs) + production build                 |
-| `pnpm preview`                      | Serve `dist/` on :5173                                        |
-| `pnpm typecheck`                    | `tsc --noEmit` for app + node configs                         |
-| `pnpm lint`                         | ESLint (flat config)                                          |
-| `pnpm format` / `format:check`      | Prettier                                                      |
-| `pnpm test`                         | Vitest unit suite (amortization math, formatters, XML parser) |
-| `pnpm test:e2e`                     | Full Playwright matrix (3 browsers × UI + API project)        |
-| `pnpm test:e2e:ui` / `test:e2e:api` | Project subsets                                               |
+| `npm run dev`                       | Vite dev server                                               |
+| `npm run dev:all`                   | Vite dev server + Express server together (run `npm run build` once first; Express serves the built SPA on :3000, Vite on :5173) |
+| `npm run server:dev`                | Express server only, on :3000                                 |
+| `npm run build`                     | Typecheck (both tsconfigs) + production build                 |
+| `npm run preview`                   | Serve `client/dist/` on :5173                                  |
+| `npm run typecheck`                 | `tsc --noEmit` for app + node configs                         |
+| `npm run lint`                      | ESLint (flat config)                                          |
+| `npm run format` / `format:check`   | Prettier                                                      |
+| `npm test`                          | Vitest unit suite (amortization math, formatters, XML parser) |
+| `npm run test:e2e`                  | Full Playwright matrix (3 browsers × UI + API project)        |
+| `npm run test:e2e:ui` / `test:e2e:api` | Project subsets                                            |
 
-E2E uses `vite preview` against `dist/`; run `pnpm build` first (CI does this
-for you). Tests never touch the real network — BOI/CBS/EmailJS are mocked.
+E2E uses `vite preview` against `client/dist/`; run `npm run build` first (CI
+does this for you). Tests never touch the real network — BOI/CBS/EmailJS are mocked.
 
 ## Architecture
 
 ```
-src/
-  config/       env.ts (zod-validated env) · siteConfig.ts (public business info)
-  i18n/         he.ts · en.ts · provider (document dir/lang switching)
-  lib/          amortization.ts (pure mortgage math + BoI rules)
-                format.ts (currency/input caret formatting) · xml.ts (CBS parser)
-  services/     boi.ts · cbs.ts (typed fetch wrappers, silent-fail parity)
-  stores/       calculatorStore.ts (tracks, sync modes, dirty flags, snapshot)
-  components/
-    layout/     Navbar · IndexesBar · Footer · OfflineBanner · Loader · Reveal
-    ui/         MoneyInput · TermSlider (CSS-variable fill) · AppModal (Radix)
-  features/
-    calculator/ Page · TrackForm · PresetSelector · ResultsCards · ScheduleSection
-    contact/    ContactForm · FloatingLabelField · MessageModal · ActionFormModal
-                emailjsClient.ts (deadlock-retry) · validation.ts (zod schemas)
-  pages/        Home · Services · Articles
+client/
+  index.html    Vite entry
+  public/       static assets (images, favicon)
+  src/
+    config/       env.ts (zod-validated env) · siteConfig.ts (public business info)
+    i18n/         he.ts · en.ts · provider (document dir/lang switching)
+    lib/          amortization.ts (pure mortgage math + BoI rules)
+                  format.ts (currency/input caret formatting) · xml.ts (CBS parser)
+    services/     boi.ts · cbs.ts (typed fetch wrappers, silent-fail parity)
+    stores/       calculatorStore.ts (tracks, sync modes, dirty flags, snapshot)
+    components/
+      layout/     Navbar · IndexesBar · Footer · OfflineBanner · Loader · Reveal
+      ui/         MoneyInput · TermSlider (CSS-variable fill) · AppModal (Radix)
+    features/
+      calculator/ Page · TrackForm · PresetSelector · ResultsCards · ScheduleSection
+      contact/    ContactForm · FloatingLabelField · MessageModal · ActionFormModal
+                  emailjsClient.ts (deadlock-retry) · validation.ts (zod schemas)
+    pages/        Home · Services · Articles
+  tests/unit/   Vitest suites for lib/
+server/         server.js (Express — serves client/dist, SPA fallback)
 e2e/            playwright config in root; pom/ · support/mocks.ts · tests/{ui,api}
-tests/unit/     Vitest suites for lib/
 ```
 
 ### The calculator state machine
@@ -85,8 +98,8 @@ The port keeps every rule but makes it explicit:
 - BOI prime rate (+1.5 margin) applied only to tracks whose rate the user has
   not overridden.
 
-All of the math is pure (`src/lib/amortization.ts`) and pinned by golden unit
-tests; see `tests/unit/amortization.test.ts`.
+All of the math is pure (`client/src/lib/amortization.ts`) and pinned by
+golden unit tests; see `client/tests/unit/amortization.test.ts`.
 
 ## Migration notes
 

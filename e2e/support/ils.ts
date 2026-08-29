@@ -1,4 +1,4 @@
-import { formatCurrency } from '../../src/lib/format'
+import { formatCurrency } from '../../client/src/lib/format'
 
 export { formatCurrency }
 

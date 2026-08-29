@@ -1,12 +1,17 @@
 services:
-  - type: static
+  - type: web
     name: makeyev-finance
+    runtime: node
     buildCommand: npm install && npm run build
-    publishPath: dist
+    startCommand: npm start
+    healthCheckPath: /
     envVars:
       - key: NODE_VERSION
         value: 20
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+      # Public-by-design (baked into the client bundle); same values as .env.example.
+      - key: VITE_EMAILJS_SERVICE_ID
+        value: service_k2c0eve
+      - key: VITE_EMAILJS_TEMPLATE_ID
+        value: template_kmxsnuc
+      - key: VITE_EMAILJS_PUBLIC_KEY
+        value: 2y064p5z9qRvVxOHN

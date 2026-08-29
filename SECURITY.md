@@ -18,14 +18,15 @@ directly in source. Disposition during this migration:
 
 Phone number, email addresses, street address, Facebook page URL, Google Maps
 embed id and Waze deep link are **public-facing business details** displayed on
-the site. They live in `src/config/siteConfig.ts` as typed constants.
+the site. They live in `client/src/config/siteConfig.ts` as typed constants.
 
 ## Environment variable rules
 
 - Everything is prefixed `VITE_`. **Vite bakes these into the client bundle —
   assume anything in them is public.** Never place server-only credentials here.
 - `.env` is git-ignored; `.env.example` documents the required shape.
-- `src/config/env.ts` validates the variables through a Zod schema at startup:
+- `client/src/config/env.ts` validates the variables through a Zod schema at
+  startup:
   - production builds **fail fast** when required values are missing;
   - dev/test builds warn and fall back to disabled-email placeholders so the
     app still boots without a `.env`.

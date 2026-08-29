@@ -44,7 +44,7 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: 'pnpm exec vite preview --port 5173 --strictPort',
+        command: 'npx vite preview --port 5173 --strictPort',
         url: `http://localhost:${PORT}`,
         reuseExistingServer: !process.env.CI,
         stdout: 'ignore',
