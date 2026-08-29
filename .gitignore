@@ -1,2 +1,25 @@
-# Dependencies
-/node_modules
+dist
+dist-ssr
+coverage
+node_modules
+.env
+.env.local
+.env.*.local
+playwright-report
+test-results
+blob-report
+playwright/.cache
+
+# Legacy vanilla site (removed during migration, preserved in git history)
+articles.html
+calculators.html
+contact.html
+services.html
+styles/
+src/*.js
+.htaccess
+
+# OS / editor
+Thumbs.db
+.DS_Store
+*.log
