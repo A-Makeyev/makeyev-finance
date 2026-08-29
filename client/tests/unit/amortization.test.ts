@@ -242,6 +242,18 @@ describe('scaleTrackAmounts', () => {
   it('returns null when there is nothing to scale from', () => {
     expect(scaleTrackAmounts([0, 0], [null, null], 1_000)).toBeNull()
   })
+
+  it('keeps remembered shares when the loan is 0 and amounts are already zeroed', () => {
+    // Typing a property value keystroke-by-keystroke drives the loan through
+    // 0 repeatedly; the remembered share must survive so tracks can be
+    // restored once the loan turns positive again.
+    const first = scaleTrackAmounts([945_345], [null], 0)!
+    expect(first.shareMemory).toEqual([945_345])
+    const second = scaleTrackAmounts([0], first.shareMemory, 0)!
+    expect(second.shareMemory).toEqual([945_345])
+    const restored = scaleTrackAmounts([0], second.shareMemory, 1_179_909)!
+    expect(restored.amounts).toEqual([1_179_909])
+  })
 })
 
 describe('distributeEqually', () => {

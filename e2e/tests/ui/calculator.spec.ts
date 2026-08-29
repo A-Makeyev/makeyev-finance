@@ -13,10 +13,12 @@ test.describe('mortgage calculator — core UI flows', () => {
   })
 
   test('renders basket1 by default with correct Spitzer payment', async () => {
-    // ₪1,000,000 · 4.5% · 30y Spitzer → ₪5,067/month
-    await expect(calc.monthlyPayment).toHaveText(ils(5_067))
+    // ₪1,000,000 · 4.5% · 15y Spitzer → ₪7,650/month (default term is 15)
+    await expect(calc.monthlyPayment).toHaveText(ils(7_650))
     await expect(calc.track(1).type()).toHaveValue('fixed')
     await expect(calc.track(1).amount()).toHaveValue('1,000,000')
+    await expect(calc.track(1).years()).toHaveValue('15')
+    await expect(calc.termSlider).toHaveValue('15')
     await expect(calc.startingAmount).toHaveValue('1,000,000')
     await expect(calc.formError).toBeHidden()
   })
@@ -100,19 +102,21 @@ test.describe('mortgage calculator — core UI flows', () => {
     await calc.setPropertyValue('1,000,000')
     await calc.setCapital('400,000')
 
-    await expect(calc.limitsWarning).toBeVisible()
-    await expect(calc.limitsWarning).toContainText('60%')
-    await expect(calc.limitsWarning).toContainText(ils(500_000))
+    await expect(calc.summaryNotes).toBeVisible()
+    await expect(calc.summaryNotes).toContainText('60%')
+    await expect(calc.summaryNotes).toContainText(ils(500_000))
     // Equity note: 40% ≥ required(50)+15 → good
-    await expect(calc.equityNote).toContainText('הון עצמי 40% משווי הנכס')
+    await expect(calc.summaryNotes).toContainText('הון עצמי 40% משווי הנכס')
   })
 
   test('DTI warning triggers above half of income and suggests a minimum', async () => {
     await calc.setIncome('1,000')
-    await expect(calc.limitsWarning).toBeVisible()
-    await expect(calc.limitsWarning).toContainText('50%')
-    // Suggested minimum income placeholder: ceil(5067·2/500)·500 = ₪10,500
-    await expect(calc.monthlyIncome).toHaveAttribute('placeholder', ils(10_500))
+    await expect(calc.summaryNotes).toBeVisible()
+    // Merged DTI line (bad ❌): shortfall + required minimum income.
+    await expect(calc.summaryNotes).toContainText('מהנדרש')
+    await expect(calc.summaryNotes).toContainText('הבנק יבקש הכנסה חודשית פנויה של לפחות')
+    // Suggested minimum income placeholder: ceil(7650·2/500)·500 = ₪15,500
+    await expect(calc.monthlyIncome).toHaveAttribute('placeholder', ils(15_500))
   })
 
   test('variable-rate cap blocks calculation and auto-fix rebalances', async () => {
@@ -141,6 +145,8 @@ test.describe('mortgage calculator — core UI flows', () => {
   })
 
   test('schedule expands to full horizon and collapses back', async () => {
+    // Default term is 15y (no expand button) — push the term to 30 first.
+    await calc.termSlider.fill('30')
     const expand = calc.page.getByTestId('expand-schedule')
     await expect(expand).toBeVisible()
     await expect(expand).toContainText('30 שנים')
@@ -184,6 +190,6 @@ test.describe('mortgage calculator — core UI flows', () => {
     await expect(calc.startingAmount).toHaveValue('1,000,000')
     await expect(calc.preset('basket1')).toHaveAttribute('aria-pressed', 'true')
     await expect(calc.track(1).type()).toHaveValue('fixed')
-    await expect(calc.termSlider).toHaveValue('30')
+    await expect(calc.termSlider).toHaveValue('15')
   })
 })

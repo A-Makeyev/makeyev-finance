@@ -2269,26 +2269,54 @@ textarea {
   margin-top: 7px;
 }
 
-.info-note {
+/* Summary notes — the equity/closing-cost breakdown and the regulatory
+   warnings share one container (feedback request): a single uniform font
+   size, no yellow tint, and per-line status markers. Positive lines lead
+   with a green ✔️, negative lines with a red ❌, and general-info lines with
+   a muted 💡. The legacy "•" bullets are gone — each line carries exactly
+   one marker. Lines of the same status stay tightly packed; a status change
+   adds breathing room (group-start), so the list reads as good / bad / info
+   groups. */
+.summary-notes {
   color: var(--calc-muted);
-  font-size: 0.88rem;
-  margin-top: 12px;
-}
-
-.info-note.equity-bad {
-  color: #bb3a3a;
-}
-
-.info-note.equity-good {
-  color: var(--calc-accent);
-}
-
-.limits-warning {
-  color: #b36b00;
-  font-size: 0.88rem;
+  font-size: 1rem;
   line-height: 1.5;
   margin-top: 12px;
   white-space: pre-line;
+}
+
+.note-line {
+  display: block;
+}
+
+.note-line + .note-line {
+  margin-top: 4px;
+}
+
+.note-line.group-start {
+  margin-top: 14px;
+}
+
+.note-line.positive {
+  color: var(--calc-accent);
+}
+
+.note-line.negative {
+  color: #bb3a3a;
+}
+
+.note-line.info {
+  color: inherit;
+}
+
+/* When nothing is wrong (no red ❌ lines), the good lines read green — but
+   the 💡 info lines always stay regular (never tinted green). */
+.summary-notes.all-good {
+  color: var(--calc-accent);
+}
+
+.summary-notes.all-good .note-line.info {
+  color: var(--calc-muted);
 }
 
 .starting-amount {
@@ -2323,7 +2351,10 @@ textarea {
   display: flex;
   align-items: center;
   height: 50px;
-  margin-top: auto;
+  /* Mirrors the .input-wrap gap (7px) above the starting-amount control so the
+     "משכנתא לתקופה בשנים" label sits level with the "סכום המשכנתא" label
+     (feedback request). */
+  margin-top: 7px;
   box-sizing: border-box;
   gap: 5px;
 }
@@ -2408,6 +2439,39 @@ textarea {
 .term-slider-wrap input[type='range']::-moz-range-thumb:active {
   cursor: grabbing;
   transform: scale(1.1);
+}
+
+/* Track wrapper + current-value bubble (feedback request): a positioned box
+   around the native range input whose bubbled `--slider-*` variables continue
+   to drive the legacy fill, plus a small chip just below the thumb showing the
+   selected number of years. JS sets `left` to the thumb's position. */
+.term-slider-track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  /* Center the native range strip vertically so the "1"/"30" end labels sit
+     exactly on the slider line instead of below it (feedback request). */
+  display: flex;
+  align-items: center;
+}
+
+.slider-current {
+  position: absolute;
+  top: 45px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  pointer-events: none;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.4;
+  white-space: nowrap;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: var(--calc-teal-dark);
+  background: var(--calc-paper);
+  border: 1.4px solid var(--calc-line);
 }
 
 #tracks-list {

@@ -7,6 +7,8 @@
 
 export const MAX_TRACKS = 3
 export const MAX_YEARS = 30
+/** Default slider term on load and after reset (feedback request). */
+export const DEFAULT_TERM_YEARS = 15
 export const FALLBACK_INFLATION = 0.02
 export const VARIABLE_SHARE_LIMIT = 2 / 3
 export const VARIABLE_SHARE_EPSILON = 0.0001
@@ -485,7 +487,13 @@ export function scaleTrackAmounts(
   if (!loanAmount) {
     return {
       amounts: currentAmounts.map(() => 0),
-      shareMemory: currentAmounts.map((amount) => (amount > 0 ? amount : null)),
+      // Keep the remembered share for tracks whose current amount is 0 —
+      // otherwise typing a property value keystroke-by-keystroke (where the
+      // loan briefly hits 0) would wipe the memory and the tracks could never
+      // be restored once the loan becomes positive again.
+      shareMemory: currentAmounts.map((amount, index) =>
+        amount > 0 ? amount : previousMemory[index],
+      ),
     }
   }
 

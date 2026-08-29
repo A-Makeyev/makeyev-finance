@@ -1,13 +1,45 @@
 import type { ReactNode } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useCalculatorStore } from '@/stores/calculatorStore'
-import { formatCurrency, formatRatePercent } from '@/lib/format'
+import { formatCurrency, formatRatePercent, parseAmountText } from '@/lib/format'
 import {
+  DTI_THRESHOLD,
   FIRST_HOME_TAX_EXEMPTION_UP_TO,
+  MIN_REAL_HOME_VALUE,
   PURPOSE_LIMITS,
   type PaymentLabelKind,
   type PropertyPurpose,
 } from '@/lib/amortization'
+
+/** Line status for the summary notes: good news, bad news, or general info. */
+export type NoteStatus = 'positive' | 'negative' | 'info'
+
+const NOTE_ICONS: Record<NoteStatus, string> = {
+  positive: '✔️',
+  negative: '❌',
+  info: '💡',
+}
+
+/** Sort order for grouping summary lines: good news first, then bad, then info. */
+const STATUS_PRIORITY: Record<NoteStatus, number> = { positive: 0, negative: 1, info: 2 }
+
+/**
+ * Tags a summary line with its status and leads with the matching emoji. The
+ * legacy "•" bullets were removed — a line carries exactly one marker
+ * (feedback request).
+ */
+function mark(status: NoteStatus, node: ReactNode): { status: NoteStatus; node: ReactNode } {
+  return {
+    status,
+    node: (
+      <>
+        {NOTE_ICONS[status]} {node}
+      </>
+    ),
+  }
+}
+
+export type NoteLine = { status: NoteStatus; node: ReactNode }
 
 /**
  * Maps the raw calculation snapshot to localized display strings, preserving
@@ -21,6 +53,10 @@ export function useCalculatorViewModel() {
   const termYears = useCalculatorStore((s) => s.termYears)
   const scheduleExpanded = useCalculatorStore((s) => s.scheduleExpanded)
   const purpose = useCalculatorStore((s) => s.purpose)
+  const propertyValueText = useCalculatorStore((s) => s.propertyValueText)
+  const capitalText = useCalculatorStore((s) => s.capitalText)
+  const incomeText = useCalculatorStore((s) => s.incomeText)
+  const tracks = useCalculatorStore((s) => s.tracks)
   const requiredEquityPercent = 100 - PURPOSE_LIMITS[purpose].limit
 
   const countText =
@@ -71,43 +107,125 @@ export function useCalculatorViewModel() {
     investment: t('calculator.warnings.purchaseTaxInvestment'),
   }
 
-  const warningMessages: string[] = []
+  // Regulatory-limit messages: equity shortfall and LTV violations are "bad"
+  // (red ❌); the DTI explanation is general info (ℹ️) — feedback request.
+  const warningMessages: NoteLine[] = []
   // Entered equity below the required amount → tell the user how much more.
-  if (snapshot.equityShortfall && snapshot.suggestedEquity !== null) {
+  // When the equity-percent line (below) already folds in the shortfall, the
+  // standalone message is skipped — feedback request (mix together).
+  if (snapshot.equityShortfall && snapshot.suggestedEquity !== null && !snapshot.equity) {
     warningMessages.push(
-      t('calculator.warnings.equityShortfall', {
-        required: formatCurrency(snapshot.suggestedEquity),
-        requiredPercent: requiredEquityPercent,
-      }),
+      mark(
+        'negative',
+        <Trans
+          i18nKey="calculator.warnings.equityShortfall"
+          values={{
+            required: formatCurrency(snapshot.suggestedEquity),
+            requiredPercent: requiredEquityPercent,
+          }}
+          components={[<strong key="es-required" />, <strong key="es-pct" />]}
+        />,
+      ),
     )
   }
   if (snapshot.equity) {
     // Rendered separately under the inputs row (legacy #equity-note).
   }
+  // Raw inputs needed to report a compliant LTV/DTI (the store only carries
+  // the *violated* assessments — feedback request: when conditions are met,
+  // show the same message as a green ✔️ positive line).
+  const propertyValue = parseAmountText(propertyValueText)
+  const capital = parseAmountText(capitalText)
+  const income = parseAmountText(incomeText)
+  const loanAmount = tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
+  const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capital
+
   if (snapshot.ltv) {
     // Precise ratio (e.g. 75.3%) so the warning never reads as
     // "75% exceeds 75%" when the true ratio is just above the limit.
     const ltvPercent = Number.isInteger(snapshot.ltv.percent)
       ? String(snapshot.ltv.percentRounded)
       : snapshot.ltv.percent.toFixed(1)
+    // The violation and the "what the bank allows" follow-up read as one bad
+    // line — feedback request (sum them together).
     warningMessages.push(
-      t('calculator.warnings.ltv', {
-        percent: ltvPercent,
-        purpose: purposeLabels[snapshot.ltv.purpose],
-        limit: snapshot.ltv.limit,
-        value: formatCurrency(snapshot.ltv.effectiveValue),
-        maxLoan: formatCurrency(snapshot.ltv.maxLoan),
-      }),
+      mark(
+        'negative',
+        <>
+          <Trans
+            i18nKey="calculator.warnings.ltv"
+            values={{
+              percent: ltvPercent,
+              purpose: purposeLabels[snapshot.ltv.purpose],
+              limit: snapshot.ltv.limit,
+            }}
+            components={[<strong key="ltv-percent" />, <strong key="ltv-limit" />]}
+          />
+          {' ~ '}
+          <Trans
+            i18nKey="calculator.warnings.ltvMaxLoan"
+            values={{
+              value: formatCurrency(snapshot.ltv.effectiveValue),
+              maxLoan: formatCurrency(snapshot.ltv.maxLoan),
+            }}
+            components={[<strong key="ltv-value" />, <strong key="ltv-maxloan" />]}
+          />
+        </>,
+      ),
     )
+  } else if (!snapshot.isEmpty && effectiveValue >= MIN_REAL_HOME_VALUE && loanAmount > 0) {
+    // Compliant financing ratio → green ✔️ mirror of the violation line.
+    const percent = (loanAmount / effectiveValue) * 100
+    const limit = PURPOSE_LIMITS[purpose].limit
+    if (percent <= limit + 0.01) {
+      const ltvPercent = Number.isInteger(percent) ? String(Math.round(percent)) : percent.toFixed(1)
+      warningMessages.push(
+        mark(
+          'positive',
+          <Trans
+            i18nKey="calculator.warnings.ltvOk"
+            values={{ percent: ltvPercent, purpose: purposeLabels[purpose], limit }}
+            components={[<strong key="ltv-percent" />, <strong key="ltv-limit" />]}
+          />,
+        ),
+      )
+    }
   }
   if (snapshot.dti) {
+    // The payment shortfall and the bank's income requirement combine into
+    // one brief line — the shortfall is bad news (red ❌).
     warningMessages.push(
-      t('calculator.warnings.dti', {
-        payment: formatCurrency(snapshot.dti.payment),
-        minIncome: formatCurrency(snapshot.dti.minIncome),
-        shortfall: snapshot.dti.shortfallPercent,
-      }),
+      mark(
+        'negative',
+        <Trans
+          i18nKey="calculator.warnings.dti"
+          values={{
+            payment: formatCurrency(snapshot.dti.payment),
+            shortfall: snapshot.dti.shortfallPercent,
+            minIncome: formatCurrency(snapshot.dti.minIncome),
+          }}
+          components={[
+            <strong key="dti-payment" />,
+            <strong key="dti-shortfall" />,
+            <strong key="dti-minincome" />,
+          ]}
+        />,
+      ),
     )
+  } else if (!snapshot.isEmpty && snapshot.totals.firstPayment > 0 && income > 0) {
+    // Payment within the 50% ceiling → green ✔️ mirror of the violation line.
+    if (snapshot.totals.firstPayment / income <= DTI_THRESHOLD) {
+      warningMessages.push(
+        mark(
+          'positive',
+          <Trans
+            i18nKey="calculator.warnings.dtiOk"
+            values={{ payment: formatCurrency(snapshot.totals.firstPayment) }}
+            components={[<strong key="dti-payment" />]}
+          />,
+        ),
+      )
+    }
   }
 
   const errorMessage = (() => {
@@ -141,6 +259,137 @@ export function useCalculatorViewModel() {
       </>
     )
 
+  // Equity note lines: the actual/required equity share, the closing-cost
+  // breakdown, then the totals — every number is bold. The closing-cost
+  // subtotal (סה"כ עלויות נלוות ומיסים) always closes the list.
+  const equityNoteLines: NoteLine[] = (() => {
+    const lines: NoteLine[] = []
+    // The equity share (actual or required) leads the list — when it's
+    // neutral it is the first info line (feedback request). When it's below
+    // the required amount, the shortfall folds into the same line.
+    if (snapshot.equity) {
+      if (snapshot.equityShortfall && snapshot.suggestedEquity !== null) {
+        lines.push(
+          mark(
+            'negative',
+            <Trans
+              i18nKey="calculator.warnings.equityPercentRequired"
+              values={{
+                percent: snapshot.equity.percent,
+                required: formatCurrency(snapshot.suggestedEquity),
+                requiredPercent: requiredEquityPercent,
+              }}
+              components={[
+                <strong key="equity-percent" />,
+                <strong key="required" />,
+                <strong key="requiredPercent" />,
+              ]}
+            />,
+          ),
+        )
+      } else {
+        const state = snapshot.equity.state
+        lines.push(
+          mark(
+            state === 'good' ? 'positive' : state === 'bad' ? 'negative' : 'info',
+            <Trans
+              i18nKey="calculator.warnings.equity"
+              values={{ percent: snapshot.equity.percent }}
+              components={[<strong key="equity-percent" />]}
+            />,
+          ),
+        )
+      }
+    } else if (snapshot.suggestedEquity !== null) {
+      // Requirement is general info, not good or bad news.
+      lines.push(
+        mark(
+          'info',
+          <Trans
+            i18nKey="calculator.warnings.equityRequired"
+            values={{
+              required: formatCurrency(snapshot.suggestedEquity),
+              requiredPercent: requiredEquityPercent,
+            }}
+            components={[<strong key="required" />, <strong key="requiredPercent" />]}
+          />,
+        ),
+      )
+    }
+
+    if (snapshot.closingCosts !== null) {
+      if (snapshot.closingCosts.purchaseTax === 0) {
+        lines.push(
+          mark(
+            'positive',
+            <Trans
+              i18nKey="calculator.warnings.purchaseTaxNone"
+              values={{
+                purpose: purchaseTaxPurposeLabels[purpose],
+                threshold: formatCurrency(FIRST_HOME_TAX_EXEMPTION_UP_TO),
+              }}
+              components={[<strong key="threshold" />]}
+            />,
+          ),
+        )
+      } else {
+        lines.push(
+          mark(
+            'info',
+            <Trans
+              i18nKey="calculator.warnings.purchaseTax"
+              values={{
+                purpose: purchaseTaxPurposeLabels[purpose],
+                amount: formatCurrency(snapshot.closingCosts.purchaseTax),
+                percent: formatRatePercent(snapshot.closingCosts.purchaseTaxPercent),
+              }}
+              components={[<strong key="taxAmount" />, <strong key="taxPercent" />]}
+            />,
+          ),
+        )
+      }
+    }
+    // Side costs (attorney, registration & surveyor) — general info.
+    if (snapshot.closingCosts !== null) {
+      lines.push(
+        mark(
+          'info',
+          <Trans
+            i18nKey="calculator.warnings.closingCosts"
+            values={{
+              amount: formatCurrency(snapshot.closingCosts.sideCosts),
+              percent: snapshot.closingCosts.sideCostsPercent,
+            }}
+            components={[<strong key="sideAmount" />, <strong key="sidePercent" />]}
+          />,
+        ),
+      )
+    }
+    // Overall cash needed upfront (equity + all side costs & taxes) — the
+    // two legacy totals merged into one line (feedback request).
+    if (snapshot.suggestedEquity !== null && snapshot.closingCosts !== null) {
+      lines.push(
+        mark(
+          'info',
+          <Trans
+            i18nKey="calculator.warnings.equityTotalRequired"
+            values={{ total: formatCurrency(snapshot.suggestedEquity + snapshot.closingCosts.total) }}
+            components={[<strong key="total" />]}
+          />,
+        ),
+      )
+    }
+    return lines
+  })()
+
+  // Everything on one list, grouped by status: good → bad → info
+  // (feedback request), with one uniform font size and no yellow tint.
+  const summaryNotes: NoteLine[] = [...equityNoteLines, ...warningMessages].sort(
+    (a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status],
+  )
+  // When nothing is wrong (no red ❌ lines), the whole summary reads green.
+  const allGood = summaryNotes.every((line) => line.status !== 'negative')
+
   return {
     snapshot,
     error,
@@ -163,96 +412,9 @@ export function useCalculatorViewModel() {
       snapshot.incomePlaceholder !== null ? formatCurrency(snapshot.incomePlaceholder) : undefined,
     capitalPlaceholder:
       snapshot.suggestedEquity !== null ? formatCurrency(snapshot.suggestedEquity) : undefined,
-    // Equity note lines: the actual/required equity share, the closing-cost
-    // breakdown, then the totals — every number is bold. The closing-cost
-    // subtotal (סה"כ עלויות נלוות ומיסים) always closes the list.
-    equityNoteLines: (() => {
-      const lines: ReactNode[] = []
-      // Purchase tax first — "not applicable up to the exemption" for a first
-      // home, otherwise the amount for a second home and beyond.
-      if (snapshot.closingCosts !== null) {
-        if (snapshot.closingCosts.purchaseTax === 0) {
-          lines.push(
-            <Trans
-              i18nKey="calculator.warnings.purchaseTaxNone"
-              values={{
-                purpose: purchaseTaxPurposeLabels[purpose],
-                threshold: formatCurrency(FIRST_HOME_TAX_EXEMPTION_UP_TO),
-              }}
-              components={[<strong key="threshold" />]}
-            />,
-          )
-        } else {
-          lines.push(
-            <Trans
-              i18nKey="calculator.warnings.purchaseTax"
-              values={{
-                purpose: purchaseTaxPurposeLabels[purpose],
-                amount: formatCurrency(snapshot.closingCosts.purchaseTax),
-                percent: formatRatePercent(snapshot.closingCosts.purchaseTaxPercent),
-              }}
-              components={[<strong key="taxAmount" />, <strong key="taxPercent" />]}
-            />,
-          )
-        }
-      }
-      // The equity share (actual or required).
-      if (snapshot.equity) {
-        lines.push(
-          <Trans
-            i18nKey="calculator.warnings.equity"
-            values={{ percent: snapshot.equity.percent }}
-            components={[<strong key="equity-percent" />]}
-          />,
-        )
-      } else if (snapshot.suggestedEquity !== null) {
-        lines.push(
-          <Trans
-            i18nKey="calculator.warnings.equityRequired"
-            values={{
-              required: formatCurrency(snapshot.suggestedEquity),
-              requiredPercent: requiredEquityPercent,
-            }}
-            components={[<strong key="required" />, <strong key="requiredPercent" />]}
-          />,
-        )
-      }
-      // Side costs (attorney, registration & surveyor).
-      if (snapshot.closingCosts !== null) {
-        lines.push(
-          <Trans
-            i18nKey="calculator.warnings.closingCosts"
-            values={{
-              amount: formatCurrency(snapshot.closingCosts.sideCosts),
-              percent: snapshot.closingCosts.sideCostsPercent,
-            }}
-            components={[<strong key="sideAmount" />, <strong key="sidePercent" />]}
-          />,
-        )
-      }
-      // Overall cash needed upfront (equity + all closing costs).
-      if (snapshot.suggestedEquity !== null && snapshot.closingCosts !== null) {
-        lines.push(
-          <>
-            {t('calculator.warnings.equityTotalPrefix')}
-            <strong>
-              {formatCurrency(snapshot.suggestedEquity + snapshot.closingCosts.total)}
-            </strong>
-          </>,
-        )
-      }
-      // Closing-cost subtotal — always the last line when it applies.
-      if (snapshot.closingCosts !== null && snapshot.closingCosts.purchaseTax !== 0) {
-        lines.push(
-          <Trans
-            i18nKey="calculator.warnings.closingCostsTotal"
-            values={{ total: formatCurrency(snapshot.closingCosts.total) }}
-            components={[<strong key="total" />]}
-          />,
-        )
-      }
-      return lines
-    })(),
+    equityNoteLines,
+    summaryNotes,
+    allGood,
     equityState: snapshot.equity?.state ?? null,
     warningMessages,
     visibleScheduleRows,

@@ -9,8 +9,8 @@ export class CalculatorPage {
   readonly totalPayment: Locator
   readonly paymentNote: Locator
   readonly formError: Locator
-  readonly limitsWarning: Locator
-  readonly equityNote: Locator
+  /** Merged good/bad/info summary notes (equity note + regulatory warnings). */
+  readonly summaryNotes: Locator
   readonly autofixButton: Locator
   readonly addTrackButton: Locator
   readonly resetButton: Locator
@@ -28,8 +28,7 @@ export class CalculatorPage {
     this.totalPayment = page.getByTestId('total-payment')
     this.paymentNote = page.getByTestId('payment-note')
     this.formError = page.getByTestId('form-error')
-    this.limitsWarning = page.getByTestId('limits-warning')
-    this.equityNote = page.getByTestId('equity-note')
+    this.summaryNotes = page.getByTestId('summary-notes')
     this.autofixButton = page.getByTestId('autofix-mix')
     this.addTrackButton = page.getByTestId('add-track')
     this.resetButton = page.getByTestId('reset-calculator')

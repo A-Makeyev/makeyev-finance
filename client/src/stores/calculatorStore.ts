@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import {
   MAX_YEARS,
+  DEFAULT_TERM_YEARS,
   FALLBACK_INFLATION,
   FALLBACK_PRIME_RATE,
   DEFAULT_RATES_BY_TYPE,
@@ -416,8 +417,8 @@ function createInitialTracks(primeRate: number | null): TrackState[] {
   const allocated = allocatePreset('basket1', 1_000_000, primeRate)
   return allocated.map((entry) =>
     trackFromValues(
-      { type: entry.type, amount: entry.amount, years: MAX_YEARS, rate: entry.rate },
-      MAX_YEARS,
+      { type: entry.type, amount: entry.amount, years: DEFAULT_TERM_YEARS, rate: entry.rate },
+      DEFAULT_TERM_YEARS,
       primeRate,
     ),
   )
@@ -427,7 +428,7 @@ const initialData: CalculatorData = {
   startingAmountText: '1,000,000',
   startingNoNeed: false,
   derivedLoanMemory: 0,
-  termYears: MAX_YEARS,
+  termYears: DEFAULT_TERM_YEARS,
   propertyValueText: '',
   capitalText: '',
   incomeText: '',
@@ -713,7 +714,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.derivedLoanMemory = 0
         s.propertyValueText = ''
         s.capitalText = ''
-        s.termYears = MAX_YEARS
+        s.termYears = DEFAULT_TERM_YEARS
         s.scheduleExpanded = false
         // legacy reset does not clear income/purpose; preserved.
         const allocated = allocatePreset('basket1', 1_000_000, s.primeRate)

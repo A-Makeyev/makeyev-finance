@@ -21,6 +21,8 @@ const CPI: CbsFixtureOptions = {
 async function setupSingleIndexedTrack(page: Page) {
   const calc = new CalculatorPage(page)
   await calc.goto()
+  // Pin the term to 30y (the default is 15) so the expected totals below match.
+  await calc.termSlider.fill('30')
   const track = calc.track(1)
   await track.setAmount('100,000')
   await track.setType('fixedIndexed')
@@ -91,6 +93,8 @@ test.describe('CBS CPI index', () => {
     await installExternalMocks(page, { cpi: null })
     const calc = new CalculatorPage(page)
     await calc.goto()
+    // Pin the term to 30y (the default is 15) so the expected totals below match.
+    await calc.termSlider.fill('30')
 
     // Index bar stays hidden entirely (legacy parity).
     await expect(calc.page.locator('[aria-label="מדדי מחירים"]')).toHaveCount(0)

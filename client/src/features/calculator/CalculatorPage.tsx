@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPrimeRatePercent } from '@/services/boi'
@@ -11,7 +11,7 @@ import { PresetSelector } from './PresetSelector'
 import { TrackForm } from './TrackForm'
 import { ResultsCards } from './ResultsCards'
 import { ScheduleSection } from './ScheduleSection'
-import { useCalculatorViewModel } from './useCalculatorViewModel'
+import { useCalculatorViewModel, type NoteLine } from './useCalculatorViewModel'
 
 /**
  * Mortgage calculator page — full port of calculators.html + calculator.js;
@@ -75,6 +75,23 @@ export function CalculatorPage() {
       resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
+
+  /**
+   * Renders status-tagged summary lines as blocks, adding a larger gap when
+   * the status group changes (positive → negative → info) so good, bad and
+   * general-info messages read as groups (feedback request).
+   */
+  const renderNoteLines = (lines: NoteLine[]): ReactNode =>
+    lines.map((line, index) => (
+      <span
+        key={index}
+        className={`note-line ${line.status}${
+          index > 0 && line.status !== lines[index - 1].status ? ' group-start' : ''
+        }`}
+      >
+        {line.node}
+      </span>
+    ))
 
   return (
     <>
@@ -187,37 +204,17 @@ export function CalculatorPage() {
               </label>
             </div>
 
-            {/* Equity note */}
-            <p
-              id="equity-note"
-              hidden={vm.equityNoteLines.length === 0}
-              data-testid="equity-note"
-              className={`${
-                vm.equityState === 'bad'
-                  ? 'info-note equity-bad'
-                  : vm.equityState === 'good'
-                    ? 'info-note equity-good'
-                    : 'info-note'
-              } whitespace-pre-line`}
-            >
-              {vm.equityNoteLines.map((line, index) => (
-                <Fragment key={index}>
-                  {line}
-                  {index < vm.equityNoteLines.length - 1 ? '\n' : null}
-                </Fragment>
-              ))}
-            </p>
-
-            {/* Limits warnings */}
-            <p
-              id="limits-warning"
-              hidden={vm.warningMessages.length === 0}
-              data-testid="limits-warning"
+            {/* Summary notes: the equity/closing-cost breakdown and the
+                regulatory warnings on one list, grouped good → bad → info */}
+            <div
+              id="summary-notes"
+              hidden={vm.summaryNotes.length === 0}
+              data-testid="summary-notes"
               role="alert"
-              className="limits-warning"
+              className={`summary-notes${vm.allGood ? ' all-good' : ''}`}
             >
-              {vm.warningMessages.join('\n')}
-            </p>
+              {renderNoteLines(vm.summaryNotes)}
+            </div>
 
             <PresetSelector />
 
@@ -270,7 +267,7 @@ export function CalculatorPage() {
             )}
 
             <p className="regulatory-note">
-              <strong>💡</strong> {' '}
+              <strong>⚠️</strong> {' '}
               {t('calculator.regulatoryNote')}
             </p>
           </form>
