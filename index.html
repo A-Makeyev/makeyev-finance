@@ -199,11 +199,28 @@
   </div>
   <div class="container">
     <div class="header">
-      <h1>🧪 Automation Reports</h1>
+      <h1>🧪 Test Reports</h1>
       <button class="refresh-btn" onclick="refreshReports()">↻</button>
     </div>
     <div class="last-updated" id="lastUpdated"></div>
     <ul class="reports-list" id="reportsList">
+        <li class="report-item">
+          <a href="Run-8/index.html" class="report-link">
+            <div class="report-content">
+              <div class="run-header">
+                <span class="run-number">Run #8 <span class="badge badge-success">✓ Passed</span></span>
+                <span class="test-type">Playwright Tests</span>
+              </div>
+              <div class="run-date">30-08-2026 03:52PM</div>
+              <div class="test-stats">
+                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
+                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
+                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
+              </div>
+            </div>
+            <div class="link-icon">→</div>
+          </a>
+        </li>
         <li class="report-item">
           <a href="Run-7/index.html" class="report-link">
             <div class="report-content">
@@ -252,7 +269,7 @@
     updateTimestamp();
 
     // Auto-refresh logic
-    const currentRun = "7";
+    const currentRun = "8";
     let checkCount = 0;
 
     async function checkForUpdates() {
