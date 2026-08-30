@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
+  <title>Automation Test Reports</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      margin: 0;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      flex-direction: row;
+      align-items: center;
+      margin-bottom: 30px;
+      padding: 0 10px;
+    }
+    h1 {
+      color: white;
+      font-size: 2.5em;
+      margin: 0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .refresh-btn {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.4em;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .refresh-btn:hover {
+      background: rgba(255,255,255,0.25);
+      transform: rotate(180deg);
+    }
+    .refresh-btn:active {
+      transform: rotate(180deg) scale(0.9);
+    }
+    .refresh-btn.loading {
+      opacity: 0.6;
+      cursor: wait;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .last-updated {
+      text-align: right;
+      color: rgba(255,255,255,0.9);
+      font-size: 0.85em;
+      margin-bottom: 25px;
+      font-weight: 500;
+    }
+    .reports-list {
+      list-style: none;
+      padding: 0;
+    }
+    .report-item {
+      margin: 15px 0;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .report-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+    }
+    .report-link {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      text-decoration: none;
+      color: #333;
+    }
+    .report-content {
+      flex: 1;
+    }
+    .link-icon {
+      color: #999;
+      font-size: 2em;
+      font-weight: bolder;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .report-item:hover .link-icon {
+      opacity: 1;
+    }
+    .run-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .run-number {
+      font-size: 1.3em;
+      font-weight: 600;
+      color: #667eea;
+    }
+    .test-type {
+      font-size: 0.85em;
+      color: #888;
+      font-weight: 500;
+    }
+    .run-date {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 4px;
+    }
+    .test-stats {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+      font-size: 0.85em;
+    }
+    .stat-item {
+      color: #888;
+    }
+    .stat-value {
+      font-weight: 600;
+      color: #555;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      color: white;
+      border-radius: 12px;
+      font-size: 0.8em;
+      margin-left: 10px;
+      font-weight: 500;
+    }
+    .badge-success {
+      background: #10b981;
+    }
+    .badge-failed {
+      background: #ef4444;
+    }
+    .update-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #10b981;
+      color: white;
+      padding: 12px;
+      text-align: center;
+      font-weight: 600;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-100%); }
+      to { transform: translateY(0); }
+    }
+    .update-banner button {
+      background: white;
+      color: #10b981;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 6px;
+      margin-left: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .update-banner button:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div id="updateBanner" class="update-banner">
+    ✨ New test results are available!
+    <button onclick="refreshReports()">See Results</button>
+  </div>
+  <div class="container">
+    <div class="header">
+      <h1>🧪 Automation Reports</h1>
+      <button class="refresh-btn" onclick="refreshReports()">↻</button>
+    </div>
+    <div class="last-updated" id="lastUpdated"></div>
+    <ul class="reports-list" id="reportsList">
+        <li class="report-item">
+          <a href="Run-7/index.html" class="report-link">
+            <div class="report-content">
+              <div class="run-header">
+                <span class="run-number">Run #7 <span class="badge badge-success">✓ Passed</span></span>
+                <span class="test-type">Playwright Tests</span>
+              </div>
+              <div class="run-date">30-08-2026 03:19PM</div>
+              <div class="test-stats">
+                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
+                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
+                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
+              </div>
+            </div>
+            <div class="link-icon">→</div>
+          </a>
+        </li>
+    </ul>
+  </div>
+  <script>
+    // Update last updated timestamp
+    function updateTimestamp() {
+      const now = new Date();
+      const formatted = now.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      document.getElementById('lastUpdated').textContent = 'Last updated: ' + formatted;
+    }
+
+    // Refresh with cache busting
+    function refreshReports() {
+      const btn = document.querySelector('.refresh-btn');
+      btn.classList.add('loading');
+
+      // Use cache-busting query parameter
+      const timestamp = new Date().getTime();
+      window.location.href = window.location.pathname + '?v=' + timestamp;
+    }
+
+    // Set initial timestamp
+    updateTimestamp();
+
+    // Auto-refresh logic
+    const currentRun = "7";
+    let checkCount = 0;
+
+    async function checkForUpdates() {
+      try {
+        // Cache busting for the metadata file
+        const response = await fetch('latest.txt?t=' + Date.now());
+        if (response.ok) {
+          const latestRun = (await response.text()).trim();
+          if (latestRun && latestRun !== currentRun) {
+            document.getElementById('updateBanner').style.display = 'block';
+            // Also update the refresh button to glow
+            document.querySelector('.refresh-btn').style.background = '#10b981';
+          }
+        }
+      } catch (e) {
+        console.log('Update check failed', e);
+      }
+    }
+
+    setInterval(checkForUpdates, 30000);
+    setTimeout(checkForUpdates, 10000);
+  </script>
+</body>
+</html>
