@@ -4,9 +4,13 @@ const currencyFormatter = new Intl.NumberFormat('he-IL', {
   maximumFractionDigits: 0,
 })
 
-/** ₪ currency formatting, identical to the legacy calculator. */
+/**
+ * ₪ currency formatting, identical to the legacy calculator. Guards against
+ * NaN/Infinity so a bad value can never render literal "NaN ₪" / "∞ ₪" —
+ * it degrades to ₪0, matching the defensive style used in amortization.ts.
+ */
 export function formatCurrency(value: number): string {
-  return currencyFormatter.format(value)
+  return currencyFormatter.format(Number.isFinite(value) ? value : 0)
 }
 
 /**
@@ -71,13 +75,14 @@ function sanitizeAmountText(raw: string): string {
 
 /**
  * Percent display that never rounds a small rate to "0.0%": whole numbers stay
- * whole, rates under 1% get 3 decimals, otherwise 1 decimal — trailing zeros
- * trimmed (e.g. 0.0372 → "0.037", 8.271 → "8.3").
+ * whole, rates under 1% get 3 decimals, otherwise 2 decimals — trailing zeros
+ * trimmed (e.g. 0.0372 → "0.037", 8.271 → "8.27", 4.50 → "4.5"). Two decimals
+ * for the ≥1% branch preserve precision on real preset rates (5.75, 4.25).
  */
 export function formatRatePercent(percent: number): string {
   if (!Number.isFinite(percent)) return '0'
   if (Number.isInteger(percent)) return String(percent)
-  const decimals = percent < 1 ? 3 : 1
+  const decimals = percent < 1 ? 3 : 2
   return percent.toFixed(decimals).replace(/\.?0+$/, '')
 }
 

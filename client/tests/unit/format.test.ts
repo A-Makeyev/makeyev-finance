@@ -49,17 +49,29 @@ describe('number formatting parity with legacy', () => {
     expect(formatCurrency(1_000_000)).toContain('1,000,000')
     expect(formatCurrency(0)).toMatch(/0/)
   })
+
+  it('degrades non-finite values to ₪0 instead of "NaN ₪" / "∞ ₪"', () => {
+    expect(formatCurrency(NaN)).toBe(formatCurrency(0))
+    expect(formatCurrency(Infinity)).toBe(formatCurrency(0))
+    expect(formatCurrency(-Infinity)).toBe(formatCurrency(0))
+  })
   it('uses en-US grouping inside inputs (legacy convention)', () => {
     expect(formatGroupedNumber(1234567)).toBe('1,234,567')
   })
 })
 
 describe('formatRatePercent', () => {
-  it('keeps whole numbers whole and normal rates at 1 decimal', () => {
+  it('keeps whole numbers whole and normal rates at 2 decimals', () => {
     expect(formatRatePercent(8)).toBe('8')
-    expect(formatRatePercent(8.271)).toBe('8.3')
+    expect(formatRatePercent(8.271)).toBe('8.27')
     expect(formatRatePercent(1.5)).toBe('1.5')
     expect(formatRatePercent(0)).toBe('0')
+  })
+
+  it('preserves precision on the real preset rates', () => {
+    expect(formatRatePercent(5.75)).toBe('5.75')
+    expect(formatRatePercent(4.25)).toBe('4.25')
+    expect(formatRatePercent(3.0)).toBe('3')
   })
 
   it('never rounds tiny rates to 0.0% — shows 3 decimals instead', () => {
