@@ -47,7 +47,7 @@ export function ActionFormModal({ open, onOpenChange }: ActionFormModalProps) {
         tone="blue"
         testId="action-form-modal"
         dir={isHebrew ? 'rtl' : 'ltr'}
-        contentClassName="max-w-[500px] !rounded-2xl !border-soft-black !shadow-[0_8px_24px_rgba(15,15,15,0.28)]"
+        contentClassName="max-w-[500px] !rounded-2xl !border-soft-black !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
       >
         <div className="p-6 pb-5" dir={isHebrew ? 'rtl' : 'ltr'}>
           {/* Header */}

@@ -44,9 +44,19 @@ export function FloatingLabelField({
   const isFloating = focused || hasValue
   const displayLabel = addColonOnFocus && focused && !label.endsWith(':') ? `${label}:` : label
 
+  // Color is driven purely by validity (not focus): grey neutral, blue valid,
+  // red invalid. The focus ring mirrors the status so keyboard focus stays
+  // visible without ever recoloring a neutral input to blue.
+  const statusRing =
+    status === 'invalid'
+      ? 'focus:ring-2 focus:ring-soft-red/30'
+      : status === 'valid'
+        ? 'focus:ring-2 focus:ring-soft-blue/30'
+        : 'focus:ring-2 focus:ring-soft-dark-grey/20'
+
   const fieldClasses = cn(
     'peer w-full rounded-[5px] border bg-white outline-none transition-all duration-200 font-medium text-soft-black',
-    'focus:ring-2 focus:ring-soft-blue/30 focus:border-soft-blue',
+    statusRing,
     // Equal 13px padding + a 22px line box exactly fill the 50px input,
     // so typed text sits dead-center vertically.
     textarea
@@ -54,7 +64,10 @@ export function FloatingLabelField({
       : 'px-3 py-[13px] leading-[22px] text-[17px] h-[50px]',
     status === 'invalid' && 'border-soft-red shadow-red',
     status === 'valid' && 'border-soft-blue shadow-blue',
-    status === 'neutral' && 'border-soft-black shadow-black',
+    // Neutral inputs keep the legacy near-black border + shadow, just a touch
+    // lighter (rgb 70 vs soft-black's 15) so they read less heavy. On focus
+    // the border darkens toward the original soft-black.
+    status === 'neutral' && 'border-[rgb(70,70,70)] shadow-black focus:border-soft-black',
     isRtl ? 'text-right' : 'text-left',
   )
 
@@ -71,12 +84,22 @@ export function FloatingLabelField({
           // centered on the input box itself.
           isRtl ? (isFloating ? 'right-3' : 'right-4') : isFloating ? 'left-3' : 'left-4',
           isFloating
-            ? '-top-1 text-[16px] text-soft-blue/80'
+            ? '-top-1 text-[16px]'
             : textarea
               // Textarea label sits where the first typed line lands: wrapper
               // pt-4 (16px) + textarea border (1px) + textarea pt-6 (24px).
-              ? 'top-[41px] text-[17px] text-soft-dark-grey'
-              : 'top-[calc(50%_+_8px)] -translate-y-1/2 text-[17px] text-soft-dark-grey',
+              ? 'top-[41px] text-[17px]'
+              : 'top-[calc(50%_+_8px)] -translate-y-1/2 text-[17px]',
+          // Label color mirrors the border and follows validity only. A
+          // neutral input (empty) darkens its label on focus but never turns
+          // blue/red until the value is valid or invalid.
+          status === 'invalid'
+            ? 'text-soft-red'
+            : status === 'valid'
+              ? 'text-soft-blue/80'
+              : isFloating
+                ? 'text-soft-black'
+                : 'text-soft-dark-grey',
         )}
       >
         {displayLabel}
