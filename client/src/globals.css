@@ -248,11 +248,21 @@ body {
   color: var(--soft-white);
   text-transform: capitalize;
   background: var(--soft-red);
+  /* A little breathing room above and below the banner text. */
+  padding-block: 8px;
 }
 
 #offline.visible,
 #offline[style*='block'] {
   display: block;
+}
+
+/* Keep the info icon and label together, centered as one unit. */
+.offline-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
 }
 
 p {
