@@ -1,13 +1,26 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCalculatorStore } from '@/stores/calculatorStore'
 import { useCalculatorViewModel } from './useCalculatorViewModel'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatRatio } from '@/lib/format'
 
-/** Amortization schedule — legacy .schedule-section markup and classes. */
+type ScheduleView = 'total' | 'separate'
+
+/**
+ * Amortization schedule — legacy .schedule-section markup and classes. Shows
+ * either the combined "total" table (all tracks together) or one yearly table
+ * per track with a payback-ratio column, toggled via a segmented control.
+ */
 export function ScheduleSection() {
   const { t } = useTranslation()
   const vm = useCalculatorViewModel()
   const toggleScheduleExpanded = useCalculatorStore((s) => s.toggleScheduleExpanded)
+  const [view, setView] = useState<ScheduleView>('total')
+
+  const viewButtons: Array<{ id: ScheduleView; label: string }> = [
+    { id: 'total', label: t('calculator.schedule.viewTotal') },
+    { id: 'separate', label: t('calculator.schedule.viewSeparate') },
+  ]
 
   return (
     <section className="schedule-section">
@@ -20,29 +33,89 @@ export function ScheduleSection() {
         </p>
       </div>
 
+      <div
+        className="schedule-view-toggle"
+        role="group"
+        aria-label={t('calculator.schedule.viewToggleAria')}
+      >
+        {viewButtons.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            data-testid={`schedule-view-${id}`}
+            aria-pressed={view === id}
+            className={`schedule-view-button${view === id ? ' active' : ''}`}
+            onClick={() => setView(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="schedule-content">
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>{t('calculator.schedule.yearHeader')}</th>
-                <th>{t('calculator.schedule.principalHeader')}</th>
-                <th>{t('calculator.schedule.interestHeader')}</th>
-                <th>{t('calculator.schedule.balanceHeader')}</th>
-              </tr>
-            </thead>
-            <tbody id="schedule-body" data-testid="schedule-body">
-              {vm.visibleScheduleRows.map((row) => (
-                <tr key={row.year}>
-                  <td data-testid={`schedule-year-${row.year}`}>{row.year}</td>
-                  <td>{formatCurrency(row.principal)}</td>
-                  <td>{formatCurrency(row.interest)}</td>
-                  <td>{formatCurrency(row.closing)}</td>
+        {view === 'total' ? (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t('calculator.schedule.yearHeader')}</th>
+                  <th>{t('calculator.schedule.principalHeader')}</th>
+                  <th>{t('calculator.schedule.interestHeader')}</th>
+                  <th>{t('calculator.schedule.balanceHeader')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody id="schedule-body" data-testid="schedule-body">
+                {vm.visibleScheduleRows.map((row) => (
+                  <tr key={row.year}>
+                    <td data-testid={`schedule-year-${row.year}`}>{row.year}</td>
+                    <td>{formatCurrency(row.principal)}</td>
+                    <td>{formatCurrency(row.interest)}</td>
+                    <td>{formatCurrency(row.closing)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="schedule-tracks">
+            {vm.visibleScheduleTracks.length === 0 && (
+              <p className="schedule-empty">{t('calculator.emptyNote')}</p>
+            )}
+            {vm.visibleScheduleTracks.map((track, index) => (
+              <section className="schedule-track" key={`${index}-${track.type}`}>
+                <h3 className="schedule-track-heading">
+                  {t(`calculator.trackTypes.${track.type}`)} · {formatCurrency(track.amount)}
+                  <span className="schedule-track-heading-ratio">
+                    {' '}· {t('calculator.schedule.paybackRatioLabel')}{' '}
+                    {formatRatio(track.rows[0]?.paybackRatio)}
+                  </span>
+                </h3>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{t('calculator.schedule.yearHeader')}</th>
+                        <th>{t('calculator.schedule.principalHeader')}</th>
+                        <th>{t('calculator.schedule.interestHeader')}</th>
+                        <th>{t('calculator.schedule.balanceHeader')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {track.rows.map((row) => (
+                        <tr key={row.year}>
+                          <td data-testid={`schedule-year-${row.year}`}>{row.year}</td>
+                          <td>{formatCurrency(row.principal)}</td>
+                          <td>{formatCurrency(row.interest)}</td>
+                          <td>{formatCurrency(row.balance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
 
         <aside className="schedule-aside">
           <p>{t('calculator.schedule.asideTitle')}</p>

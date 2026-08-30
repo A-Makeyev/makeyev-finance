@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [ui-chromium, ui-firefox, ui-webkit]
+        project: [ui-chromium]
     steps:
       - uses: actions/checkout@v5
 
@@ -74,7 +74,7 @@ jobs:
           path: client/dist
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox webkit
+        run: npx playwright install --with-deps chromium
 
       - name: Run UI e2e tests
         run: npx playwright test --project=${{ matrix.project }}

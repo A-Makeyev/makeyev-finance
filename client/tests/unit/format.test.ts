@@ -5,6 +5,7 @@ import {
   formatCurrency,
   formatGroupedNumber,
   formatRatePercent,
+  formatRatio,
   parseAmountText,
 } from '@/lib/format'
 
@@ -65,6 +66,20 @@ describe('formatRatePercent', () => {
     expect(formatRatePercent(0.0372)).toBe('0.037')
     expect(formatRatePercent(0.1)).toBe('0.1')
     expect(formatRatePercent(0.0005)).toBe('0.001')
+  })
+})
+
+describe('formatRatio', () => {
+  it('keeps four decimals and trims trailing zeros', () => {
+    expect(formatRatio(1.0617)).toBe('1.0617')
+    expect(formatRatio(1.1422)).toBe('1.1422')
+    expect(formatRatio(1)).toBe('1')
+    expect(formatRatio(1.5)).toBe('1.5')
+  })
+
+  it('falls back to 0 for non-finite values', () => {
+    expect(formatRatio(NaN)).toBe('0')
+    expect(formatRatio(Infinity)).toBe('0')
   })
 })
 

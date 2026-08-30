@@ -5,11 +5,16 @@ import {
   assessEquity,
   assessLtv,
   autoFixVariableMix,
+  averageInterestRate,
+  averagePaybackRatio,
+  buildTrackScheduleRows,
+  calculateWeightedAvgInterestRate,
   combineSchedules,
   computePurchaseTax,
   computeTrackResult,
   deriveLoanAmount,
   distributeEqually,
+  effectiveAnnualRatePercent,
   estimateClosingCosts,
   scaleTrackAmounts,
   suggestedEquity,
@@ -344,8 +349,8 @@ describe('suggestedEquity (required initial הון עצמי)', () => {
     // Non-multiple of 500 rounds UP.
     expect(suggestedEquity(1_500_001, 0, 0, 'first')).toBe(375_500)
     expect(suggestedEquity(0, 0, 0, 'first')).toBeNull()
-    // Too small to be a real home → no suggestion.
-    expect(suggestedEquity(15, 0, 0, 'first')).toBeNull()
+    // No value basis → no suggestion; modest values still hint (rounded to 500).
+    expect(suggestedEquity(15, 0, 0, 'first')).toBe(500)
   })
 })
 
@@ -450,6 +455,119 @@ describe('DTI assessment', () => {
 
   it('caps the shortfall display at 99%', () => {
     expect(assessDti(10_000, 1)!.shortfallPercent).toBe(99)
+  })
+})
+
+describe('paybackRatio and aggregate rate/payout helpers', () => {
+  it('exposes the guide-verified payback ratio for a Prime-style track', () => {
+    // 105,000 / 10yr / 1.2% → total ≈ 111,478.40, ratio ≈ 1.0617 (guide fixture).
+    const result = computeTrackResult({
+      principal: 105_000,
+      years: 10,
+      annualRatePercent: 1.2,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    expect(result!.totalPaid).toBeCloseTo(111_478.4, 0)
+    expect(result!.paybackRatio).toBeCloseTo(1.0617, 3)
+    // Self-consistency: ratio is total paid ÷ nominal principal.
+    expect(result!.paybackRatio).toBeCloseTo(result!.totalPaid / result!.principal, 10)
+  })
+
+  it('carries the annual rate through to the result', () => {
+    const result = computeTrackResult({
+      principal: 100_000,
+      years: 10,
+      annualRatePercent: 3.25,
+      type: 'fixedIndexed',
+      method: 'spitzer',
+    })!
+    expect(result!.annualRatePercent).toBe(3.25)
+  })
+
+  it('averages rates unweighted and weighted by loan amount', () => {
+    const small = computeTrackResult({
+      principal: 10_000,
+      years: 10,
+      annualRatePercent: 1,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const large = computeTrackResult({
+      principal: 300_000,
+      years: 10,
+      annualRatePercent: 3,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    // Unweighted: (1 + 3) / 2 = 2% — misrepresents the blended cost.
+    expect(averageInterestRate([small, large])).toBeCloseTo(2, 10)
+    // Weighted: (10k·1 + 300k·3) / 310k = 2.94%
+    expect(calculateWeightedAvgInterestRate([small, large])).toBeCloseTo(910 / 310, 10)
+  })
+
+  it('averages payback ratios across entered tracks', () => {
+    const a = computeTrackResult({
+      principal: 105_000,
+      years: 10,
+      annualRatePercent: 1.2,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const b = computeTrackResult({
+      principal: 146_000,
+      years: 10,
+      annualRatePercent: 2.7,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const expected = (a.paybackRatio + b.paybackRatio) / 2
+    expect(averagePaybackRatio([a, b])).toBeCloseTo(expected, 10)
+    // Guide fixture: 105k/10yr/1.2% → 1.0617 and 146k/10yr/2.7% → 1.1422.
+    expect(a.paybackRatio).toBeCloseTo(1.0617, 2)
+    expect(b.paybackRatio).toBeCloseTo(1.1422, 2)
+  })
+
+  it('returns 0 for an empty set', () => {
+    expect(averageInterestRate([])).toBe(0)
+    expect(calculateWeightedAvgInterestRate([])).toBe(0)
+    expect(averagePaybackRatio([])).toBe(0)
+  })
+})
+
+describe('effectiveAnnualRatePercent', () => {
+  it('is ≥ nominal and ≈0.09pp higher at 4.5% monthly compounding', () => {
+    const eff = effectiveAnnualRatePercent(4.5)
+    expect(eff).toBeGreaterThan(4.5)
+    expect(eff).toBeCloseTo(4.5938, 2)
+  })
+
+  it('returns 0 for zero, negatives and non-finite', () => {
+    expect(effectiveAnnualRatePercent(0)).toBe(0)
+    expect(effectiveAnnualRatePercent(-1)).toBe(0)
+    expect(effectiveAnnualRatePercent(Number.NaN)).toBe(0)
+  })
+})
+
+describe('buildTrackScheduleRows (per-track schedule with payback ratio)', () => {
+  it('stamps the flat lifetime payback ratio on every row', () => {
+    const result = computeTrackResult({
+      principal: 105_000,
+      years: 10,
+      annualRatePercent: 1.2,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const rows = buildTrackScheduleRows(result)
+    expect(rows).toHaveLength(10)
+    // Every row carries the same lifetime ratio — first and last identical.
+    expect(rows.every((row) => row.paybackRatio === result.paybackRatio)).toBe(true)
+    expect(rows[0].paybackRatio).toBeCloseTo(result.paybackRatio, 10)
+    expect(rows[9].paybackRatio).toBeCloseTo(result.paybackRatio, 10)
+    // Each row's principal + interest + balance mirror the source yearlyRows.
+    expect(rows[0].balance).toBeCloseTo(result.yearlyRows[0].closing, 6)
+    expect(rows[4].principal).toBeCloseTo(result.yearlyRows[4].principal, 6)
+    expect(rows[4].interest).toBeCloseTo(result.yearlyRows[4].interest, 6)
   })
 })
 

@@ -12,6 +12,10 @@ import {
   assessEquity,
   assessLtv,
   autoFixVariableMix,
+  averageInterestRate,
+  averagePaybackRatio,
+  buildTrackScheduleRows,
+  calculateWeightedAvgInterestRate,
   combineSchedules,
   computeTrackResult,
   deriveLoanAmount,
@@ -36,6 +40,7 @@ import {
   type PropertyPurpose,
   type TotalsSummary,
   type TrackResult,
+  type TrackScheduleRow,
   type TrackType,
 } from '@/lib/amortization'
 import {
@@ -61,6 +66,20 @@ export interface TrackState {
 
 export type CalculationError = { kind: 'term' } | { kind: 'positive' } | { kind: 'variableCap' }
 
+/** Per-track payback metric (total repaid ÷ principal) for the results display. */
+export interface TrackPayback {
+  type: TrackType
+  amount: number
+  paybackRatio: number
+}
+
+/** One track's own yearly schedule for the schedule section. */
+export interface TrackSchedule {
+  type: TrackType
+  amount: number
+  rows: TrackScheduleRow[]
+}
+
 export interface CalculatorSnapshot {
   totals: TotalsSummary
   annualFirstYearPayment: number
@@ -82,6 +101,16 @@ export interface CalculatorSnapshot {
   equityShortfall: boolean
   /** Rough buyer-side closing costs (side costs + purchase tax) estimate. */
   closingCosts: ClosingCostsEstimate | null
+  /** Unweighted average annual rate (%) of the entered tracks. */
+  avgInterestRate: number
+  /** Loan-amount-weighted average annual rate (%) — blended portfolio cost. */
+  weightedAvgInterestRate: number
+  /** Unweighted average payback ratio across the entered tracks. */
+  avgPaybackRatio: number
+  /** Per-track payback ratios for the entered tracks, in entry order. */
+  trackPaybacks: TrackPayback[]
+  /** Per-track yearly schedules, one table per entered track. */
+  scheduleTracks: TrackSchedule[]
 }
 
 export interface AddTrackValues {
@@ -199,6 +228,11 @@ const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   suggestedEquity: null,
   equityShortfall: false,
   closingCosts: null,
+  avgInterestRate: 0,
+  weightedAvgInterestRate: 0,
+  avgPaybackRatio: 0,
+  trackPaybacks: [],
+  scheduleTracks: [],
 }
 
 // ---------------------------------------------------------------------------
@@ -253,10 +287,11 @@ function scaleTracks(s: CalculatorData): void {
 
 /** Legacy syncStartingAmountFromTracks (calculator.js:169-174). */
 function syncStartingAmountFromTracks(s: CalculatorData): void {
-  if (parseAmountText(s.propertyValueText) > 0) return
+  // סכום המשכנתא always equals the loan itself — the sum of the track
+  // amounts. Equity and property value are separate inputs and must not
+  // inflate the mortgage field, so no capital and no property gate here.
   const total = s.tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
-  const gross = total + parseAmountText(s.capitalText)
-  s.startingAmountText = gross > 0 ? formatGroupedNumber(Math.round(gross)) : ''
+  s.startingAmountText = total > 0 ? formatGroupedNumber(Math.round(total)) : ''
 }
 
 /** Legacy snapTracksToLoan (calculator.js:226-242). */
@@ -358,6 +393,11 @@ function recalculate(s: CalculatorState): void {
       suggestedEquity: suggested,
       equityShortfall: capital > 0 && suggested !== null && suggested > capital,
       closingCosts: estimateClosingCosts(property, 0, capital, s.purpose),
+      avgInterestRate: 0,
+      weightedAvgInterestRate: 0,
+      avgPaybackRatio: 0,
+      trackPaybacks: [],
+      scheduleTracks: [],
     }
     return
   }
@@ -410,6 +450,19 @@ function recalculate(s: CalculatorState): void {
     suggestedEquity: suggested,
     equityShortfall: capital > 0 && suggested !== null && suggested > capital,
     closingCosts: estimateClosingCosts(property, totalPrincipal, capital, s.purpose),
+    avgInterestRate: averageInterestRate(validResults),
+    weightedAvgInterestRate: calculateWeightedAvgInterestRate(validResults),
+    avgPaybackRatio: averagePaybackRatio(validResults),
+    trackPaybacks: validResults.map((result) => ({
+      type: result.type,
+      amount: result.principal,
+      paybackRatio: result.paybackRatio,
+    })),
+    scheduleTracks: validResults.map((result) => ({
+      type: result.type,
+      amount: result.principal,
+      rows: buildTrackScheduleRows(result),
+    })),
   }
 }
 
@@ -470,7 +523,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.startingAmountText = formatted.text
         s.startingNoNeed = false
         s.startingPointDirty = true
-        scaleTracks(s)
+        // snapTracksToLoan scales existing tracks or fills blank ones from the
+        // sum (so a reset blank track computes again, as before).
+        snapTracksToLoan(s)
         recalculate(s)
       })
       return formatted
@@ -490,7 +545,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         s.propertyValueText = formatted.text
         syncStartingFromProperty(s)
-        scaleTracks(s)
+        snapTracksToLoan(s)
         recalculate(s)
       })
       return formatted
@@ -501,7 +556,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         s.capitalText = formatted.text
         syncStartingFromProperty(s)
-        scaleTracks(s)
+        snapTracksToLoan(s)
         recalculate(s)
       })
       return formatted
@@ -707,17 +762,13 @@ export const useCalculatorStore = create<CalculatorStore>()(
     },
 
     reset: () => {
+      // Reset clears every input and leaves the track amount blank (not "0"),
+      // so no "positive amount" error fires and the calculator returns to a
+      // clean empty state — no stale placeholders or summary notes. תמהיל 1
+      // stays selected so it applies once the user enters a new amount.
+      // External live data (prime rate, CPI) is kept — it is market data.
       set((s) => {
-        s.tracks = []
-        s.startingAmountText = '1,000,000'
-        s.startingNoNeed = false
-        s.derivedLoanMemory = 0
-        s.propertyValueText = ''
-        s.capitalText = ''
-        s.termYears = DEFAULT_TERM_YEARS
-        s.scheduleExpanded = false
-        // legacy reset does not clear income/purpose; preserved.
-        const allocated = allocatePreset('basket1', 1_000_000, s.primeRate)
+        const allocated = allocatePreset('basket1', 0, s.primeRate)
         s.tracks = allocated.map((entry) =>
           trackFromValues(
             { type: entry.type, amount: entry.amount, years: s.termYears, rate: entry.rate },
@@ -725,8 +776,25 @@ export const useCalculatorStore = create<CalculatorStore>()(
             s.primeRate,
           ),
         )
+        // Blank the track amount so it isn't counted as "entered".
+        s.tracks.forEach((track) => {
+          track.amountText = ''
+        })
+        s.startingAmountText = ''
+        s.startingNoNeed = false
+        s.derivedLoanMemory = 0
+        s.propertyValueText = ''
+        s.capitalText = ''
+        s.incomeText = ''
+        s.purpose = 'first'
+        s.termYears = DEFAULT_TERM_YEARS
+        s.scheduleExpanded = false
         s.activePreset = 'basket1'
         s.startingPointDirty = false
+        // The empty-state branch preserves the previous income placeholder;
+        // drop it so a reset shows a genuinely blank income field.
+        s.snapshot.incomePlaceholder = null
+        s.error = null
         recalculate(s)
       })
     },

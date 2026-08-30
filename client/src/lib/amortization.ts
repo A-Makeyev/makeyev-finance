@@ -131,6 +131,10 @@ export interface TrackResult {
   isVariable: boolean
   isIndexed: boolean
   method: AmortizationMethod
+  /** Total repaid ÷ nominal principal (e.g. 1.0617 = ₪1.0617 repaid per ₪1 borrowed). */
+  paybackRatio: number
+  /** Annual rate (percent, e.g. 4.5), carried through for the aggregate rate-helpers. */
+  annualRatePercent: number
 }
 
 /**
@@ -225,6 +229,8 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     isVariable: isVariableType(type),
     isIndexed: isIndexedType(type),
     method,
+    paybackRatio: totalPaid / principal,
+    annualRatePercent,
   }
 }
 
@@ -254,6 +260,50 @@ export function sumTotals(results: TrackResult[]): TotalsSummary {
   )
 }
 
+/**
+ * Unweighted average of the entered tracks' annual interest rates (percent).
+ * Each track counts equally regardless of its loan amount (parity with the
+ * reference sheet's average; see the weighted alternative below).
+ */
+export function averageInterestRate(results: TrackResult[]): number {
+  if (!results.length) return 0
+  const total = results.reduce((sum, result) => sum + result.annualRatePercent, 0)
+  return total / results.length
+}
+
+/**
+ * Loan-amount-weighted average annual interest rate (percent) — the blended
+ * cost of the portfolio. A ₪10,000 track at 1% and a ₪300,000 track at 3%
+ * average to 2% unweighted, but ≈2.94% when weighted by amount.
+ */
+export function calculateWeightedAvgInterestRate(results: TrackResult[]): number {
+  const totalLoan = results.reduce((sum, result) => sum + result.principal, 0)
+  if (totalLoan <= 0) return 0
+  const weightedSum = results.reduce(
+    (sum, result) => sum + result.principal * result.annualRatePercent,
+    0,
+  )
+  return weightedSum / totalLoan
+}
+
+/** Average payback ratio (total repaid ÷ principal) across the entered tracks. */
+export function averagePaybackRatio(results: TrackResult[]): number {
+  if (!results.length) return 0
+  const total = results.reduce((sum, result) => sum + result.paybackRatio, 0)
+  return total / results.length
+}
+
+/**
+ * Effective annual rate (EAR) implied by a monthly compounding of a nominal
+ * annual rate (%) — `(1 + nominal/12)^12 − 1`, returned in percent. Always ≥
+ * the nominal rate; used to compare offers apples-to-apples across banks.
+ */
+export function effectiveAnnualRatePercent(nominalRatePercent: number): number {
+  if (!Number.isFinite(nominalRatePercent) || nominalRatePercent < 0) return 0
+  const monthly = nominalRatePercent / 100 / 12
+  return (Math.pow(1 + monthly, 12) - 1) * 100
+}
+
 export type CombinedScheduleRow = YearlyRow
 
 /** Combines per-track yearly rows into a single schedule (missing years filtered). */
@@ -272,6 +322,30 @@ export function combineSchedules(results: TrackResult[]): CombinedScheduleRow[] 
     })
   }
   return combined
+}
+
+/** One display row of a single track's yearly schedule. */
+export interface TrackScheduleRow {
+  year: number
+  principal: number
+  interest: number
+  balance: number
+  /** The track's flat lifetime payback ratio (total repaid ÷ principal). */
+  paybackRatio: number
+}
+
+/**
+ * Derives a single track's per-track yearly schedule, stamping the track's
+ * lifetime payback ratio (total repaid ÷ principal) onto every row.
+ */
+export function buildTrackScheduleRows(result: TrackResult): TrackScheduleRow[] {
+  return result.yearlyRows.map((row) => ({
+    year: row.year,
+    principal: row.principal,
+    interest: row.interest,
+    balance: row.closing,
+    paybackRatio: result.paybackRatio,
+  }))
 }
 
 // ---------------------------------------------------------------------------
@@ -426,7 +500,10 @@ export function suggestedEquity(
   purpose: PropertyPurpose,
 ): number | null {
   const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capital
-  if (effectiveValue < MIN_REAL_HOME_VALUE) return null
+  // Null only when there is no value basis at all — the equity hint shows even
+  // for modest values (unlike LTV/equity-share warnings, which still guard on
+  // a real home value to avoid absurd percentages).
+  if (effectiveValue <= 0) return null
   const requiredPercent = 100 - PURPOSE_LIMITS[purpose].limit
   const raw = (requiredPercent / 100) * effectiveValue
   return Math.ceil(raw / 500) * 500

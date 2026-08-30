@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPrimeRatePercent } from '@/services/boi'
@@ -7,6 +7,7 @@ import { MAX_TRACKS, MAX_YEARS, type PropertyPurpose } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { TermSlider } from '@/components/ui/TermSlider'
 import { FlipSelect } from '@/components/ui/FlipSelect'
+import { AppModal } from '@/components/ui/AppModal'
 import { PresetSelector } from './PresetSelector'
 import { TrackForm } from './TrackForm'
 import { ResultsCards } from './ResultsCards'
@@ -19,8 +20,27 @@ import { useCalculatorViewModel, type NoteLine } from './useCalculatorViewModel'
  * starting-point / limits-row …) so the verbatim CSS applies unchanged.
  */
 export function CalculatorPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const resultsRef = useRef<HTMLDivElement | null>(null)
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+
+  // Reset stays available whenever any data is present (including the default
+  // ₪1,000,000 prefill); it is only disabled when everything is truly cleared
+  // to blank — empty sum, no track amounts and no cash/property inputs.
+  const canReset = useCalculatorStore((s) => {
+    const sumBlank = s.startingAmountText.trim() === ''
+    const inputsBlank =
+      s.propertyValueText === '' && s.capitalText === '' && s.incomeText === ''
+    const hasTrackAmount = s.tracks.some((track) => track.amountText.trim() !== '')
+    return !(sumBlank && inputsBlank && !hasTrackAmount)
+  })
+
+  const confirmReset = () => {
+    // Reset first, then close — closing triggers a re-render that must not
+    // beat the state change.
+    store.reset()
+    setResetConfirmOpen(false)
+  }
 
   useEffect(() => {
     document.title = t('meta.calculatorsTitle')
@@ -112,7 +132,8 @@ export function CalculatorPage() {
               data-testid="reset-calculator"
               className="reset-button"
               type="button"
-              onClick={() => store.reset()}
+              disabled={!canReset}
+              onClick={() => setResetConfirmOpen(true)}
             >
               {t('calculator.reset')}
             </button>
@@ -279,6 +300,43 @@ export function CalculatorPage() {
 
         <ScheduleSection />
       </main>
+
+      <AppModal
+        open={resetConfirmOpen}
+        onOpenChange={setResetConfirmOpen}
+        testId="reset-confirm"
+        dir={i18n.dir()}
+        contentClassName="max-w-[420px] !border-0 !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
+      >
+        <div className="p-6 pb-6">
+          <div className="mb-5">
+            <h3 className="text-[20px] font-bold leading-tight text-soft-black">
+              {t('calculator.resetConfirmTitle')}
+            </h3>
+            <p className="mt-4 text-[15px] leading-relaxed text-[#333]">
+              {t('calculator.resetConfirmBody')} {t('calculator.resetConfirmUndoLine')}
+            </p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              data-testid="reset-confirm-no"
+              className="rounded-[5px] border border-[var(--calc-line)] px-5 py-2 text-[15px] font-medium text-[var(--calc-muted)] transition-colors hover:text-[var(--calc-teal-dark)]"
+              onClick={() => setResetConfirmOpen(false)}
+            >
+              {t('calculator.resetCancel')}
+            </button>
+            <button
+              type="button"
+              data-testid="reset-confirm-yes"
+              className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-dark)]"
+              onClick={confirmReset}
+            >
+              {t('calculator.resetConfirm')}
+            </button>
+          </div>
+        </div>
+      </AppModal>
     </>
   )
 }

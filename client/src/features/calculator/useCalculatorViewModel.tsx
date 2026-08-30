@@ -1,12 +1,19 @@
 import type { ReactNode } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useCalculatorStore } from '@/stores/calculatorStore'
-import { formatCurrency, formatRatePercent, parseAmountText } from '@/lib/format'
+import {
+  formatCurrency,
+  formatGroupedNumber,
+  formatRatePercent,
+  formatRatio,
+  parseAmountText,
+} from '@/lib/format'
 import {
   DTI_THRESHOLD,
   FIRST_HOME_TAX_EXEMPTION_UP_TO,
   MIN_REAL_HOME_VALUE,
   PURPOSE_LIMITS,
+  effectiveAnnualRatePercent,
   type PaymentLabelKind,
   type PropertyPurpose,
 } from '@/lib/amortization'
@@ -112,8 +119,14 @@ export function useCalculatorViewModel() {
   const warningMessages: NoteLine[] = []
   // Entered equity below the required amount → tell the user how much more.
   // When the equity-percent line (below) already folds in the shortfall, the
-  // standalone message is skipped — feedback request (mix together).
-  if (snapshot.equityShortfall && snapshot.suggestedEquity !== null && !snapshot.equity) {
+  // standalone message is skipped — feedback request (mix together). With no
+  // loan entered there is nothing to report, so skip the shortfall too.
+  if (
+    !snapshot.isEmpty &&
+    snapshot.equityShortfall &&
+    snapshot.suggestedEquity !== null &&
+    !snapshot.equity
+  ) {
     warningMessages.push(
       mark(
         'negative',
@@ -164,11 +177,8 @@ export function useCalculatorViewModel() {
           {' ~ '}
           <Trans
             i18nKey="calculator.warnings.ltvMaxLoan"
-            values={{
-              value: formatCurrency(snapshot.ltv.effectiveValue),
-              maxLoan: formatCurrency(snapshot.ltv.maxLoan),
-            }}
-            components={[<strong key="ltv-value" />, <strong key="ltv-maxloan" />]}
+            values={{ maxLoan: formatCurrency(snapshot.ltv.maxLoan) }}
+            components={[<strong key="ltv-maxloan" />]}
           />
         </>,
       ),
@@ -200,15 +210,10 @@ export function useCalculatorViewModel() {
         <Trans
           i18nKey="calculator.warnings.dti"
           values={{
-            payment: formatCurrency(snapshot.dti.payment),
             shortfall: snapshot.dti.shortfallPercent,
             minIncome: formatCurrency(snapshot.dti.minIncome),
           }}
-          components={[
-            <strong key="dti-payment" />,
-            <strong key="dti-shortfall" />,
-            <strong key="dti-minincome" />,
-          ]}
+          components={[<strong key="dti-shortfall" />, <strong key="dti-minincome" />]}
         />,
       ),
     )
@@ -221,7 +226,7 @@ export function useCalculatorViewModel() {
           <Trans
             i18nKey="calculator.warnings.dtiOk"
             values={{ payment: formatCurrency(snapshot.totals.firstPayment) }}
-            components={[<strong key="dti-payment" />]}
+            components={[<strong key="dti-ok-payment" />]}
           />,
         ),
       )
@@ -242,6 +247,12 @@ export function useCalculatorViewModel() {
 
   const rowsToShow = scheduleExpanded ? 30 : 15
   const visibleScheduleRows = snapshot.scheduleRows.slice(0, rowsToShow)
+  // Each track gets its own table; the expand toggle reveals up to 30 rows
+  // in every table at once.
+  const visibleScheduleTracks = snapshot.scheduleTracks.map((track) => ({
+    ...track,
+    rows: track.rows.slice(0, rowsToShow),
+  }))
   const showExpandButton = snapshot.scheduleYearCount > 15
   const expandLabel = scheduleExpanded
     ? t('calculator.schedule.collapseToFifteen')
@@ -264,9 +275,17 @@ export function useCalculatorViewModel() {
   // subtotal (סה"כ עלויות נלוות ומיסים) always closes the list.
   const equityNoteLines: NoteLine[] = (() => {
     const lines: NoteLine[] = []
-    // The equity share (actual or required) leads the list — when it's
-    // neutral it is the first info line (feedback request). When it's below
-    // the required amount, the shortfall folds into the same line.
+    // Below a real home value there is nothing meaningful to summarize — hide
+    // the equity/closing-cost lines entirely (capital/income hints still work).
+    if (propertyValue > 0 && propertyValue < MIN_REAL_HOME_VALUE) return lines
+    // With no loan entered (track amounts empty) there is nothing meaningful
+    // to summarize — hide the equity/closing-cost lines until a real
+    // calculation exists.
+    if (snapshot.isEmpty) return lines
+    // The equity share (actual or required) leads the list — any share that
+    // meets the requirement (good or neutral) is good news; only a share
+    // below the required amount is bad. When it's below the required amount,
+    // the shortfall folds into the same line.
     if (snapshot.equity) {
       if (snapshot.equityShortfall && snapshot.suggestedEquity !== null) {
         lines.push(
@@ -291,7 +310,7 @@ export function useCalculatorViewModel() {
         const state = snapshot.equity.state
         lines.push(
           mark(
-            state === 'good' ? 'positive' : state === 'bad' ? 'negative' : 'info',
+            state === 'bad' ? 'negative' : 'positive',
             <Trans
               i18nKey="calculator.warnings.equity"
               values={{ percent: snapshot.equity.percent }}
@@ -366,14 +385,17 @@ export function useCalculatorViewModel() {
       )
     }
     // Overall cash needed upfront (equity + all side costs & taxes) — the
-    // two legacy totals merged into one line (feedback request).
+    // two legacy totals merged into one line (feedback request). The total
+    // reflects the *actual* equity entered; only when none is entered does
+    // it fall back to the required (suggested) equity.
     if (snapshot.suggestedEquity !== null && snapshot.closingCosts !== null) {
+      const equityForTotal = capital > 0 ? capital : snapshot.suggestedEquity
       lines.push(
         mark(
           'info',
           <Trans
             i18nKey="calculator.warnings.equityTotalRequired"
-            values={{ total: formatCurrency(snapshot.suggestedEquity + snapshot.closingCosts.total) }}
+            values={{ total: formatCurrency(equityForTotal + snapshot.closingCosts.total) }}
             components={[<strong key="total" />]}
           />,
         ),
@@ -403,21 +425,31 @@ export function useCalculatorViewModel() {
     totalPayment: formatCurrency(snapshot.totals.totalPaid),
     totalPaymentLabelParts,
     paymentNote,
+    avgRate: formatRatePercent(snapshot.avgInterestRate),
+    weightedAvgRate: formatRatePercent(snapshot.weightedAvgInterestRate),
+    totalLoanAmount: formatCurrency(
+      snapshot.trackPaybacks.reduce((sum, entry) => sum + entry.amount, 0),
+    ),
+    effectiveRate: formatRatePercent(effectiveAnnualRatePercent(snapshot.avgInterestRate)),
+    avgPayback: formatRatio(snapshot.avgPaybackRatio),
+    trackPaybacks: snapshot.trackPaybacks,
     annualFirstYearPayment: formatCurrency(snapshot.annualFirstYearPayment),
     summaryTypes: snapshot.summaryTypes,
     summaryText: snapshot.summaryTypes
       .map((type) => t(`calculator.trackTypes.${type}`))
       .join(' · '),
+    // Hints carry no ₪ — the MoneyInput already renders its own suffix symbol.
     incomePlaceholder:
-      snapshot.incomePlaceholder !== null ? formatCurrency(snapshot.incomePlaceholder) : undefined,
+      snapshot.incomePlaceholder !== null ? formatGroupedNumber(snapshot.incomePlaceholder) : undefined,
     capitalPlaceholder:
-      snapshot.suggestedEquity !== null ? formatCurrency(snapshot.suggestedEquity) : undefined,
+      snapshot.suggestedEquity !== null ? formatGroupedNumber(snapshot.suggestedEquity) : undefined,
     equityNoteLines,
     summaryNotes,
     allGood,
     equityState: snapshot.equity?.state ?? null,
     warningMessages,
     visibleScheduleRows,
+    visibleScheduleTracks,
     showExpandButton,
     expandLabel,
     purposeLimits: PURPOSE_LIMITS,

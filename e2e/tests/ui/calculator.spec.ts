@@ -171,23 +171,28 @@ test.describe('mortgage calculator — core UI flows', () => {
     await expect(calc.page.getByTestId('total-payment-label')).toContainText('ל-29 שנים')
   })
 
-  test('reset restores defaults', async () => {
+  test('reset asks for confirmation then restores the default mix', async () => {
     await calc.selectPreset('basket4')
-    await expect(calc.preset('basket4')).toHaveAttribute('aria-pressed', 'true')
     await calc.setPropertyValue('3,000,000')
-    // Idempotent retry: guards against rare engine-timing misses on click.
-    await expect
-      .poll(
-        async () => {
-          if ((await calc.propertyValue.inputValue()) !== '') await calc.resetButton.click()
-          return calc.propertyValue.inputValue()
-        },
-        { timeout: 15_000 },
-      )
-      .toBe('')
+    await expect(calc.preset('basket4')).toHaveAttribute('aria-pressed', 'true')
 
+    // Clicking reset opens the confirmation modal without clearing anything yet.
+    await calc.resetButton.click()
+    await expect(calc.page.getByTestId('reset-confirm')).toBeVisible()
+    await expect(calc.propertyValue).toHaveValue('3,000,000')
+
+    // Cancelling keeps all data untouched.
+    await calc.page.getByTestId('reset-confirm-no').click()
+    await expect(calc.page.getByTestId('reset-confirm')).toBeHidden()
+    await expect(calc.propertyValue).toHaveValue('3,000,000')
+
+    // Confirming zeros the sum and returns to תמהיל 1 (still selected, blank).
+    await calc.resetButton.click()
+    await calc.page.getByTestId('reset-confirm-yes').click()
+    await expect(calc.page.getByTestId('reset-confirm')).toBeHidden()
+    await expect(calc.propertyValue).toHaveValue('')
     await expect(calc.startingAmount).toBeEnabled()
-    await expect(calc.startingAmount).toHaveValue('1,000,000')
+    await expect(calc.startingAmount).toHaveValue('')
     await expect(calc.preset('basket1')).toHaveAttribute('aria-pressed', 'true')
     await expect(calc.track(1).type()).toHaveValue('fixed')
     await expect(calc.termSlider).toHaveValue('15')

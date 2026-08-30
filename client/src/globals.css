@@ -2586,6 +2586,14 @@ textarea {
   color: var(--calc-accent-dark);
 }
 
+/* Reset is disabled only when there is genuinely nothing to clear — the label
+   stays dark enough to read. */
+.reset-button:disabled {
+  color: var(--calc-muted);
+  cursor: default;
+  pointer-events: none;
+}
+
 .input-group {
   color: var(--calc-muted);
   font-size: 0.95rem;
@@ -2791,6 +2799,42 @@ textarea {
   padding-top: 12px;
 }
 
+/* Inline % unit beside the average-rate value (nested, so the card's direct-
+   child >span rules don't apply). */
+.rate-unit {
+  display: inline;
+  color: inherit;
+  font-size: 0.6em;
+  font-weight: 700;
+  margin-inline-start: 2px;
+}
+
+/* Per-track payback breakdown — spans the full results grid below the cards. */
+.track-paybacks {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  align-items: baseline;
+  padding: 10px 2px 2px;
+  color: var(--calc-muted);
+  font-size: 0.9rem;
+}
+
+.track-paybacks-title {
+  width: 100%;
+  margin: 0 0 4px;
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.track-payback .track-payback-label {
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+  margin-inline-end: 6px;
+}
+
 .primary-result {
   background: linear-gradient(115deg,
       var(--calc-teal-dark),
@@ -2863,6 +2907,63 @@ textarea {
   font-size: 1.8rem;
   line-height: 1.2;
   margin: 8px 0;
+}
+
+/* Total / per-track schedule view toggle (added Step 4). */
+.schedule-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--calc-line);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.schedule-view-button {
+  padding: 8px 18px;
+  background: #fff;
+  border: 0;
+  border-inline-end: 1px solid var(--calc-line);
+  color: var(--calc-muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.schedule-view-button:last-child {
+  border-inline-end: 0;
+}
+
+.schedule-view-button.active {
+  background: var(--calc-teal);
+  color: #fff;
+}
+
+.schedule-view-button:not(.active):hover {
+  background: #f2f7f5;
+}
+
+/* One yearly table per track (added Step 3). */
+.schedule-track + .schedule-track {
+  margin-top: 28px;
+}
+
+.schedule-track-heading {
+  color: var(--calc-teal-dark);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.schedule-track-heading-ratio {
+  color: var(--calc-muted);
+  font-weight: 500;
+  font-size: 0.9em;
+}
+
+.schedule-empty {
+  color: var(--calc-muted);
+  font-size: 0.9rem;
+  margin: 0;
 }
 
 table {

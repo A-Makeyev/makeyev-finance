@@ -81,6 +81,16 @@ export function formatRatePercent(percent: number): string {
   return percent.toFixed(decimals).replace(/\.?0+$/, '')
 }
 
+/**
+ * Payback ratio display (total repaid ÷ principal), e.g. 1.0617 → "1.0617",
+ * 1 → "1". Four decimals keep the guide's figures (1.0617, 1.1422) intact
+ * while trimming trailing zeros.
+ */
+export function formatRatio(value: number): string {
+  if (!Number.isFinite(value)) return '0'
+  return value.toFixed(4).replace(/\.?0+$/, '')
+}
+
 /** Digits-only clamp for the track-years field (legacy constrainTrackYears). */
 export function constrainYearsText(raw: string, maximumYears: number): string {
   const digits = raw.replace(/[^0-9]/g, '')
