@@ -22,7 +22,7 @@ describe('parseXmlToJson (legacy regex parser)', () => {
     const parsed = parseXmlToJson(
       '<DateMonth><value>1</value><value>2</value><percent>0.1</percent></DateMonth>',
     )
-    // The regex captures the enclosing tag too — callers parse inner segments
+    // The regex captures the enclosing tag too - callers parse inner segments
     expect(parsed).toEqual({ DateMonth: { value: '2', percent: '0.1' } })
   })
 

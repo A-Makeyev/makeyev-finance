@@ -2,7 +2,7 @@ import emailjs from '@emailjs/browser'
 import { env } from '@/config/env'
 
 // Legacy pages initialized the SDK inline with the public key
-// (index/contact.html inline script) — replicated here from validated env.
+// (index/contact.html inline script) - replicated here from validated env.
 emailjs.init({ publicKey: env.VITE_EMAILJS_PUBLIC_KEY })
 
 export interface ContactEmailParams {
@@ -20,7 +20,7 @@ const MAX_DEADLOCK_RETRIES = 3
 
 /**
  * The SDK resolves {status, text} for 2xx responses and THROWS the same shape
- * for failures (sendPost.js). `text` carries the RAW response body — this is
+ * for failures (sendPost.js). `text` carries the RAW response body - this is
  * exactly what the legacy code matched 'deadlock victim' against.
  */
 interface SdkResponse {
@@ -56,11 +56,11 @@ export interface EmailSendResult {
 /**
  * Sends the contact email through EmailJS, transparently retrying the known
  * transient "deadlock victim" SMTP failure (legacy contact.js:383-444;
- * retry count capped — see migration checklist).
+ * retry count capped - see migration checklist).
  */
 export async function sendContactEmail(params: ContactEmailParams): Promise<EmailSendResult> {
   let attempt = 0
-  for (;;) {
+  for (; ;) {
     attempt++
     let response: SdkResponse | undefined
     let thrownError: unknown
@@ -85,7 +85,7 @@ export async function sendContactEmail(params: ContactEmailParams): Promise<Emai
   }
 }
 
-/** True when the EmailJS SDK failed to load (ad-blockers etc.) — legacy parity. */
+/** True when the EmailJS SDK failed to load (ad-blockers etc.) - legacy parity. */
 export function isEmailjsAvailable(): boolean {
   return typeof emailjs !== 'undefined'
 }

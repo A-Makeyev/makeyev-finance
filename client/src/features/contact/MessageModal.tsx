@@ -21,7 +21,7 @@ export interface MessageModalProps {
 }
 
 /**
- * Success/failure status modal — Tailwind-styled with backdrop blur,
+ * Success/failure status modal - Tailwind-styled with backdrop blur,
  * per-status accent theming, first-name greeting and detail block.
  */
 export function MessageModal({
@@ -63,7 +63,7 @@ export function MessageModal({
         className={cn(
           // Legacy spin-in: the modal scales up while rotating a full turn
           // (`.modal.active { transform: ... scale(1) rotate(360deg) }`).
-          // Legacy `transition: all 0.5s` — spins AND fades on both open and
+          // Legacy `transition: all 0.5s` - spins AND fades on both open and
           // close; legacy default `ease` curve keeps it smooth in each dir.
           'fixed left-1/2 top-1/2 z-[9999] w-[520px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-2 bg-soft-white shadow-[0_8px_22px_0_rgba(15,15,15,0.5)] transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]',
           // Border matches the header accent: green on success, red on failure.

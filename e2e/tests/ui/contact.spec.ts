@@ -21,7 +21,7 @@ function setup(page: Page, options?: InstallExternalMocksOptions) {
   return { install, emailjsPosts }
 }
 
-test.describe('contact form — validation states', () => {
+test.describe('contact form - validation states', () => {
   let contact: ContactFormPage
 
   test.beforeEach(async ({ page }) => {

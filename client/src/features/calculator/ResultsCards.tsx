@@ -3,8 +3,8 @@ import { useCalculatorViewModel } from './useCalculatorViewModel'
 import { formatCurrency, formatRatio } from '@/lib/format'
 
 /**
- * Four money cards plus the staged Step-2 additions — an average-rate card,
- * an average-payback card and the per-track payback breakdown — all fed from
+ * Four money cards plus the staged Step-2 additions - an average-rate card,
+ * an average-payback card and the per-track payback breakdown - all fed from
  * the store snapshot, using the legacy .results-layout/.results-card markup.
  */
 export function ResultsCards() {

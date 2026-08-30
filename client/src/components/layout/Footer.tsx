@@ -18,7 +18,7 @@ const SOCIAL_ENTRIES = [
   { key: 'phone', hoverClass: 'phone-fill', Icon: FaPhoneSquareAlt },
 ] as const
 
-/** Legacy .socials row — footer (white) and modal (black) variants. */
+/** Legacy .socials row - footer (white) and modal (black) variants. */
 export function SocialLinks({ variant = 'footer' }: { variant?: 'footer' | 'modal' }) {
   const links = socialLinks('hebrew')
   return (

@@ -24,7 +24,7 @@ import {
 
 const round2 = (value: number) => Math.round(value * 100) / 100
 
-describe('computeTrackResult — Spitzer', () => {
+describe('computeTrackResult - Spitzer', () => {
   it('computes the classic annuity payment (P=100k, 10%/yr, 12mo)', () => {
     const result = computeTrackResult({
       principal: 100_000,
@@ -81,7 +81,7 @@ describe('computeTrackResult — Spitzer', () => {
   })
 })
 
-describe('computeTrackResult — equal principal (קרן שווה)', () => {
+describe('computeTrackResult - equal principal (קרן שווה)', () => {
   it('declining payments with exact principal split', () => {
     const result = computeTrackResult({
       principal: 120_000,
@@ -99,7 +99,7 @@ describe('computeTrackResult — equal principal (קרן שווה)', () => {
   })
 })
 
-describe('computeTrackResult — CPI-indexed tracks', () => {
+describe('computeTrackResult - CPI-indexed tracks', () => {
   it('inflates the balance month-over-month from month 2', () => {
     const inflation = 0.12
     const factor = Math.pow(1 + inflation, 1 / 12)
@@ -365,15 +365,15 @@ describe('computePurchaseTax (מס רכישה progressive brackets)', () => {
     )
     expect(computePurchaseTax(7_000_000, 'first')).toBeCloseTo(
       0.035 * (2_347_040 - 1_978_745) +
-        0.05 * (6_055_070 - 2_347_040) +
-        0.08 * (7_000_000 - 6_055_070),
+      0.05 * (6_055_070 - 2_347_040) +
+      0.08 * (7_000_000 - 6_055_070),
       2,
     )
     expect(computePurchaseTax(25_000_000, 'first')).toBeCloseTo(
       0.035 * (2_347_040 - 1_978_745) +
-        0.05 * (6_055_070 - 2_347_040) +
-        0.08 * (20_183_565 - 6_055_070) +
-        0.1 * (25_000_000 - 20_183_565),
+      0.05 * (6_055_070 - 2_347_040) +
+      0.08 * (20_183_565 - 6_055_070) +
+      0.1 * (25_000_000 - 20_183_565),
       2,
     )
   })
@@ -426,7 +426,7 @@ describe('estimateClosingCosts (side costs + purchase tax)', () => {
     const big = estimateClosingCosts(7_000_000, 0, 0, 'investment')!
     const expected = 0.08 * 6_055_070 + 0.1 * (7_000_000 - 6_055_070)
     expect(big.purchaseTax).toBe(Math.ceil(expected / 500) * 500)
-    // Effective rate uses the unrounded tax — no distortion from the rounding.
+    // Effective rate uses the unrounded tax - no distortion from the rounding.
     expect(big.purchaseTaxPercent).toBeCloseTo((expected / 7_000_000) * 100, 1)
   })
 
@@ -500,7 +500,7 @@ describe('paybackRatio and aggregate rate/payout helpers', () => {
       type: 'fixed',
       method: 'spitzer',
     })!
-    // Unweighted: (1 + 3) / 2 = 2% — misrepresents the blended cost.
+    // Unweighted: (1 + 3) / 2 = 2% - misrepresents the blended cost.
     expect(averageInterestRate([small, large])).toBeCloseTo(2, 10)
     // Weighted: (10k·1 + 300k·3) / 310k = 2.94%
     expect(calculateWeightedAvgInterestRate([small, large])).toBeCloseTo(910 / 310, 10)
@@ -560,7 +560,7 @@ describe('buildTrackScheduleRows (per-track schedule with payback ratio)', () =>
     })!
     const rows = buildTrackScheduleRows(result)
     expect(rows).toHaveLength(10)
-    // Every row carries the same lifetime ratio — first and last identical.
+    // Every row carries the same lifetime ratio - first and last identical.
     expect(rows.every((row) => row.paybackRatio === result.paybackRatio)).toBe(true)
     expect(rows[0].paybackRatio).toBeCloseTo(result.paybackRatio, 10)
     expect(rows[9].paybackRatio).toBeCloseTo(result.paybackRatio, 10)

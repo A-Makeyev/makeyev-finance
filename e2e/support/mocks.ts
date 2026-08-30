@@ -4,7 +4,7 @@ import type { Page, Route } from '@playwright/test'
  * Deterministic network mocks for the external integrations
  * (Bank of Israel prime rate, CBS index feeds, EmailJS).
  *
- * Cross-origin fulfilled responses MUST carry CORS headers — otherwise the
+ * Cross-origin fulfilled responses MUST carry CORS headers - otherwise the
  * browser blocks the app from reading them and fetch() rejects, which is
  * indistinguishable from a real outage. The production endpoints send
  * permissive CORS headers; we mirror that here. JSON POSTs also trigger an
@@ -126,7 +126,7 @@ export async function installExternalMocks(
         status: 200,
         contentType: 'application/json',
         // Legacy-era SMTP deadlocks surfaced a 200 response whose body
-        // contained the marker — matched verbatim by the client.
+        // contained the marker - matched verbatim by the client.
         bodyText: 'deadlock victim of process 12345, resending email…',
       })
     }

@@ -1,5 +1,5 @@
 /**
- * Hebrew (default) locale — every string transcribed from the legacy source.
+ * Hebrew (default) locale - every string transcribed from the legacy source.
  * Placeholders preserved verbatim (including newlines inside warning texts,
  * which the UI renders with `white-space: pre-line`).
  */
@@ -107,13 +107,12 @@ export const he = {
       panelHeading: 'תכנון ההחזר החודשי והסכום הכולל',
       reset: 'איפוס נתונים',
       resetConfirmTitle: 'לאפס את כל הנתונים?',
-      resetConfirmBody: 'פעולה זו תאפס את כל הנתונים',
-      resetConfirmUndoLine: 'ולא יהיה ניתן לשחזר אותם',
+      resetConfirmMessage: 'פעולה זו תאפס את כל הנתונים ולא יהיה ניתן לשחזר אותם',
       resetConfirm: 'איפוס',
       resetCancel: 'ביטול',
       startingAmountLabel: 'סכום המשכנתא',
       termLabel: 'משכנתא לתקופה בשנים',
-      showPayments: 'הצג את ההחזרים',
+      showPayments: 'הצג ההחזרים',
       purposeLabel: 'תכלית הרכישה',
       purposeFirst: 'דירה ראשונה (75% מימון)',
       purposeUpgrade: 'שדרוג דירה (70% מימון)',
@@ -130,10 +129,12 @@ export const he = {
       autofix: 'תיקון תמהיל אוטומטית',
       noNeed: 'אין צורך 🥳',
       regulatoryNote:
-        'ריבית משתנה עלולה לעלות — לכן בנק ישראל מחייב שלפחות שליש מהמשכנתא תישאר בריבית קבועה, ליציבות ההחזר שלכם.',
+        'ריבית משתנה עלולה לעלות - לכן הבנק מחייב שלפחות שליש מהמשכנתא תישאר בריבית קבועה, ליציבות ההחזר שלכם.',
       disclaimer: 'החישוב הוא הערכה כללית ואינו כולל עמלות, ביטוחים או שינויים עתידיים בריבית.',
-      legalNote:
-        'הנתונים להמחשה בלבד ואינם הצעה או אישור להלוואה. הריביות והתחזיות עשויות להשתנות, והאישור כפוף לתנאי הבנק.',
+      legalNotePart1: 'הנתונים להמחשה בלבד ואינם הצעה או אישור להלוואה.',
+      legalNoteLink: 'הריביות והתחזיות עשויות להשתנות, והאישור כפוף לתנאי הבנק.',
+      legalNoteLinkUrl:
+        'https://www.boi.org.il/information/bank-paymnts/financial-education/campaigns/boi-equator/mortgage/',
       legalNoteRisk: 'אי עמידה בהחזרים עלולה לגרור ריבית פיגורים והליכי גבייה.',
       track: {
         legend: 'מסלול {{index}}',
@@ -186,7 +187,7 @@ export const he = {
       dynamicNotes: {
         indexedLabel: 'ההחזר הגבוה ביותר',
         indexedNote: 'כולל הצמדה עתידית למדד (ההחזר עשוי לעלות)',
-        equalPrincipalLabel: 'ההחזר החודשי הראשון (הגבוה)',
+        equalPrincipalLabel: 'ההחזר החודשי הראשון',
         equalPrincipalNote: 'בקרן שווה ההחזר יורד עם השנים',
         variableLabel: 'ההחזר החודשי הנוכחי',
         variableFiveYearNote: 'הריבית במסלולים המשתנים מובטחת רק עד למועד העדכון (כל 5 שנים)',
@@ -204,9 +205,12 @@ export const he = {
       },
       warnings: {
         equity: 'הון עצמי <0>{{percent}}</0>% משווי הנכס',
-        equityRequired: 'הון עצמי התחלתי נדרש לאישור הבנק: <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
-        equityShortfall: 'הון עצמי נמוך מהנדרש ~ נדרש לפחות <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
-        equityPercentRequired: 'הון עצמי <0>{{percent}}</0>% משווי הנכס ~ נדרש לפחות <1>{{required}}</1> (<2>{{requiredPercent}}</2>%)',
+        equityRequired:
+          'הון עצמי התחלתי נדרש לאישור הבנק: <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
+        equityShortfall:
+          'הון עצמי נמוך מהנדרש ~ נדרש לפחות <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
+        equityPercentRequired:
+          'הון עצמי <0>{{percent}}</0>% משווי הנכס ~ נדרש לפחות <1>{{required}}</1> (<2>{{requiredPercent}}</2>%)',
         closingCosts: 'עלויות נלוות (עו"ד, רישום ושמאי): <0>{{amount}}</0> (<1>{{percent}}</1>%)',
         purchaseTaxNone: 'מס רכישה לא חל על {{purpose}} עד <0>{{threshold}}</0>',
         purchaseTax: 'מס רכישה ({{purpose}}): <0>{{amount}}</0> (<1>{{percent}}</1>%)',

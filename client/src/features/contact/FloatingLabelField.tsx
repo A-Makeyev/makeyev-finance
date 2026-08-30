@@ -73,7 +73,7 @@ export function FloatingLabelField({
 
   return (
     <div className="relative mb-5 w-full pt-4" data-testid={testId} data-status={status}>
-      {/* Floating label — starts inside input, moves above input border on focus/filled */}
+      {/* Floating label - starts inside input, moves above input border on focus/filled */}
       <label
         htmlFor={id}
         className={cn(

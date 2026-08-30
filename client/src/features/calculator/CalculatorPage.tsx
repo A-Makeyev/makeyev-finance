@@ -15,7 +15,7 @@ import { ScheduleSection } from './ScheduleSection'
 import { useCalculatorViewModel, type NoteLine } from './useCalculatorViewModel'
 
 /**
- * Mortgage calculator page — full port of calculators.html + calculator.js;
+ * Mortgage calculator page - full port of calculators.html + calculator.js;
  * markup/classes mirror the legacy DOM (calculator-shell / calculator-panel /
  * starting-point / limits-row …) so the verbatim CSS applies unchanged.
  */
@@ -26,17 +26,16 @@ export function CalculatorPage() {
 
   // Reset stays available whenever any data is present (including the default
   // ₪1,000,000 prefill); it is only disabled when everything is truly cleared
-  // to blank — empty sum, no track amounts and no cash/property inputs.
+  // to blank - empty sum, no track amounts and no cash/property inputs.
   const canReset = useCalculatorStore((s) => {
     const sumBlank = s.startingAmountText.trim() === ''
-    const inputsBlank =
-      s.propertyValueText === '' && s.capitalText === '' && s.incomeText === ''
+    const inputsBlank = s.propertyValueText === '' && s.capitalText === '' && s.incomeText === ''
     const hasTrackAmount = s.tracks.some((track) => track.amountText.trim() !== '')
     return !(sumBlank && inputsBlank && !hasTrackAmount)
   })
 
   const confirmReset = () => {
-    // Reset first, then close — closing triggers a re-render that must not
+    // Reset first, then close - closing triggers a re-render that must not
     // beat the state change.
     store.reset()
     setResetConfirmOpen(false)
@@ -74,7 +73,7 @@ export function CalculatorPage() {
 
   const vm = useCalculatorViewModel()
 
-  // Live Bank of Israel prime rate — silent failure preserved (legacy .catch(() => {})).
+  // Live Bank of Israel prime rate - silent failure preserved (legacy .catch(() => {})).
   const primeQuery = useQuery({
     queryKey: ['boi', 'prime'],
     queryFn: ({ signal }) => fetchPrimeRatePercent(signal),
@@ -167,7 +166,11 @@ export function CalculatorPage() {
                 />
               </label>
 
-              <button className="calculate-button starting-calculate-button" type="submit" data-testid="show-payments">
+              <button
+                className="calculate-button starting-calculate-button"
+                type="submit"
+                data-testid="show-payments"
+              >
                 <span>{t('calculator.showPayments')}</span>
               </button>
             </div>
@@ -288,8 +291,7 @@ export function CalculatorPage() {
             )}
 
             <p className="regulatory-note">
-              <strong>⚠️</strong> {' '}
-              {t('calculator.regulatoryNote')}
+              <strong>⚠️</strong> {t('calculator.regulatoryNote')}
             </p>
           </form>
         </section>
@@ -314,7 +316,7 @@ export function CalculatorPage() {
               {t('calculator.resetConfirmTitle')}
             </h3>
             <p className="mt-4 text-[15px] leading-relaxed text-[#333]">
-              {t('calculator.resetConfirmBody')} {t('calculator.resetConfirmUndoLine')}
+              {t('calculator.resetConfirmMessage')}
             </p>
           </div>
           <div className="flex justify-end gap-3">

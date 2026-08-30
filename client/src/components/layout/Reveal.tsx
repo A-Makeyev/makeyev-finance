@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
 /**
- * IntersectionObserver scroll fade-in — the exact legacy mechanism
+ * IntersectionObserver scroll fade-in - the exact legacy mechanism
  * (loader.js:13-24 + main.css): element carries `.fade-in`; when it enters
  * the viewport `.faded-in` is added once and never removed. The transition
  * itself (500ms ease-in-out) comes from the element's own class

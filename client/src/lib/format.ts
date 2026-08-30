@@ -6,7 +6,7 @@ const currencyFormatter = new Intl.NumberFormat('he-IL', {
 
 /**
  * ₪ currency formatting, identical to the legacy calculator. Guards against
- * NaN/Infinity so a bad value can never render literal "NaN ₪" / "∞ ₪" —
+ * NaN/Infinity so a bad value can never render literal "NaN ₪" / "∞ ₪" -
  * it degrades to ₪0, matching the defensive style used in amortization.ts.
  */
 export function formatCurrency(value: number): string {
@@ -75,7 +75,7 @@ function sanitizeAmountText(raw: string): string {
 
 /**
  * Percent display that never rounds a small rate to "0.0%": whole numbers stay
- * whole, rates under 1% get 3 decimals, otherwise 2 decimals — trailing zeros
+ * whole, rates under 1% get 3 decimals, otherwise 2 decimals - trailing zeros
  * trimmed (e.g. 0.0372 → "0.037", 8.271 → "8.27", 4.50 → "4.5"). Two decimals
  * for the ≥1% branch preserve precision on real preset rates (5.75, 4.25).
  */

@@ -12,10 +12,10 @@ tested, CI-gated React application.
 | Build            | Vite 5 + React 18 + TypeScript (`strict`)                                                                                                                |
 | Package manager  | npm                                                                                                                                                      |
 | Routing          | React Router v7 (SPA, 5 routes mapped 1:1 from legacy pages)                                                                                             |
-| Calculator state | Zustand (+ immer) — mirrors the legacy state machine exactly                                                                                             |
+| Calculator state | Zustand (+ immer) - mirrors the legacy state machine exactly                                                                                             |
 | Data fetching    | TanStack Query wrapping native `fetch` (BOI prime rate, CBS indexes) with **silent-fail** semantics identical to the legacy site                         |
 | Forms            | React Hook Form + Zod (validation regexes ported verbatim)                                                                                               |
-| i18n             | react-i18next — Hebrew default, full document-level RTL/LTR                                                                                              |
+| i18n             | react-i18next - Hebrew default, full document-level RTL/LTR                                                                                              |
 | UI primitives    | Radix Dialog (focus trap / Escape / overlay), native `select` and `range` preserved deliberately; Tailwind CSS with logical properties + `rtl:` variants |
 | Icons            | react-icons (Font Awesome set) replacing the per-account FA kit                                                                                          |
 | Email            | @emailjs/browser (credentials via env only)                                                                                                              |
@@ -52,7 +52,7 @@ files to serve.
 | `npm run test:e2e:ui` / `test:e2e:api` | Project subsets                                            |
 
 E2E uses `vite preview` against `client/dist/`; run `npm run build` first (CI
-does this for you). Tests never touch the real network — BOI/CBS/EmailJS are mocked.
+does this for you). Tests never touch the real network - BOI/CBS/EmailJS are mocked.
 
 ## Architecture
 
@@ -76,7 +76,7 @@ client/
                   emailjsClient.ts (deadlock-retry) · validation.ts (zod schemas)
     pages/        Home · Services · Articles
   tests/unit/   Vitest suites for lib/
-server/         server.js (Express — serves client/dist, SPA fallback)
+server/         server.js (Express - serves client/dist, SPA fallback)
 e2e/            playwright config in root; pom/ · support/mocks.ts · tests/{ui,api}
 ```
 

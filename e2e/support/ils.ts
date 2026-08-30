@@ -4,7 +4,7 @@ export { formatCurrency, formatGroupedNumber }
 
 /**
  * Expected visible text for an ILS amount. he-IL Intl output embeds RTL marks
- * (U+200F) and NBSP around the ₪ sign — always compare through this helper
+ * (U+200F) and NBSP around the ₪ sign - always compare through this helper
  * instead of literal strings like '₪5,067'.
  */
 export function ils(value: number): string {

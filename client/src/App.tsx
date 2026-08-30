@@ -11,7 +11,7 @@ import { ContactPage } from '@/features/contact/ContactPage'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Legacy semantics: silent failure everywhere — external data must
+      // Legacy semantics: silent failure everywhere - external data must
       // never block the UI.
       retry: false,
       refetchOnWindowFocus: false,

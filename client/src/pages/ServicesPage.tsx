@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
-/** Services page — legacy services.html content carried over verbatim. */
+/** Services page - legacy services.html content carried over verbatim. */
 export function ServicesPage() {
   const { t } = useTranslation()
 

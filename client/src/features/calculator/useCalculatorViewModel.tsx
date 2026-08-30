@@ -32,7 +32,7 @@ const STATUS_PRIORITY: Record<NoteStatus, number> = { positive: 0, negative: 1, 
 
 /**
  * Tags a summary line with its status and leads with the matching emoji. The
- * legacy "•" bullets were removed — a line carries exactly one marker
+ * legacy "•" bullets were removed - a line carries exactly one marker
  * (feedback request).
  */
 function mark(status: NoteStatus, node: ReactNode): { status: NoteStatus; node: ReactNode } {
@@ -40,7 +40,8 @@ function mark(status: NoteStatus, node: ReactNode): { status: NoteStatus; node: 
     status,
     node: (
       <>
-        {NOTE_ICONS[status]} {node}
+        <span className="note-icon">{NOTE_ICONS[status]}</span>
+        {node}
       </>
     ),
   }
@@ -115,11 +116,11 @@ export function useCalculatorViewModel() {
   }
 
   // Regulatory-limit messages: equity shortfall and LTV violations are "bad"
-  // (red ❌); the DTI explanation is general info (ℹ️) — feedback request.
+  // (red ❌); the DTI explanation is general info (ℹ️) - feedback request.
   const warningMessages: NoteLine[] = []
   // Entered equity below the required amount → tell the user how much more.
   // When the equity-percent line (below) already folds in the shortfall, the
-  // standalone message is skipped — feedback request (mix together). With no
+  // standalone message is skipped - feedback request (mix together). With no
   // loan entered there is nothing to report, so skip the shortfall too.
   if (
     !snapshot.isEmpty &&
@@ -145,7 +146,7 @@ export function useCalculatorViewModel() {
     // Rendered separately under the inputs row (legacy #equity-note).
   }
   // Raw inputs needed to report a compliant LTV/DTI (the store only carries
-  // the *violated* assessments — feedback request: when conditions are met,
+  // the *violated* assessments - feedback request: when conditions are met,
   // show the same message as a green ✔️ positive line).
   const propertyValue = parseAmountText(propertyValueText)
   const capital = parseAmountText(capitalText)
@@ -160,7 +161,7 @@ export function useCalculatorViewModel() {
       ? String(snapshot.ltv.percentRounded)
       : snapshot.ltv.percent.toFixed(1)
     // The violation and the "what the bank allows" follow-up read as one bad
-    // line — feedback request (sum them together).
+    // line - feedback request (sum them together).
     warningMessages.push(
       mark(
         'negative',
@@ -188,7 +189,9 @@ export function useCalculatorViewModel() {
     const percent = (loanAmount / effectiveValue) * 100
     const limit = PURPOSE_LIMITS[purpose].limit
     if (percent <= limit + 0.01) {
-      const ltvPercent = Number.isInteger(percent) ? String(Math.round(percent)) : percent.toFixed(1)
+      const ltvPercent = Number.isInteger(percent)
+        ? String(Math.round(percent))
+        : percent.toFixed(1)
       warningMessages.push(
         mark(
           'positive',
@@ -203,7 +206,7 @@ export function useCalculatorViewModel() {
   }
   if (snapshot.dti) {
     // The payment shortfall and the bank's income requirement combine into
-    // one brief line — the shortfall is bad news (red ❌).
+    // one brief line - the shortfall is bad news (red ❌).
     warningMessages.push(
       mark(
         'negative',
@@ -271,18 +274,18 @@ export function useCalculatorViewModel() {
     )
 
   // Equity note lines: the actual/required equity share, the closing-cost
-  // breakdown, then the totals — every number is bold. The closing-cost
+  // breakdown, then the totals - every number is bold. The closing-cost
   // subtotal (סה"כ עלויות נלוות ומיסים) always closes the list.
   const equityNoteLines: NoteLine[] = (() => {
     const lines: NoteLine[] = []
-    // Below a real home value there is nothing meaningful to summarize — hide
+    // Below a real home value there is nothing meaningful to summarize - hide
     // the equity/closing-cost lines entirely (capital/income hints still work).
     if (propertyValue > 0 && propertyValue < MIN_REAL_HOME_VALUE) return lines
     // With no loan entered (track amounts empty) there is nothing meaningful
-    // to summarize — hide the equity/closing-cost lines until a real
+    // to summarize - hide the equity/closing-cost lines until a real
     // calculation exists.
     if (snapshot.isEmpty) return lines
-    // The equity share (actual or required) leads the list — any share that
+    // The equity share (actual or required) leads the list - any share that
     // meets the requirement (good or neutral) is good news; only a share
     // below the required amount is bad. When it's below the required amount,
     // the shortfall folds into the same line.
@@ -368,7 +371,7 @@ export function useCalculatorViewModel() {
         )
       }
     }
-    // Side costs (attorney, registration & surveyor) — general info.
+    // Side costs (attorney, registration & surveyor) - general info.
     if (snapshot.closingCosts !== null) {
       lines.push(
         mark(
@@ -384,7 +387,7 @@ export function useCalculatorViewModel() {
         ),
       )
     }
-    // Overall cash needed upfront (equity + all side costs & taxes) — the
+    // Overall cash needed upfront (equity + all side costs & taxes) - the
     // two legacy totals merged into one line (feedback request). The total
     // reflects the *actual* equity entered; only when none is entered does
     // it fall back to the required (suggested) equity.
@@ -438,9 +441,11 @@ export function useCalculatorViewModel() {
     summaryText: snapshot.summaryTypes
       .map((type) => t(`calculator.trackTypes.${type}`))
       .join(' · '),
-    // Hints carry no ₪ — the MoneyInput already renders its own suffix symbol.
+    // Hints carry no ₪ - the MoneyInput already renders its own suffix symbol.
     incomePlaceholder:
-      snapshot.incomePlaceholder !== null ? formatGroupedNumber(snapshot.incomePlaceholder) : undefined,
+      snapshot.incomePlaceholder !== null
+        ? formatGroupedNumber(snapshot.incomePlaceholder)
+        : undefined,
     capitalPlaceholder:
       snapshot.suggestedEquity !== null ? formatGroupedNumber(snapshot.suggestedEquity) : undefined,
     equityNoteLines,

@@ -2,8 +2,8 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 /**
- * Articles page — stub preserved from the live site (bare heading only,
- * exactly as the legacy articles.html rendered it — no fade-in).
+ * Articles page - stub preserved from the live site (bare heading only,
+ * exactly as the legacy articles.html rendered it - no fade-in).
  */
 export function ArticlesPage() {
   const { t } = useTranslation()

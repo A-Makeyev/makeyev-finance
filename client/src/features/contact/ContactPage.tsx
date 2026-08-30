@@ -76,7 +76,7 @@ export function ContactPage() {
           {/* Divider */}
           <div className="w-px bg-soft-grey max-lg:w-full max-lg:h-px max-lg:my-6" />
 
-          {/* Right: Contact info — nudged down a bit to sit alongside the form */}
+          {/* Right: Contact info - nudged down a bit to sit alongside the form */}
           <div className="flex-1 min-w-0 lg:ml-14 lg:mt-8">
             {/* WhatsApp */}
             <div className="flex items-center gap-3 mb-10">

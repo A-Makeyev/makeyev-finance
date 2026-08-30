@@ -17,7 +17,7 @@ export function buildCbsUrl(kind: CbsFeedKind, now = new Date()): string {
 }
 
 /**
- * Fetches and parses one CBS index feed. Returns null on any failure —
+ * Fetches and parses one CBS index feed. Returns null on any failure -
  * legacy logged to console and left the UI untouched; the index bar simply
  * stays hidden and indexed tracks keep their fallback inflation.
  */

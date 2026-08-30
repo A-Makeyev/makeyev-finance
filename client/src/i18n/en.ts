@@ -73,7 +73,7 @@ export const en: { translation: Translation } = {
       headerTitle: 'Free Consultation Call',
       formTitle: 'Leave your details',
       formSubtitle:
-        "We'll save you money on a new or existing mortgage\non terms that fit you — not the bank",
+        "We'll save you money on a new or existing mortgage\non terms that fit you - not the bank",
       nameLabel: 'Name',
       phoneLabel: 'Number',
       emailLabel: 'Email',
@@ -112,8 +112,7 @@ export const en: { translation: Translation } = {
       panelHeading: 'Plan your monthly payment and total cost',
       reset: 'Reset data',
       resetConfirmTitle: 'Reset all data?',
-      resetConfirmBody: 'This will clear all entered data',
-      resetConfirmUndoLine: 'This cannot be undone',
+      resetConfirmMessage: 'This will clear all entered data and cannot be undone',
       resetConfirm: 'Reset',
       resetCancel: 'Cancel',
       startingAmountLabel: 'Mortgage amount',
@@ -125,7 +124,7 @@ export const en: { translation: Translation } = {
       purposeInvestment: 'Investment property (50% financing)',
       propertyValueLabel: 'Property value',
       capitalLabel: 'Equity',
-      incomeLabel: 'Net free monthly income',
+      incomeLabel: 'Net monthly income',
       presetHeading: 'Choose a mix',
       presetBasket1: 'Mix 1',
       presetBasket2: 'Mix 2',
@@ -135,11 +134,13 @@ export const en: { translation: Translation } = {
       autofix: 'Auto-fix mix',
       noNeed: 'No need 🥳',
       regulatoryNote:
-        'Variable rates can rise — the Bank of Israel requires that at least one third of the mortgage remain at a fixed rate, for the stability of your payments.',
+        'Variable rates can rise - the bank requires that at least one third of the mortgage remain at a fixed rate, for the stability of your payments.',
       disclaimer:
         'This calculation is a general estimate and does not include fees, insurance or future rate changes.',
-      legalNote:
-        'Data is for illustration only and is not an offer or approval of a loan. Rates and forecasts may change; approval is subject to bank terms.',
+      legalNotePart1: 'Data is for illustration only and is not an offer or approval of a loan.',
+      legalNoteLink: 'Rates and forecasts may change; approval is subject to bank terms.',
+      legalNoteLinkUrl:
+        'https://www.boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/campaigns/boi-equalizer/',
       legalNoteRisk:
         'Failure to meet payments may incur late-payment interest and collection proceedings.',
       track: {
@@ -193,7 +194,7 @@ export const en: { translation: Translation } = {
       dynamicNotes: {
         indexedLabel: 'Highest payment',
         indexedNote: 'Includes future CPI indexation (payment may rise)',
-        equalPrincipalLabel: 'First monthly payment (highest)',
+        equalPrincipalLabel: 'First monthly payment ',
         equalPrincipalNote: 'With equal principal, the payment decreases over the years',
         variableLabel: 'Current monthly payment',
         variableFiveYearNote:
@@ -207,16 +208,21 @@ export const en: { translation: Translation } = {
         termRange: 'The loan term must be between 1 and 30 years.',
         positiveAmounts: 'Please enter a positive amount in each track',
         variableCapLine1:
-          'Per Bank of Israel directives, variable-rate tracks marked below cannot exceed 66.66% of the total mortgage',
+          'Per Bank of Israel, variable-rate tracks marked below cannot exceed 66.66% of the total mortgage',
         variableCapLine2: ' Reduce a marked track or increase a fixed-rate track',
       },
       warnings: {
         equity: 'Equity is <0>{{percent}}</0>% of the property value',
-        equityRequired: 'Required initial equity for bank approval: <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
-        equityShortfall: 'Equity is below the required share ~ at least <0>{{required}}</0> (<1>{{requiredPercent}}</1>%) is needed',
-        equityPercentRequired: 'Equity of <0>{{percent}}</0>% of the property value ~ at least <1>{{required}}</1> (<2>{{requiredPercent}}</2>%) required',
-        closingCosts: 'Side costs (attorney, registration & surveyor): <0>{{amount}}</0> (<1>{{percent}}</1>%)',
-        purchaseTaxNone: 'Purchase tax is not applicable for a {{purpose}} up to <0>{{threshold}}</0>',
+        equityRequired:
+          'Required initial equity for bank approval: <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
+        equityShortfall:
+          'Equity is below the required share ~ at least <0>{{required}}</0> (<1>{{requiredPercent}}</1>%) is needed',
+        equityPercentRequired:
+          'Equity of <0>{{percent}}</0>% of the property value ~ at least <1>{{required}}</1> (<2>{{requiredPercent}}</2>%) required',
+        closingCosts:
+          'Side costs (attorney, registration & surveyor): <0>{{amount}}</0> (<1>{{percent}}</1>%)',
+        purchaseTaxNone:
+          'Purchase tax is not applicable for a {{purpose}} up to <0>{{threshold}}</0>',
         purchaseTax: 'Purchase tax ({{purpose}}): <0>{{amount}}</0> (<1>{{percent}}</1>%)',
         purchaseTaxFirst: 'first home',
         purchaseTaxUpgrade: 'home improver',
@@ -224,7 +230,8 @@ export const en: { translation: Translation } = {
         equityTotalRequired: 'Equity + expected side costs & taxes: <0>{{total}}</0>',
         ltv: 'The financing ratio (<0>{{percent}}</0>%) exceeds the Bank of Israel limit for a {{purpose}} (up to <1>{{limit}}</1>%)',
         ltvMaxLoan: 'The maximum mortgage is <0>{{maxLoan}}</0>',
-        ltvOk: 'The financing ratio (<0>{{percent}}</0>%) is within the limit for a {{purpose}} (up to <1>{{limit}}</1>%)',
+        ltvOk:
+          'The financing ratio (<0>{{percent}}</0>%) is within the limit for a {{purpose}} (up to <1>{{limit}}</1>%)',
         dti: 'Free income is <0>{{shortfall}}</0>% below required. The bank will ask for a net free monthly income of at least <1>{{minIncome}}</1>',
         dtiOk: 'Free income covers the monthly payment (<0>{{payment}}</0>)',
         purposeFirst: 'first home',

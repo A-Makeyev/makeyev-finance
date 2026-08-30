@@ -74,7 +74,7 @@ describe('formatRatePercent', () => {
     expect(formatRatePercent(3.0)).toBe('3')
   })
 
-  it('never rounds tiny rates to 0.0% — shows 3 decimals instead', () => {
+  it('never rounds tiny rates to 0.0% - shows 3 decimals instead', () => {
     expect(formatRatePercent(0.0372)).toBe('0.037')
     expect(formatRatePercent(0.1)).toBe('0.1')
     expect(formatRatePercent(0.0005)).toBe('0.001')

@@ -14,7 +14,7 @@ const envSchema = z.object({
 })
 
 /**
- * Legacy fallbacks — the exact values the original site shipped inline in its
+ * Legacy fallbacks - the exact values the original site shipped inline in its
  * HTML/JS (EmailJS public key + service/template are client-exposed by
  * design, so missing env must degrade to the legacy working configuration,
  * never to a disabled placeholder).
@@ -41,7 +41,7 @@ function loadEnv(): AppEnv {
 
   // Missing credentials fall back to the legacy inline values (public by
   // design) so local dev / preview builds keep a working send pipeline.
-  const message = `Invalid environment configuration — falling back to legacy inline credentials:\n${parsed.error.issues
+  const message = `Invalid environment configuration - falling back to legacy inline credentials:\n${parsed.error.issues
     .map((issue) => `  - ${issue.path.join('.')}: ${issue.message}`)
     .join('\n')}`
   console.warn(`[env] ${message}`)

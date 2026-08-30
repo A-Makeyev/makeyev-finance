@@ -6,7 +6,7 @@
    VERBATIM PORT of the legacy stylesheet stack, in original cascade order:
    styles/loader.css → navigation.css → main.css → services.css →
    contact.css → calculators.css.
-   Do NOT "modernize" values — this file is the pixel-parity contract with the
+   Do NOT "modernize" values - this file is the pixel-parity contract with the
    original site (see the migration correction pass).
 =========================================================================== */
 
@@ -151,7 +151,7 @@ strong {
 =========================================================================== */
 html {
   scroll-behavior: smooth;
-  /* Legacy had no line-height rules — Tailwind preflight's 1.5 inflates
+  /* Legacy had no line-height rules - Tailwind preflight's 1.5 inflates
      every input/label/button vs the original metrics (56px inputs, 62px
      button). UA `normal` restores the legacy geometry site-wide. */
   line-height: normal;
@@ -833,11 +833,10 @@ img {
 
 /* The React action-form modal isn't `.form-modal`/`.contact-col`, so the legacy
    `#submit-form` width rules (110–120% !important) above would blow the button
-   out of the dialog — keep it at 100% inside any dialog. */
+   out of the dialog - keep it at 100% inside any dialog. */
 [role='dialog'] #submit-form {
   width: 100% !important;
 }
-
 
 .modal-body .contact-col {
   margin-bottom: 0;
@@ -960,7 +959,7 @@ img {
   pointer-events: all;
 }
 
-/* Radix action-form modal — smooth open/close (fade + subtle pop). The
+/* Radix action-form modal - smooth open/close (fade + subtle pop). The
    animations are applied from AppModal via Tailwind data-[state] classes;
    only the keyframes live here. */
 @keyframes app-modal-fade-in {
@@ -1266,8 +1265,12 @@ nav#navbar {
   align-items: center;
   justify-content: space-between;
   /* The nav (with the logo) slides up when the menu opens and back down to
-     its place when it closes — instead of jumping. Colors keep their fade. */
-  transition: top 0.25s ease-in-out, margin-top 0.25s ease-in-out, color 0.5s ease, background-color 0.5s ease;
+     its place when it closes - instead of jumping. Colors keep their fade. */
+  transition:
+    top 0.25s ease-in-out,
+    margin-top 0.25s ease-in-out,
+    color 0.5s ease,
+    background-color 0.5s ease;
 }
 
 nav#navbar .logo {
@@ -1294,7 +1297,7 @@ nav#navbar .logo {
   gap: 20px;
 }
 
-.nav-content>li {
+.nav-content > li {
   list-style: none;
 }
 
@@ -1478,7 +1481,7 @@ nav#navbar.nav-scrolling-resize {
   gap: 20px;
 }
 
-.nav-content>li {
+.nav-content > li {
   list-style: none;
 }
 
@@ -1549,7 +1552,7 @@ nav#navbar.nav-scrolling-resize {
 }
 
 /* Tailwind preflight forces svg{display:block}; legacy Font Awesome <i> was
-   inline — restore inline flow so social rows and star ratings lay out
+   inline - restore inline flow so social rows and star ratings lay out
    horizontally exactly like the original. */
 .socials a,
 .socials svg,
@@ -1685,7 +1688,7 @@ nav#navbar.nav-scrolling-resize {
     justify-content: space-evenly;
     background: var(--soft-white);
     /* EXACT legacy animation: the panel's top stays pinned below the nav
-       (top:100px — the nav's bottom edge once it has slid up) and `bottom`
+       (top:100px - the nav's bottom edge once it has slid up) and `bottom`
        transitions 100% → 0, so the white slides down from the navbar to the
        bottom of the screen. `will-change: bottom` lets the compositor
        prepare, keeping each frame smooth. */
@@ -1728,35 +1731,34 @@ nav#navbar.nav-scrolling-resize {
     background: var(--soft-white);
   }
 
-  nav#navbar :checked~.nav-center #nav-list {
+  nav#navbar :checked ~ .nav-center #nav-list {
     bottom: 0;
     /* The menu slides open AFTER the nav (logo) has finished sliding up
        (the nav's top/margin-top transition is 0.4s). */
     transition-delay: 0.25s;
   }
 
-  nav#navbar :checked~.menu-icon .line:nth-child(1) {
+  nav#navbar :checked ~ .menu-icon .line:nth-child(1) {
     transform: translateY(10px) rotate(225deg);
   }
 
-  nav#navbar :checked~.menu-icon .line:nth-child(2) {
+  nav#navbar :checked ~ .menu-icon .line:nth-child(2) {
     opacity: 0;
   }
 
-  nav#navbar :checked~.menu-icon .line:nth-child(3) {
+  nav#navbar :checked ~ .menu-icon .line:nth-child(3) {
     transform: translateY(-10px) rotate(-225deg);
   }
 
   /* When the menu is open the three lines form an ✕. Hover spins the whole
      toggle smoothly (a 90° turn, like the modal close button) without
-     breaking the ✕ glyph — the label transition is already 0.5s ease. */
-  nav#navbar :checked~.menu-icon:hover {
+     breaking the ✕ glyph - the label transition is already 0.5s ease. */
+  nav#navbar :checked ~ .menu-icon:hover {
     transform: translateY(-50%) rotate(90deg);
   }
 }
 
 @media screen and (max-width: 500px) {
-
   .logo-image,
   .logo-image-transparent {
     width: 18% !important;
@@ -1994,9 +1996,8 @@ textarea {
   padding-left: 0 !important;
   padding-right: 10px !important;
   text-indent: 0 !important;
-}e
-
-#name,
+}
+e #name,
 #message,
 .input-rtl,
 .contact-col input.input-rtl,
@@ -2059,7 +2060,6 @@ textarea {
 }
 
 @media (max-width: 1600px) {
-
   .submit-form,
   .contact-col input,
   .contact-col textarea {
@@ -2104,7 +2104,7 @@ textarea {
     font-size: 25px;
   }
 
-  .contact>p {
+  .contact > p {
     font-size: 15px;
   }
 
@@ -2165,7 +2165,6 @@ textarea {
 }
 
 @media (max-width: 500px) {
-
   .submit-form,
   .contact-col input,
   .contact-col textarea {
@@ -2191,7 +2190,7 @@ textarea {
 
   .contact-col i,
   .contact-col p,
-  .contact>p {
+  .contact > p {
     font-size: 12px;
   }
 }
@@ -2259,15 +2258,17 @@ textarea {
   border-bottom: 1px solid var(--calc-line);
 }
 
-.starting-point>label {
+.starting-point > label {
   display: flex;
   flex-direction: column;
 }
 
 .limits-row {
   display: grid;
-  grid-template-columns:
-    minmax(220px, 1.6fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(140px, 1fr);
+  grid-template-columns: minmax(220px, 1.6fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(
+      140px,
+      1fr
+    );
   gap: 18px;
   padding-bottom: 20px;
   margin-bottom: 20px;
@@ -2279,11 +2280,11 @@ textarea {
   margin-top: 7px;
 }
 
-/* Summary notes — the equity/closing-cost breakdown and the regulatory
+/* Summary notes - the equity/closing-cost breakdown and the regulatory
    warnings share one container (feedback request): a single uniform font
    size, no yellow tint, and per-line status markers. Positive lines lead
    with a green ✔️, negative lines with a red ❌, and general-info lines with
-   a muted 💡. The legacy "•" bullets are gone — each line carries exactly
+   a muted 💡. The legacy "•" bullets are gone - each line carries exactly
    one marker. Lines of the same status stay tightly packed; a status change
    adds breathing room (group-start), so the list reads as good / bad / info
    groups. */
@@ -2319,7 +2320,16 @@ textarea {
   color: inherit;
 }
 
-/* When nothing is wrong (no red ❌ lines), the good lines read green — but
+/* Icons (✔️ ❌ 💡) differ in glyph width - give them a fixed box so every
+   line's text starts at the same point, regardless of the marker. */
+.note-line .note-icon {
+  display: inline-block;
+  width: 1.2em;
+  margin-inline-end: 0.6em;
+  text-align: center;
+}
+
+/* When nothing is wrong (no red ❌ lines), the good lines read green - but
    the 💡 info lines always stay regular (never tinted green). */
 .summary-notes.all-good {
   color: var(--calc-accent);
@@ -2393,15 +2403,34 @@ textarea {
 .term-slider-wrap input[type='range']::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
-  background: linear-gradient(to left,
-      transparent 0%,
-      transparent var(--slider-start, 4.4%),
-      var(--calc-accent) var(--slider-start, 4.4%),
-      var(--calc-accent) var(--slider-fill, 50%),
-      var(--calc-line) var(--slider-fill, 50%),
-      var(--calc-line) var(--slider-end, 95.6%),
-      transparent var(--slider-end, 95.6%),
-      transparent 100%);
+  background: linear-gradient(
+    to left,
+    transparent 0%,
+    transparent var(--slider-start, 4.4%),
+    var(--calc-accent) var(--slider-start, 4.4%),
+    var(--calc-accent) var(--slider-fill, 50%),
+    var(--calc-line) var(--slider-fill, 50%),
+    var(--calc-line) var(--slider-end, 95.6%),
+    transparent var(--slider-end, 95.6%),
+    transparent 100%
+  );
+}
+
+/* Legacy fill was hardcoded `to left` for the Hebrew RTL default (min on the
+   right). English is LTR (min on the left), so flip the gradient direction to
+   keep the teal fill growing from the min end toward the thumb. */
+:root[dir='ltr'] .term-slider-wrap input[type='range']::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    transparent var(--slider-start, 4.4%),
+    var(--calc-accent) var(--slider-start, 4.4%),
+    var(--calc-accent) var(--slider-fill, 50%),
+    var(--calc-line) var(--slider-fill, 50%),
+    var(--calc-line) var(--slider-end, 95.6%),
+    transparent var(--slider-end, 95.6%),
+    transparent 100%
+  );
 }
 
 .term-slider-wrap input[type='range']::-moz-range-progress {
@@ -2533,7 +2562,9 @@ textarea {
 
 .mortgage-track {
   display: grid;
-  grid-template-columns: 1.3fr repeat(4, 1fr);
+  /* Columns: type (wider), amount, years, rate, method - the track-type field
+     gets extra room while years/rate are trimmed so the full row stays snug. */
+  grid-template-columns: 2fr 1fr 0.8fr 0.8fr 1fr;
   gap: 14px;
   position: relative;
   border: 1px solid var(--calc-line);
@@ -2596,7 +2627,7 @@ textarea {
   color: var(--calc-accent-dark);
 }
 
-/* Reset is disabled only when there is genuinely nothing to clear — the label
+/* Reset is disabled only when there is genuinely nothing to clear - the label
    stays dark enough to read. */
 .reset-button:disabled {
   color: var(--calc-muted);
@@ -2800,7 +2831,7 @@ textarea {
   margin: 14px 0 0;
 }
 
-.results-card>span {
+.results-card > span {
   display: block;
   color: var(--calc-muted);
   font-size: 0.8rem;
@@ -2819,7 +2850,7 @@ textarea {
   margin-inline-start: 2px;
 }
 
-/* Per-track payback breakdown — spans the full results grid below the cards. */
+/* Per-track payback breakdown - spans the full results grid below the cards. */
 .track-paybacks {
   grid-column: 1 / -1;
   display: flex;
@@ -2846,10 +2877,12 @@ textarea {
 }
 
 .primary-result {
-  background: linear-gradient(115deg,
-      var(--calc-teal-dark),
-      var(--calc-teal) 65%,
-      var(--calc-accent));
+  background: linear-gradient(
+    115deg,
+    var(--calc-teal-dark),
+    var(--calc-teal) 65%,
+    var(--calc-accent)
+  );
   border-color: var(--calc-teal);
 }
 
@@ -3067,6 +3100,16 @@ tbody tr:hover {
   margin-top: 12px;
 }
 
+.legal-note a {
+  color: var(--calc-accent);
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.legal-note a:hover {
+  color: var(--calc-teal-dark);
+}
+
 .expand-schedule-button {
   border: 1px solid var(--calc-teal);
   color: var(--calc-teal-dark);
@@ -3086,13 +3129,43 @@ tbody tr:hover {
    RESPONSIVE
    ========================= */
 
+@media (max-width: 1000px) {
+  /* Track cards break out of the tight 5-column layout - the track type and
+     amount share one row, and the remaining fields (years, rate, method)
+     share the row below. Results cards switch to 2 columns at the same
+     breakpoint so both panels change together. */
+  .results-layout {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mortgage-track {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .mortgage-track .input-group:nth-of-type(1) {
+    grid-column: 1 / 4;
+  }
+
+  .mortgage-track .input-group:nth-of-type(2) {
+    grid-column: 4 / 7;
+  }
+
+  .mortgage-track .input-group:nth-of-type(3) {
+    grid-column: 1 / 3;
+  }
+
+  .mortgage-track .input-group:nth-of-type(4) {
+    grid-column: 3 / 5;
+  }
+
+  .mortgage-track .input-group:nth-of-type(5) {
+    grid-column: 5 / 7;
+  }
+}
+
 @media (max-width: 900px) {
   .calculator-intro h1 {
     font-size: 4.3rem;
-  }
-
-  .results-layout {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -3147,13 +3220,5 @@ tbody tr:hover {
   .results-card strong,
   .primary-result strong {
     font-size: 2rem;
-  }
-
-  .mortgage-track {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .mortgage-track .input-group:first-of-type {
-    grid-column: 1 / -1;
   }
 }

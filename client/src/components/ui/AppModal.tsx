@@ -9,7 +9,7 @@ export interface AppModalProps {
   /** Border/header accent color. */
   tone?: 'blue' | 'green' | 'red'
   testId?: string
-  /** Content direction — drives logical props like the close button's side. */
+  /** Content direction - drives logical props like the close button's side. */
   dir?: 'rtl' | 'ltr'
   /** Extra class names merged onto Dialog.Content. */
   contentClassName?: string
@@ -22,7 +22,7 @@ const TONE_BORDER = {
 } as const
 
 /**
- * Centered modal with blurred overlay — Radix Dialog provides the focus trap,
+ * Centered modal with blurred overlay - Radix Dialog provides the focus trap,
  * Escape-to-close and overlay-click-to-close that the legacy modals
  * hand-rolled (contact.js:319-360).
  *

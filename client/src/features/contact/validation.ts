@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 /**
  * Validation regexes transcribed VERBATIM from legacy src/index.js:24-26.
- * Do not "modernize" them — they define the accepted input contract.
+ * Do not "modernize" them - they define the accepted input contract.
  */
 export const PHONE_REGEX = /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s./0-9]*$/
 export const NAME_REGEX = /^[^0-9.,_!¡?÷?¿/\\+=@#$%ˆ&*(){}|~<>;:[\]]{2,}$/
@@ -19,7 +19,7 @@ export const contactFormSchema = z.object({
 })
 
 /**
- * Action-form modal variant — identical minus the email field
+ * Action-form modal variant - identical minus the email field
  * (legacy contact.js validateForm email-null branch).
  */
 export const actionFormSchema = contactFormSchema.omit({ email: true })

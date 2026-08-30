@@ -3,7 +3,7 @@
  * navigation.js (src/navigation.js:203-230).
  *
  * WHY NOT a generic XML library: the CBS feed handling depends on this
- * parser's exact semantics — repeated sibling tags collapse last-wins into a
+ * parser's exact semantics - repeated sibling tags collapse last-wins into a
  * flat object, recursion only descends when children exist, and the caller
  * slices the raw document by splitting on `<DateMonth>` before parsing.
  * DOMParser/fast-xml-parser produce different shapes (arrays, attribute
@@ -94,7 +94,7 @@ function compareTrend(current: number, previous: number): TrendDirection {
 /**
  * Extracts the display payload for one CBS index feed, replicating the legacy
  * slicing: split('<DateMonth>')[1] = newest entry, [2] = previous month,
- * [10] = year-ago context (parsed but unused downstream — kept for parity).
+ * [10] = year-ago context (parsed but unused downstream - kept for parity).
  */
 export function extractCbsIndexPayload(xmlString: string): CbsIndexPayload | null {
   const segments = xmlString.split('<DateMonth>')

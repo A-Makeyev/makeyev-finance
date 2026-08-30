@@ -7,7 +7,7 @@ export interface BoiInterestResponse {
 
 /**
  * Fetches the Bank of Israel key rate and returns the prime lending rate
- * (key rate + 1.5% margin, rounded to 2 decimals) — identical math to legacy
+ * (key rate + 1.5% margin, rounded to 2 decimals) - identical math to legacy
  * calculator.js:432-440. Returns null when unavailable; callers must treat
  * that as "no live rate" (silent degradation, never blocks the calculator).
  */
@@ -19,7 +19,7 @@ export async function fetchPrimeRatePercent(signal?: AbortSignal): Promise<numbe
     if (!Number.isFinite(keyRate) || keyRate <= 0) return null
     return Math.round((keyRate + PRIME_MARGIN) * 100) / 100
   } catch {
-    // Legacy behaviour: `.catch(() => {})` — silent failure.
+    // Legacy behaviour: `.catch(() => {})` - silent failure.
     return null
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Pure mortgage math — extracted from the legacy inline `getTrackResult`
+ * Pure mortgage math - extracted from the legacy inline `getTrackResult`
  * (src/calculator.js:479-524) and the Bank of Israel compliance helpers.
  * Every formula, threshold and rounding behaviour is preserved verbatim;
  * see tests/unit/amortization.test.ts for golden values.
@@ -17,10 +17,10 @@ export const FALLBACK_PRIME_RATE = 5.75
 export const DTI_THRESHOLD = 0.5
 export const DTI_ROUNDING_STEP = 500
 /** Rough buyer-side side costs (attorney, registration, surveyor) as a % of the
-    effective property value — a common mid estimate in Israel (~1.5%, excluding
+    effective property value - a common mid estimate in Israel (~1.5%, excluding
     purchase tax and agent commission). */
 export const SIDE_COSTS_PERCENT = 1.5
-/** Below this effective value no real home exists — equity, LTV and closing-cost
+/** Below this effective value no real home exists - equity, LTV and closing-cost
     estimates are meaningless noise (their ₪500 rounding / percent math would
     distort them, e.g. "3333%") and are omitted entirely. */
 export const MIN_REAL_HOME_VALUE = 100_000
@@ -31,11 +31,11 @@ export interface PurchaseTaxBracket {
   rate: number
 }
 
-/** Purchase tax (מס רכישה) exemption cap for a first home — no tax up to this
+/** Purchase tax (מס רכישה) exemption cap for a first home - no tax up to this
     value (2025–2028 rates). */
 export const FIRST_HOME_TAX_EXEMPTION_UP_TO = 1_978_745
 
-/** Purchase-tax brackets for a single dwelling unit (דירה יחידה) — rates for
+/** Purchase-tax brackets for a single dwelling unit (דירה יחידה) - rates for
     purchases between 16.1.2025 and 15.1.2028: 0% up to ₪1,978,745, then
     3.5% / 5% / 8% / 10%. */
 export const PURCHASE_TAX_BRACKETS_FIRST_HOME: PurchaseTaxBracket[] = [
@@ -46,7 +46,7 @@ export const PURCHASE_TAX_BRACKETS_FIRST_HOME: PurchaseTaxBracket[] = [
   { upTo: Infinity, rate: 10 },
 ]
 
-/** Purchase-tax brackets for a second/additional dwelling (דירה נוספת) — paid
+/** Purchase-tax brackets for a second/additional dwelling (דירה נוספת) - paid
     from the first shekel: 8% up to ₪6,055,070, 10% above (2026 rates). */
 export const PURCHASE_TAX_BRACKETS_ADDITIONAL: PurchaseTaxBracket[] = [
   { upTo: 6_055_070, rate: 8 },
@@ -83,7 +83,7 @@ export const PURPOSE_LIMITS: Record<PropertyPurpose, { limit: number }> = {
   investment: { limit: 50 },
 }
 
-/** Legacy defaultRatesByType — note: no `prime` entry (handled via live rate). */
+/** Legacy defaultRatesByType - note: no `prime` entry (handled via live rate). */
 export const DEFAULT_RATES_BY_TYPE: Omit<Record<TrackType, number>, 'prime'> = {
   fixed: 4.5,
   variable5y: 4.25,
@@ -272,7 +272,7 @@ export function averageInterestRate(results: TrackResult[]): number {
 }
 
 /**
- * Loan-amount-weighted average annual interest rate (percent) — the blended
+ * Loan-amount-weighted average annual interest rate (percent) - the blended
  * cost of the portfolio. A ₪10,000 track at 1% and a ₪300,000 track at 3%
  * average to 2% unweighted, but ≈2.94% when weighted by amount.
  */
@@ -295,7 +295,7 @@ export function averagePaybackRatio(results: TrackResult[]): number {
 
 /**
  * Effective annual rate (EAR) implied by a monthly compounding of a nominal
- * annual rate (%) — `(1 + nominal/12)^12 − 1`, returned in percent. Always ≥
+ * annual rate (%) - `(1 + nominal/12)^12 − 1`, returned in percent. Always ≥
  * the nominal rate; used to compare offers apples-to-apples across banks.
  */
 export function effectiveAnnualRatePercent(nominalRatePercent: number): number {
@@ -453,7 +453,7 @@ export function computePurchaseTax(value: number, purpose: PropertyPurpose): num
 export interface ClosingCostsEstimate {
   /** Side costs excluding purchase tax (attorney, registration, surveyor). */
   sideCosts: number
-  /** Purchase tax — progressive brackets: 0/3.5/5/8/10% first home, 8/10% second home. */
+  /** Purchase tax - progressive brackets: 0/3.5/5/8/10% first home, 8/10% second home. */
   purchaseTax: number
   /** sideCosts + purchaseTax. */
   total: number
@@ -500,7 +500,7 @@ export function suggestedEquity(
   purpose: PropertyPurpose,
 ): number | null {
   const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capital
-  // Null only when there is no value basis at all — the equity hint shows even
+  // Null only when there is no value basis at all - the equity hint shows even
   // for modest values (unlike LTV/equity-share warnings, which still guard on
   // a real home value to avoid absurd percentages).
   if (effectiveValue <= 0) return null
@@ -564,7 +564,7 @@ export function scaleTrackAmounts(
   if (!loanAmount) {
     return {
       amounts: currentAmounts.map(() => 0),
-      // Keep the remembered share for tracks whose current amount is 0 —
+      // Keep the remembered share for tracks whose current amount is 0 -
       // otherwise typing a property value keystroke-by-keystroke (where the
       // loan briefly hits 0) would wipe the memory and the tracks could never
       // be restored once the loan becomes positive again.

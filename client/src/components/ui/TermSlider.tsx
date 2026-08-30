@@ -22,7 +22,7 @@ const THUMB_SIZE = 22
  *
  * On top of the legacy fill, a small bubble just below the thumb shows the
  * current value (the selected term in years) so the slider always reads its
- * own state — feedback request.
+ * own state - feedback request.
  */
 export function TermSlider({
   min,
@@ -77,7 +77,23 @@ export function TermSlider({
       positionBubble()
     })
     observer.observe(element)
-    return () => observer.disconnect()
+    // Switching language flips documentElement dir (RTL <-> LTR), which
+    // mirrors the bubble's visual position - re-run the layout on that.
+    const dirObserver =
+      typeof MutationObserver === 'undefined'
+        ? null
+        : new MutationObserver(() => {
+            paint()
+            positionBubble()
+          })
+    dirObserver?.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['dir'],
+    })
+    return () => {
+      observer.disconnect()
+      dirObserver?.disconnect()
+    }
   }, [paint, positionBubble])
 
   return (

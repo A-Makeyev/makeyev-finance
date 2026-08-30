@@ -6,7 +6,7 @@ import { FlipSelect } from '@/components/ui/FlipSelect'
 import { cn } from '@/lib/cn'
 
 /**
- * One mortgage track fieldset — semantic fieldset/legend structure preserved
+ * One mortgage track fieldset - semantic fieldset/legend structure preserved
  * from the legacy addTrack() DOM (calculator.js:244-257); all styling comes
  * from the verbatim calculators.css port.
  */

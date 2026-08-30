@@ -7,7 +7,7 @@ import { formatCurrency, formatRatio } from '@/lib/format'
 type ScheduleView = 'total' | 'separate'
 
 /**
- * Amortization schedule — legacy .schedule-section markup and classes. Shows
+ * Amortization schedule - legacy .schedule-section markup and classes. Shows
  * either the combined "total" table (all tracks together) or one yearly table
  * per track with a payback-ratio column, toggled via a segmented control.
  */
@@ -86,7 +86,8 @@ export function ScheduleSection() {
                 <h3 className="schedule-track-heading">
                   {t(`calculator.trackTypes.${track.type}`)} · {formatCurrency(track.amount)}
                   <span className="schedule-track-heading-ratio">
-                    {' '}· {t('calculator.schedule.paybackRatioLabel')}{' '}
+                    {' '}
+                    · {t('calculator.schedule.paybackRatioLabel')}{' '}
                     {formatRatio(track.rows[0]?.paybackRatio)}
                   </span>
                 </h3>
@@ -138,10 +139,19 @@ export function ScheduleSection() {
         </button>
       )}
 
-      <p className="disclaimer">{t('calculator.disclaimer')}</p>
-
       <p className="legal-note">
-        {t('calculator.legalNote')}
+        <a
+          href={t('calculator.legalNoteLinkUrl')}
+          target="_blank"
+          rel="noreferrer"
+          data-testid="legal-note-link"
+        >
+          {t('calculator.legalNoteLink')}
+        </a>
+        <br />
+        {t('calculator.disclaimer')}
+        <br />
+        {t('calculator.legalNotePart1')}
         <br />
         {t('calculator.legalNoteRisk')}
       </p>

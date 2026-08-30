@@ -62,7 +62,7 @@ export function Navbar({ indexesVisible = false, onMenuChange }: NavbarProps) {
 
   // Notify parent of the menu's VISUAL state (for hiding indexes bar on
   // mobile). `menuChecked` flips immediately on both open and close, unlike
-  // `menuOpen` which lags 500ms behind on close — so driving the indexes bar
+  // `menuOpen` which lags 500ms behind on close - so driving the indexes bar
   // from `menuChecked` keeps it animating in sync with the panel sliding
   // instead of waiting out that delay.
   useEffect(() => {
@@ -159,7 +159,7 @@ export function Navbar({ indexesVisible = false, onMenuChange }: NavbarProps) {
           {NAV_ITEMS.map((item) => renderNavItem(item))}
           <div className="nav-icons-center w-full flex justify-center md:w-auto md:justify-start">
             <SocialIconsRow />
-            {/* Language switch — flag only */}
+            {/* Language switch - flag only */}
             <li>
               <a
                 href="javascript:void(0);"

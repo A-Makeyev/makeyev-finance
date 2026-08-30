@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Dummy EmailJS credentials for build/e2e — tests mock the network, so no
+  # Dummy EmailJS credentials for build/e2e - tests mock the network, so no
   # real secrets are ever required (or present) in CI. Real credentials are
   # scoped to deployment environments only; see SECURITY.md.
   VITE_EMAILJS_SERVICE_ID: service_dummy_ci

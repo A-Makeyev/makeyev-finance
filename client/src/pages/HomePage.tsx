@@ -5,7 +5,7 @@ import { Reveal } from '@/components/layout/Reveal'
 import { ActionFormModal } from '@/features/contact/ActionFormModal'
 
 /**
- * Home page — content carried over verbatim from the legacy index.html
+ * Home page - content carried over verbatim from the legacy index.html
  * (including its placeholder filler copy, per product decision).
  */
 export function HomePage() {

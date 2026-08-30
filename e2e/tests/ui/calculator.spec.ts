@@ -3,7 +3,7 @@ import { installExternalMocks } from '../../support/mocks'
 import { CalculatorPage } from '../../pom/CalculatorPage'
 import { formatGroupedNumber, ils } from '../../support/ils'
 
-test.describe('mortgage calculator — core UI flows', () => {
+test.describe('mortgage calculator - core UI flows', () => {
   let calc: CalculatorPage
 
   test.beforeEach(async ({ page }) => {
@@ -116,7 +116,7 @@ test.describe('mortgage calculator — core UI flows', () => {
     await expect(calc.summaryNotes).toContainText('מהנדרש')
     await expect(calc.summaryNotes).toContainText('הבנק יבקש הכנסה חודשית פנויה של לפחות')
     // Suggested minimum income placeholder: ceil(7650·2/500)·500 = 15,500.
-    // Hints are plain grouped numbers — the input renders its own ₪ suffix.
+    // Hints are plain grouped numbers - the input renders its own ₪ suffix.
     await expect(calc.monthlyIncome).toHaveAttribute('placeholder', formatGroupedNumber(15_500))
   })
 
@@ -146,7 +146,7 @@ test.describe('mortgage calculator — core UI flows', () => {
   })
 
   test('schedule expands to full horizon and collapses back', async () => {
-    // Default term is 15y (no expand button) — push the term to 30 first.
+    // Default term is 15y (no expand button) - push the term to 30 first.
     await calc.termSlider.fill('30')
     const expand = calc.page.getByTestId('expand-schedule')
     await expect(expand).toBeVisible()
@@ -164,7 +164,7 @@ test.describe('mortgage calculator — core UI flows', () => {
 
   test('term slider drives track years both ways', async () => {
     // NOTE: RTL range inputs invert arrow-key direction differently per engine
-    // (Chromium/Firefox invert, WebKit does not) — drive the value directly,
+    // (Chromium/Firefox invert, WebKit does not) - drive the value directly,
     // which exercises the same onChange wiring as native keyboard input.
     await calc.termSlider.fill('29')
     await expect(calc.termSlider).toHaveValue('29')

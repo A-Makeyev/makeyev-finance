@@ -53,12 +53,12 @@ import {
 export interface TrackState {
   id: string
   type: TrackType
-  /** Formatted display text ('' allowed) — math parses from this text exactly like the legacy DOM. */
+  /** Formatted display text ('' allowed) - math parses from this text exactly like the legacy DOM. */
   amountText: string
   yearsText: string
   rateText: string
   method: AmortizationMethod
-  /** Legacy dataset.autoRate — live-rate seeding is allowed until user edits. */
+  /** Legacy dataset.autoRate - live-rate seeding is allowed until user edits. */
   isAutoRate: boolean
   /** Legacy dataset.loanShare memory for proportional rebalancing. */
   loanShareMemory: number | null
@@ -103,7 +103,7 @@ export interface CalculatorSnapshot {
   closingCosts: ClosingCostsEstimate | null
   /** Unweighted average annual rate (%) of the entered tracks. */
   avgInterestRate: number
-  /** Loan-amount-weighted average annual rate (%) — blended portfolio cost. */
+  /** Loan-amount-weighted average annual rate (%) - blended portfolio cost. */
   weightedAvgInterestRate: number
   /** Unweighted average payback ratio across the entered tracks. */
   avgPaybackRatio: number
@@ -287,7 +287,7 @@ function scaleTracks(s: CalculatorData): void {
 
 /** Legacy syncStartingAmountFromTracks (calculator.js:169-174). */
 function syncStartingAmountFromTracks(s: CalculatorData): void {
-  // סכום המשכנתא always equals the loan itself — the sum of the track
+  // סכום המשכנתא always equals the loan itself - the sum of the track
   // amounts. Equity and property value are separate inputs and must not
   // inflate the mortgage field, so no capital and no property gate here.
   const total = s.tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
@@ -309,14 +309,14 @@ function snapTracksToLoan(s: CalculatorData): void {
   })
 }
 
-/** Legacy applySelectedYears — slider drives every track's term. */
+/** Legacy applySelectedYears - slider drives every track's term. */
 function applySelectedYears(s: CalculatorData): void {
   s.tracks.forEach((track) => {
     track.yearsText = String(s.termYears)
   })
 }
 
-/** Legacy syncTermSliderFromTracks (calculator.js:214-224) — slider follows max track term. */
+/** Legacy syncTermSliderFromTracks (calculator.js:214-224) - slider follows max track term. */
 function syncTermYearsFromTracks(s: CalculatorData): void {
   const yearValues = s.tracks
     .map((track) => Number(track.yearsText))
@@ -339,7 +339,7 @@ function applyTrackTypeLogic(s: CalculatorData, track: TrackState, type: TrackTy
   }
 }
 
-/** Core recalculation — a faithful port of legacy calculate() (calculator.js:526-644). */
+/** Core recalculation - a faithful port of legacy calculate() (calculator.js:526-644). */
 function recalculate(s: CalculatorState): void {
   const property = parseAmountText(s.propertyValueText)
   const capital = parseAmountText(s.capitalText)
@@ -764,9 +764,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
     reset: () => {
       // Reset clears every input and leaves the track amount blank (not "0"),
       // so no "positive amount" error fires and the calculator returns to a
-      // clean empty state — no stale placeholders or summary notes. תמהיל 1
+      // clean empty state - no stale placeholders or summary notes. תמהיל 1
       // stays selected so it applies once the user enters a new amount.
-      // External live data (prime rate, CPI) is kept — it is market data.
+      // External live data (prime rate, CPI) is kept - it is market data.
       set((s) => {
         const allocated = allocatePreset('basket1', 0, s.primeRate)
         s.tracks = allocated.map((entry) =>

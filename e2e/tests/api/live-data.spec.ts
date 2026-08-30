@@ -6,7 +6,7 @@ import { formatCurrency } from '@/lib/format'
 
 /**
  * API-level tests: the calculator must incorporate live BOI/CBS data when
- * available and fall back silently when those endpoints fail — exactly the
+ * available and fall back silently when those endpoints fail - exactly the
  * legacy contract (`.catch(() => {})`, 2% fallback inflation, 5.75 prime).
  */
 

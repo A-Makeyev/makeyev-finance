@@ -9,7 +9,7 @@ const PRESET_LABEL_KEYS: Record<PresetId, string> = {
   basket4: 'calculator.presetBasket4',
 }
 
-/** Preset "basket" buttons — legacy .preset-button active highlight. */
+/** Preset "basket" buttons - legacy .preset-button active highlight. */
 export function PresetSelector() {
   const { t } = useTranslation()
   const activePreset = useCalculatorStore((s) => s.activePreset)

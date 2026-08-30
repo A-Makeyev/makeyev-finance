@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 /**
- * Intro loader — preserves the legacy loading screen (loader.js + loader.css):
+ * Intro loader - preserves the legacy loading screen (loader.js + loader.css):
  * body scroll-lock until loaded, 1s fade, then removal; also resets scroll
  * position and cleans `?fbclid=` URLs.
  */
