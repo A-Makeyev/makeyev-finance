@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { installExternalMocks } from '../../support/mocks'
 import { CalculatorPage } from '../../pom/CalculatorPage'
-import { ils } from '../../support/ils'
+import { formatGroupedNumber, ils } from '../../support/ils'
 
 test.describe('mortgage calculator — core UI flows', () => {
   let calc: CalculatorPage
@@ -115,8 +115,9 @@ test.describe('mortgage calculator — core UI flows', () => {
     // Merged DTI line (bad ❌): shortfall + required minimum income.
     await expect(calc.summaryNotes).toContainText('מהנדרש')
     await expect(calc.summaryNotes).toContainText('הבנק יבקש הכנסה חודשית פנויה של לפחות')
-    // Suggested minimum income placeholder: ceil(7650·2/500)·500 = ₪15,500
-    await expect(calc.monthlyIncome).toHaveAttribute('placeholder', ils(15_500))
+    // Suggested minimum income placeholder: ceil(7650·2/500)·500 = 15,500.
+    // Hints are plain grouped numbers — the input renders its own ₪ suffix.
+    await expect(calc.monthlyIncome).toHaveAttribute('placeholder', formatGroupedNumber(15_500))
   })
 
   test('variable-rate cap blocks calculation and auto-fix rebalances', async () => {

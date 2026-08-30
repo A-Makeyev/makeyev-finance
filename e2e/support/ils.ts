@@ -1,6 +1,6 @@
-import { formatCurrency } from '../../client/src/lib/format'
+import { formatCurrency, formatGroupedNumber } from '../../client/src/lib/format'
 
-export { formatCurrency }
+export { formatCurrency, formatGroupedNumber }
 
 /**
  * Expected visible text for an ILS amount. he-IL Intl output embeds RTL marks
