@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   allocatePreset,
   assessDti,
-  assessEquity,
+  assessCapital,
   assessLtv,
   autoFixVariableMix,
   averageInterestRate,
@@ -17,7 +17,7 @@ import {
   effectiveAnnualRatePercent,
   estimateClosingCosts,
   scaleTrackAmounts,
-  suggestedEquity,
+  suggestedCapital,
   suggestedMinimumIncome,
   variableShareExceeded,
 } from '@/lib/amortization'
@@ -317,40 +317,40 @@ describe('LTV assessment', () => {
   })
 })
 
-describe('equity note thresholds', () => {
+describe('capital note thresholds', () => {
   it('bad under required, good at required+15, neutral between', () => {
-    expect(assessEquity(200_000, 1_000_000, 800_000, 'first')?.state).toBe('bad')
-    expect(assessEquity(300_000, 1_000_000, 700_000, 'first')?.state).toBe('neutral')
-    expect(assessEquity(400_000, 1_000_000, 600_000, 'first')?.state).toBe('good')
-    expect(assessEquity(0, 1_000_000, 1_000_000, 'first')).toBeNull()
+    expect(assessCapital(200_000, 1_000_000, 800_000, 'first')?.state).toBe('bad')
+    expect(assessCapital(300_000, 1_000_000, 700_000, 'first')?.state).toBe('neutral')
+    expect(assessCapital(400_000, 1_000_000, 600_000, 'first')?.state).toBe('good')
+    expect(assessCapital(0, 1_000_000, 1_000_000, 'first')).toBeNull()
   })
 
   it('omits the note for values too small to be a real home', () => {
     // Otherwise the share shows absurd percents like 3333%.
-    expect(assessEquity(500, 15, 0, 'first')).toBeNull()
-    expect(assessEquity(40_000, 99_999, 0, 'first')).toBeNull()
-    expect(assessEquity(40_000, 100_000, 0, 'first')).not.toBeNull()
+    expect(assessCapital(500, 15, 0, 'first')).toBeNull()
+    expect(assessCapital(40_000, 99_999, 0, 'first')).toBeNull()
+    expect(assessCapital(40_000, 100_000, 0, 'first')).not.toBeNull()
   })
 })
 
-describe('suggestedEquity (required initial הון עצמי)', () => {
+describe('suggestedCapital (required initial הון עצמי)', () => {
   it('is the purpose financing gap of the effective value', () => {
     // first = 75% finance → 25% of 1.5M = 375k.
-    expect(suggestedEquity(1_500_000, 0, 0, 'first')).toBe(375_000)
+    expect(suggestedCapital(1_500_000, 0, 0, 'first')).toBe(375_000)
     // upgrade = 70% → 30%.
-    expect(suggestedEquity(1_000_000, 0, 0, 'upgrade')).toBe(300_000)
+    expect(suggestedCapital(1_000_000, 0, 0, 'upgrade')).toBe(300_000)
     // investment = 50% → 50%.
-    expect(suggestedEquity(1_000_000, 0, 0, 'investment')).toBe(500_000)
+    expect(suggestedCapital(1_000_000, 0, 0, 'investment')).toBe(500_000)
   })
 
   it('uses loan + capital when property is unknown and rounds up to 500', () => {
     // effective = loan + capital.
-    expect(suggestedEquity(0, 800_000, 200_000, 'first')).toBe(250_000)
+    expect(suggestedCapital(0, 800_000, 200_000, 'first')).toBe(250_000)
     // Non-multiple of 500 rounds UP.
-    expect(suggestedEquity(1_500_001, 0, 0, 'first')).toBe(375_500)
-    expect(suggestedEquity(0, 0, 0, 'first')).toBeNull()
+    expect(suggestedCapital(1_500_001, 0, 0, 'first')).toBe(375_500)
+    expect(suggestedCapital(0, 0, 0, 'first')).toBeNull()
     // No value basis → no suggestion; modest values still hint (rounded to 500).
-    expect(suggestedEquity(15, 0, 0, 'first')).toBe(500)
+    expect(suggestedCapital(15, 0, 0, 'first')).toBe(500)
   })
 })
 

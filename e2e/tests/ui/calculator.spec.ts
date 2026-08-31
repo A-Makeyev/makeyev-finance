@@ -105,7 +105,7 @@ test.describe('mortgage calculator - core UI flows', () => {
     await expect(calc.summaryNotes).toBeVisible()
     await expect(calc.summaryNotes).toContainText('60%')
     await expect(calc.summaryNotes).toContainText(ils(500_000))
-    // Equity note: 40% ≥ required(50)+15 → good
+    // Capital note: 40% ≥ required(50)+15 → good
     await expect(calc.summaryNotes).toContainText('הון עצמי 40% משווי הנכס')
   })
 

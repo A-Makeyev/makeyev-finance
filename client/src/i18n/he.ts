@@ -204,12 +204,12 @@ export const he = {
         variableCapLine2: ' הקטינו מסלול מסומן או הגדילו מסלול בריבית קבועה',
       },
       warnings: {
-        equity: 'הון עצמי <0>{{percent}}</0>% משווי הנכס',
-        equityRequired:
-          'הון עצמי התחלתי נדרש לאישור הבנק: <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
-        equityShortfall:
+        capital: 'הון עצמי <0>{{percent}}</0>% משווי הנכס',
+        capitalRequired:
+          'הון עצמי נדרש לאישור הבנק: <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
+        capitalShortfall:
           'הון עצמי נמוך מהנדרש ~ נדרש לפחות <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
-        equityPercentRequired:
+        capitalPercentRequired:
           'הון עצמי <0>{{percent}}</0>% משווי הנכס ~ נדרש לפחות <1>{{required}}</1> (<2>{{requiredPercent}}</2>%)',
         closingCosts: 'עלויות נלוות (עו"ד, רישום ושמאי): <0>{{amount}}</0> (<1>{{percent}}</1>%)',
         purchaseTaxNone: 'מס רכישה לא חל על {{purpose}} עד <0>{{threshold}}</0>',
@@ -217,7 +217,7 @@ export const he = {
         purchaseTaxFirst: 'דירה ראשונה',
         purchaseTaxUpgrade: 'משפר דיור',
         purchaseTaxInvestment: 'דירה שנייה ומעלה',
-        equityTotalRequired: 'הון עצמי + עלויות נלוות ומיסים צפויים: <0>{{total}}</0>',
+        capitalTotalRequired: 'הון עצמי + עלויות נלוות ומיסים צפויים: <0>{{total}}</0>',
         ltv: 'שיעור המימון (<0>{{percent}}</0>%) חורג מהמותר ל{{purpose}} (עד <1>{{limit}}</1>%)',
         ltvMaxLoan: 'ניתן לקבל משכנתא של עד <0>{{maxLoan}}</0>',
         ltvOk: 'שיעור המימון (<0>{{percent}}</0>%) עומד במותר ל{{purpose}} (עד <1>{{limit}}</1>%)',

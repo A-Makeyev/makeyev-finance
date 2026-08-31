@@ -1264,13 +1264,29 @@ nav#navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Frosted-glass default (user-requested deviation from the legacy parity
+     pass): translucent ink tint + blur over the dark hero banners (.header /
+     .sub-header are both dark images under a 50% black overlay), so the
+     white links + transparent logo stay readable while the cover bleeds
+     through blurred. A faint cool white lift keeps the slab lit rather than
+     smoked. Browsers without backdrop-filter keep the tint only. */
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)),
+    rgba(15, 15, 15, 0.3);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  /* Faint light hairline along the slab's bottom edge; the scrolled state
+     swaps it for its own drop shadow. */
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.25);
   /* The nav (with the logo) slides up when the menu opens and back down to
-     its place when it closes - instead of jumping. Colors keep their fade. */
+     its place when it closes - instead of jumping. Colors keep their fade;
+     backdrop-filter fades too so the blur dissolves with the tint. */
   transition:
     top 0.25s ease-in-out,
     margin-top 0.25s ease-in-out,
     color 0.5s ease,
-    background-color 0.5s ease;
+    background-color 0.5s ease,
+    backdrop-filter 0.5s ease;
 }
 
 nav#navbar .logo {
@@ -1438,10 +1454,15 @@ nav#navbar .menu-icon .line:hover {
   transform: scale(1.2);
 }
 
-.navbar-scrolling {
+/* Id-qualified on purpose: the glass lives on nav#navbar (an id rule), so a
+   plain class here would lose the cascade - this resets tint, blur and the
+   glass hairline back to the legacy solid white bar. */
+nav#navbar.navbar-scrolling {
   color: var(--soft-black);
   background: var(--soft-white);
   box-shadow: 0 5px 5px 0 var(--soft-black-background);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* Legacy adjustMenuOpen/adjustMenuClosed/resize painted link + hamburger
@@ -1653,15 +1674,20 @@ nav#navbar.nav-scrolling-resize {
 
 @media screen and (max-width: 650px) {
   .adjust-nav {
-    margin-top: 40px;
+    /* 35px fixed top + 49px margin = 84px - the navbar still starts exactly
+       below the indexes bar. */
+    margin-top: 49px;
   }
 
   .indexes {
-    height: 75px;
+    /* Compact fit for the 10px index text: 6 wrapped lines (12px line
+       boxes) + 10px padding = 82px. */
+    height: 84px;
   }
 
   .indexes a {
-    font-size: 9px;
+    /* Small but readable on phones - 9px was unreadable, 11px too loud. */
+    font-size: 10px;
   }
 }
 
@@ -2265,9 +2291,14 @@ e #name,
 
 .limits-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1.6fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(
-      140px,
-      1fr
+  /* Property value and capital hold the biggest numbers (7-8 digits once
+     thousand-separated), so they get at least as much room as income -
+     150px minimum keeps ~90px of text area after the ₪ suffix and padding,
+     enough for "10,000,000". The purpose select only needs its option text
+     (~220px), so its weight drops from 1.6fr to 1.3fr. */
+  grid-template-columns: minmax(220px, 1.3fr) minmax(150px, 1.05fr) minmax(150px, 1.05fr) minmax(
+      130px,
+      0.85fr
     );
   gap: 18px;
   padding-bottom: 20px;
@@ -2280,7 +2311,7 @@ e #name,
   margin-top: 7px;
 }
 
-/* Summary notes - the equity/closing-cost breakdown and the regulatory
+/* Summary notes - the capital/closing-cost breakdown and the regulatory
    warnings share one container (feedback request): a single uniform font
    size, no yellow tint, and per-line status markers. Positive lines lead
    with a green ✔️, negative lines with a red ❌, and general-info lines with
@@ -3164,6 +3195,15 @@ tbody tr:hover {
 }
 
 @media (max-width: 900px) {
+  /* Stack the limits row a bit earlier than the 800px panel collapse:
+     between 800-900px the four-column grid squeezed שווי הנכס / הון עצמי to
+     ~127px, which scrolled the leading digits of 7-digit amounts out of
+     view. Stacked, each money field gets the full row width instead. */
+  .limits-row {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
   .calculator-intro h1 {
     font-size: 4.3rem;
   }
@@ -3191,11 +3231,6 @@ tbody tr:hover {
     gap: 18px;
   }
 
-  .limits-row {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
   .starting-amount,
   .starting-amount .input-wrap {
     max-width: 100%;
@@ -3220,5 +3255,105 @@ tbody tr:hover {
   .results-card strong,
   .primary-result strong {
     font-size: 2rem;
+  }
+}
+
+@media (max-width: 650px) {
+  /* Small phones: trim the calculator's type scale and control heights one
+     notch (feedback request) so fields, notes and the schedule stay readable
+     without crowding the narrow panel. */
+  .calculator-panel,
+  .schedule-section {
+    padding: 20px 14px;
+  }
+
+  .panel-heading h2,
+  .section-heading h2 {
+    font-size: 1.4rem;
+  }
+
+  .calculator-panel input,
+  .calculator-panel select {
+    font-size: 0.85rem;
+    padding: 10px;
+  }
+
+  .select-wrap {
+    height: 38px;
+  }
+
+  .input-group,
+  .starting-amount,
+  .term-slider {
+    font-size: 0.85rem;
+  }
+
+  .starting-amount .input-wrap,
+  .term-slider-wrap,
+  .starting-calculate-button {
+    height: 42px;
+  }
+
+  .summary-notes {
+    font-size: 0.85rem;
+  }
+
+  .preset-heading {
+    font-size: 0.9rem;
+  }
+
+  .preset-button {
+    font-size: 0.9rem;
+    padding: 7px 12px;
+  }
+
+  .calculate-button {
+    font-size: 0.9rem;
+    padding: 11px 18px;
+  }
+
+  .mortgage-track {
+    gap: 10px;
+    padding: 20px 12px 12px;
+  }
+
+  .results-card p {
+    font-size: 0.9rem;
+  }
+
+  .results-card strong,
+  .primary-result strong {
+    font-size: 1.6rem;
+  }
+
+  .track-paybacks {
+    font-size: 0.8rem;
+  }
+
+  #schedule-summary {
+    font-size: 0.8rem;
+  }
+
+  th {
+    font-size: 0.78rem;
+    padding: 10px 12px;
+  }
+
+  td {
+    font-size: 0.85rem;
+    padding: 10px 12px;
+  }
+
+  .schedule-aside strong {
+    font-size: 1.4rem;
+  }
+
+  .schedule-track-heading {
+    font-size: 0.95rem;
+  }
+
+  .regulatory-note,
+  .legal-note {
+    font-size: 0.75rem;
   }
 }

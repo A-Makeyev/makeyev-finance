@@ -20,7 +20,7 @@ export const DTI_ROUNDING_STEP = 500
     effective property value - a common mid estimate in Israel (~1.5%, excluding
     purchase tax and agent commission). */
 export const SIDE_COSTS_PERCENT = 1.5
-/** Below this effective value no real home exists - equity, LTV and closing-cost
+/** Below this effective value no real home exists - capital, LTV and closing-cost
     estimates are meaningless noise (their ₪500 rounding / percent math would
     distort them, e.g. "3333%") and are omitted entirely. */
 export const MIN_REAL_HOME_VALUE = 100_000
@@ -352,25 +352,25 @@ export function buildTrackScheduleRows(result: TrackResult): TrackScheduleRow[] 
 // Bank of Israel regulatory limits
 // ---------------------------------------------------------------------------
 
-export interface EquityAssessment {
+export interface CapitalAssessment {
   percent: number
   requiredPercent: number
   state: 'bad' | 'good' | 'neutral'
 }
 
-/** Legacy equity-note logic (capital > 0 only). */
-export function assessEquity(
+/** Legacy "equity note" logic, now user-facing "capital" (capital > 0 only). */
+export function assessCapital(
   capital: number,
   propertyValue: number,
   loanAmount: number,
   purpose: PropertyPurpose,
-): EquityAssessment | null {
+): CapitalAssessment | null {
   if (capital <= 0) return null
   const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capital
   if (effectiveValue < MIN_REAL_HOME_VALUE) return null
   const percent = Math.round((capital / effectiveValue) * 100)
   const requiredPercent = 100 - PURPOSE_LIMITS[purpose].limit
-  const state: EquityAssessment['state'] =
+  const state: CapitalAssessment['state'] =
     percent < requiredPercent ? 'bad' : percent >= requiredPercent + 15 ? 'good' : 'neutral'
   return { percent, requiredPercent, state }
 }
@@ -420,9 +420,9 @@ export function suggestedMinimumIncome(firstMonthPayment: number): number {
 }
 
 /**
- * Required initial equity (הון עצמי) for a purchase: the gap between the
+ * Required initial capital (הון עצמי) for a purchase: the gap between the
  * maximum financed share (100 − purpose limit) and the effective property
- * value. Mirrors assessEquity's effectiveValue (property else loan+capital).
+ * value. Mirrors assessCapital's effectiveValue (property else loan+capital).
  */
 /**
  * Which purchase-tax brackets apply: a first home, or a home improver
@@ -493,15 +493,15 @@ export function estimateClosingCosts(
   }
 }
 
-export function suggestedEquity(
+export function suggestedCapital(
   propertyValue: number,
   loanAmount: number,
   capital: number,
   purpose: PropertyPurpose,
 ): number | null {
   const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capital
-  // Null only when there is no value basis at all - the equity hint shows even
-  // for modest values (unlike LTV/equity-share warnings, which still guard on
+  // Null only when there is no value basis at all - the capital hint shows even
+  // for modest values (unlike LTV/capital-share warnings, which still guard on
   // a real home value to avoid absurd percentages).
   if (effectiveValue <= 0) return null
   const requiredPercent = 100 - PURPOSE_LIMITS[purpose].limit

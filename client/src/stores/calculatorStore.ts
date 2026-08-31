@@ -9,7 +9,7 @@ import {
   PRESETS,
   allocatePreset,
   assessDti,
-  assessEquity,
+  assessCapital,
   assessLtv,
   autoFixVariableMix,
   averageInterestRate,
@@ -26,14 +26,14 @@ import {
   resolvePaymentLabel,
   scaleTrackAmounts,
   sumTotals,
-  suggestedEquity,
+  suggestedCapital,
   suggestedMinimumIncome,
   variableShareExceeded,
   type AmortizationMethod,
   type ClosingCostsEstimate,
   type CombinedScheduleRow,
   type DtiWarning,
-  type EquityAssessment,
+  type CapitalAssessment,
   type LtvWarning,
   type PaymentLabelResolution,
   type PresetId,
@@ -91,14 +91,14 @@ export interface CalculatorSnapshot {
   isEmpty: boolean
   /** null = keep showing whatever the label area currently shows (legacy behaviour). */
   highestLabel: PaymentLabelResolution | null
-  equity: EquityAssessment | null
+  capitalAssessment: CapitalAssessment | null
   ltv: LtvWarning | null
   dti: DtiWarning | null
   incomePlaceholder: number | null
-  /** Suggested required initial equity (הון עצמי) for the current purpose. */
-  suggestedEquity: number | null
-  /** Entered equity is positive but below the required amount. */
-  equityShortfall: boolean
+  /** Suggested required initial capital (הון עצמי) for the current purpose. */
+  suggestedCapital: number | null
+  /** Entered capital is positive but below the required amount. */
+  capitalShortfall: boolean
   /** Rough buyer-side closing costs (side costs + purchase tax) estimate. */
   closingCosts: ClosingCostsEstimate | null
   /** Unweighted average annual rate (%) of the entered tracks. */
@@ -221,12 +221,12 @@ const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   enteredCount: 0,
   isEmpty: true,
   highestLabel: null,
-  equity: null,
+  capitalAssessment: null,
   ltv: null,
   dti: null,
   incomePlaceholder: null,
-  suggestedEquity: null,
-  equityShortfall: false,
+  suggestedCapital: null,
+  capitalShortfall: false,
   closingCosts: null,
   avgInterestRate: 0,
   weightedAvgInterestRate: 0,
@@ -288,7 +288,7 @@ function scaleTracks(s: CalculatorData): void {
 /** Legacy syncStartingAmountFromTracks (calculator.js:169-174). */
 function syncStartingAmountFromTracks(s: CalculatorData): void {
   // סכום המשכנתא always equals the loan itself - the sum of the track
-  // amounts. Equity and property value are separate inputs and must not
+  // amounts. Capital and property value are separate inputs and must not
   // inflate the mortgage field, so no capital and no property gate here.
   const total = s.tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
   s.startingAmountText = total > 0 ? formatGroupedNumber(Math.round(total)) : ''
@@ -375,7 +375,7 @@ function recalculate(s: CalculatorState): void {
   if (!enteredIndexes.length) {
     const prev = s.snapshot
     s.error = null
-    const suggested = suggestedEquity(property, 0, capital, s.purpose)
+    const suggested = suggestedCapital(property, 0, capital, s.purpose)
     s.snapshot = {
       totals: EMPTY_TOTALS,
       annualFirstYearPayment: 0,
@@ -386,12 +386,12 @@ function recalculate(s: CalculatorState): void {
       enteredCount: 0,
       isEmpty: true,
       highestLabel: prev.highestLabel,
-      equity: assessEquity(capital, property, 0, s.purpose),
+      capitalAssessment: assessCapital(capital, property, 0, s.purpose),
       ltv: assessLtv(0, property, capital, s.purpose),
       dti: assessDti(0, income),
       incomePlaceholder: prev.incomePlaceholder,
-      suggestedEquity: suggested,
-      equityShortfall: capital > 0 && suggested !== null && suggested > capital,
+      suggestedCapital: suggested,
+      capitalShortfall: capital > 0 && suggested !== null && suggested > capital,
       closingCosts: estimateClosingCosts(property, 0, capital, s.purpose),
       avgInterestRate: 0,
       weightedAvgInterestRate: 0,
@@ -428,7 +428,7 @@ function recalculate(s: CalculatorState): void {
   const totals = sumTotals(validResults)
   const combinedRows = combineSchedules(validResults)
   const firstMonthPayment = totals.firstPayment
-  const suggested = suggestedEquity(property, totalPrincipal, capital, s.purpose)
+  const suggested = suggestedCapital(property, totalPrincipal, capital, s.purpose)
 
   s.snapshot = {
     totals,
@@ -440,15 +440,15 @@ function recalculate(s: CalculatorState): void {
     enteredCount: validResults.length,
     isEmpty: false,
     highestLabel: resolvePaymentLabel(validResults),
-    equity: assessEquity(capital, property, totalPrincipal, s.purpose),
+    capitalAssessment: assessCapital(capital, property, totalPrincipal, s.purpose),
     ltv: assessLtv(totalPrincipal, property, capital, s.purpose),
     dti: assessDti(firstMonthPayment, income),
     incomePlaceholder:
       firstMonthPayment > 0
         ? suggestedMinimumIncome(firstMonthPayment)
         : s.snapshot.incomePlaceholder,
-    suggestedEquity: suggested,
-    equityShortfall: capital > 0 && suggested !== null && suggested > capital,
+    suggestedCapital: suggested,
+    capitalShortfall: capital > 0 && suggested !== null && suggested > capital,
     closingCosts: estimateClosingCosts(property, totalPrincipal, capital, s.purpose),
     avgInterestRate: averageInterestRate(validResults),
     weightedAvgInterestRate: calculateWeightedAvgInterestRate(validResults),

@@ -9,7 +9,7 @@ export class CalculatorPage {
   readonly totalPayment: Locator
   readonly paymentNote: Locator
   readonly formError: Locator
-  /** Merged good/bad/info summary notes (equity note + regulatory warnings). */
+  /** Merged good/bad/info summary notes (capital note + regulatory warnings). */
   readonly summaryNotes: Locator
   readonly autofixButton: Locator
   readonly addTrackButton: Locator

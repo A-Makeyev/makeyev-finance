@@ -228,7 +228,7 @@ export function CalculatorPage() {
               </label>
             </div>
 
-            {/* Summary notes: the equity/closing-cost breakdown and the
+            {/* Summary notes: the capital/closing-cost breakdown and the
                 regulatory warnings on one list, grouped good → bad → info */}
             <div
               id="summary-notes"

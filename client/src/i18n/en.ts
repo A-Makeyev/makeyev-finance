@@ -123,7 +123,7 @@ export const en: { translation: Translation } = {
       purposeUpgrade: 'Home upgrade (70% financing)',
       purposeInvestment: 'Investment property (50% financing)',
       propertyValueLabel: 'Property value',
-      capitalLabel: 'Equity',
+      capitalLabel: 'Initial capital',
       incomeLabel: 'Net monthly income',
       presetHeading: 'Choose a mix',
       presetBasket1: 'Mix 1',
@@ -212,13 +212,13 @@ export const en: { translation: Translation } = {
         variableCapLine2: ' Reduce a marked track or increase a fixed-rate track',
       },
       warnings: {
-        equity: 'Equity is <0>{{percent}}</0>% of the property value',
-        equityRequired:
-          'Required initial equity for bank approval: <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
-        equityShortfall:
-          'Equity is below the required share ~ at least <0>{{required}}</0> (<1>{{requiredPercent}}</1>%) is needed',
-        equityPercentRequired:
-          'Equity of <0>{{percent}}</0>% of the property value ~ at least <1>{{required}}</1> (<2>{{requiredPercent}}</2>%) required',
+        capital: 'Capital is <0>{{percent}}</0>% of the property value',
+        capitalRequired:
+          'Required capital for bank approval: <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
+        capitalShortfall:
+          'Capital is below the required share ~ at least <0>{{required}}</0> (<1>{{requiredPercent}}</1>%) is needed',
+        capitalPercentRequired:
+          'Capital of <0>{{percent}}</0>% of the property value ~ at least <1>{{required}}</1> (<2>{{requiredPercent}}</2>%) required',
         closingCosts:
           'Side costs (attorney, registration & surveyor): <0>{{amount}}</0> (<1>{{percent}}</1>%)',
         purchaseTaxNone:
@@ -227,7 +227,7 @@ export const en: { translation: Translation } = {
         purchaseTaxFirst: 'first home',
         purchaseTaxUpgrade: 'home improver',
         purchaseTaxInvestment: 'second home and beyond',
-        equityTotalRequired: 'Equity + expected side costs & taxes: <0>{{total}}</0>',
+        capitalTotalRequired: 'Capital + expected side costs & taxes: <0>{{total}}</0>',
         ltv: 'The financing ratio (<0>{{percent}}</0>%) exceeds the Bank of Israel limit for a {{purpose}} (up to <1>{{limit}}</1>%)',
         ltvMaxLoan: 'The maximum mortgage is <0>{{maxLoan}}</0>',
         ltvOk:

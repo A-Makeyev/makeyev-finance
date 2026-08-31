@@ -65,7 +65,7 @@ export function useCalculatorViewModel() {
   const capitalText = useCalculatorStore((s) => s.capitalText)
   const incomeText = useCalculatorStore((s) => s.incomeText)
   const tracks = useCalculatorStore((s) => s.tracks)
-  const requiredEquityPercent = 100 - PURPOSE_LIMITS[purpose].limit
+  const requiredCapitalPercent = 100 - PURPOSE_LIMITS[purpose].limit
 
   const countText =
     snapshot.enteredCount === 1
@@ -115,34 +115,34 @@ export function useCalculatorViewModel() {
     investment: t('calculator.warnings.purchaseTaxInvestment'),
   }
 
-  // Regulatory-limit messages: equity shortfall and LTV violations are "bad"
+  // Regulatory-limit messages: capital shortfall and LTV violations are "bad"
   // (red ❌); the DTI explanation is general info (ℹ️) - feedback request.
   const warningMessages: NoteLine[] = []
-  // Entered equity below the required amount → tell the user how much more.
-  // When the equity-percent line (below) already folds in the shortfall, the
+  // Entered capital below the required amount → tell the user how much more.
+  // When the capital-percent line (below) already folds in the shortfall, the
   // standalone message is skipped - feedback request (mix together). With no
   // loan entered there is nothing to report, so skip the shortfall too.
   if (
     !snapshot.isEmpty &&
-    snapshot.equityShortfall &&
-    snapshot.suggestedEquity !== null &&
-    !snapshot.equity
+    snapshot.capitalShortfall &&
+    snapshot.suggestedCapital !== null &&
+    !snapshot.capitalAssessment
   ) {
     warningMessages.push(
       mark(
         'negative',
         <Trans
-          i18nKey="calculator.warnings.equityShortfall"
+          i18nKey="calculator.warnings.capitalShortfall"
           values={{
-            required: formatCurrency(snapshot.suggestedEquity),
-            requiredPercent: requiredEquityPercent,
+            required: formatCurrency(snapshot.suggestedCapital),
+            requiredPercent: requiredCapitalPercent,
           }}
           components={[<strong key="es-required" />, <strong key="es-pct" />]}
         />,
       ),
     )
   }
-  if (snapshot.equity) {
+  if (snapshot.capitalAssessment) {
     // Rendered separately under the inputs row (legacy #equity-note).
   }
   // Raw inputs needed to report a compliant LTV/DTI (the store only carries
@@ -273,36 +273,36 @@ export function useCalculatorViewModel() {
       </>
     )
 
-  // Equity note lines: the actual/required equity share, the closing-cost
+  // Capital note lines: the actual/required capital share, the closing-cost
   // breakdown, then the totals - every number is bold. The closing-cost
   // subtotal (סה"כ עלויות נלוות ומיסים) always closes the list.
-  const equityNoteLines: NoteLine[] = (() => {
+  const capitalNoteLines: NoteLine[] = (() => {
     const lines: NoteLine[] = []
     // Below a real home value there is nothing meaningful to summarize - hide
-    // the equity/closing-cost lines entirely (capital/income hints still work).
+    // the capital/closing-cost lines entirely (capital/income hints still work).
     if (propertyValue > 0 && propertyValue < MIN_REAL_HOME_VALUE) return lines
     // With no loan entered (track amounts empty) there is nothing meaningful
-    // to summarize - hide the equity/closing-cost lines until a real
+    // to summarize - hide the capital/closing-cost lines until a real
     // calculation exists.
     if (snapshot.isEmpty) return lines
-    // The equity share (actual or required) leads the list - any share that
+    // The capital share (actual or required) leads the list - any share that
     // meets the requirement (good or neutral) is good news; only a share
     // below the required amount is bad. When it's below the required amount,
     // the shortfall folds into the same line.
-    if (snapshot.equity) {
-      if (snapshot.equityShortfall && snapshot.suggestedEquity !== null) {
+    if (snapshot.capitalAssessment) {
+      if (snapshot.capitalShortfall && snapshot.suggestedCapital !== null) {
         lines.push(
           mark(
             'negative',
             <Trans
-              i18nKey="calculator.warnings.equityPercentRequired"
+              i18nKey="calculator.warnings.capitalPercentRequired"
               values={{
-                percent: snapshot.equity.percent,
-                required: formatCurrency(snapshot.suggestedEquity),
-                requiredPercent: requiredEquityPercent,
+                percent: snapshot.capitalAssessment.percent,
+                required: formatCurrency(snapshot.suggestedCapital),
+                requiredPercent: requiredCapitalPercent,
               }}
               components={[
-                <strong key="equity-percent" />,
+                <strong key="capital-percent" />,
                 <strong key="required" />,
                 <strong key="requiredPercent" />,
               ]}
@@ -310,28 +310,28 @@ export function useCalculatorViewModel() {
           ),
         )
       } else {
-        const state = snapshot.equity.state
+        const state = snapshot.capitalAssessment.state
         lines.push(
           mark(
             state === 'bad' ? 'negative' : 'positive',
             <Trans
-              i18nKey="calculator.warnings.equity"
-              values={{ percent: snapshot.equity.percent }}
-              components={[<strong key="equity-percent" />]}
+              i18nKey="calculator.warnings.capital"
+              values={{ percent: snapshot.capitalAssessment.percent }}
+              components={[<strong key="capital-percent" />]}
             />,
           ),
         )
       }
-    } else if (snapshot.suggestedEquity !== null) {
+    } else if (snapshot.suggestedCapital !== null) {
       // Requirement is general info, not good or bad news.
       lines.push(
         mark(
           'info',
           <Trans
-            i18nKey="calculator.warnings.equityRequired"
+            i18nKey="calculator.warnings.capitalRequired"
             values={{
-              required: formatCurrency(snapshot.suggestedEquity),
-              requiredPercent: requiredEquityPercent,
+              required: formatCurrency(snapshot.suggestedCapital),
+              requiredPercent: requiredCapitalPercent,
             }}
             components={[<strong key="required" />, <strong key="requiredPercent" />]}
           />,
@@ -387,18 +387,18 @@ export function useCalculatorViewModel() {
         ),
       )
     }
-    // Overall cash needed upfront (equity + all side costs & taxes) - the
+    // Overall cash needed upfront (capital + all side costs & taxes) - the
     // two legacy totals merged into one line (feedback request). The total
-    // reflects the *actual* equity entered; only when none is entered does
-    // it fall back to the required (suggested) equity.
-    if (snapshot.suggestedEquity !== null && snapshot.closingCosts !== null) {
-      const equityForTotal = capital > 0 ? capital : snapshot.suggestedEquity
+    // reflects the *actual* capital entered; only when none is entered does
+    // it fall back to the required (suggested) capital.
+    if (snapshot.suggestedCapital !== null && snapshot.closingCosts !== null) {
+      const capitalForTotal = capital > 0 ? capital : snapshot.suggestedCapital
       lines.push(
         mark(
           'info',
           <Trans
-            i18nKey="calculator.warnings.equityTotalRequired"
-            values={{ total: formatCurrency(equityForTotal + snapshot.closingCosts.total) }}
+            i18nKey="calculator.warnings.capitalTotalRequired"
+            values={{ total: formatCurrency(capitalForTotal + snapshot.closingCosts.total) }}
             components={[<strong key="total" />]}
           />,
         ),
@@ -409,7 +409,7 @@ export function useCalculatorViewModel() {
 
   // Everything on one list, grouped by status: good → bad → info
   // (feedback request), with one uniform font size and no yellow tint.
-  const summaryNotes: NoteLine[] = [...equityNoteLines, ...warningMessages].sort(
+  const summaryNotes: NoteLine[] = [...capitalNoteLines, ...warningMessages].sort(
     (a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status],
   )
   // When nothing is wrong (no red ❌ lines), the whole summary reads green.
@@ -447,11 +447,13 @@ export function useCalculatorViewModel() {
         ? formatGroupedNumber(snapshot.incomePlaceholder)
         : undefined,
     capitalPlaceholder:
-      snapshot.suggestedEquity !== null ? formatGroupedNumber(snapshot.suggestedEquity) : undefined,
-    equityNoteLines,
+      snapshot.suggestedCapital !== null
+        ? formatGroupedNumber(snapshot.suggestedCapital)
+        : undefined,
+    capitalNoteLines,
     summaryNotes,
     allGood,
-    equityState: snapshot.equity?.state ?? null,
+    capitalState: snapshot.capitalAssessment?.state ?? null,
     warningMessages,
     visibleScheduleRows,
     visibleScheduleTracks,
