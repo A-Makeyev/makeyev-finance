@@ -286,6 +286,60 @@ export function calculateWeightedAvgInterestRate(results: TrackResult[]): number
   return weightedSum / totalLoan
 }
 
+/**
+ * Stress test: the combined first payment if every variable-rate track's
+ * annual rate rose by `bumpPercent` percentage points (prime included);
+ * fixed-rate tracks keep their payment. Exposes the monthly-payment
+ * sensitivity to prime/variable moves in one number.
+ */
+export function firstPaymentWithRateBump(
+  results: TrackResult[],
+  bumpPercent: number,
+  annualInflation: number = FALLBACK_INFLATION,
+): number {
+  return results.reduce((sum, result) => {
+    if (!result.isVariable) return sum + result.firstPayment
+    const stressed = computeTrackResult({
+      principal: result.principal,
+      years: result.years,
+      annualRatePercent: result.annualRatePercent + bumpPercent,
+      type: result.type,
+      method: result.method,
+      annualInflation,
+    })
+    return sum + (stressed?.firstPayment ?? 0)
+  }, 0)
+}
+
+/**
+ * Interest share (%) of everything repaid during the first five years -
+ * annuity mechanics in aggregate: early payments are mostly interest, so
+ * this stays high even years into the loan.
+ */
+export function first5yInterestShare(results: TrackResult[]): number {
+  let interest = 0
+  let paid = 0
+  for (const result of results) {
+    for (const row of result.yearlyRows) {
+      if (row.year > 5) break
+      interest += row.interest
+      paid += row.paid
+    }
+  }
+  return paid > 0 ? (interest / paid) * 100 : 0
+}
+
+/**
+ * Normalized first payment per ₪100,000 borrowed - a scale-free number for
+ * comparing offers and mixes regardless of total loan size.
+ */
+export function paymentPer100k(results: TrackResult[]): number {
+  const totalPrincipal = results.reduce((sum, result) => sum + result.principal, 0)
+  if (totalPrincipal <= 0) return 0
+  const firstPayment = results.reduce((sum, result) => sum + result.firstPayment, 0)
+  return firstPayment / (totalPrincipal / 100_000)
+}
+
 /** Average payback ratio (total repaid ÷ principal) across the entered tracks. */
 export function averagePaybackRatio(results: TrackResult[]): number {
   if (!results.length) return 0

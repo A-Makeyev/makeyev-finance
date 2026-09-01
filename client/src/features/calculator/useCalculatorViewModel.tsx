@@ -14,6 +14,7 @@ import {
   MIN_REAL_HOME_VALUE,
   PURPOSE_LIMITS,
   effectiveAnnualRatePercent,
+  isVariableType,
   type PaymentLabelKind,
   type PropertyPurpose,
 } from '@/lib/amortization'
@@ -433,6 +434,25 @@ export function useCalculatorViewModel() {
     totalLoanAmount: formatCurrency(
       snapshot.trackPaybacks.reduce((sum, entry) => sum + entry.amount, 0),
     ),
+    overpayPercent: formatRatePercent(snapshot.overpayPercent),
+    avgMonthlyPayment: formatCurrency(snapshot.avgMonthlyPayment),
+    hasVariableTrack: snapshot.summaryTypes.some(isVariableType),
+    paymentRateUp1: formatCurrency(snapshot.firstPaymentRateUp1),
+    paymentRateUp1Delta: formatRatePercent(
+      snapshot.totals.firstPayment > 0
+        ? (snapshot.firstPaymentRateUp1 / snapshot.totals.firstPayment - 1) * 100
+        : 0,
+    ),
+    paymentRateDown1: formatCurrency(snapshot.firstPaymentRateDown1),
+    paymentRateDown1Delta: formatRatePercent(
+      snapshot.totals.firstPayment > 0
+        ? (snapshot.firstPaymentRateDown1 / snapshot.totals.firstPayment - 1) * 100
+        : 0,
+    ),
+    first5yInterestShare: formatRatePercent(snapshot.first5yInterestShare),
+    paymentPer100k: formatCurrency(snapshot.paymentPer100k),
+    firstPaymentInterestShare: formatRatePercent(snapshot.firstPaymentInterestShare),
+    balanceAfter5y: formatCurrency(snapshot.balanceAfter5y),
     effectiveRate: formatRatePercent(effectiveAnnualRatePercent(snapshot.avgInterestRate)),
     avgPayback: formatRatio(snapshot.avgPaybackRatio),
     trackPaybacks: snapshot.trackPaybacks,

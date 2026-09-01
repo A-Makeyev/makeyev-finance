@@ -16,7 +16,11 @@ import {
   distributeEqually,
   effectiveAnnualRatePercent,
   estimateClosingCosts,
+  first5yInterestShare,
+  firstPaymentWithRateBump,
+  paymentPer100k,
   scaleTrackAmounts,
+  sumTotals,
   suggestedCapital,
   suggestedMinimumIncome,
   variableShareExceeded,
@@ -535,6 +539,57 @@ describe('paybackRatio and aggregate rate/payout helpers', () => {
   })
 })
 
+describe('derived results-card metrics (replace total-loan card)', () => {
+  const a = computeTrackResult({
+    principal: 600_000,
+    years: 20,
+    annualRatePercent: 4.5,
+    type: 'fixed',
+    method: 'spitzer',
+  })!
+  const b = computeTrackResult({
+    principal: 400_000,
+    years: 20,
+    annualRatePercent: 4.5,
+    type: 'fixed',
+    method: 'spitzer',
+  })!
+  const rows = combineSchedules([a, b])
+  const totals = sumTotals([a, b])
+  const totalLoan = 1_000_000
+
+  it('balance after 5 years comes from the combined schedule', () => {
+    const row5 = rows.find((row) => row.year === 5)
+    expect(row5).toBeDefined()
+    expect(row5!.closing).toBeGreaterThan(0)
+    expect(row5!.closing).toBeLessThan(totalLoan)
+    // Sanity: debt shrinks monotonically year over year.
+    for (let index = 1; index < rows.length; index++) {
+      expect(rows[index].closing).toBeLessThanOrEqual(rows[index - 1].closing + 1)
+    }
+  })
+
+  it('average monthly payment sits between first and highest payment', () => {
+    const avgMonthly = totals.totalPaid / (20 * 12)
+    expect(avgMonthly).toBeGreaterThan(0)
+    expect(avgMonthly).toBeGreaterThanOrEqual(totals.firstPayment - 1)
+    expect(avgMonthly).toBeLessThanOrEqual(totals.highestPayment + 1)
+  })
+
+  it('first-payment interest share is the dominant annuity component', () => {
+    const firstInterest = rows[0].interest / 12
+    const share = (firstInterest / totals.firstPayment) * 100
+    expect(share).toBeGreaterThan(50)
+    expect(share).toBeLessThan(100)
+  })
+
+  it('overpay percent matches the payback identity', () => {
+    const overpay = (totals.totalInterest / totalLoan) * 100
+    expect(overpay).toBeCloseTo((totals.totalPaid / totalLoan - 1) * 100, 6)
+    expect(overpay).toBeGreaterThan(0)
+  })
+})
+
 describe('effectiveAnnualRatePercent', () => {
   it('is ≥ nominal and ≈0.09pp higher at 4.5% monthly compounding', () => {
     const eff = effectiveAnnualRatePercent(4.5)
@@ -592,5 +647,148 @@ describe('combined schedule', () => {
     expect(rows[0].opening).toBeCloseTo(1_000_000, 6)
     // Year 2 only the long track contributes.
     expect(rows[1].opening).toBeCloseTo(long.yearlyRows[0].closing, 6)
+  })
+
+  it('derived metrics: balance after 5y, avg payment, interest share, overpay %', () => {
+    const a = computeTrackResult({
+      principal: 600_000,
+      years: 20,
+      annualRatePercent: 4.5,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const b = computeTrackResult({
+      principal: 400_000,
+      years: 20,
+      annualRatePercent: 4.5,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const rows = combineSchedules([a, b])
+    const totals = sumTotals([a, b])
+    const totalLoan = 1_000_000
+
+    // Balance after 5 years comes straight from the combined schedule.
+    const row5 = rows.find((row) => row.year === 5)
+    expect(row5).toBeDefined()
+    expect(row5!.closing).toBeGreaterThan(0)
+    expect(row5!.closing).toBeLessThan(totalLoan)
+
+    // Average monthly payment = totalPaid / (years * 12).
+    const avgMonthly = totals.totalPaid / (20 * 12)
+    expect(avgMonthly).toBeGreaterThan(0)
+    // Between first and highest (Spitzer flat: equal to first payment).
+    expect(avgMonthly).toBeGreaterThanOrEqual(totals.firstPayment - 1)
+    expect(avgMonthly).toBeLessThanOrEqual(totals.highestPayment + 1)
+
+    // Interest share of the first payment: for an annuity at 4.5%/20y it is
+    // high (most of the early payment is interest) but below 100%.
+    const firstInterest = rows[0].interest / 12
+    const share = (firstInterest / totals.firstPayment) * 100
+    expect(share).toBeGreaterThan(50)
+    expect(share).toBeLessThan(100)
+
+    // Overpay percent: total interest / loan * 100, and must match the
+    // payback-ratio identity (totalPaid = loan + interest).
+    const overpay = (totals.totalInterest / totalLoan) * 100
+    expect(overpay).toBeCloseTo((totals.totalPaid / totalLoan - 1) * 100, 6)
+    expect(overpay).toBeGreaterThan(0)
+  })
+})
+
+describe('firstPaymentWithRateBump', () => {
+  const prime1M = computeTrackResult({
+    principal: 1_000_000,
+    years: 30,
+    annualRatePercent: 5.75,
+    type: 'prime',
+    method: 'spitzer',
+  })!
+  const fixed500k = computeTrackResult({
+    principal: 500_000,
+    years: 30,
+    annualRatePercent: 4.5,
+    type: 'fixed',
+    method: 'spitzer',
+  })!
+
+  it('leaves a fixed-only mix unchanged', () => {
+    expect(firstPaymentWithRateBump([fixed500k], 1)).toBeCloseTo(fixed500k.firstPayment, 6)
+  })
+
+  it('reprices a prime track at rate +1 (golden: 5.75% → 6.75%)', () => {
+    // P·r/(1-(1+r)^-360) at 6.75%/yr on 1M → 6485.98
+    expect(firstPaymentWithRateBump([prime1M], 1)).toBeCloseTo(6485.98, 1)
+    expect(firstPaymentWithRateBump([prime1M], 1)).toBeGreaterThan(prime1M.firstPayment)
+  })
+
+  it('reprices a prime track at rate −1 (golden: 5.75% → 4.75%)', () => {
+    // P·r/(1-(1+r)^-360) at 4.75%/yr on 1M → 5216.47
+    expect(firstPaymentWithRateBump([prime1M], -1)).toBeCloseTo(5216.47, 1)
+    expect(firstPaymentWithRateBump([prime1M], -1)).toBeLessThan(prime1M.firstPayment)
+  })
+
+  it('a fixed track absorbs a negative bump untouched', () => {
+    expect(firstPaymentWithRateBump([fixed500k], -1)).toBeCloseTo(fixed500k.firstPayment, 6)
+  })
+
+  it('bumps only the variable track in a mixed portfolio', () => {
+    // 5835.73 (prime @ 6.75%) + 2533.43 (fixed @ 4.5% untouched)
+    expect(firstPaymentWithRateBump([prime1M, fixed500k], 1)).toBeCloseTo(6485.98 + 2533.43, 1)
+  })
+
+  it('returns 0 for an empty mix', () => {
+    expect(firstPaymentWithRateBump([], 1)).toBe(0)
+  })
+})
+
+describe('first5yInterestShare and paymentPer100k', () => {
+  it('aggregates the first five years of interest share across tracks', () => {
+    const long = computeTrackResult({
+      principal: 600_000,
+      years: 10,
+      annualRatePercent: 4,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const short = computeTrackResult({
+      principal: 400_000,
+      years: 3,
+      annualRatePercent: 4,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    // Manual aggregate over both schedules' first five years.
+    let interest = 0
+    let paid = 0
+    for (const result of [long, short]) {
+      for (const row of result.yearlyRows) {
+        if (row.year > 5) break
+        interest += row.interest
+        paid += row.paid
+      }
+    }
+    expect(first5yInterestShare([long, short])).toBeCloseTo((interest / paid) * 100, 6)
+    // Annuity: interest-heavy but a 10y term amortizes fast, so the 5-year
+    // share sits well under half (measured ≈26% at 4%/10y).
+    expect(first5yInterestShare([long])).toBeGreaterThan(20)
+    expect(first5yInterestShare([long])).toBeLessThan(100)
+  })
+
+  it('returns 0 interest share with no rows', () => {
+    expect(first5yInterestShare([])).toBe(0)
+  })
+
+  it('normalizes the first payment per ₪100k borrowed', () => {
+    const track = computeTrackResult({
+      principal: 250_000,
+      years: 30,
+      annualRatePercent: 5.75,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    // 5835.73 payment on 250k → 2334.29 per ₪100k (2.5 units of 100k).
+    expect(paymentPer100k([track])).toBeCloseTo((track.firstPayment / 250_000) * 100_000, 6)
+    expect(paymentPer100k([])).toBe(0)
   })
 })

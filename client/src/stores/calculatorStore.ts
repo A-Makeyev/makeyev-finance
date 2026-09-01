@@ -22,7 +22,10 @@ import {
   distributeEqually,
   EMPTY_TOTALS,
   estimateClosingCosts,
+  first5yInterestShare,
+  firstPaymentWithRateBump,
   isVariableType,
+  paymentPer100k,
   resolvePaymentLabel,
   scaleTrackAmounts,
   sumTotals,
@@ -82,6 +85,22 @@ export interface TrackSchedule {
 
 export interface CalculatorSnapshot {
   totals: TotalsSummary
+  /** Interest as a share of the loan (percent) - cost of borrowing at a glance. */
+  overpayPercent: number
+  /** Total paid ÷ full term in months - the "typical" monthly payment. */
+  avgMonthlyPayment: number
+  /** First payment if every variable-rate track's rate rose by 1 point. */
+  firstPaymentRateUp1: number
+  /** First payment if every variable-rate track's rate dropped by 1 point. */
+  firstPaymentRateDown1: number
+  /** Interest share (%) of everything repaid in the first five years. */
+  first5yInterestShare: number
+  /** Normalized first payment per ₪100k borrowed (offer comparison). */
+  paymentPer100k: number
+  /** Share (%) of the first payment that is interest (annuity mechanics). */
+  firstPaymentInterestShare: number
+  /** Remaining debt after 5 years (early payoff / sale planning). */
+  balanceAfter5y: number
   annualFirstYearPayment: number
   scheduleRows: CombinedScheduleRow[]
   scheduleYearCount: number
@@ -197,6 +216,7 @@ export interface CalculatorActions {
   commitTrackAmountBlur(id: string): void
   updateTrackYears(id: string, raw: string): string
   commitTrackYearsBlur(id: string): void
+  commitTrackRateBlur(id: string): void
   updateTrackRate(id: string, raw: string): void
   changeTrackType(id: string, type: TrackType): void
   changeTrackMethod(id: string, method: AmortizationMethod): void
@@ -213,6 +233,10 @@ export type CalculatorStore = CalculatorState & CalculatorActions
 
 const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   totals: EMPTY_TOTALS,
+  overpayPercent: 0,
+  avgMonthlyPayment: 0,
+  firstPaymentInterestShare: 0,
+  balanceAfter5y: 0,
   annualFirstYearPayment: 0,
   scheduleRows: [],
   scheduleYearCount: 0,
@@ -233,6 +257,10 @@ const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   avgPaybackRatio: 0,
   trackPaybacks: [],
   scheduleTracks: [],
+  firstPaymentRateUp1: 0,
+  firstPaymentRateDown1: 0,
+  first5yInterestShare: 0,
+  paymentPer100k: 0,
 }
 
 // ---------------------------------------------------------------------------
@@ -378,6 +406,10 @@ function recalculate(s: CalculatorState): void {
     const suggested = suggestedCapital(property, 0, capital, s.purpose)
     s.snapshot = {
       totals: EMPTY_TOTALS,
+      overpayPercent: 0,
+      avgMonthlyPayment: 0,
+      firstPaymentInterestShare: 0,
+      balanceAfter5y: 0,
       annualFirstYearPayment: 0,
       scheduleRows: [],
       scheduleYearCount: 0,
@@ -398,6 +430,10 @@ function recalculate(s: CalculatorState): void {
       avgPaybackRatio: 0,
       trackPaybacks: [],
       scheduleTracks: [],
+      firstPaymentRateUp1: 0,
+      firstPaymentRateDown1: 0,
+      first5yInterestShare: 0,
+      paymentPer100k: 0,
     }
     return
   }
@@ -430,8 +466,42 @@ function recalculate(s: CalculatorState): void {
   const firstMonthPayment = totals.firstPayment
   const suggested = suggestedCapital(property, totalPrincipal, capital, s.purpose)
 
+  // Derived metrics for the results cards (replacing the redundant
+  // "total mortgage amount" card, which only echoed user input):
+  // - overpayPercent: interest as a share of the loan - "you repay X% on top"
+  // - avgMonthlyPayment: total paid / full term in months - the "typical"
+  //   payment between first and highest
+  // - firstPaymentInterestShare: how much of the first payment is interest
+  //   (annuity mechanics: early payments are mostly interest)
+  // - balanceAfter5y: remaining debt after 5 years (early-payoff / sale planning)
+  const totalLoan = totalPrincipal
+  const overpayPercent = totalLoan > 0 ? (totals.totalInterest / totalLoan) * 100 : 0
+  const maxYears = Math.max(...validResults.map((result) => result.years))
+  const avgMonthlyPayment = maxYears > 0 ? totals.totalPaid / (maxYears * 12) : 0
+  // Stress test: the first payment if every variable rate (prime included)
+  // rose by one point - a single number for rate-move exposure.
+  const firstPaymentRateUp1 = firstPaymentWithRateBump(validResults, 1, inflation)
+  const firstPaymentRateDown1 = firstPaymentWithRateBump(validResults, -1, inflation)
+  const first5yInterestSharePercent = first5yInterestShare(validResults)
+  const paymentPer100kValue = paymentPer100k(validResults)
+  const firstMonthInterest = combinedRows[0]
+    ? combinedRows[0].interest / 12
+    : 0
+  const firstPaymentInterestShare =
+    firstMonthPayment > 0 ? (firstMonthInterest / firstMonthPayment) * 100 : 0
+  const row5 = combinedRows.find((row) => row.year === 5)
+  const balanceAfter5y = row5 ? row5.closing : (combinedRows[combinedRows.length - 1]?.closing ?? 0)
+
   s.snapshot = {
     totals,
+    overpayPercent,
+    avgMonthlyPayment,
+    firstPaymentRateUp1,
+    firstPaymentRateDown1,
+    first5yInterestShare: first5yInterestSharePercent,
+    paymentPer100k: paymentPer100kValue,
+    firstPaymentInterestShare,
+    balanceAfter5y,
     annualFirstYearPayment: combinedRows[0]?.paid ?? 0,
     scheduleRows: combinedRows,
     scheduleYearCount: combinedRows.length,
@@ -644,6 +714,20 @@ export const useCalculatorStore = create<CalculatorStore>()(
         track.yearsText = constrainYearsText(track.yearsText, MAX_YEARS)
         if (!track.yearsText) track.yearsText = '1'
         syncTermYearsFromTracks(s)
+        recalculate(s)
+      })
+    },
+
+    commitTrackRateBlur: (id) => {
+      set((s) => {
+        const track = s.tracks.find((t) => t.id === id)
+        if (!track) return
+        if (!track.rateText.trim()) {
+          // A cleared rate would silently compute the track at 0% interest
+          // (Number('') || 0) - reseed the type's default (live prime for
+          // prime tracks) on blur, mirroring the years-blur fallback.
+          applyTrackTypeLogic(s, track, track.type)
+        }
         recalculate(s)
       })
     },

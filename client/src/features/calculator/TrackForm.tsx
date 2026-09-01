@@ -18,6 +18,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
   const updateTrackYears = useCalculatorStore((s) => s.updateTrackYears)
   const commitTrackYearsBlur = useCalculatorStore((s) => s.commitTrackYearsBlur)
   const updateTrackRate = useCalculatorStore((s) => s.updateTrackRate)
+  const commitTrackRateBlur = useCalculatorStore((s) => s.commitTrackRateBlur)
   const changeTrackType = useCalculatorStore((s) => s.changeTrackType)
   const changeTrackMethod = useCalculatorStore((s) => s.changeTrackMethod)
   const removeTrack = useCalculatorStore((s) => s.removeTrack)
@@ -99,6 +100,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
             step={0.01}
             value={track.rateText}
             onInput={(event) => updateTrackRate(track.id, event.currentTarget.value)}
+            onBlur={() => commitTrackRateBlur(track.id)}
             required
             aria-label={`${t('calculator.track.rateLabel')} ${index + 1}`}
             data-testid={`track-rate-${index + 1}`}
