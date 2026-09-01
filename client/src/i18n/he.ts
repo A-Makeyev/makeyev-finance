@@ -29,7 +29,7 @@ export const he = {
       // *opposite* language (Hebrew page shows an English tagline, English
       // page shows the Hebrew tagline), matching the original index.html.
       heroTitleLine1: 'ייעוץ משכנתאות',
-      heroTitleLine2: 'פיננסים &',
+      heroTitleLine2: 'תכנון פיננסי &',
       heroSubtitle: 'Mortgage and financial advice',
       heroCta: 'תתאמו שיחת ייעוץ חינם',
       coursesTitle: 'Courses',
