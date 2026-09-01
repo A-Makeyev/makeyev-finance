@@ -16,6 +16,7 @@ import {
   averagePaybackRatio,
   buildTrackScheduleRows,
   calculateWeightedAvgInterestRate,
+  combineMonthlySchedules,
   combineSchedules,
   computeTrackResult,
   deriveLoanAmount,
@@ -36,6 +37,7 @@ import {
   variableShareExceeded,
   type AmortizationMethod,
   type ClosingCostsEstimate,
+  type CombinedMonthlyRow,
   type CombinedScheduleRow,
   type DtiWarning,
   type CapitalAssessment,
@@ -47,6 +49,7 @@ import {
   type TrackResult,
   type TrackScheduleRow,
   type TrackType,
+  type MonthlyRow,
 } from '@/lib/amortization'
 import {
   constrainYearsText,
@@ -83,6 +86,8 @@ export interface TrackSchedule {
   type: TrackType
   amount: number
   rows: TrackScheduleRow[]
+  /** Per-month payment rows (monthly view). */
+  monthlyRows: MonthlyRow[]
 }
 
 export interface CalculatorSnapshot {
@@ -132,6 +137,8 @@ export interface CalculatorSnapshot {
   trackPaybacks: TrackPayback[]
   /** Per-track yearly schedules, one table per entered track. */
   scheduleTracks: TrackSchedule[]
+  /** Combined per-month payment rows across all entered tracks (monthly view). */
+  scheduleMonthlyRows: CombinedMonthlyRow[]
 }
 
 export interface AddTrackValues {
@@ -261,6 +268,7 @@ const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   avgPaybackRatio: 0,
   trackPaybacks: [],
   scheduleTracks: [],
+  scheduleMonthlyRows: [],
   firstPaymentRateUp1: 0,
   firstPaymentRateDown1: 0,
   first5yInterestShare: 0,
@@ -331,7 +339,7 @@ function syncStartingAmountFromTracks(s: CalculatorData): void {
  * amount the snap changed (blur commit, property/capital rescale) are
  * flashed briefly, same as the live re-balancing while typing.
  */
-function snapTracksToLoan(s: CalculatorData): void {
+function snapTracksToLoan(s: CalculatorState): void {
   const before = s.tracks.map((track) => track.amountText)
   const total = s.tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
   if (total) {
@@ -443,6 +451,7 @@ function recalculate(s: CalculatorState): void {
       avgPaybackRatio: 0,
       trackPaybacks: [],
       scheduleTracks: [],
+      scheduleMonthlyRows: [],
       firstPaymentRateUp1: 0,
       firstPaymentRateDown1: 0,
       first5yInterestShare: 0,
@@ -545,12 +554,14 @@ function recalculate(s: CalculatorState): void {
       type: result.type,
       amount: result.principal,
       rows: buildTrackScheduleRows(result),
+      monthlyRows: result.monthlyRows,
     })),
+    scheduleMonthlyRows: combineMonthlySchedules(validResults),
   }
 }
 
 function createInitialTracks(primeRate: number | null): TrackState[] {
-  const allocated = allocatePreset('basket1', 1_000_000, primeRate)
+  const allocated = allocatePreset('basket4', 1_000_000, primeRate)
   return allocated.map((entry) =>
     trackFromValues(
       { type: entry.type, amount: entry.amount, years: DEFAULT_TERM_YEARS, rate: entry.rate },
@@ -570,7 +581,7 @@ const initialData: CalculatorData = {
   incomeText: '',
   purpose: 'first',
   tracks: createInitialTracks(null),
-  activePreset: 'basket1',
+  activePreset: 'basket4',
   startingPointDirty: false,
   scheduleExpanded: false,
   primeRate: null,
@@ -588,7 +599,7 @@ function createInitialState(): CalculatorState {
     snapshot: INITIAL_SNAPSHOT,
   }
   state.tracks = createInitialTracks(null)
-  state.activePreset = 'basket1'
+  state.activePreset = 'basket4'
   recalculate(state)
   return state
 }
@@ -931,7 +942,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       // stays selected so it applies once the user enters a new amount.
       // External live data (prime rate, CPI) is kept - it is market data.
       set((s) => {
-        const allocated = allocatePreset('basket1', 0, s.primeRate)
+        const allocated = allocatePreset('basket4', 0, s.primeRate)
         s.tracks = allocated.map((entry) =>
           trackFromValues(
             { type: entry.type, amount: entry.amount, years: s.termYears, rate: entry.rate },
@@ -952,7 +963,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.purpose = 'first'
         s.termYears = DEFAULT_TERM_YEARS
         s.scheduleExpanded = false
-        s.activePreset = 'basket1'
+        s.activePreset = 'basket4'
         s.startingPointDirty = false
         // The empty-state branch preserves the previous income placeholder;
         // drop it so a reset shows a genuinely blank income field.

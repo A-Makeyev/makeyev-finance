@@ -9,6 +9,7 @@ import {
   averagePaybackRatio,
   buildTrackScheduleRows,
   calculateWeightedAvgInterestRate,
+  combineMonthlySchedules,
   combineSchedules,
   computePurchaseTax,
   computeTrackResult,
@@ -690,6 +691,63 @@ describe('effectiveAnnualRatePercent', () => {
   })
 })
 
+describe('monthly schedule rows (monthly view)', () => {
+  it('records one row per payment month, matching the yearly totals', () => {
+    const result = computeTrackResult({
+      principal: 100_000,
+      years: 1,
+      annualRatePercent: 10,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    expect(result.monthlyRows).toHaveLength(12)
+    // First monthly payment is the classic annuity payment.
+    expect(result.monthlyRows[0].paid).toBeCloseTo(result.firstPayment, 6)
+    // Monthly principal + interest sum to the yearly row figures.
+    expect(round2(result.monthlyRows.reduce((sum, row) => sum + row.principal, 0))).toBe(
+      round2(result.yearlyRows[0].principal),
+    )
+    expect(round2(result.monthlyRows.reduce((sum, row) => sum + row.interest, 0))).toBe(
+      round2(result.yearlyRows[0].interest),
+    )
+    // Month labels cycle 1-12 within the year, and the balance closes at 0.
+    expect(result.monthlyRows.map((row) => row.month)).toEqual(
+      Array.from({ length: 12 }, (_, index) => index + 1),
+    )
+    expect(result.monthlyRows[11].closing).toBeCloseTo(0, 4)
+  })
+})
+
+describe('combineMonthlySchedules (monthly view)', () => {
+  it('merges per-track monthly rows into a single monthly schedule', () => {
+    const long = computeTrackResult({
+      principal: 600_000,
+      years: 2,
+      annualRatePercent: 4,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const short = computeTrackResult({
+      principal: 400_000,
+      years: 1,
+      annualRatePercent: 4,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const rows = combineMonthlySchedules([long, short])
+    expect(rows).toHaveLength(24)
+    // Sum of monthly principal equals total principal.
+    expect(rows.reduce((sum, row) => sum + row.principal, 0)).toBeCloseTo(1_000_000, 4)
+    // Sum of monthly paid equals total repaid across both tracks.
+    const expectedPaid = long.totalPaid + short.totalPaid
+    expect(rows.reduce((sum, row) => sum + row.paid, 0)).toBeCloseTo(expectedPaid, 4)
+  })
+
+  it('returns an empty list when no tracks are given', () => {
+    expect(combineMonthlySchedules([])).toEqual([])
+  })
+})
+
 describe('buildTrackScheduleRows (per-track schedule with payback ratio)', () => {
   it('stamps the flat lifetime payback ratio on every row', () => {
     const result = computeTrackResult({
@@ -705,10 +763,12 @@ describe('buildTrackScheduleRows (per-track schedule with payback ratio)', () =>
     expect(rows.every((row) => row.paybackRatio === result.paybackRatio)).toBe(true)
     expect(rows[0].paybackRatio).toBeCloseTo(result.paybackRatio, 10)
     expect(rows[9].paybackRatio).toBeCloseTo(result.paybackRatio, 10)
-    // Each row's principal + interest + balance mirror the source yearlyRows.
+    // Each row's principal + interest + balance mirror the source yearlyRows,
+    // and the annual payment column carries the year's total paid.
     expect(rows[0].balance).toBeCloseTo(result.yearlyRows[0].closing, 6)
     expect(rows[4].principal).toBeCloseTo(result.yearlyRows[4].principal, 6)
     expect(rows[4].interest).toBeCloseTo(result.yearlyRows[4].interest, 6)
+    expect(rows[4].paid).toBeCloseTo(result.yearlyRows[4].paid, 6)
   })
 })
 

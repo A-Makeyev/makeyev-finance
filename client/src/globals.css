@@ -2912,26 +2912,6 @@ e #name,
   margin-inline-start: 2px;
 }
 
-/* Per-track payback breakdown - spans the full results grid below the cards. */
-.track-paybacks {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 20px;
-  align-items: baseline;
-  padding: 10px 2px 2px;
-  color: var(--calc-muted);
-  font-size: 0.9rem;
-}
-
-.track-paybacks-title {
-  width: 100%;
-  margin: 0 0 4px;
-  color: var(--calc-teal-dark);
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
 .track-payback .track-payback-label {
   color: var(--calc-teal-dark);
   font-weight: 700;
@@ -2986,11 +2966,50 @@ e #name,
   overflow-x: auto;
 }
 
+/* Scrollable schedule table: cap the height so long schedules (30 years, or
+   the month-by-month view) scroll vertically instead of stretching the page.
+   The scrollbar handle itself stays hidden - the table still scrolls by
+   wheel, touch and keyboard (feedback request). The table keeps its own
+   natural height while the aside column stretches to match it. */
+.schedule-content .table-wrap {
+  align-self: start;
+  max-height: 480px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.schedule-content .table-wrap::-webkit-scrollbar {
+  display: none;
+}
+
+/* Keep the header visible while scrolling through the rows. */
+.schedule-content .table-wrap thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+
 .schedule-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;
   gap: 22px;
-  align-items: start;
+  align-items: stretch;
+}
+
+.schedule-asides {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule-asides-title {
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 40px 0 4px;
 }
 
 .schedule-aside {
@@ -3021,13 +3040,35 @@ e #name,
   margin: 8px 0;
 }
 
-/* Total / per-track schedule view toggle (added Step 4). */
-.schedule-view-toggle {
+/* Per-track payback card: one aside per track, name on top with the
+   amount · payback ratio underneath (feedback request: slightly larger). */
+.schedule-aside-payback strong {
+  display: block;
+  color: var(--calc-teal-dark);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.schedule-aside-payback span {
+  display: block;
+  color: var(--calc-ink);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* Total / per-track and yearly / monthly schedule view toggles. */
+.schedule-view-toggle,
+.schedule-granularity-toggle {
   display: inline-flex;
   border: 1px solid var(--calc-line);
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 16px;
+}
+
+.schedule-granularity-toggle {
+  margin-inline-start: 10px;
 }
 
 .schedule-view-button {
@@ -3146,7 +3187,7 @@ tbody tr:hover {
 
 .regulatory-note {
   border-right: 3px solid var(--calc-accent);
-  margin: 20px 0 0;
+  margin: 25px 0 -10px;
   padding: 8px 12px;
   background: #f0faf8;
 }
@@ -3166,7 +3207,7 @@ tbody tr:hover {
 }
 
 .legal-note {
-  margin-top: 12px;
+  margin-top: 40px;
 }
 
 .legal-note a {
@@ -3177,21 +3218,6 @@ tbody tr:hover {
 
 .legal-note a:hover {
   color: var(--calc-teal-dark);
-}
-
-.expand-schedule-button {
-  border: 1px solid var(--calc-teal);
-  color: var(--calc-teal-dark);
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  margin-top: 24px;
-  padding: 9px 16px;
-}
-
-.expand-schedule-button:hover {
-  color: white;
-  background: var(--calc-teal);
 }
 
 /* =========================
@@ -3282,6 +3308,12 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
+  /* Stacked heading: space the track-type summary (פריים · קבועה לא צמודה ·
+     ...) off the toggle row below it. */
+  #schedule-summary {
+    margin: 0 0 16px;
+  }
+
   .results-layout {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -3368,10 +3400,6 @@ tbody tr:hover {
 
   .results-card strong {
     font-size: 1.75rem;
-  }
-
-  .track-paybacks {
-    font-size: 0.8rem;
   }
 
   #schedule-summary {

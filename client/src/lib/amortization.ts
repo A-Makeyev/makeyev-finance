@@ -119,12 +119,26 @@ export interface YearlyRow {
   closing: number
 }
 
+/** One display row of a monthly schedule (aggregated per payment month). */
+export interface MonthlyRow {
+  /** Month index within the year, 1-12. */
+  month: number
+  /** Calendar year of the loan (1-based, same as YearlyRow.year). */
+  year: number
+  principal: number
+  interest: number
+  paid: number
+  closing: number
+}
+
 export interface TrackResult {
   firstPayment: number
   highestPayment: number
   totalPaid: number
   totalInterest: number
   yearlyRows: YearlyRow[]
+  /** Per-month payment rows (same totals as yearlyRows, finer granularity). */
+  monthlyRows: MonthlyRow[]
   type: TrackType
   years: number
   principal: number
@@ -166,6 +180,7 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
   let highestPayment = 0
   let indexFactor = 1
   const yearlyRows: YearlyRow[] = []
+  const monthlyRows: MonthlyRow[] = []
   let yearOpening = principal
   let yearPrincipal = 0
   let yearPaid = 0
@@ -201,6 +216,16 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     yearPaid += payment
     yearInterest += interest
 
+    // Record the per-month row (monthly schedule view).
+    monthlyRows.push({
+      month: ((month - 1) % 12) + 1,
+      year: Math.ceil(month / 12),
+      principal: principalPart,
+      interest,
+      paid: payment,
+      closing: balance,
+    })
+
     if (month % 12 === 0 || month === months) {
       yearlyRows.push({
         year: Math.ceil(month / 12),
@@ -223,6 +248,7 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     totalPaid,
     totalInterest,
     yearlyRows,
+    monthlyRows,
     type,
     years: months / 12,
     principal,
@@ -378,9 +404,46 @@ export function combineSchedules(results: TrackResult[]): CombinedScheduleRow[] 
   return combined
 }
 
+/** One display row of the combined monthly schedule (all tracks together). */
+export interface CombinedMonthlyRow {
+  year: number
+  /** Month within that year, 1-12. */
+  month: number
+  principal: number
+  interest: number
+  paid: number
+  closing: number
+}
+
+/**
+ * Combines per-track monthly rows into a single monthly schedule (missing
+ * months filtered). Mirrors combineSchedules but at month granularity, so
+ * the schedule table can render a month-by-month view.
+ */
+export function combineMonthlySchedules(results: TrackResult[]): CombinedMonthlyRow[] {
+  if (!results.length) return []
+  const scheduleMonths = Math.max(...results.map((result) => result.monthlyRows.length))
+  const combined: CombinedMonthlyRow[] = []
+  for (let index = 0; index < scheduleMonths; index++) {
+    const rows = results.map((result) => result.monthlyRows[index]).filter(Boolean)
+    if (!rows.length) continue
+    combined.push({
+      year: rows[0].year,
+      month: rows[0].month,
+      principal: rows.reduce((sum, row) => sum + row.principal, 0),
+      paid: rows.reduce((sum, row) => sum + row.paid, 0),
+      interest: rows.reduce((sum, row) => sum + row.interest, 0),
+      closing: rows.reduce((sum, row) => sum + row.closing, 0),
+    })
+  }
+  return combined
+}
+
 /** One display row of a single track's yearly schedule. */
 export interface TrackScheduleRow {
   year: number
+  /** Sum of the 12 monthly payments in that year (the "annual payment"). */
+  paid: number
   principal: number
   interest: number
   balance: number
@@ -395,6 +458,7 @@ export interface TrackScheduleRow {
 export function buildTrackScheduleRows(result: TrackResult): TrackScheduleRow[] {
   return result.yearlyRows.map((row) => ({
     year: row.year,
+    paid: row.paid,
     principal: row.principal,
     interest: row.interest,
     balance: row.closing,

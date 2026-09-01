@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import { useCalculatorViewModel } from './useCalculatorViewModel'
-import { formatCurrency, formatRatio } from '@/lib/format'
 
 /**
  * Results grid, ordered left-to-right in three logical rows of five:
@@ -138,24 +137,6 @@ export function ResultsCards() {
         <p>{t('calculator.results.per100kCard')}</p>
         <span>{t('calculator.results.per100kCaption')}</span>
       </div>
-
-      {vm.trackPaybacks.length > 0 && (
-        <div className="track-paybacks" data-testid="track-paybacks">
-          <p className="track-paybacks-title">{t('calculator.results.paybackPerTrackTitle')}</p>
-          {vm.trackPaybacks.map((entry, index) => (
-            <span
-              key={index}
-              className="track-payback"
-              data-testid={`track-payback-${index + 1}`}
-            >
-              <strong className="track-payback-label">
-                {t(`calculator.trackTypes.${entry.type}`)}
-              </strong>
-              {formatCurrency(entry.amount)} · {formatRatio(entry.paybackRatio)}
-            </span>
-          ))}
-        </div>
-      )}
     </section>
   )
 }

@@ -12,31 +12,34 @@ test.describe('mortgage calculator - core UI flows', () => {
     await calc.goto()
   })
 
-  test('renders basket1 by default with correct Spitzer payment', async () => {
-    // ₪1,000,000 · 4.5% · 15y Spitzer → ₪7,650/month (default term is 15)
-    await expect(calc.monthlyPayment).toHaveText(ils(7_650))
-    await expect(calc.track(1).type()).toHaveValue('fixed')
-    await expect(calc.track(1).amount()).toHaveValue('1,000,000')
+  test('renders the recommended mix (תמהיל מומלץ) by default', async () => {
+    // ₪1,000,000 split prime 400k / fixed 340k / variableIndexed5y 260k,
+    // 15y Spitzer → ₪7,772/month (default term is 15)
+    await expect(calc.monthlyPayment).toHaveText(ils(7_772))
+    await expect(calc.preset('basket4')).toHaveAttribute('aria-pressed', 'true')
+    await expect(calc.track(1).type()).toHaveValue('prime')
+    await expect(calc.track(1).amount()).toHaveValue('400,000')
+    await expect(calc.track(2).type()).toHaveValue('fixed')
+    await expect(calc.track(2).amount()).toHaveValue('340,000')
+    await expect(calc.track(3).type()).toHaveValue('variableIndexed5y')
+    await expect(calc.track(3).amount()).toHaveValue('260,000')
     await expect(calc.track(1).years()).toHaveValue('15')
     await expect(calc.termSlider).toHaveValue('15')
     await expect(calc.startingAmount).toHaveValue('1,000,000')
     await expect(calc.formError).toBeHidden()
   })
 
-  test('adding tracks caps at three and removal keeps at least one', () => {
+  test('default mix has three tracks; removal keeps at least one', () => {
     test.setTimeout(45_000)
-    return test.step('add up to cap, then remove back down', async () => {
-      await calc.addTrackButton.click()
-      await expect(calc.page.getByTestId('track-2')).toBeVisible()
-      await calc.addTrackButton.click()
+    return test.step('remove down to one, then guard the last', async () => {
       await expect(calc.page.getByTestId('track-3')).toBeVisible()
       await expect(calc.addTrackButton).toBeHidden()
 
       await calc.track(3).removeTrack()
-      await expect(calc.page.getByTestId('track-2')).toHaveCount(1)
+      await expect(calc.page.getByTestId('track-3')).toHaveCount(0)
       await calc.track(2).removeTrack()
+      await expect(calc.page.getByTestId('track-2')).toHaveCount(0)
       await expect(calc.page.getByTestId('track-1')).toBeVisible()
-      // Guarded: cannot remove the last track.
       await calc.track(1).removeTrack()
       await expect(calc.page.getByTestId('track-1')).toBeVisible()
     })
@@ -58,12 +61,9 @@ test.describe('mortgage calculator - core UI flows', () => {
   })
 
   test('manual rate override is respected (autoRate cleared)', async () => {
-    // Compliant two-track mix: prime 30% + fixed 70%.
     const track = calc.track(1)
     await track.setType('prime')
     await track.setAmount('300,000')
-    await calc.addTrackButton.click()
-    await calc.track(2).setAmount('700,000')
 
     await track.rate().fill('9.99')
     await expect(track.rate()).toHaveValue('9.99')
@@ -81,8 +81,8 @@ test.describe('mortgage calculator - core UI flows', () => {
 
     await expect(calc.startingAmount).toBeDisabled()
     await expect(calc.startingAmount).toHaveValue('1,500,000')
-    // Tracks rescaled to the derived loan.
-    await expect(calc.track(1).amount()).toHaveValue('1,500,000')
+    // Tracks rescaled to the derived loan (1,500,000 · 40% prime share).
+    await expect(calc.track(1).amount()).toHaveValue('600,000')
 
     // Clearing the property value restores manual entry with remembered gross.
     await calc.setPropertyValue('')
@@ -115,18 +115,16 @@ test.describe('mortgage calculator - core UI flows', () => {
     // Merged DTI line (bad ❌): shortfall + required minimum income.
     await expect(calc.summaryNotes).toContainText('מהנדרש')
     await expect(calc.summaryNotes).toContainText('הבנק יבקש הכנסה חודשית פנויה של לפחות')
-    // Suggested minimum income placeholder: ceil(7650·2/500)·500 = 15,500.
+    // Suggested minimum income placeholder: ceil(7772·2/500)·500 = 16,000.
     // Hints are plain grouped numbers - the input renders its own ₪ suffix.
-    await expect(calc.monthlyIncome).toHaveAttribute('placeholder', formatGroupedNumber(15_500))
+    await expect(calc.monthlyIncome).toHaveAttribute('placeholder', formatGroupedNumber(16_000))
   })
 
   test('variable-rate cap blocks calculation and auto-fix rebalances', async () => {
     const track1 = calc.track(1)
+    await calc.setPropertyValue('1,000,000')
     await track1.setType('prime')
     await track1.setAmount('900,000')
-    await calc.addTrackButton.click()
-    const track2 = calc.track(2)
-    await track2.setAmount('100,000')
 
     await expect(calc.formError).toContainText('66.66%')
     await expect(calc.autofixButton).toBeVisible()
@@ -136,30 +134,24 @@ test.describe('mortgage calculator - core UI flows', () => {
     await expect(calc.formError).toBeHidden()
     await expect(calc.autofixButton).toBeHidden()
     // Σtracks === loan exactly, variable share ≤ ⅔
-    const amounts = [
-      Number((await track1.amount().inputValue()).replace(/,/g, '')),
-      Number((await track2.amount().inputValue()).replace(/,/g, '')),
-    ]
-    expect(amounts[0] + amounts[1]).toBe(1_000_000)
+    const amounts = await Promise.all(
+      [1, 2, 3].map(async (index) =>
+        Number((await calc.track(index).amount().inputValue()).replace(/,/g, '')),
+      ),
+    )
+    expect(amounts.reduce((sum, amount) => sum + amount, 0)).toBe(1_000_000)
     expect(amounts[0]).toBeLessThanOrEqual(666_666)
     await expect(calc.monthlyPayment).not.toHaveText('₪0')
   })
 
-  test('schedule expands to full horizon and collapses back', async () => {
-    // Default term is 15y (no expand button) - push the term to 30 first.
+  test('schedule always shows the full horizon, with no expand button', async () => {
+    // Default term is 15y - the full 15 rows render, no expand control.
+    await expect(calc.page.getByTestId('expand-schedule')).toHaveCount(0)
+    await expect(calc.page.locator('[data-testid^="schedule-year-"]')).toHaveCount(15)
+
     await calc.termSlider.fill('30')
-    const expand = calc.page.getByTestId('expand-schedule')
-    await expect(expand).toBeVisible()
-    await expect(expand).toContainText('30 שנים')
-    await expect(calc.page.locator('[data-testid^="schedule-year-"]')).toHaveCount(15)
-
-    await expand.click()
+    await expect(calc.page.getByTestId('expand-schedule')).toHaveCount(0)
     await expect(calc.page.locator('[data-testid^="schedule-year-"]')).toHaveCount(30)
-    await expect(expand).toContainText('הצג 15 שנים ראשונות')
-
-    await expand.click()
-    await expect(calc.page.locator('[data-testid^="schedule-year-"]')).toHaveCount(15)
-    await expect(expand).toContainText('הצג פירוט ל-30 שנים')
   })
 
   test('term slider drives track years both ways', async () => {
@@ -187,15 +179,15 @@ test.describe('mortgage calculator - core UI flows', () => {
     await expect(calc.page.getByTestId('reset-confirm')).toBeHidden()
     await expect(calc.propertyValue).toHaveValue('3,000,000')
 
-    // Confirming zeros the sum and returns to תמהיל 1 (still selected, blank).
+    // Confirming zeros the sum and returns to תמהיל מומלץ (still selected, blank).
     await calc.resetButton.click()
     await calc.page.getByTestId('reset-confirm-yes').click()
     await expect(calc.page.getByTestId('reset-confirm')).toBeHidden()
     await expect(calc.propertyValue).toHaveValue('')
     await expect(calc.startingAmount).toBeEnabled()
     await expect(calc.startingAmount).toHaveValue('')
-    await expect(calc.preset('basket1')).toHaveAttribute('aria-pressed', 'true')
-    await expect(calc.track(1).type()).toHaveValue('fixed')
+    await expect(calc.preset('basket4')).toHaveAttribute('aria-pressed', 'true')
+    await expect(calc.track(1).type()).toHaveValue('prime')
     await expect(calc.termSlider).toHaveValue('15')
   })
 })

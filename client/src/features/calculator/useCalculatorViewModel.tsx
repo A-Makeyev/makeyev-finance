@@ -61,7 +61,6 @@ export function useCalculatorViewModel() {
   const error = useCalculatorStore((s) => s.error)
   const flaggedTrackIds = useCalculatorStore((s) => s.flaggedTrackIds)
   const termYears = useCalculatorStore((s) => s.termYears)
-  const scheduleExpanded = useCalculatorStore((s) => s.scheduleExpanded)
   const purpose = useCalculatorStore((s) => s.purpose)
   const propertyValueText = useCalculatorStore((s) => s.propertyValueText)
   const capitalText = useCalculatorStore((s) => s.capitalText)
@@ -250,18 +249,17 @@ export function useCalculatorViewModel() {
     }
   })()
 
-  const rowsToShow = scheduleExpanded ? 30 : 15
-  const visibleScheduleRows = snapshot.scheduleRows.slice(0, rowsToShow)
-  // Each track gets its own table; the expand toggle reveals up to 30 rows
-  // in every table at once.
+  // Full schedule for both granularities - the tables are scrollable, so
+  // there is no expand/pagination control anymore.
+  const visibleScheduleRows = snapshot.scheduleRows
+  // Monthly view: same horizon as the yearly view, at month granularity.
+  const visibleMonthlyRows = snapshot.scheduleMonthlyRows
+  // Each track gets its own table, showing its full horizon.
   const visibleScheduleTracks = snapshot.scheduleTracks.map((track) => ({
     ...track,
-    rows: track.rows.slice(0, rowsToShow),
+    rows: track.rows,
+    monthlyRows: track.monthlyRows,
   }))
-  const showExpandButton = snapshot.scheduleYearCount > 15
-  const expandLabel = scheduleExpanded
-    ? t('calculator.schedule.collapseToFifteen')
-    : t('calculator.schedule.expandToYears', { years: snapshot.maxEnteredYears })
 
   /** Legacy #total-payment-label innerHTML: years number wrapped in a span. */
   const totalPaymentLabelParts =
@@ -485,9 +483,8 @@ export function useCalculatorViewModel() {
     capitalState: snapshot.capitalAssessment?.state ?? null,
     warningMessages,
     visibleScheduleRows,
+    visibleMonthlyRows,
     visibleScheduleTracks,
-    showExpandButton,
-    expandLabel,
     purposeLimits: PURPOSE_LIMITS,
   }
 }
