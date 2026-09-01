@@ -27,6 +27,8 @@ async function setupSingleIndexedTrack(page: Page) {
   await track.setAmount('100,000')
   await track.setType('fixedIndexed')
   await track.rate().fill('3')
+  await calc.track(3).removeTrack()
+  await calc.track(2).removeTrack()
   return { calc, track }
 }
 
@@ -103,6 +105,8 @@ test.describe('CBS CPI index', () => {
     await track.setAmount('100,000')
     await track.setType('fixedIndexed')
     await track.rate().fill('3')
+    await calc.track(3).removeTrack()
+    await calc.track(2).removeTrack()
 
     const expected = computeTrackResult({
       principal: 100_000,
