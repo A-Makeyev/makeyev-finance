@@ -25,6 +25,7 @@ import {
   sumTotals,
   suggestedCapital,
   suggestedMinimumIncome,
+  suggestedPropertyValue,
   variableShareExceeded,
 } from '@/lib/amortization'
 
@@ -413,6 +414,33 @@ describe('suggestedCapital (required initial הון עצמי)', () => {
     expect(suggestedCapital(0, 0, 0, 'first')).toBeNull()
     // No value basis → no suggestion; modest values still hint (rounded to 500).
     expect(suggestedCapital(15, 0, 0, 'first')).toBe(500)
+  })
+})
+
+describe('suggestedPropertyValue (min שווי הנכס per purpose limit + min equity)', () => {
+  it('is the largest value the loan stays within the financing limit for', () => {
+    // first = 75% → 1M / 0.75 = 1,333,333… rounds UP to 500.
+    expect(suggestedPropertyValue(1_000_000, 'first')).toBe(1_333_500)
+    // upgrade = 70% → 1M / 0.7 = 1,428,571…
+    expect(suggestedPropertyValue(1_000_000, 'upgrade')).toBe(1_429_000)
+    // investment = 50% → exactly 2M.
+    expect(suggestedPropertyValue(1_000_000, 'investment')).toBe(2_000_000)
+    // Exact multiple of the limit needs no rounding.
+    expect(suggestedPropertyValue(750_000, 'first')).toBe(1_000_000)
+  })
+
+  it('is bounded below by the mandatory ₪100k minimum equity', () => {
+    // ₪100k loan: 75% financing alone implies 133,333, but value ≥ loan +
+    // 100,000 dominates → at least a ₪200k home.
+    expect(suggestedPropertyValue(100_000, 'first')).toBe(200_000)
+    // 400k loan: financing floor 533,333 beats the 500,000 equity floor.
+    expect(suggestedPropertyValue(400_000, 'first')).toBe(533_500)
+  })
+
+  it('is null without a meaningful mortgage (no 500 placeholders)', () => {
+    expect(suggestedPropertyValue(0, 'first')).toBeNull()
+    expect(suggestedPropertyValue(1, 'first')).toBeNull()
+    expect(suggestedPropertyValue(99_999, 'first')).toBeNull()
   })
 })
 

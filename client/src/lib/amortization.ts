@@ -563,6 +563,30 @@ export function suggestedCapital(
   return Math.ceil(raw / 500) * 500
 }
 
+/**
+ * Mandatory minimum equity (הון עצמי) a bank requires alongside any mortgage:
+ * value ≥ loan + ₪100,000 no matter the financing limit.
+ */
+export const MINIMUM_EQUITY = 100_000
+
+/**
+ * Property value (שווי הנכס) hint when the field is blank: the smallest value
+ * that satisfies both regulatory constraints for the mortgage -
+ * - the purpose's maximum financing (e.g. a ₪1M loan at the 75% first-home
+ *   limit needs a value of ₪1,333,500), and
+ * - the mandatory ₪100,000 minimum equity (value ≥ loan + 100,000, which
+ *   dominates for loans under ₪400k - a ₪100k loan means at least a ₪200k
+ *   home).
+ * Rounded up to ₪500; null when no meaningful mortgage is entered, so a
+ * placeholder never shows for tiny/placeholder loan amounts.
+ */
+export function suggestedPropertyValue(loanAmount: number, purpose: PropertyPurpose): number | null {
+  if (loanAmount < MIN_REAL_HOME_VALUE) return null
+  const financingFloor = (loanAmount * 100) / PURPOSE_LIMITS[purpose].limit
+  const raw = Math.max(financingFloor, loanAmount + MINIMUM_EQUITY)
+  return Math.ceil(raw / 500) * 500
+}
+
 export function assessDti(firstMonthPayment: number, income: number): DtiWarning | null {
   if (income <= 0 || firstMonthPayment / income <= DTI_THRESHOLD) return null
   const minIncome = suggestedMinimumIncome(firstMonthPayment)

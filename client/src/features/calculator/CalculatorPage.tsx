@@ -196,6 +196,7 @@ export function CalculatorPage() {
                   onChange={(raw, caret) => store.setPropertyValue(raw, caret)}
                   onBlur={() => store.setPropertyBlur()}
                   suffix="₪"
+                  placeholder={vm.propertyValuePlaceholder}
                   ariaLabel={t('calculator.propertyValueLabel')}
                   testId="property-value"
                 />

@@ -14,6 +14,7 @@ import {
   MIN_REAL_HOME_VALUE,
   PURPOSE_LIMITS,
   effectiveAnnualRatePercent,
+  suggestedPropertyValue,
   isVariableType,
   type PaymentLabelKind,
   type PropertyPurpose,
@@ -470,6 +471,14 @@ export function useCalculatorViewModel() {
       snapshot.suggestedCapital !== null
         ? formatGroupedNumber(snapshot.suggestedCapital)
         : undefined,
+    // שווי הנכס hint - the smallest value satisfying both the purpose's
+    // financing limit and the ₪100k minimum-equity rule. Only while the
+    // property-value field is blank and a meaningful mortgage is entered.
+    propertyValuePlaceholder: (() => {
+      if (propertyValue > 0) return undefined
+      const hint = suggestedPropertyValue(loanAmount, purpose)
+      return hint !== null ? formatGroupedNumber(hint) : undefined
+    })(),
     capitalNoteLines,
     summaryNotes,
     allGood,
