@@ -13,6 +13,7 @@ import { cn } from '@/lib/cn'
 export function TrackForm({ track, index }: { track: TrackState; index: number }) {
   const { t } = useTranslation()
   const flagged = useCalculatorStore((s) => s.flaggedTrackIds.includes(track.id))
+  const rebalanced = useCalculatorStore((s) => s.rebalancedTrackIds.includes(track.id))
   const updateTrackAmount = useCalculatorStore((s) => s.updateTrackAmount)
   const commitTrackAmountBlur = useCalculatorStore((s) => s.commitTrackAmountBlur)
   const updateTrackYears = useCalculatorStore((s) => s.updateTrackYears)
@@ -26,7 +27,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
   return (
     <fieldset
       data-testid={`track-${index + 1}`}
-      className={cn('mortgage-track', flagged && 'variable-limit-flag')}
+      className={cn('mortgage-track', flagged && 'variable-limit-flag', rebalanced && 'track-rebalanced')}
     >
       <legend className={flagged ? 'variable-limit-flag' : undefined}>
         {t('calculator.track.legend', { index: index + 1 })}
@@ -64,7 +65,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
           value={track.amountText}
           onChange={(raw, caret) => updateTrackAmount(track.id, raw, caret)}
           onBlur={() => commitTrackAmountBlur(track.id)}
-          suffix=""
+          suffix="₪"
           ariaLabel={t('calculator.track.amountLabel')}
           testId={`track-amount-${index + 1}`}
         />

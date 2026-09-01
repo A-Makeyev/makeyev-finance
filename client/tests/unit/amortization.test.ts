@@ -19,7 +19,9 @@ import {
   first5yInterestShare,
   firstPaymentWithRateBump,
   paymentPer100k,
+  redistributeTrackAmounts,
   scaleTrackAmounts,
+  splitLargestForNewTrack,
   sumTotals,
   suggestedCapital,
   suggestedMinimumIncome,
@@ -262,6 +264,62 @@ describe('scaleTrackAmounts', () => {
     expect(second.shareMemory).toEqual([945_345])
     const restored = scaleTrackAmounts([0], second.shareMemory, 1_179_909)!
     expect(restored.amounts).toEqual([1_179_909])
+  })
+})
+
+describe('redistributeTrackAmounts', () => {
+  it('fills the other tracks proportionally so the sum equals the loan', () => {
+    // Loan 1,544,000: editing track 1 to 386,000 leaves 1,158,000, split
+    // 50/50 between two 772,000 tracks.
+    expect(redistributeTrackAmounts(386_000, [772_000, 772_000], 1_544_000)).toEqual([
+      579_000,
+      579_000,
+    ])
+  })
+
+  it('keeps the proportions of the others, last track absorbing rounding', () => {
+    expect(redistributeTrackAmounts(400_000, [100_000, 300_000], 1_000_000)).toEqual([
+      150_000,
+      450_000,
+    ])
+    expect(redistributeTrackAmounts(1, [100_000, 100_000, 100_000], 1_000_003)).toEqual([
+      333_334,
+      333_334,
+      333_334,
+    ])
+  })
+
+  it('splits equally when the other tracks are all 0', () => {
+    expect(redistributeTrackAmounts(500_000, [0, 0], 1_500_000)).toEqual([500_000, 500_000])
+  })
+
+  it('zeroes the others when the typed amount exceeds the loan', () => {
+    expect(redistributeTrackAmounts(2_000_000, [772_000, 772_000], 1_544_000)).toEqual([0, 0])
+  })
+
+  it('returns null without other tracks or a loan', () => {
+    expect(redistributeTrackAmounts(100_000, [], 1_000_000)).toBeNull()
+    expect(redistributeTrackAmounts(100_000, [100_000], 0)).toBeNull()
+  })
+})
+
+describe('splitLargestForNewTrack', () => {
+  it('splits the largest amount in half for the new track, total unchanged', () => {
+    // 772,000 / 2 = 386,000 exactly - the screenshot scenario. Ties split
+    // from the first largest track.
+    expect(splitLargestForNewTrack([772_000, 772_000])).toEqual([386_000, 772_000, 386_000])
+  })
+
+  it('splits an odd amount without losing or creating shekels', () => {
+    const result = splitLargestForNewTrack([500, 772_001])!
+    expect(result[2] + result[1]).toBe(772_001)
+    expect(result[0]).toBe(500)
+    expect(result.reduce((sum, amount) => sum + amount, 0)).toBe(772_501)
+  })
+
+  it('returns null when every existing amount is 0 (nothing to split)', () => {
+    expect(splitLargestForNewTrack([0, 0])).toBeNull()
+    expect(splitLargestForNewTrack([])).toBeNull()
   })
 })
 

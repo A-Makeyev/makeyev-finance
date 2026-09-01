@@ -28,6 +28,8 @@ import {
   paymentPer100k,
   resolvePaymentLabel,
   scaleTrackAmounts,
+  redistributeTrackAmounts,
+  splitLargestForNewTrack,
   sumTotals,
   suggestedCapital,
   suggestedMinimumIncome,
@@ -193,6 +195,8 @@ interface CalculatorData {
 export interface CalculatorState extends CalculatorData {
   error: CalculationError | null
   flaggedTrackIds: string[]
+  /** Tracks whose amount was just changed by re-balancing (brief highlight). */
+  rebalancedTrackIds: string[]
   snapshot: CalculatorSnapshot
 }
 
@@ -322,19 +326,28 @@ function syncStartingAmountFromTracks(s: CalculatorData): void {
   s.startingAmountText = total > 0 ? formatGroupedNumber(Math.round(total)) : ''
 }
 
-/** Legacy snapTracksToLoan (calculator.js:226-242). */
+/**
+ * Legacy snapTracksToLoan (calculator.js:226-242). Tracks whose display
+ * amount the snap changed (blur commit, property/capital rescale) are
+ * flashed briefly, same as the live re-balancing while typing.
+ */
 function snapTracksToLoan(s: CalculatorData): void {
+  const before = s.tracks.map((track) => track.amountText)
   const total = s.tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
   if (total) {
     scaleTracks(s)
-    return
+  } else {
+    const loanAmount = getLoanAmount(s)
+    const amounts = distributeEqually(loanAmount, s.tracks.length)
+    if (!amounts.length) return
+    s.tracks.forEach((track, index) => {
+      track.amountText = displayAmountText(amounts[index])
+    })
   }
-  const loanAmount = getLoanAmount(s)
-  const amounts = distributeEqually(loanAmount, s.tracks.length)
-  if (!amounts.length) return
-  s.tracks.forEach((track, index) => {
-    track.amountText = displayAmountText(amounts[index])
-  })
+  markRebalanced(
+    s,
+    s.tracks.filter((track, index) => track.amountText !== before[index]).map((track) => track.id),
+  )
 }
 
 /** Legacy applySelectedYears - slider drives every track's term. */
@@ -571,6 +584,7 @@ function createInitialState(): CalculatorState {
     activePreset: null,
     error: null,
     flaggedTrackIds: [],
+    rebalancedTrackIds: [],
     snapshot: INITIAL_SNAPSHOT,
   }
   state.tracks = createInitialTracks(null)
@@ -582,6 +596,23 @@ function createInitialState(): CalculatorState {
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
+
+let rebalanceClearTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * Mark tracks whose amount was just changed by re-balancing (not by the
+ * user) so the UI can flash them briefly; auto-clears so the animation
+ * can re-trigger on the next re-balance.
+ */
+function markRebalanced(s: Pick<CalculatorState, 'rebalancedTrackIds'>, ids: string[]): void {
+  if (!ids.length) return
+  s.rebalancedTrackIds = ids
+  if (rebalanceClearTimer) clearTimeout(rebalanceClearTimer)
+  rebalanceClearTimer = setTimeout(() => {
+    rebalanceClearTimer = null
+    useCalculatorStore.setState({ rebalancedTrackIds: [] })
+  }, 1400)
+}
 
 export const useCalculatorStore = create<CalculatorStore>()(
   immer((set) => ({
@@ -669,7 +700,30 @@ export const useCalculatorStore = create<CalculatorStore>()(
     addTrack: (values) => {
       set((s) => {
         if (s.tracks.length >= 3) return
-        s.tracks.push(trackFromValues(values ?? { years: s.termYears }, s.termYears, s.primeRate))
+        const track = trackFromValues(values ?? { years: s.termYears }, s.termYears, s.primeRate)
+        s.tracks.push(track)
+        if (!track.amountText.trim()) {
+          // A blank amount computes the new track as a 0-size loan (it
+          // contributes nothing) - fund it by moving half of the largest
+          // existing track's amount over, keeping the loan total constant.
+          const amounts = splitLargestForNewTrack(
+            s.tracks.slice(0, -1).map((existing) => parseAmountText(existing.amountText)),
+          )
+          if (amounts) {
+            const changedIds: string[] = []
+            s.tracks.forEach((existing, i) => {
+              const text = displayAmountText(amounts[i])
+              if (text !== existing.amountText) {
+                existing.amountText = text
+                // Don't highlight the brand-new track (last index) - only
+                // the existing one that funded it.
+                if (i < s.tracks.length - 1) changedIds.push(existing.id)
+              }
+            })
+            syncStartingAmountFromTracks(s)
+            markRebalanced(s, changedIds)
+          }
+        }
         recalculate(s)
       })
     },
@@ -685,8 +739,33 @@ export const useCalculatorStore = create<CalculatorStore>()(
     updateTrackAmount: (id, raw, caret) => {
       const formatted = formatAmountWithCaret(raw, caret)
       set((s) => {
-        const track = s.tracks.find((t) => t.id === id)
-        if (!track) return
+        const index = s.tracks.findIndex((t) => t.id === id)
+        if (index < 0) return
+        const track = s.tracks[index]
+        // Only when a property value pins the loan: the loan is stable, so
+        // the other tracks can be re-balanced against it. Without a property
+        // the loan is derived FROM the tracks and live balancing would fight
+        // the input (same gate as the blur snap).
+        if (parseAmountText(s.propertyValueText) > 0) {
+          const updated = redistributeTrackAmounts(
+            parseAmountText(formatted.text),
+            s.tracks.filter((_, i) => i !== index).map((other) => parseAmountText(other.amountText)),
+            getLoanAmount(s),
+          )
+          if (updated) {
+            const changedIds: string[] = []
+            let otherIndex = 0
+            s.tracks.forEach((other, i) => {
+              if (i === index) return
+              const text = displayAmountText(updated[otherIndex++])
+              if (text !== other.amountText) {
+                other.amountText = text
+                changedIds.push(other.id)
+              }
+            })
+            markRebalanced(s, changedIds)
+          }
+        }
         track.amountText = formatted.text
         track.loanShareMemory = null
         syncStartingAmountFromTracks(s)

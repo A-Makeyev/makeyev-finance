@@ -2624,6 +2624,35 @@ e #name,
   font-weight: 800;
 }
 
+/* Brief flash when a track's amount was re-balanced by the app (live
+   redistribution while typing or the add-track split), not by the user.
+   A translucent overlay pseudo-element whose OPACITY is the only animated
+   property - compositor-friendly (no per-frame repaints) and, since the
+   rest state (opacity 0) is visually identical to the unhighlighted
+   fieldset, the class can drop at any moment with no visible snap. */
+.mortgage-track::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  border: 1px solid var(--calc-teal);
+  background: rgba(8, 127, 120, 0.05);
+  opacity: 0;
+}
+
+.mortgage-track.track-rebalanced::after {
+  animation: track-rebalance-flash 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes track-rebalance-flash {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 .remove-track {
   position: absolute;
   left: 33px;
@@ -2687,7 +2716,6 @@ e #name,
 }
 
 .input-wrap:focus-within {
-  border-color: var(--calc-teal);
   box-shadow: 0 0 0 3px rgba(8, 127, 120, 0.12);
   outline: none;
 }

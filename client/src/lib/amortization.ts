@@ -664,6 +664,57 @@ export function distributeEqually(loanAmount: number, count: number): number[] {
 }
 
 /**
+ * Live re-balance while typing: given the edited track's new amount, return
+ * the amounts the OTHER tracks must take so the tracks sum to the loan
+ * exactly. Others keep their current proportions (equal split when they are
+ * all 0); the last track absorbs rounding. Returns null when there is
+ * nothing to redistribute. A typed amount above the loan leaves the others
+ * at 0 - the blur snap reconciles the overshoot.
+ */
+export function redistributeTrackAmounts(
+  editedAmount: number,
+  otherAmounts: number[],
+  loanAmount: number,
+): number[] | null {
+  const count = otherAmounts.length
+  if (!count || loanAmount <= 0) return null
+  const remaining = Math.max(0, loanAmount - editedAmount)
+  const othersTotal = otherAmounts.reduce((sum, amount) => sum + amount, 0)
+  let allocated = 0
+  return otherAmounts.map((amount, index) => {
+    if (index === count - 1) return remaining - allocated
+    const share =
+      othersTotal > 0 ? Math.round((remaining * amount) / othersTotal) : Math.floor(remaining / count)
+    allocated += share
+    return share
+  })
+}
+
+/**
+ * Fill a newly added track (result's last index) by moving half of the
+ * largest existing track amount to it, keeping the total constant.
+ * Returns null when there is nothing to split (every existing amount is 0),
+ * in which case the caller leaves the new track empty.
+ */
+export function splitLargestForNewTrack(existingAmounts: number[]): number[] | null {
+  if (!existingAmounts.length) return null
+  let maxIndex = -1
+  let max = 0
+  existingAmounts.forEach((amount, index) => {
+    if (amount > max) {
+      max = amount
+      maxIndex = index
+    }
+  })
+  if (maxIndex < 0) return null
+  const half = Math.round(max / 2)
+  const result = [...existingAmounts]
+  result[maxIndex] = max - half
+  result.push(half)
+  return result
+}
+
+/**
  * Pure port of the legacy autoFixVariableMix rebalancer (calculator.js:378-414).
  * Input tracks carry a display amount and whether they are variable-type.
  * Returns new amounts plus (optionally) the index converted to fixed.
