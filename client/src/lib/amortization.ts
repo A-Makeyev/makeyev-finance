@@ -755,7 +755,9 @@ export function distributeEqually(loanAmount: number, count: number): number[] {
  * Live re-balance while typing: given the edited track's new amount, return
  * the amounts the OTHER tracks must take so the tracks sum to the loan
  * exactly. Others keep their current proportions (equal split when they are
- * all 0); the last track absorbs rounding. Returns null when there is
+ * all 0); the last track absorbs rounding. Clearing a track (amount 0)
+ * splits the whole loan evenly between the survivors, so the freed share is
+ * never dumped onto whichever track was largest. Returns null when there is
  * nothing to redistribute. A typed amount above the loan leaves the others
  * at 0 - the blur snap reconciles the overshoot.
  */
@@ -766,6 +768,7 @@ export function redistributeTrackAmounts(
 ): number[] | null {
   const count = otherAmounts.length
   if (!count || loanAmount <= 0) return null
+  if (editedAmount === 0) return distributeEqually(loanAmount, count)
   const remaining = Math.max(0, loanAmount - editedAmount)
   const othersTotal = otherAmounts.reduce((sum, amount) => sum + amount, 0)
   let allocated = 0
@@ -803,7 +806,13 @@ export function splitLargestForNewTrack(existingAmounts: number[]): number[] | n
 }
 
 /**
- * Pure port of the legacy autoFixVariableMix rebalancer (calculator.js:378-414).
+ * Auto-fix rebalancer for the ⅔ variable-rate ceiling. Fixed (non-variable)
+ * tracks keep the exact amounts the user entered; only the variable tracks
+ * are trimmed - proportionally to each other, last one absorbing rounding -
+ * until their total is at most twice the fixed total (share ≤ 2/3). The
+ * trimmed excess leaves the loan instead of being parked into a fixed track,
+ * so the mortgage total shrinks. When every track is variable one of them
+ * (the last one holding money) is converted to fixed to anchor the ceiling.
  * Input tracks carry a display amount and whether they are variable-type.
  * Returns new amounts plus (optionally) the index converted to fixed.
  */
@@ -823,9 +832,18 @@ export function autoFixVariableMix(tracks: AutoFixTrackInput[]): AutoFixResult {
   let convertedToFixedIndex: number | null = null
 
   if (isVar.every((v) => v)) {
-    const convertIndex = isVar.lastIndexOf(true)
-    convertedToFixedIndex = convertIndex
-    isVar[convertIndex] = false
+    // All tracks are variable - one must carry the fixed share. Prefer the
+    // last track that actually holds money: converting an empty trailing
+    // track would leave a zero fixed anchor and force the whole loan away.
+    let convertIndex = -1
+    for (let index = tracks.length - 1; index >= 0; index--) {
+      if (isVar[index] && tracks[index].amount > 0) {
+        convertIndex = index
+        break
+      }
+    }
+    convertedToFixedIndex = convertIndex < 0 ? isVar.lastIndexOf(true) : convertIndex
+    isVar[convertedToFixedIndex] = false
   }
 
   const amounts = tracks.map((track) => track.amount)
@@ -835,31 +853,20 @@ export function autoFixVariableMix(tracks: AutoFixTrackInput[]): AutoFixResult {
   }
 
   const varTotal = amounts.reduce((sum, amount, index) => sum + (isVar[index] ? amount : 0), 0)
-  if (varTotal / total <= VARIABLE_SHARE_LIMIT + VARIABLE_SHARE_EPSILON) {
+  const fixedTotal = total - varTotal
+  // Variable may hold at most twice the fixed total: v/(v+f) ≤ 2/3 ⇔ v ≤ 2f.
+  const varCap = fixedTotal * 2
+  if (varTotal <= varCap) {
     return { amounts, convertedToFixedIndex, changed: convertedToFixedIndex !== null }
   }
 
-  const targetVar = Math.floor((total * 2) / 3)
-  let varLeft = targetVar
+  let varLeft = varCap
   const varIndexes = tracks.map((_, index) => index).filter((index) => isVar[index])
   varIndexes.forEach((index, order) => {
     const isLast = order === varIndexes.length - 1
-    const amount = isLast ? varLeft : Math.round((amounts[index] * targetVar) / varTotal)
+    const amount = isLast ? varLeft : Math.round((amounts[index] * varCap) / varTotal)
     amounts[index] = Math.max(0, amount)
     varLeft -= amount
-  })
-
-  const fixedTarget = total - targetVar
-  let fixedLeft = fixedTarget
-  const fixedIndexes = tracks.map((_, index) => index).filter((index) => !isVar[index])
-  const fixedBase = fixedIndexes.reduce((sum, index) => sum + amounts[index], 0)
-  fixedIndexes.forEach((index, order) => {
-    const isLast = order === fixedIndexes.length - 1
-    const amount = isLast
-      ? fixedLeft
-      : Math.round((amounts[index] / (fixedBase || 1)) * fixedTarget)
-    amounts[index] = Math.max(0, amount)
-    fixedLeft -= amount
   })
 
   return { amounts, convertedToFixedIndex, changed: true }
@@ -877,17 +884,22 @@ export interface PresetDefinition {
   rate: number
 }
 
-/** Verbatim preset data from legacy calculator.js:37-42. */
+/**
+ * Preset data from legacy calculator.js:37-42 - the basket-2 and basket-3
+ * mixes were swapped so the mix number matches its track count: תמהיל 2
+ * holds two tracks (fixed/prime halves), תמהיל 3 holds three equal tracks
+ * (fixed/prime/5-year variable).
+ */
 export const PRESETS: Record<PresetId, PresetDefinition[]> = {
   basket1: [{ type: 'fixed', share: 1, rate: 4.5 }],
   basket2: [
+    { type: 'fixed', share: 1 / 2, rate: 4.5 },
+    { type: 'prime', share: 1 / 2, rate: 5.75 },
+  ],
+  basket3: [
     { type: 'fixed', share: 1 / 3, rate: 4.5 },
     { type: 'prime', share: 1 / 3, rate: 5.75 },
     { type: 'variableIndexed5y', share: 1 / 3, rate: 3.0 },
-  ],
-  basket3: [
-    { type: 'fixed', share: 1 / 2, rate: 4.5 },
-    { type: 'prime', share: 1 / 2, rate: 5.75 },
   ],
   basket4: [
     { type: 'prime', share: 0.4, rate: 5.75 },

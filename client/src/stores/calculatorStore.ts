@@ -167,7 +167,7 @@ function trackFromValues(
   let rateValue = values.rate === undefined ? '' : String(values.rate)
   if (values.type === 'prime' && !rateValue && primeRate) rateValue = String(primeRate)
   const displayAmount =
-    values.amount === undefined || values.amount === ''
+    values.amount === undefined || values.amount === '' || Number(values.amount) === 0
       ? ''
       : formatGroupedNumber(Number(values.amount))
   return {
@@ -356,6 +356,39 @@ function snapTracksToLoan(s: CalculatorState): void {
     s,
     s.tracks.filter((track, index) => track.amountText !== before[index]).map((track) => track.id),
   )
+}
+
+/**
+ * Snap for loan-defining inputs (starting amount, property value, capital):
+ * the legacy proportional snap keeps empty tracks at zero, so typing a loan
+ * while other tracks are blank dumps the whole amount into whichever single
+ * track already held money. When the tracks still mirror the active preset's
+ * lineup and at least one is empty, re-allocate the whole loan with the
+ * preset's proportions (the recommended mix) instead - every track gets its
+ * share and no single (variable) track swallows the loan. Track blur commits
+ * keep the legacy snap, since clearing/typing tracks re-balances on its own.
+ */
+function fillTracksFromLoanInput(s: CalculatorState): void {
+  const loanAmount = getLoanAmount(s)
+  const amounts = s.tracks.map((track) => parseAmountText(track.amountText))
+  const preset = s.activePreset ? PRESETS[s.activePreset] : null
+  const lineupMatches =
+    preset !== null &&
+    preset.length === s.tracks.length &&
+    preset.every((definition, index) => definition.type === s.tracks[index].type)
+  if (loanAmount > 0 && amounts.some((amount) => amount === 0) && lineupMatches) {
+    const before = s.tracks.map((track) => track.amountText)
+    const allocated = allocatePreset(s.activePreset!, loanAmount, s.primeRate)
+    s.tracks.forEach((track, index) => {
+      track.amountText = displayAmountText(allocated[index].amount)
+    })
+    markRebalanced(
+      s,
+      s.tracks.filter((track, index) => track.amountText !== before[index]).map((track) => track.id),
+    )
+    return
+  }
+  snapTracksToLoan(s)
 }
 
 /** Legacy applySelectedYears - slider drives every track's term. */
@@ -635,9 +668,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.startingAmountText = formatted.text
         s.startingNoNeed = false
         s.startingPointDirty = true
-        // snapTracksToLoan scales existing tracks or fills blank ones from the
-        // sum (so a reset blank track computes again, as before).
-        snapTracksToLoan(s)
+        // Scales existing tracks, or fills the active preset's mix into empty
+        // tracks so a typed loan never lands in a single track.
+        fillTracksFromLoanInput(s)
         recalculate(s)
       })
       return formatted
@@ -657,7 +690,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         s.propertyValueText = formatted.text
         syncStartingFromProperty(s)
-        snapTracksToLoan(s)
+        fillTracksFromLoanInput(s)
         recalculate(s)
       })
       return formatted
@@ -668,7 +701,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         s.capitalText = formatted.text
         syncStartingFromProperty(s)
-        snapTracksToLoan(s)
+        fillTracksFromLoanInput(s)
         recalculate(s)
       })
       return formatted
@@ -795,7 +828,17 @@ export const useCalculatorStore = create<CalculatorStore>()(
       })
     },
 
-    updateTrackYears: (_id, raw) => constrainYearsText(raw, MAX_YEARS),
+    updateTrackYears: (id, raw) => {
+      // Persist the clamped value so the controlled input actually edits
+      // (the legacy handler returned the constrained text without saving).
+      const constrained = constrainYearsText(raw, MAX_YEARS)
+      set((s) => {
+        const track = s.tracks.find((t) => t.id === id)
+        if (!track) return
+        track.yearsText = constrained
+      })
+      return constrained
+    },
 
     commitTrackYearsBlur: (id) => {
       set((s) => {
@@ -886,14 +929,16 @@ export const useCalculatorStore = create<CalculatorStore>()(
           track.type = 'fixed'
           applyTrackTypeLogic(s, track, 'fixed')
         }
-        const total = inputs.reduce((sum, item) => sum + item.amount, 0)
-        const varTotal = inputs.reduce((sum, item) => sum + (item.isVariable ? item.amount : 0), 0)
-        const rebalanced = total > 0 && !(varTotal / total <= 2 / 3 + 0.0001)
-        if (rebalanced) {
-          s.tracks.forEach((track, index) => {
-            track.amountText = displayAmountText(Math.max(0, result.amounts[index]))
-          })
-        }
+        // Auto-fix only trims the variable tracks down to the ⅔ ceiling -
+        // fixed amounts are left as entered and the excess exits the loan
+        // (the total shrinks) instead of being parked into a fixed track.
+        s.tracks.forEach((track, index) => {
+          track.amountText = displayAmountText(Math.max(0, result.amounts[index]))
+        })
+        // Without a property pin the loan field mirrors the tracks - make it
+        // follow the shrunk total. With a property the loan is derived from
+        // it, so the field must keep showing property - capital.
+        if (!parseAmountText(s.propertyValueText)) syncStartingAmountFromTracks(s)
         recalculate(s)
       })
     },
@@ -936,12 +981,11 @@ export const useCalculatorStore = create<CalculatorStore>()(
     },
 
     reset: () => {
-      // Reset clears every input and leaves the track amount blank (not "0"),
-      // so no "positive amount" error fires and the calculator returns to a
-      // clean empty state - no stale placeholders or summary notes. תמהיל 1
-      // stays selected so it applies once the user enters a new amount.
-      // External live data (prime rate, CPI) is kept - it is market data.
       set((s) => {
+        // A zero loan allocates zero amounts, which trackFromValues renders as
+        // blank inputs (not "0") - no "positive amount" error fires and the
+        // calculator returns to a clean empty state. External live data
+        // (prime rate, CPI) is kept - it is market data.
         const allocated = allocatePreset('basket4', 0, s.primeRate)
         s.tracks = allocated.map((entry) =>
           trackFromValues(
@@ -950,10 +994,6 @@ export const useCalculatorStore = create<CalculatorStore>()(
             s.primeRate,
           ),
         )
-        // Blank the track amount so it isn't counted as "entered".
-        s.tracks.forEach((track) => {
-          track.amountText = ''
-        })
         s.startingAmountText = ''
         s.startingNoNeed = false
         s.derivedLoanMemory = 0

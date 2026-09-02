@@ -35,6 +35,10 @@ export function ScheduleSection() {
   // 13-24 in year 2, ... up to years*12).
   const monthLabel = (year: number, month: number): string => `${year} · ${month}`
   const totalMonth = (year: number, month: number): number => (year - 1) * 12 + month
+  // With no loan entered there are no rows to render - hide the header-only
+  // table and show the empty note instead (same as the per-track view).
+  const hasTotalRows =
+    granularity === 'monthly' ? vm.visibleMonthlyRows.length > 0 : vm.visibleScheduleRows.length > 0
 
   return (
     <section className="schedule-section">
@@ -87,47 +91,55 @@ export function ScheduleSection() {
 
       <div className="schedule-content">
         {view === 'total' ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>
-                    {granularity === 'monthly'
-                      ? t('calculator.schedule.monthHeader')
-                      : t('calculator.schedule.yearHeader')}
-                  </th>
-                  {granularity === 'monthly' && <th>{t('calculator.schedule.monthTotalHeader')}</th>}
-                  <th>{t('calculator.schedule.principalHeader')}</th>
-                  <th>{t('calculator.schedule.interestHeader')}</th>
-                  {granularity === 'yearly' && <th>{t('calculator.schedule.annualPaymentHeader')}</th>}
-                  <th>{t('calculator.schedule.balanceHeader')}</th>
-                </tr>
-              </thead>
-              <tbody id="schedule-body" data-testid="schedule-body">
-                {granularity === 'monthly'
-                  ? vm.visibleMonthlyRows.map((row) => (
-                      <tr key={`${row.year}-${row.month}`}>
-                        <td data-testid={`schedule-year-${row.year}-month-${row.month}`}>
-                          {monthLabel(row.year, row.month)}
-                        </td>
-                        <td>{totalMonth(row.year, row.month)}</td>
-                        <td>{formatCurrency(row.principal)}</td>
-                        <td>{formatCurrency(row.interest)}</td>
-                        <td>{formatCurrency(row.closing)}</td>
-                      </tr>
-                    ))
-                  : vm.visibleScheduleRows.map((row) => (
-                      <tr key={row.year}>
-                        <td data-testid={`schedule-year-${row.year}`}>{row.year}</td>
-                        <td>{formatCurrency(row.principal)}</td>
-                        <td>{formatCurrency(row.interest)}</td>
-                        <td>{formatCurrency(row.paid)}</td>
-                        <td>{formatCurrency(row.closing)}</td>
-                      </tr>
-                    ))}
-              </tbody>
-            </table>
-          </div>
+          hasTotalRows ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>
+                      {granularity === 'monthly'
+                        ? t('calculator.schedule.monthHeader')
+                        : t('calculator.schedule.yearHeader')}
+                    </th>
+                    {granularity === 'monthly' && (
+                      <th>{t('calculator.schedule.monthTotalHeader')}</th>
+                    )}
+                    <th>{t('calculator.schedule.principalHeader')}</th>
+                    <th>{t('calculator.schedule.interestHeader')}</th>
+                    {granularity === 'yearly' && (
+                      <th>{t('calculator.schedule.annualPaymentHeader')}</th>
+                    )}
+                    <th>{t('calculator.schedule.balanceHeader')}</th>
+                  </tr>
+                </thead>
+                <tbody id="schedule-body" data-testid="schedule-body">
+                  {granularity === 'monthly'
+                    ? vm.visibleMonthlyRows.map((row) => (
+                        <tr key={`${row.year}-${row.month}`}>
+                          <td data-testid={`schedule-year-${row.year}-month-${row.month}`}>
+                            {monthLabel(row.year, row.month)}
+                          </td>
+                          <td>{totalMonth(row.year, row.month)}</td>
+                          <td>{formatCurrency(row.principal)}</td>
+                          <td>{formatCurrency(row.interest)}</td>
+                          <td>{formatCurrency(row.closing)}</td>
+                        </tr>
+                      ))
+                    : vm.visibleScheduleRows.map((row) => (
+                        <tr key={row.year}>
+                          <td data-testid={`schedule-year-${row.year}`}>{row.year}</td>
+                          <td>{formatCurrency(row.principal)}</td>
+                          <td>{formatCurrency(row.interest)}</td>
+                          <td>{formatCurrency(row.paid)}</td>
+                          <td>{formatCurrency(row.closing)}</td>
+                        </tr>
+                      ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="schedule-empty">{t('calculator.emptyNote')}</p>
+          )
         ) : (
           <div className="schedule-tracks">
             {vm.visibleScheduleTracks.length === 0 && (

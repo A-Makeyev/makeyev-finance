@@ -188,29 +188,50 @@ describe('variable-rate ⅔ cap', () => {
 })
 
 describe('autoFixVariableMix', () => {
-  it('rebalances proportional-to-cap with last-track remainders', () => {
+  it('trims variable tracks to the ⅔ cap, keeping fixed amounts and shrinking the total', () => {
     const result = autoFixVariableMix([
       { amount: 60_000, isVariable: true },
       { amount: 30_000, isVariable: true },
       { amount: 30_000, isVariable: false },
     ])
     expect(result.convertedToFixedIndex).toBeNull()
-    // targetVar = floor(120000·2/3) = 80000; var split ∝ original (last absorbs)
-    expect(result.amounts[0]).toBe(53_333)
-    expect(result.amounts[1]).toBe(26_667)
-    expect(result.amounts[2]).toBe(40_000)
-    expect(result.amounts.reduce((a, b) => a + b, 0)).toBe(120_000)
+    // Fixed stays 30,000; variable may hold at most 2·30,000 = 60,000, split
+    // ∝ original 60:30 (last absorbs) → 40,000 + 20,000. Total drops to 90,000.
+    expect(result.amounts).toEqual([40_000, 20_000, 30_000])
+    expect(result.amounts.reduce((a, b) => a + b, 0)).toBe(90_000)
   })
 
-  it('converts the last variable track when everything is variable', () => {
+  it('converts the last funded variable track when everything is variable', () => {
     const result = autoFixVariableMix([
       { amount: 40_000, isVariable: true },
       { amount: 40_000, isVariable: true },
       { amount: 40_000, isVariable: true },
     ])
     expect(result.convertedToFixedIndex).toBe(2)
-    // After conversion the mix is within limits → amounts unchanged.
+    // Converted anchor is 40,000 → variable may keep 80,000 = exactly what
+    // the two remaining tracks hold, so the amounts are unchanged.
     expect(result.amounts).toEqual([40_000, 40_000, 40_000])
+  })
+
+  it('skips an empty trailing variable track when anchoring the fixed share', () => {
+    const result = autoFixVariableMix([
+      { amount: 900_000, isVariable: true },
+      { amount: 0, isVariable: true },
+    ])
+    // Converting the empty second track would anchor fixed at 0 and wipe the
+    // loan; instead the funded first track converts and no cut is needed.
+    expect(result.convertedToFixedIndex).toBe(0)
+    expect(result.amounts).toEqual([900_000, 0])
+  })
+
+  it('cuts variable tracks against the converted anchor, shrinking the total', () => {
+    const result = autoFixVariableMix([
+      { amount: 900_000, isVariable: true },
+      { amount: 100_000, isVariable: true },
+    ])
+    expect(result.convertedToFixedIndex).toBe(1)
+    // Anchor (fixed) = 100,000 → variable cap = 200,000; total drops to 300,000.
+    expect(result.amounts).toEqual([200_000, 100_000])
   })
 
   it('leaves compliant mixes untouched', () => {
@@ -295,6 +316,21 @@ describe('redistributeTrackAmounts', () => {
     expect(redistributeTrackAmounts(500_000, [0, 0], 1_500_000)).toEqual([500_000, 500_000])
   })
 
+  it('splits the whole loan evenly across survivors when a track is cleared', () => {
+    // Clearing one of three tracks on a ₪2,000,000 loan leaves two tracks
+    // that share the loan equally - the freed money is never dumped onto
+    // whichever survivor was largest.
+    expect(redistributeTrackAmounts(0, [1_125_000, 375_000], 2_000_000)).toEqual([
+      1_000_000,
+      1_000_000,
+    ])
+    expect(redistributeTrackAmounts(0, [100_000, 100_000, 100_000], 1_000_003)).toEqual([
+      333_334,
+      333_334,
+      333_335,
+    ])
+  })
+
   it('zeroes the others when the typed amount exceeds the loan', () => {
     expect(redistributeTrackAmounts(2_000_000, [772_000, 772_000], 1_544_000)).toEqual([0, 0])
   })
@@ -350,6 +386,15 @@ describe('preset allocation', () => {
     expect(allocated[1].type).toBe('prime')
     expect(allocated[1].rate).toBe(6.05)
     expect(allocated[0].rate).toBe(4.5)
+  })
+
+  it('numbers the mixes by track count (תמהיל 2 = two, תמהיל 3 = three)', () => {
+    const two = allocatePreset('basket2', 300_000, null)
+    expect(two.map((entry) => entry.type)).toEqual(['fixed', 'prime'])
+    expect(two.map((entry) => entry.amount)).toEqual([150_000, 150_000])
+    const three = allocatePreset('basket3', 300_000, null)
+    expect(three.map((entry) => entry.type)).toEqual(['fixed', 'prime', 'variableIndexed5y'])
+    expect(three.map((entry) => entry.amount)).toEqual([100_000, 100_000, 100_000])
   })
 })
 

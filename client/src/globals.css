@@ -2989,6 +2989,7 @@ e #name,
   position: sticky;
   top: 0;
   background: #fff;
+  font-weight: 600;
   z-index: 1;
 }
 
@@ -3007,9 +3008,9 @@ e #name,
 
 .schedule-asides-title {
   color: var(--calc-teal-dark);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.95rem;
-  margin: 40px 0 4px;
+  margin: 10px 0 4px;
 }
 
 .schedule-aside {

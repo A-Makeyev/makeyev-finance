@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { TRACK_TYPES, type AmortizationMethod, type TrackType } from '@/lib/amortization'
+import { MAX_YEARS, TRACK_TYPES, type AmortizationMethod, type TrackType } from '@/lib/amortization'
 import { useCalculatorStore, type TrackState } from '@/stores/calculatorStore'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { FlipSelect } from '@/components/ui/FlipSelect'
@@ -75,13 +75,13 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         {t('calculator.track.yearsLabel')}
         <div className="input-wrap">
           <input
-            type="text"
+            type="number"
             inputMode="numeric"
+            min={1}
+            max={MAX_YEARS}
+            step={1}
             value={track.yearsText}
-            onInput={(event) => {
-              const element = event.currentTarget
-              element.value = updateTrackYears(track.id, element.value)
-            }}
+            onInput={(event) => updateTrackYears(track.id, event.currentTarget.value)}
             onBlur={() => commitTrackYearsBlur(track.id)}
             required
             aria-label={`${t('calculator.track.yearsLabel')} ${index + 1}`}
