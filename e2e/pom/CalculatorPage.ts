@@ -19,6 +19,8 @@ export class CalculatorPage {
   readonly initialCapital: Locator
   readonly monthlyIncome: Locator
   readonly termSlider: Locator
+  /** Toggle that reveals the twelve secondary result cards. */
+  readonly resultsToggle: Locator
 
   constructor(page: Page) {
     this.page = page
@@ -37,6 +39,7 @@ export class CalculatorPage {
     this.initialCapital = page.getByTestId('initial-capital')
     this.monthlyIncome = page.getByTestId('monthly-income')
     this.termSlider = page.getByTestId('term-years')
+    this.resultsToggle = page.getByTestId('results-toggle')
   }
 
   async goto(): Promise<void> {
@@ -70,6 +73,12 @@ export class CalculatorPage {
 
   async selectPurpose(value: string): Promise<void> {
     await this.page.getByTestId('property-purpose').selectOption(value)
+  }
+
+  /** Expand the results grid so the twelve secondary cards are visible. */
+  async showAllResults(): Promise<void> {
+    await this.resultsToggle.click()
+    await expect(this.page.getByTestId('total-payment')).toBeVisible()
   }
 }
 

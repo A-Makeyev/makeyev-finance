@@ -2853,6 +2853,111 @@ e #name,
   padding: 18px 18px 16px;
   background: white;
   border: 1px solid var(--calc-line);
+  /* Cards fade in one by one - each starts 70ms after its predecessor via
+     the --card-index custom property set inline. "both" keeps a card
+     invisible until its delay passes, then holds the final state. */
+  animation: results-card-in 0.45s ease-out both;
+  animation-delay: calc(var(--card-index, 0) * 70ms);
+}
+
+/* The author display rule above would defeat the UA's [hidden] { display:
+   none } (author styles win over the UA stylesheet at any specificity), so
+   hidden cards must be re-hidden explicitly. */
+.results-card[hidden] {
+  display: none;
+}
+
+@keyframes results-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Collapse cascade: the entrance run backwards - same duration, same 70ms
+   steps, same drift, but the last card hides first ((11 - index) flips the
+   stagger order) so the grid closes in mirror image of how it opened. */
+.results-card.results-extra-out {
+  animation: results-card-out 0.45s ease-in both;
+  animation-delay: calc((11 - var(--card-index, 0)) * 70ms);
+}
+
+@keyframes results-card-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .results-card,
+  .results-card.results-extra-out {
+    animation: none;
+  }
+}
+
+/* "Show all" button - plain teal text in a card-sized but wider cell:
+   it spans the last two cells of the featured row (3 cards + button =
+   5 columns) and matches the card height. A full-width centered row
+   below the grid while expanded. */
+.results-toggle {
+  justify-self: stretch;
+  align-self: stretch;
+  grid-column: span 2;
+  min-height: 132px;
+  border: none;
+  background: transparent;
+  color: var(--calc-teal-dark);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 15px;
+  transition: color 0.2s ease;
+}
+
+.results-toggle:hover {
+  color: var(--calc-accent-dark);
+}
+
+/* While a card cascade plays the button is hidden (React toggles
+   .is-visible once the cascade ends); it fades in smoothly and stays
+   unclickable while invisible. */
+.results-toggle {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.4s ease-out,
+    color 0.2s ease;
+}
+
+.results-toggle.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .results-toggle {
+    opacity: 1;
+    pointer-events: auto;
+    transition: none;
+  }
+}
+
+/* Grid order moves the toggle after every card while the extras are on
+   the grid (expanded or still fading out) so the close cascade plays
+   without the grid re-flowing mid-animation. */
+.results-layout.all-visible .results-toggle {
+  order: 1;
+  grid-column: 1 / -1;
+  text-align: center;
 }
 
 .results-card p {
@@ -3322,6 +3427,12 @@ tbody tr:hover {
   /* The primary (first monthly payment) card gets the full row so the
      headline number and its note breathe at the narrowest layout. */
   .primary-result {
+    grid-column: 1 / -1;
+  }
+
+  /* The toggle reads as a divider between the featured pair and the rest
+     when it sits between half-width cards. */
+  .results-toggle {
     grid-column: 1 / -1;
   }
 

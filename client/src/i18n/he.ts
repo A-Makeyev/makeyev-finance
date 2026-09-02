@@ -199,6 +199,8 @@ export const he = {
         effRateCard: 'ריבית אפקטיבית',
         effRateCaption: 'העלות השנתית האמיתית, בהרכבה חודשית של {{nominal}}%',
         paybackPerTrackTitle: 'יחס החזר לכל מסלול',
+        showAll: 'הצג הכל',
+        showLess: 'הצג פחות',
       },
       dynamicNotes: {
         indexedLabel: 'ההחזר הגבוה ביותר',

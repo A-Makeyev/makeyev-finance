@@ -206,6 +206,8 @@ export const en: { translation: Translation } = {
         effRateCard: 'Effective annual rate',
         effRateCaption: 'True yearly cost, monthly compounding of {{nominal}}% nominal',
         paybackPerTrackTitle: 'Payback ratio per track',
+        showAll: 'Show all',
+        showLess: 'Show less',
       },
       dynamicNotes: {
         indexedLabel: 'Highest payment',
