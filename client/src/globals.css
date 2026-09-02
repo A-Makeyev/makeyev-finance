@@ -2912,7 +2912,6 @@ e #name,
   justify-self: stretch;
   align-self: stretch;
   grid-column: span 2;
-  min-height: 132px;
   border: none;
   background: transparent;
   color: var(--calc-teal-dark);
@@ -3051,6 +3050,468 @@ e #name,
 }
 
 /* =========================
+   CHARTS (hand-rolled SVG)
+   ========================= */
+
+.amort-chart-wrap {
+  margin: 0 0 22px;
+}
+
+.amort-chart,
+.per-track-chart {
+  /* No white box - charts sit directly on the page background with only a
+     light grid inside the plot. */
+  padding: 14px 10px 6px;
+}
+
+.per-track-chart {
+  flex: 1;
+  min-width: 0;
+  /* Vertical stack: the legend row sits above, the plot fills the full
+     width below it. The RTL page would split them side by side, so force
+     column layout where the legend is first (top) and plot second (bottom). */
+  display: flex;
+  flex-direction: column;
+  direction: ltr;
+}
+
+.per-track-chart .chart-legend {
+  /* Legend row across the full width. Hebrew (RTL) orders the items
+     right-to-left; English (LTR) overrides below so they start left. */
+  flex: 0 0 auto;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  padding: 0 8px 10px;
+  direction: rtl;
+}
+
+:root[dir='ltr'] .per-track-chart .chart-legend {
+  direction: ltr;
+}
+
+.per-track-plot {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+.chart-legend-name {
+  color: var(--calc-ink);
+  font-weight: 700;
+  direction: rtl;
+}
+
+:root[dir='ltr'] .chart-legend-name {
+  direction: ltr;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  padding: 0 8px 10px;
+  color: var(--calc-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  /* Hebrew page: inherit RTL so items order right-to-left (swatch to the
+     right, name to its left), matching the surrounding layout. */
+}
+
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+
+.chart-swatch-principal {
+  background: var(--chart-principal, #0aa89f);
+}
+
+.chart-swatch-interest {
+  background: var(--chart-interest, #d2762e);
+}
+
+.chart-swatch-balance {
+  background: var(--chart-balance, #111111);
+}
+
+.amort-chart svg,
+.per-track-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-grid {
+  stroke: var(--calc-line);
+  stroke-width: 1;
+}
+
+.chart-tick {
+  fill: var(--calc-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+/* Total/schedule chart: keep axis numbers & text a touch smaller than the
+   per-track chart (which has its own override below). */
+.amort-chart .chart-tick {
+  font-size: 10px;
+}
+
+.amort-chart .chart-axis-title {
+  font-size: 10px;
+}
+
+/* The per-track chart's viewBox is wider (900 vs 720), so its labels would
+   render smaller at the same pixel width. Bump the size so the axis numbers
+   match the total graph's weight. */
+.per-track-chart .chart-tick {
+  font-size: 17px;
+}
+
+.chart-major-tick {
+  stroke: var(--calc-muted);
+  stroke-width: 1;
+}
+
+.chart-minor-tick {
+  stroke: var(--calc-line);
+  stroke-width: 1;
+}
+
+.chart-tick-end {
+  text-anchor: end;
+}
+
+.chart-tick-balance {
+  fill: var(--chart-balance, #111111);
+  text-anchor: start;
+}
+
+.chart-axis-title {
+  fill: var(--calc-muted);
+  font-weight: 700;
+  font-size: 15px;
+  text-anchor: middle;
+}
+
+/* Rotated axis titles (תשלום שנתי / יתרה) get their own compositing layer so
+   the hover scale animation of the bars doesn't re-blend them (which made
+   them glitch). */
+.chart-axis-title-rot {
+  will-change: transform;
+}
+
+/* Stacked series: one fixed color per component, same as the legend and
+   the cost donut. */
+.chart-bar-principal,
+.chart-area-principal {
+  fill: var(--chart-principal, #0aa89f);
+}
+
+.chart-bar-interest,
+.chart-area-interest {
+  fill: var(--chart-interest, #d2762e);
+  fill-opacity: 0.9;
+}
+
+.chart-bar-group-active {
+  /* Scale the whole stacked bar (קרן + ריבית) up from its baseline, using an
+     inline user-unit transform origin (bar center-x, baseline) so it pivots
+     at the base. `will-change` lifts only this group onto its own compositing
+     layer, so Chromium never repaints the surrounding axis text (which was
+     the source of the flicker). */
+  transform: translateY(-3px) scaleY(1.04);
+  transition: transform 0.18s ease;
+  will-change: transform;
+}
+
+.chart-area-principal {
+  fill-opacity: 0.28;
+}
+
+.chart-area-interest {
+  fill-opacity: 0.28;
+}
+
+/* The balance trend line: dashed so it reads as a separate series on top of
+   the bars, and thick enough to track at a glance. */
+.chart-line {
+  fill: none;
+  stroke: var(--chart-balance, #111111);
+  stroke-width: 2.5;
+  stroke-dasharray: 7 5;
+  stroke-linejoin: round;
+}
+
+.chart-line-track {
+  fill: none;
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-dot {
+  fill: var(--chart-balance, #111111);
+  stroke: white;
+  stroke-width: 2;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 8px;
+  /* Physical translate: positioned by physical `left` (see component). */
+  transform: translateX(-50%);
+  display: grid;
+  gap: 2px;
+  background: white;
+  border: 1px solid var(--calc-line);
+  box-shadow: 0 6px 18px rgba(15, 15, 15, 0.12);
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: 'Heebo', sans-serif;
+  color: var(--calc-ink);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.chart-tooltip strong {
+  color: var(--calc-teal-dark);
+}
+
+.amort-chart {
+  position: relative;
+}
+
+/* Per-track band: donut on the left, per-track comparison on the right.
+   The RTL page flips flex rows, so force left-to-right placement. */
+.per-track-band {
+  display: flex;
+  align-items: flex-start;
+  gap: 26px;
+  padding: 0;
+  margin: 0 0 46px;
+  direction: ltr;
+}
+
+/* English (LTR): put the donut on the RIGHT, chart on the LEFT. */
+:root[dir='ltr'] .per-track-band {
+  flex-direction: row-reverse;
+}
+
+/* Track-mix donut + its legend: the legend column is pushed left under
+   the circle instead of being centered. */
+.mix-donut {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  align-content: start;
+  flex: 0 0 auto;
+}
+
+.mix-donut-plot {
+  position: relative;
+}
+
+.mix-donut svg {
+  width: 280px;
+  max-width: min(280px, 60vw);
+  height: auto;
+  flex: none;
+}
+
+.donut-center-label,
+.donut-center-value,
+.donut-slice-label {
+  text-anchor: middle;
+  fill: var(--calc-ink);
+}
+
+.donut-center-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--calc-muted);
+}
+
+.donut-center-value {
+  font-size: 20px;
+  font-weight: 700;
+  fill: var(--calc-teal-dark);
+}
+
+.donut-slice-label {
+  font-size: 15px;
+  font-weight: 700;
+  fill: white;
+  pointer-events: none;
+}
+
+.donut-empty {
+  fill: none;
+  stroke: var(--calc-line);
+  stroke-width: 30;
+}
+
+/* Hover: the active slice (and its % label inside the same group) grows
+   out from the donut center and brightens. */
+.mix-slice {
+  transform-origin: 160px 160px;
+  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.25s ease, filter 0.25s ease;
+  cursor: pointer;
+}
+
+.mix-slice-active {
+  transform: scale(1.06);
+  opacity: 1;
+  filter: brightness(1.08);
+}
+
+/* Callout that follows the hovered donut slice, placed just outside it on
+   the side it faces. Each side sends the body OUTWARD so it never overhangs
+   the donut: data-side is the arrow edge = the side facing the circle. */
+.mix-slice-tooltip[data-side="left"] {
+  transform: translateY(-50%);
+}
+
+.mix-slice-tooltip[data-side="right"] {
+  transform: translate(-100%, -50%);
+}
+
+.mix-slice-tooltip[data-side="top"] {
+  transform: translateX(-50%);
+}
+
+.mix-slice-tooltip[data-side="bottom"] {
+  transform: translate(-50%, -100%);
+}
+
+.mix-slice-tooltip::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: 1px solid var(--calc-line);
+  transform: rotate(45deg);
+}
+
+/* Arrow sits on the edge facing the slice and points toward it. Half-in/half-out
+   so the border line reads as a clean point against the tooltip body. */
+.mix-slice-tooltip[data-side="left"]::after {
+  left: -6px;
+  top: calc(50% - 5px);
+  border-right: none;
+  border-top: none;
+}
+
+.mix-slice-tooltip[data-side="right"]::after {
+  right: -6px;
+  top: calc(50% - 5px);
+  border-left: none;
+  border-bottom: none;
+}
+
+.mix-slice-tooltip[data-side="top"]::after {
+  top: -6px;
+  left: calc(50% - 5px);
+  border-right: none;
+  border-bottom: none;
+}
+
+.mix-slice-tooltip[data-side="bottom"]::after {
+  bottom: -6px;
+  left: calc(50% - 5px);
+  border-left: none;
+  border-top: none;
+}
+
+/* Legend as a vertical column beside the circle, each row aligned right
+   (RTL Hebrew) with its color chip, name and amount/%. */
+.mix-legend {
+  display: grid;
+  gap: 8px;
+  min-width: 220px;
+  direction: rtl;
+  /* Shift toward the donut's outer edge: Hebrew (RTL) pushes the legend
+     further left, English overrides below to push it right. A transform is
+     used instead of margins because the grid track auto-sizes to include
+     margins, which silently absorbs them with no visual change. */
+  transform: translateX(-26px);
+}
+
+:root[dir='ltr'] .mix-legend {
+  direction: ltr;
+  transform: translateX(68px);
+}
+
+.mix-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.mix-legend-text {
+  display: grid;
+  gap: 1px;
+}
+
+.mix-legend-name {
+  color: var(--calc-ink);
+  font-weight: 700;
+}
+
+.mix-legend-amount {
+  color: var(--calc-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* Total-cost donut in the schedule asides column. */
+.cost-donut {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.cost-donut svg {
+  width: 150px;
+  height: auto;
+}
+
+.cost-legend {
+  display: grid;
+  gap: 4px;
+  font-size: 0.82rem;
+}
+
+.cost-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--calc-muted);
+  font-weight: 600;
+}
+
+.cost-legend-item strong {
+  color: var(--calc-ink);
+  margin-inline-start: auto;
+}
+
+/* =========================
    SCHEDULE
    ========================= */
 
@@ -3078,7 +3539,9 @@ e #name,
    natural height while the aside column stretches to match it. */
 .schedule-content .table-wrap {
   align-self: start;
-  max-height: 480px;
+  /* 530px fits one net extra ~48px row vs the original 480px cap - enough
+     extra visibility without letting the table dominate the panel. */
+  max-height: 550px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
@@ -3114,6 +3577,7 @@ e #name,
 .schedule-asides-title {
   color: var(--calc-teal-dark);
   font-weight: 600;
+  text-align: center;
   font-size: 0.95rem;
   margin: 10px 0 4px;
 }
@@ -3121,6 +3585,7 @@ e #name,
 .schedule-aside {
   border-right: 3px solid var(--calc-teal);
   background: #f5faf4;
+  text-align: center;
   padding: 18px;
 }
 
@@ -3313,7 +3778,9 @@ tbody tr:hover {
 }
 
 .legal-note {
-  margin-top: 40px;
+  /* Push the disclaimer further off the table so it reads as separate
+     fine print instead of crowding the last visible row (request). */
+  margin-top: 64px;
 }
 
 .legal-note a {
@@ -3337,6 +3804,28 @@ tbody tr:hover {
      breakpoint so both panels change together. */
   .results-layout {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Donut and per-track chart stack once the side-by-side band gets tight,
+     each centered on the row instead of hugging the left edge. */
+  .per-track-band,
+  :root[dir='ltr'] .per-track-band {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Stacked layout is centered, so the horizontal legend shift is undone. */
+  .mix-legend,
+  :root[dir='ltr'] .mix-legend {
+    transform: none;
+  }
+
+  .per-track-chart {
+    width: 100%;
+  }
+
+  .per-track-plot {
+    width: 100%;
   }
 
   .mortgage-track {

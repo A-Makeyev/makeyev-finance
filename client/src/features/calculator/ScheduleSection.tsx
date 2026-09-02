@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCalculatorViewModel } from './useCalculatorViewModel'
-import { formatCurrency, formatRatio } from '@/lib/format'
+import { formatCurrency, formatRatio, parseAmountText } from '@/lib/format'
+import { AmortizationChart } from './AmortizationChart'
+import { PerTrackChart } from './PerTrackChart'
+import { TrackMixDonut, type TrackShare } from './TrackMixDonut'
+import { TotalCostDonut } from './TotalCostDonut'
+import { useCalculatorStore } from '@/stores/calculatorStore'
 
 type ScheduleView = 'total' | 'separate'
 type ScheduleGranularity = 'monthly' | 'yearly'
@@ -39,6 +44,41 @@ export function ScheduleSection() {
   // table and show the empty note instead (same as the per-track view).
   const hasTotalRows =
     granularity === 'monthly' ? vm.visibleMonthlyRows.length > 0 : vm.visibleScheduleRows.length > 0
+
+  // Chart rows come from the exact same arrays the table renders - one
+  // source of truth; switching the tabs re-feeds both together. The balance
+  // series needs a per-period absolute value: the yearly table's closing
+  // balance is per row; the monthly rows carry it too. Payment = principal
+  // + interest by definition.
+  const chartRows =
+    granularity === 'monthly'
+      ? vm.visibleMonthlyRows.map((row) => ({
+          period: (row.year - 1) * 12 + row.month,
+          principal: row.principal,
+          interest: row.interest,
+          balance: row.closing,
+          payment: row.paid,
+        }))
+      : vm.visibleScheduleRows.map((row) => ({
+          period: row.year,
+          principal: row.principal,
+          interest: row.interest,
+          balance: row.closing,
+          payment: row.paid,
+        }))
+  const periodLabel = (period: number) =>
+    granularity === 'monthly'
+      ? t('calculator.charts.monthLabel', { month: period })
+      : t('calculator.charts.yearLabel', { year: period })
+
+  // Live track shares for the mix donut - parsed straight from the store's
+  // track state (same amounts the cards show), one slice per track.
+  const tracks = useCalculatorStore((s) => s.tracks)
+  const mixShares: TrackShare[] = tracks.map((track) => ({
+    trackId: track.id,
+    type: track.type,
+    amount: Math.max(0, parseAmountText(track.amountText)),
+  }))
 
   return (
     <section className="schedule-section">
@@ -88,6 +128,22 @@ export function ScheduleSection() {
           </button>
         ))}
       </div>
+
+      {view === 'total' && hasTotalRows && chartRows.length > 0 && (
+        <div className="amort-chart-wrap">
+          <AmortizationChart rows={chartRows} periodLabel={periodLabel} monthly={granularity === 'monthly'} />
+        </div>
+      )}
+
+      {/* Per-track band: the mix donut sits on the left with the per-track
+          balance comparison on the right, so both are full-size and read as
+          one panel. Sits above the grid like the total view's chart. */}
+      {view === 'separate' && vm.visibleScheduleTracks.length > 0 && (
+        <div className="per-track-band">
+          {mixShares.some((share) => share.amount > 0) && <TrackMixDonut shares={mixShares} />}
+          <PerTrackChart tracks={vm.visibleScheduleTracks} />
+        </div>
+      )}
 
       <div className="schedule-content">
         {view === 'total' ? (
@@ -204,6 +260,10 @@ export function ScheduleSection() {
         )}
 
         <div className="schedule-asides">
+          <TotalCostDonut
+            totalPrincipal={vm.snapshot.totals.totalPaid - vm.snapshot.totals.totalInterest}
+            totalInterest={vm.snapshot.totals.totalInterest}
+          />
           <p className="schedule-asides-title">{t('calculator.results.paybackPerTrackTitle')}</p>
           {vm.trackPaybacks.length === 0 && (
             <aside className="schedule-aside">
