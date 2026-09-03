@@ -1,11 +1,55 @@
 import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FaPaperPlane } from 'react-icons/fa'
+import type { TFunction } from 'i18next'
+import { FaPaperPlane, FaTimes } from 'react-icons/fa'
 import { EMAIL_REGEX, NAME_REGEX, PHONE_REGEX } from './validation'
 import { isEmailjsAvailable, sendContactEmail, type EmailSendResult } from './emailjsClient'
+import { useCalculatorStore } from '@/stores/calculatorStore'
+import { useQuestionWishlist } from '@/stores/questionWishlistStore'
+import { useLocalizedResultsTopics } from '@/features/calculator/resultsTopics'
 import { useMediaQuery } from '@/hooks/useScrolled'
 import { cn } from '@/lib/cn'
 import { FloatingLabelField } from './FloatingLabelField'
+import type { TrackState } from '@/stores/calculatorStore'
+
+/**
+ * Plain-text "calculator scenario" block appended to the email alongside the
+ * saved-question rows - the numbers behind the topics (loan, term, purpose
+ * and every entered track), so whoever answers doesn't have to ask back.
+ */
+function buildCalculatorSnapshot(t: TFunction): string | null {
+  const store = useCalculatorStore.getState()
+  const entered: TrackState[] = store.tracks.filter((track) => track.amountText.trim() !== '')
+  const loanText = store.startingAmountText.trim()
+  if (!loanText && entered.length === 0) return null
+
+  const purposeKey = {
+    first: 'calculator.purposeFirst',
+    upgrade: 'calculator.purposeUpgrade',
+    investment: 'calculator.purposeInvestment',
+  }[store.purpose]
+  // The row label (wishlist.emailSnapshotTitle) heads this block in the
+  // email table, so the text itself starts with the amounts.
+  const lines = [
+    `${t('calculator.startingAmountLabel')}: ₪${loanText || '0'}`,
+    `${t('calculator.termLabel')}: ${store.termYears} ${t('calculator.track.yearsSuffix')}`,
+    `${t('calculator.purposeLabel')}: ${t(purposeKey)}`,
+    t('calculator.track.typeLabel'),
+  ]
+  entered.forEach((track) => {
+    const parts = [
+      `₪${track.amountText.trim()}`,
+      track.rateText.trim() !== '' ? `${track.rateText.trim()}%` : '',
+      t(
+        track.method === 'spitzer'
+          ? 'calculator.track.methodSpitzer'
+          : 'calculator.track.methodEqualPrincipal',
+      ),
+    ].filter((part) => part !== '')
+    lines.push(`${t(`calculator.trackTypes.${track.type}`)} — ${parts.join(' · ')}`)
+  })
+  return lines.join('\n')
+}
 
 export interface ContactSubmitOutcome {
   status: 'success' | 'failure'
@@ -49,6 +93,12 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     message: '',
   })
   const [selectedTimes, setSelectedTimes] = useState<CallbackTime[]>([])
+  const wishlistItems = useQuestionWishlist((s) => s.items)
+  // Titles and summaries follow the live language, so a saved question is
+  // re-translated when the site switches Hebrew ⇄ English.
+  const wishlistTopics = useLocalizedResultsTopics(wishlistItems)
+  const removeWishlistItem = useQuestionWishlist((s) => s.remove)
+  const clearWishlist = useQuestionWishlist((s) => s.clear)
   const [sending, setSending] = useState(false)
   const [dots, setDots] = useState(0)
   const [plane, setPlane] = useState(false)
@@ -124,16 +174,36 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     }
     let result: EmailSendResult
     try {
-      // Preferred windows ride along inside the message body - the EmailJS
-      // template renders {{message}}, so they reach the inbox with no extra
-      // template variable needed.
-      const preferredTimes = CALLBACK_TIMES.filter((id) => selectedTimes.includes(id))
-        .map((id) => `${t(`contact.callback.${id}`)} (${t(`contact.callback.${id}Hours`)})`)
-        .join('\n')
+      // The Message cell holds only the user's own text (its <pre> keeps the
+      // newlines). The callback windows, the calculator scenario and the
+      // saved questions travel as separate template params - callback /
+      // calculator / topic_N - one table row each in the EmailJS template
+      // (all with static English labels), so they keep a clean layout and
+      // stay hidden when absent.
+      const selectedTimesList = CALLBACK_TIMES.filter((id) => selectedTimes.includes(id))
       const baseMessage =
-        values.message.trim() === ''
-          ? t('contact.modal.defaultAdviceMessage')
-          : values.message
+        values.message.trim() === '' ? t('contact.modal.defaultAdviceMessage') : values.message
+      const questionParams: Record<string, string> = {}
+      if (selectedTimesList.length > 0) {
+        questionParams.callback = selectedTimesList
+          .map((id) => `${t(`contact.callback.${id}`)} (${t(`contact.callback.${id}Hours`)})`)
+          .join(', ')
+      }
+      wishlistTopics.forEach(({ title, summary }, index) => {
+        // Plain-text rows: em dashes are swapped for '~' (keeping the
+        // surrounding spaces) and a trailing '.' is dropped, so the rows
+        // read cleanly inside the email's <pre> cells.
+        questionParams[`topic_${index + 1}`] = `${title} — ${summary}`
+          .replace(/—/g, '~')
+          .replace(/\.$/, '')
+      })
+      const snapshot = buildCalculatorSnapshot(t)
+      if (snapshot) {
+        // The calculator scenario gets its own table row in the template
+        // (label "Calculator details"), so only the lines travel here - no
+        // bullet markers, one line per data point.
+        questionParams.calculator = snapshot
+      }
       result = await sendContactEmail({
         name: values.name,
         phone: values.phone,
@@ -141,10 +211,8 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
           variant === 'main' && values.email.trim() !== ''
             ? values.email
             : t('contact.modal.emailNotProvided'),
-        message:
-          preferredTimes === ''
-            ? baseMessage
-            : `${baseMessage}\n\n${t('contact.callback.emailLabel')}\n${preferredTimes}`,
+        message: baseMessage,
+        questions: questionParams,
       })
     } catch (error) {
       onOutcome({ status: 'failure', detail: String(error) })
@@ -158,6 +226,9 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     }
     resetLabels()
     onOutcome({ status: 'success', name: values.name.split(' ')[0] })
+    // The saved questions were "used" - clear them so stale topics don't
+    // ride along on the next message.
+    clearWishlist()
     setValues({ name: '', phone: '', email: '', message: '' })
     setSelectedTimes([])
     later(() => {
@@ -221,7 +292,9 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
                 ref: () => undefined,
               }}
             />
-            {variant === 'action' && name !== 'message' && <span className="asterisk" aria-hidden="true" />}
+            {variant === 'action' && name !== 'message' && (
+              <span className="asterisk" aria-hidden="true" />
+            )}
           </Fragment>
         )
       })}
@@ -236,7 +309,11 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
         >
           {t('contact.callback.label')}
         </span>
-        <div role="group" aria-labelledby={`${variant}-callback-label`} className="grid grid-cols-3 gap-2">
+        <div
+          role="group"
+          aria-labelledby={`${variant}-callback-label`}
+          className="grid grid-cols-3 gap-2"
+        >
           {CALLBACK_TIMES.map((id) => {
             const selected = selectedTimes.includes(id)
             return (
@@ -275,6 +352,40 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
         </div>
       </div>
 
+      {/* Saved questions from the calculator - pre-attached to the message.
+          Shown as topic chips; only the ✕ is a button (so the pointer and
+          the click target are the X, not the whole chip). Hidden entirely
+          when the list is empty. */}
+      {wishlistTopics.length > 0 && (
+        <div className="mb-5" data-testid={`${variant}-wishlist`}>
+          <span className="mb-2 block text-[15px] font-semibold text-soft-dark-grey">
+            {t('wishlist.formTitle')}
+          </span>
+          <ul className="flex flex-wrap gap-1.5">
+            {wishlistTopics.map(({ item, title }) => (
+              <li
+                key={item.id}
+                className="flex items-center gap-1 rounded-[5px] border border-[rgb(70,70,70)] bg-white py-1 pe-2.5 ps-1 text-[15px] font-bold leading-tight text-soft-black shadow-black"
+              >
+                <button
+                  type="button"
+                  aria-label={t('wishlist.removeAria', { title })}
+                  data-testid={`${variant}-wishlist-remove-${item.id}`}
+                  onClick={() => removeWishlistItem(item.id)}
+                  className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-soft-blue/40"
+                >
+                  <FaTimes
+                    aria-hidden="true"
+                    className="translate-y-[1px] ml-1 text-[11px] text-soft-dark-grey transition-colors hover:text-soft-red"
+                  />
+                </button>
+                {title}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <button
         type="submit"
         id="submit-form"
@@ -291,10 +402,15 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
       >
         {showSendingUi ? (
           <span className="flex w-full items-center justify-center text-center">
-            <FaPaperPlane aria-hidden="true" className="spin text-[18px] mx-auto block text-soft-blue" />
+            <FaPaperPlane
+              aria-hidden="true"
+              className="spin text-[18px] mx-auto block text-soft-blue"
+            />
           </span>
         ) : (
-          <span className="flex w-full items-center justify-center text-center">{t('contact.submit')}</span>
+          <span className="flex w-full items-center justify-center text-center">
+            {t('contact.submit')}
+          </span>
         )}
       </button>
 

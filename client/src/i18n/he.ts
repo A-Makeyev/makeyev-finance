@@ -351,6 +351,22 @@ export const he = {
       yearlyChange: 'שינוי שנתי',
       ariaLabel: 'מדדי מחירים',
     },
+    wishlist: {
+      save: 'מעניין אותי',
+      saved: 'נוסף לרשימה',
+      badge: 'נושאים שעניינו אתכם · {{count}}',
+      badgeAria: 'פתיחת רשימת הנושאים שעניינו אתכם',
+      panelTitle: 'הנושאים שעניינו אתכם',
+      panelHint: 'הנושאים שעניינו אתכם יוצגו ויישלחו כחלק מההודעה בטופס יצירת הקשר',
+      send: 'שליחה דרך טופס יצירת הקשר',
+      removeAria: 'הסרת {{title}} מהרשימה',
+      addedToast: 'הנושא נוסף לנושאים שעניינו אתכם',
+      removedToast: 'הנושא הוסר מהנושאים שעניינו אתכם',
+      formTitle: 'הנושאים שעניינו אתכם',
+      emailTopicsTitle: 'נושאים שעניינו אתכם במחשבון',
+      emailQuestion: 'נושא {{number}}',
+      emailSnapshotTitle: 'הנתונים מהמחשבון',
+    },
   },
 }
 

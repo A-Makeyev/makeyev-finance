@@ -7,8 +7,15 @@ import {
   type ReactNode,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FaExternalLinkAlt } from 'react-icons/fa'
+import { FaExternalLinkAlt, FaRegStar, FaStar } from 'react-icons/fa'
 import { AppModal } from '@/components/ui/AppModal'
+import { useCalculatorStore } from '@/stores/calculatorStore'
+import { useQuestionWishlist } from '@/stores/questionWishlistStore'
+import {
+  resultsTopicSummary,
+  resultsTopicTitle,
+  type ResultsTopicId as CardKey,
+} from './resultsTopics'
 import { useCalculatorViewModel } from './useCalculatorViewModel'
 
 /**
@@ -34,24 +41,6 @@ const TOGGLE_FADE_OUT_MS = 400
 
 /** External "read more" source per card, localized under calculator.results.links. */
 type LinkKey = 'guide' | 'interest' | 'compare' | 'rates' | 'cpi'
-
-/** Every results card opens an explanation dialog keyed by this identifier. */
-type CardKey =
-  | 'firstPayment'
-  | 'totalInterest'
-  | 'totalPayment'
-  | 'rateUp'
-  | 'rateDown'
-  | 'highestPayment'
-  | 'avgPayment'
-  | 'overpayPercent'
-  | 'avgPayback'
-  | 'avgRate'
-  | 'effRate'
-  | 'interestShare'
-  | 'fiveYInterest'
-  | 'balance5y'
-  | 'per100k'
 
 interface CardDef {
   key: CardKey
@@ -115,6 +104,11 @@ export function ResultsCards() {
    * would leave a hollow bordered line on screen (visible as a flash).
    */
   const [shownCardKey, setShownCardKey] = useState<CardKey | null>(null)
+  const wishlistItems = useQuestionWishlist((s) => s.items)
+  const addToWishlist = useQuestionWishlist((s) => s.add)
+  const removeFromWishlist = useQuestionWishlist((s) => s.remove)
+  const termYears = useCalculatorStore((s) => s.termYears)
+  const highestLabelKind = useCalculatorStore((s) => s.snapshot.highestLabel?.kind ?? null)
   const exitTimer = useRef<number | null>(null)
   const toggleTimer = useRef<number | null>(null)
   const labelTimer = useRef<number | null>(null)
@@ -375,6 +369,7 @@ export function ResultsCards() {
   // shownCardKey (persists through the close fade); opening sets both.
   const openCard =
     shownCardKey !== null ? (cards.find((card) => card.key === shownCardKey) ?? null) : null
+  const wishlistSaved = openCard !== null && wishlistItems.some((item) => item.id === openCard.key)
 
   /** Open the explanation dialog for a card. */
   const openDialog = (key: CardKey) => {
@@ -384,6 +379,23 @@ export function ResultsCards() {
 
   /** Start closing - content stays until the exit animation finishes. */
   const closeDialog = () => setOpenCardKey(null)
+
+  /** Save the open topic to the question wishlist, or drop it if already saved. */
+  const toggleWishlist = (card: CardDef) => {
+    const saved = wishlistItems.some((item) => item.id === card.key)
+    if (saved) {
+      removeFromWishlist(card.key)
+    } else {
+      // Title and summary come from the shared derivation (resultsTopics) -
+      // the same source the display surfaces use, so what is saved is what
+      // the dialog shows in the current language.
+      addToWishlist({
+        id: card.key,
+        title: resultsTopicTitle(t, card.key, { termYears, highestLabelKind }),
+        summary: resultsTopicSummary(t, card.key),
+      })
+    }
+  }
 
   // The external-link icon sits on the physical right of the label in both
   // languages: leading (start) in RTL, trailing (end) in LTR.
@@ -479,8 +491,22 @@ export function ResultsCards() {
             </a>
             <button
               type="button"
+              data-testid="wishlist-toggle"
+              aria-pressed={wishlistSaved}
+              onClick={() => openCard && toggleWishlist(openCard)}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-[5px] px-5 py-2 text-[16px] font-semibold text-[var(--calc-muted)] outline-none transition-colors hover:text-[var(--calc-teal-dark)] focus-visible:ring-2 focus-visible:ring-soft-blue/40"
+            >
+              {wishlistSaved ? (
+                <FaStar aria-hidden="true" className="text-[15px] text-[var(--calc-teal)]" />
+              ) : (
+                <FaRegStar aria-hidden="true" className="text-[15px]" />
+              )}
+              {wishlistSaved ? t('wishlist.saved') : t('wishlist.save')}
+            </button>
+            <button
+              type="button"
               data-testid="results-card-modal-gotit"
-              className="mt-6 w-full rounded-[5px] bg-[var(--calc-teal)] px-5 py-2.5 text-[16px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-dark)]"
+              className="mt-3 w-full rounded-[5px] bg-[var(--calc-teal)] px-5 py-2.5 text-[16px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-dark)]"
               onClick={closeDialog}
             >
               {t('calculator.results.gotIt')}

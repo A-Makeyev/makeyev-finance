@@ -2,6 +2,8 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SiteLayout } from '@/components/layout/SiteLayout'
 import { Loader } from '@/components/layout/Loader'
+import { QuestionWishlistPill } from '@/components/wishlist/QuestionWishlistPill'
+import { QuestionWishlistToast } from '@/components/wishlist/QuestionWishlistToast'
 import { HomePage } from '@/pages/HomePage'
 import { ServicesPage } from '@/pages/ServicesPage'
 import { CalculatorPage } from '@/features/calculator/CalculatorPage'
@@ -34,6 +36,9 @@ export function App() {
             <Route path="*" element={<HomePage />} />
           </Route>
         </Routes>
+        {/* Saved-question indicator + confirmation toast - global overlays. */}
+        <QuestionWishlistPill />
+        <QuestionWishlistToast />
       </BrowserRouter>
     </QueryClientProvider>
   )
