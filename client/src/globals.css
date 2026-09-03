@@ -1784,6 +1784,44 @@ nav#navbar.nav-scrolling-resize {
   }
 }
 
+/* Compact navbar on phones: shorter bar, smaller logo, and the slide-down
+   menu panel re-pinned to the new bar height so it stays flush. Placed after
+   the <=1200px block so these overrides win the cascade. The indexes bar is
+   deliberately untouched. */
+@media screen and (max-width: 650px) {
+  nav#navbar {
+    height: 64px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  nav#navbar .logo img {
+    /* Beats the Tailwind max-h-[75px] utility via the id selector. */
+    max-height: 44px;
+  }
+
+  nav#navbar #nav-list {
+    top: 64px;
+  }
+
+  /* Compact hamburger to match the shorter bar. Line box = 3px + 2*4px
+     margins = 11px, so the ✕-form transforms below are retuned for that
+     tighter spacing (the base translateY(10px) assumed 16px line boxes). */
+  nav#navbar .menu-icon .line {
+    width: 22px;
+    height: 3px;
+    margin: 4px;
+  }
+
+  nav#navbar :checked ~ .menu-icon .line:nth-child(1) {
+    transform: translateY(6px) rotate(225deg);
+  }
+
+  nav#navbar :checked ~ .menu-icon .line:nth-child(3) {
+    transform: translateY(-6px) rotate(-225deg);
+  }
+}
+
 @media screen and (max-width: 500px) {
   .logo-image,
   .logo-image-transparent {
@@ -1796,12 +1834,6 @@ nav#navbar.nav-scrolling-resize {
 
   nav#navbar #nav-list a {
     font-size: 20px;
-  }
-
-  nav#navbar .menu-icon .line {
-    height: 2px;
-    margin: 8px;
-    border-radius: 5px;
   }
 }
 
@@ -3807,10 +3839,10 @@ tbody tr:hover {
   }
 
   /* Donut and per-track chart stack once the side-by-side band gets tight,
-     each centered on the row instead of hugging the left edge. */
+     each centered on the row - chart on top, donut below it. */
   .per-track-band,
   :root[dir='ltr'] .per-track-band {
-    flex-direction: column;
+    flex-direction: column-reverse;
     align-items: center;
   }
 

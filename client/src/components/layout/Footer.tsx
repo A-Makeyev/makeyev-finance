@@ -44,16 +44,32 @@ export function Footer() {
   const location = useLocation()
   const year = new Date().getFullYear()
 
-  const footerNav = [
-    { to: '/', label: t('nav.home') },
+  // Legacy parity: calculators.html was the only legacy page whose footer
+  // links swapped Services and Articles - every other page (and the navbar)
+  // used Home · Services · Calculators · Articles · Contact.
+  const standardNav = [
     { to: '/services', label: t('nav.services') },
     { to: '/calculators', label: t('nav.calculators') },
     { to: '/articles', label: t('nav.articles') },
+  ]
+  const footerNav = [
+    { to: '/', label: t('nav.home') },
+    ...(location.pathname === '/calculators'
+      ? [
+          { to: '/articles', label: t('nav.articles') },
+          { to: '/calculators', label: t('nav.calculators') },
+          { to: '/services', label: t('nav.services') },
+        ]
+      : standardNav),
     { to: '/contact', label: t('nav.contact') },
   ]
 
+  // Pin the footer to LTR: the Hebrew calculators page flips the document to
+  // RTL, which would mirror the links and social icons (ראשי would sit on the
+  // right). The footer must read the same on every page, so keep it LTR -
+  // Hebrew labels still render correctly inside an LTR flow.
   return (
-    <footer className="footer">
+    <footer className="footer" dir="ltr">
       <div style={{ marginBottom: '-15px' }}>
         <div id="trademark">
           <span>{t('footer.trademark', { year })}</span>
