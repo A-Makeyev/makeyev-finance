@@ -1271,8 +1271,7 @@ nav#navbar {
      through blurred. A faint cool white lift keeps the slab lit rather than
      smoked. Browsers without backdrop-filter keep the tint only. */
   background:
-    linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)),
-    rgba(15, 15, 15, 0.3);
+    linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)), rgba(15, 15, 15, 0.3);
   -webkit-backdrop-filter: blur(10px) saturate(140%);
   backdrop-filter: blur(10px) saturate(140%);
   /* Faint light hairline along the slab's bottom edge; the scrolled state
@@ -1806,7 +1805,10 @@ nav#navbar.nav-scrolling-resize {
 
   /* Compact hamburger to match the shorter bar. Line box = 3px + 2*4px
      margins = 11px, so the ✕-form transforms below are retuned for that
-     tighter spacing (the base translateY(10px) assumed 16px line boxes). */
+     tighter spacing (the base translateY(10px) assumed 16px line boxes).
+     The three line centers sit at 5.5 / 12.5 / 19.5 (icon middle 12.5),
+     so each arm must move ±7px to cross exactly at the center - any less
+     and the ✕ reads tilted, like the old ±6px. */
   nav#navbar .menu-icon .line {
     width: 22px;
     height: 3px;
@@ -1814,11 +1816,11 @@ nav#navbar.nav-scrolling-resize {
   }
 
   nav#navbar :checked ~ .menu-icon .line:nth-child(1) {
-    transform: translateY(6px) rotate(225deg);
+    transform: translateY(7px) rotate(225deg);
   }
 
   nav#navbar :checked ~ .menu-icon .line:nth-child(3) {
-    transform: translateY(-6px) rotate(-225deg);
+    transform: translateY(-7px) rotate(-225deg);
   }
 }
 
@@ -3048,6 +3050,28 @@ e #name,
   margin-inline-start: 2px;
 }
 
+/* Cards are <button>s that open an explanation dialog - Tailwind preflight
+   inherits font/colors but buttons center text by default, so pin the
+   alignment to the reading direction and mark the whole card clickable. */
+.results-card {
+  cursor: pointer;
+  text-align: start;
+  font: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.results-card:hover {
+  border-color: var(--calc-accent);
+  box-shadow: 0 6px 14px rgba(8, 127, 120, 0.15);
+}
+
+.results-card:focus-visible {
+  outline: 2px solid var(--calc-accent);
+  outline-offset: 2px;
+}
+
 .track-payback .track-payback-label {
   color: var(--calc-teal-dark);
   font-weight: 700;
@@ -3061,7 +3085,8 @@ e #name,
     var(--calc-teal) 65%,
     var(--calc-accent)
   );
-  border-color: var(--calc-teal);
+  /* Light hairline so the border reads against the dark gradient. */
+  border-color: rgba(255, 255, 255, 0.55);
 }
 
 /* First card mirrors the other cards' hierarchy on the dark gradient:
@@ -3079,6 +3104,15 @@ e #name,
 
 .primary-result strong {
   color: white;
+}
+
+/* The gradient headline card needs its own hover: a border recolor is
+   invisible against the gradient, so lift it with a deeper shadow and a
+   slight brighten instead of the white-card border treatment. */
+.primary-result:hover {
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 22px rgba(8, 127, 120, 0.38);
+  filter: brightness(1.07) saturate(1.06);
 }
 
 /* =========================
@@ -3411,7 +3445,10 @@ e #name,
    out from the donut center and brightens. */
 .mix-slice {
   transform-origin: 160px 160px;
-  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.25s ease, filter 0.25s ease;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.25s ease,
+    filter 0.25s ease;
   cursor: pointer;
 }
 
@@ -3424,24 +3461,24 @@ e #name,
 /* Callout that follows the hovered donut slice, placed just outside it on
    the side it faces. Each side sends the body OUTWARD so it never overhangs
    the donut: data-side is the arrow edge = the side facing the circle. */
-.mix-slice-tooltip[data-side="left"] {
+.mix-slice-tooltip[data-side='left'] {
   transform: translateY(-50%);
 }
 
-.mix-slice-tooltip[data-side="right"] {
+.mix-slice-tooltip[data-side='right'] {
   transform: translate(-100%, -50%);
 }
 
-.mix-slice-tooltip[data-side="top"] {
+.mix-slice-tooltip[data-side='top'] {
   transform: translateX(-50%);
 }
 
-.mix-slice-tooltip[data-side="bottom"] {
+.mix-slice-tooltip[data-side='bottom'] {
   transform: translate(-50%, -100%);
 }
 
 .mix-slice-tooltip::after {
-  content: "";
+  content: '';
   position: absolute;
   width: 10px;
   height: 10px;
@@ -3452,28 +3489,28 @@ e #name,
 
 /* Arrow sits on the edge facing the slice and points toward it. Half-in/half-out
    so the border line reads as a clean point against the tooltip body. */
-.mix-slice-tooltip[data-side="left"]::after {
+.mix-slice-tooltip[data-side='left']::after {
   left: -6px;
   top: calc(50% - 5px);
   border-right: none;
   border-top: none;
 }
 
-.mix-slice-tooltip[data-side="right"]::after {
+.mix-slice-tooltip[data-side='right']::after {
   right: -6px;
   top: calc(50% - 5px);
   border-left: none;
   border-bottom: none;
 }
 
-.mix-slice-tooltip[data-side="top"]::after {
+.mix-slice-tooltip[data-side='top']::after {
   top: -6px;
   left: calc(50% - 5px);
   border-right: none;
   border-bottom: none;
 }
 
-.mix-slice-tooltip[data-side="bottom"]::after {
+.mix-slice-tooltip[data-side='bottom']::after {
   bottom: -6px;
   left: calc(50% - 5px);
   border-left: none;

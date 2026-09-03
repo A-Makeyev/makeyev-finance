@@ -7,7 +7,7 @@ export interface AppModalProps {
   onOpenChange: (open: boolean) => void
   children: ReactNode
   /** Border/header accent color. */
-  tone?: 'blue' | 'green' | 'red'
+  tone?: 'blue' | 'green' | 'red' | 'teal'
   testId?: string
   /** Content direction - drives logical props like the close button's side. */
   dir?: 'rtl' | 'ltr'
@@ -19,6 +19,8 @@ const TONE_BORDER = {
   blue: 'border-soft-blue',
   green: 'border-soft-green',
   red: 'border-soft-red',
+  // Calculator accent - matches the modal's action buttons.
+  teal: 'border-[color:var(--calc-teal)]',
 } as const
 
 /**
@@ -31,14 +33,24 @@ const TONE_BORDER = {
  * scrollable behind the dialog. Outside clicks are ignored (the dialog only
  * closes via the close button, Escape or an explicit onOpenChange(false)).
  */
-export function AppModal({ open, onOpenChange, children, tone = 'blue', testId, dir = 'ltr', contentClassName }: AppModalProps) {
+export function AppModal({
+  open,
+  onOpenChange,
+  children,
+  tone = 'blue',
+  testId,
+  dir = 'ltr',
+  contentClassName,
+}: AppModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange} modal={false}>
       <Dialog.Portal>
         {/* Radix only renders Dialog.Overlay in modal mode, so we draw the
             dimming layer ourselves. It does not intercept wheel/touch
             scrolling, so the page behind stays scrollable. */}
-        {open && <div className="fixed inset-0 z-[999] bg-[rgba(15,15,15,0.5)] backdrop-blur-[5px]" />}
+        {open && (
+          <div className="fixed inset-0 z-[999] bg-[rgba(15,15,15,0.5)] backdrop-blur-[5px]" />
+        )}
         <Dialog.Content
           data-testid={testId}
           dir={dir}

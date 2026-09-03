@@ -218,6 +218,61 @@ export const en: { translation: Translation } = {
         paybackPerTrackTitle: 'Payback ratio per track',
         showAll: 'Show all',
         showLess: 'Show less',
+        gotIt: 'Got it',
+        details: {
+          firstPayment:
+            'The payment you make in the first month after taking the mortgage, based on every track, amount and rate you entered. With a Spitzer schedule the payment stays constant, while variable or CPI-indexed tracks may change over time. This is the starting point for planning your monthly budget.',
+          totalInterest:
+            'The total amount you pay the bank beyond the principal — the interest accrued on the loan over the whole term. Higher rates or longer terms mean more total interest. To reduce it: raise your down payment, shorten the term, or get a better rate.',
+          totalPayment:
+            'All payments over the life of the mortgage — principal and interest combined. This is the number that matters when comparing offers: a low monthly payment over a long term can still add up to a higher total cost.',
+          rateUp:
+            'What would happen to your first monthly payment if every variable-rate track rose by 1%. It is a stress scenario showing how sensitive your payment is to rate increases. Fixed-rate tracks are unaffected.',
+          rateDown:
+            'What would happen to your first monthly payment if every variable-rate track dropped by 1%. It shows the upside of variable rates: when market rates fall, so does your monthly payment.',
+          highestPayment:
+            'The highest monthly payment expected over the whole term. With CPI-indexed tracks the payment can rise with inflation, so the peak is not necessarily the first month. Make sure this payment still fits comfortably in your budget.',
+          avgPayment:
+            'All payments over the term divided by the number of months. A useful average for quick comparisons between mixes — but remember the actual payment varies month to month.',
+          overpayPercent:
+            'How much you repay beyond the principal, as a percentage of the loan amount. For example, 50% means you repay ₪1.50 for every ₪1 you borrowed. The lower the percentage, the cheaper the loan.',
+          avgPayback:
+            'The ratio of total repayment to the loan amount. A ratio of 1.5 means you repay ₪1.50 for every shekel borrowed, interest included. A handy metric for quickly comparing different offers.',
+          avgRate:
+            'The simple average of the rates across your tracks. The rate you actually pay may differ because each track is weighted by its loan amount. For precision, check the effective rate.',
+          effRate:
+            'The true annual cost of the loan, accounting for monthly compounding. It is always slightly higher than the nominal rate, because interest accrues on itself every month. This is the right number for comparing offers.',
+          interestShare:
+            'The share of your first monthly payment that goes to interest rather than principal. With a Spitzer schedule, early payments are almost all interest — the principal is repaid mainly toward the end of the term.',
+          fiveYInterest:
+            'The share of interest in all payments during the first five years. Useful when planning an early refinance or sale: early payments are mostly interest, so the debt shrinks slowly at first.',
+          balance5y:
+            'The debt still owed after five years of payments. Early payments go mostly to interest, so a large share of the principal remains after five years. Key figure for refinancing or selling.',
+          per100k:
+            'Your monthly payment scaled to every ₪100,000 of the loan. This removes loan size from the equation, letting you fairly compare bank offers with different rates and terms.',
+        },
+        links: {
+          guide: {
+            label: 'Bank of Israel – mortgage rates, tracks and total cost',
+            url: 'https://www.boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/campaigns/boi-equalizer/',
+          },
+          interest: {
+            label: 'Bank of Israel – effective vs nominal interest rate',
+            url: 'https://www.boi.org.il/en/information-and-service-to-the-public/tools-and-calculators/nominal-effective-interest-rate-calculator/',
+          },
+          compare: {
+            label: 'Bank of Israel – mortgage rate comparison',
+            url: 'https://www.boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/campaigns/boi-equalizer/',
+          },
+          rates: {
+            label: 'Bank of Israel – current mortgage interest rates',
+            url: 'https://www.boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/campaigns/boi-equalizer/',
+          },
+          cpi: {
+            label: 'Consumer Price Index – Israel Central Bureau of Statistics',
+            url: 'https://www.cbs.gov.il/en/subjects/Pages/consumer-price-index.aspx',
+          },
+        },
       },
       charts: {
         amortAria: 'Amortization chart: principal and interest per period with the loan balance',
