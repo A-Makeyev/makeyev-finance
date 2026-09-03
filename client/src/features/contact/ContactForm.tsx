@@ -129,7 +129,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
       // template variable needed.
       const preferredTimes = CALLBACK_TIMES.filter((id) => selectedTimes.includes(id))
         .map((id) => `${t(`contact.callback.${id}`)} (${t(`contact.callback.${id}Hours`)})`)
-        .join(', ')
+        .join('\n')
       const baseMessage =
         values.message.trim() === ''
           ? t('contact.modal.defaultAdviceMessage')
@@ -144,7 +144,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
         message:
           preferredTimes === ''
             ? baseMessage
-            : `${baseMessage}\n\n${t('contact.callback.emailLabel')}: ${preferredTimes}`,
+            : `${baseMessage}\n\n${t('contact.callback.emailLabel')}\n${preferredTimes}`,
       })
     } catch (error) {
       onOutcome({ status: 'failure', detail: String(error) })
@@ -254,8 +254,8 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
                   'group flex flex-col items-start rounded-[5px] border px-3 py-2 text-left shadow-black outline-none transition-colors duration-200',
                   'focus-visible:ring-2 focus-visible:ring-soft-blue/40',
                   selected
-                    ? 'border-soft-black bg-soft-black text-white'
-                    : 'border-[rgb(70,70,70)] bg-white text-soft-black hover:border-soft-black hover:bg-soft-black hover:text-white',
+                    ? 'border-soft-blue bg-soft-blue text-white'
+                    : 'border-[rgb(70,70,70)] bg-white text-soft-black hover:border-soft-blue hover:bg-soft-blue hover:text-white',
                 )}
               >
                 <span className="text-[15px] font-bold leading-tight">
@@ -263,8 +263,8 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
                 </span>
                 <span
                   className={cn(
-                    'text-[12px] font-semibold leading-tight',
-                    selected ? 'text-soft-grey' : 'text-soft-dark-grey group-hover:text-soft-grey',
+                    'text-[12px] font-semibold leading-tight transition-colors duration-200',
+                    selected ? 'text-white/80' : 'text-soft-dark-grey group-hover:text-white/80',
                   )}
                 >
                   {t(`contact.callback.${id}Hours`)}
