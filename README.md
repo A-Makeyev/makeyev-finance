@@ -1,5 +1,7 @@
 # makeyev-finance
 
+[![E2E test reports](https://img.shields.io/badge/E2E%20test%20reports-view-blue)](https://a-makeyev.github.io/makeyev-finance/)
+
 Bilingual (Hebrew RTL / English) mortgage-advisory site with a financially
 precise multi-track mortgage calculator. This is a production-grade migration
 of the legacy vanilla HTML/CSS/JS site (preserved in git history) to a typed,
@@ -37,22 +39,34 @@ files to serve.
 
 ## Scripts
 
-| Script                              | Purpose                                                       |
-| ----------------------------------- | ------------------------------------------------------------- |
-| `npm run dev`                       | Vite dev server                                               |
-| `npm run dev:all`                   | Vite dev server + Express server together (run `npm run build` once first; Express serves the built SPA on :3000, Vite on :5173) |
-| `npm run server:dev`                | Express server only, on :3000                                 |
-| `npm run build`                     | Typecheck (both tsconfigs) + production build                 |
-| `npm run preview`                   | Serve `client/dist/` on :5173                                  |
-| `npm run typecheck`                 | `tsc --noEmit` for app + node configs                         |
-| `npm run lint`                      | ESLint (flat config)                                          |
-| `npm run format` / `format:check`   | Prettier                                                      |
-| `npm test`                          | Vitest unit suite (amortization math, formatters, XML parser) |
-| `npm run test:e2e`                  | Full Playwright matrix (3 browsers × UI + API project)        |
-| `npm run test:e2e:ui` / `test:e2e:api` | Project subsets                                            |
+| Script                                 | Purpose                                                                                                                          |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                          | Vite dev server                                                                                                                  |
+| `npm run dev:all`                      | Vite dev server + Express server together (run `npm run build` once first; Express serves the built SPA on :3000, Vite on :5173) |
+| `npm run server:dev`                   | Express server only, on :3000                                                                                                    |
+| `npm run build`                        | Typecheck (both tsconfigs) + production build                                                                                    |
+| `npm run preview`                      | Serve `client/dist/` on :5173                                                                                                    |
+| `npm run typecheck`                    | `tsc --noEmit` for app + node configs                                                                                            |
+| `npm run lint`                         | ESLint (flat config)                                                                                                             |
+| `npm run format` / `format:check`      | Prettier                                                                                                                         |
+| `npm test`                             | Vitest unit suite (amortization math, formatters, XML parser)                                                                    |
+| `npm run test:e2e`                     | Full Playwright matrix (3 browsers × UI + API project)                                                                           |
+| `npm run test:e2e:ui` / `test:e2e:api` | Project subsets                                                                                                                  |
 
 E2E uses `vite preview` against `client/dist/`; run `npm run build` first (CI
 does this for you). Tests never touch the real network - BOI/CBS/EmailJS are mocked.
+
+## Test results
+
+Every push to `main` and pull request runs the full suite in CI (lint,
+typecheck/build, unit tests, then the Playwright UI + API matrix). The E2E
+results - per-run pass/fail status and the HTML trace reports - are published
+to GitHub Pages and browsable at:
+
+**[Test Reports - https://a-makeyev.github.io/makeyev-finance/](https://a-makeyev.github.io/makeyev-finance/)**
+
+The page keeps the last 10 runs, newest first, with auto-refresh when a new
+run lands.
 
 ## Architecture
 
