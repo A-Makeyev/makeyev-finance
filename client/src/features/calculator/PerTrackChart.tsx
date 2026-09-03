@@ -105,9 +105,14 @@ export function PerTrackChart({ tracks }: { tracks: TrackSchedule[] }) {
         <text
           x={10}
           y={MARGIN.top + INNER_H / 2}
-          className="chart-axis-title"
+          className="chart-axis-title chart-axis-title-rot"
           transform={`rotate(-90 10 ${MARGIN.top + INNER_H / 2})`}
         >
+          {t('calculator.charts.axisBalance')}
+        </text>
+        {/* Small-screen stand-in for the rotated title: a short horizontal
+            caption above the axis numbers, shown on screens ≤800px (CSS). */}
+        <text x={44} y={12} className="chart-axis-title chart-axis-title-above">
           {t('calculator.charts.axisBalance')}
         </text>
         <text x={MARGIN.left + INNER_W / 2} y={HEIGHT - 8} className="chart-axis-title">

@@ -76,6 +76,16 @@ export const he = {
       messageLabel: 'איך נוכל לעזור לכם',
       submit: 'שלחו',
       sending: 'Sending',
+      callback: {
+        label: 'מתי נוח שנחזור אליך',
+        emailLabel: 'זמן נוח ליצירת קשר',
+        morning: 'בוקר',
+        noon: 'צהריים',
+        evening: 'ערב',
+        morningHours: '08:00–12:00',
+        noonHours: '12:00–16:00',
+        eveningHours: '16:00–20:00',
+      },
       validation: {
         nameRequired: 'נא להזין שם',
         nameInvalid: 'שם אינו תקין',

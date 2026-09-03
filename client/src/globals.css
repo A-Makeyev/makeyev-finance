@@ -3180,6 +3180,10 @@ e #name,
   display: block;
   width: 100%;
   height: auto;
+  /* Browsers clip root <svg> overflow by default; on narrow screens the
+     bumped axis numbers poke a few user-units past the viewBox edge, so
+     let them render into the chart's padding instead of getting cut. */
+  overflow: visible;
 }
 
 .chart-grid {
@@ -3242,6 +3246,13 @@ e #name,
    them glitch). */
 .chart-axis-title-rot {
   will-change: transform;
+}
+
+/* Small-screen replacement for the rotated side titles: a short horizontal
+   caption placed ABOVE the axis numbers, shown on every screen ≤800px (see
+   that block). Hidden on wider screens - the rotated titles handle those. */
+.chart-axis-title-above {
+  display: none;
 }
 
 /* Stacked series: one fixed color per component, same as the legend and
@@ -3966,6 +3977,39 @@ tbody tr:hover {
   .results-card strong {
     font-size: 1.45rem;
   }
+
+  /* Chart numbers sit inside a fixed viewBox, so they scale down with the
+     chart on narrow screens. Bump the SVG text at each breakpoint so the
+     axis values stay legible - the bumps step up as the chart shrinks. The
+     rotated side titles are dropped here in favor of horizontal captions
+     above the numbers (see below), so both charts' numbers can grow
+     without colliding. */
+  .chart-axis-title-rot {
+    display: none;
+  }
+
+  .amort-chart .chart-tick,
+  .amort-chart .chart-axis-title {
+    font-size: 12px;
+  }
+
+  .per-track-chart .chart-tick {
+    font-size: 20px;
+  }
+
+  /* Horizontal captions replace the rotated side titles on every screen
+     ≤800px: short labels above the axis numbers. The per-track font is
+     1.25× the amort one (its viewBox is 900 wide vs 720) so both render
+     the same pixel size. */
+  .amort-chart .chart-axis-title-above {
+    display: block;
+    font-size: 12px;
+  }
+
+  .per-track-chart .chart-axis-title-above {
+    display: block;
+    font-size: 15px;
+  }
 }
 
 @media (max-width: 650px) {
@@ -4060,5 +4104,165 @@ tbody tr:hover {
   .regulatory-note,
   .legal-note {
     font-size: 0.75rem;
+  }
+
+  /* Charts: next step up for the SVG text (see the ≤800px block) - the
+     rendered size stays ~12px as the viewBox keeps shrinking. */
+  .amort-chart .chart-tick {
+    font-size: 15px;
+  }
+
+  .per-track-chart .chart-tick {
+    font-size: 24px;
+  }
+
+  /* The horizontal year title below the axis has room to grow, so bump it
+     with the numbers. */
+  .amort-chart .chart-axis-title,
+  .per-track-chart .chart-axis-title {
+    font-size: 15px;
+  }
+
+  .amort-chart .chart-axis-title-above {
+    font-size: 15px;
+  }
+
+  .per-track-chart .chart-axis-title-above {
+    font-size: 19px;
+  }
+
+  /* Donut center numbers shrink with the same viewBox scaling - bump them
+     so the total / interest% stay readable on phones. */
+  .donut-center-label {
+    font-size: 15px;
+  }
+
+  .donut-center-value {
+    font-size: 23px;
+  }
+}
+
+/* ===========================================================================
+   Narrow-phone pass (≤400px) - fit-and-comfort notch on top of the 650px
+   scale-down. The audit showed no horizontal overflow at 400px, so these
+   only tighten density: fewer wrapped 7-digit numbers, less dead padding,
+   tighter charts and footer. Append-only so the 650px block stays intact.
+=========================================================================== */
+@media screen and (max-width: 400px) {
+  /* Results: one card per row - 7-digit amounts never wrap mid-number and
+     the featured card keeps its breathing room. */
+  .results-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .results-card {
+    padding: 14px 16px 12px;
+  }
+
+  .results-card strong {
+    font-size: 1.9rem;
+  }
+
+  /* Track form: stack every field - the long track-type label ("משתנה כל 5
+     שנים לא צמודה") finally fits without clipping. */
+  .mortgage-track {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 26px 12px 12px;
+  }
+
+  /* Neutralize the 6-col spans from the ≤1000px block - in a 1-column grid
+     every field takes the full row again. */
+  .mortgage-track .input-group:nth-of-type(1),
+  .mortgage-track .input-group:nth-of-type(2),
+  .mortgage-track .input-group:nth-of-type(3),
+  .mortgage-track .input-group:nth-of-type(4),
+  .mortgage-track .input-group:nth-of-type(5) {
+    grid-column: auto;
+  }
+
+  /* Schedule table: tighter cells so more columns fit before the
+     horizontal scroll starts, and rows stay dense. */
+  th {
+    font-size: 0.72rem;
+    padding: 8px 8px;
+  }
+
+  td {
+    font-size: 0.8rem;
+    padding: 8px 8px;
+  }
+
+  .schedule-aside {
+    padding: 12px;
+  }
+
+  .schedule-aside strong {
+    font-size: 1.2rem;
+  }
+
+  /* Charts: final step up for the SVG text (see the ≤800px/≤650px blocks) -
+     at 400px the amort chart renders ~0.48x its viewBox, so the bumped
+     sizes below keep the numbers near 10px instead of ~5px. */
+  .amort-chart .chart-tick {
+    font-size: 21px;
+  }
+
+  .per-track-chart .chart-tick {
+    font-size: 26px;
+  }
+
+  .amort-chart .chart-axis-title,
+  .per-track-chart .chart-axis-title {
+    font-size: 20px;
+  }
+
+  /* Captions keep their step-up with the numbers. */
+  .amort-chart .chart-axis-title-above {
+    font-size: 18px;
+  }
+
+  .per-track-chart .chart-axis-title-above {
+    font-size: 22px;
+  }
+
+  .donut-center-label {
+    font-size: 16px;
+  }
+
+  .donut-center-value {
+    font-size: 24px;
+  }
+
+  .donut-slice-label {
+    font-size: 18px;
+  }
+
+  /* Contact: the fixed 60px side margins waste a third of the screen on
+     phones - hug the edges like the rest of the page. */
+  .contact-info {
+    margin: 25px 16px;
+  }
+
+  .contact {
+    width: calc(100% - 32px);
+  }
+
+  /* Footer: five links + separators sit closer together at the bottom of
+     every page. */
+  #trademark,
+  .footer-links p {
+    font-size: 13px;
+  }
+
+  .footer-links p {
+    padding: 6px;
+    margin: -3px;
+  }
+
+  .socials,
+  .socials i,
+  .socials svg {
+    font-size: 18px;
   }
 }

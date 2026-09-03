@@ -22,6 +22,10 @@ export interface ContactFormProps {
 type FieldName = 'name' | 'phone' | 'email' | 'message'
 type Status = 'valid' | 'invalid' | 'neutral'
 
+/** Preferred callback windows - optional multi-select under the message. */
+type CallbackTime = 'morning' | 'noon' | 'evening'
+const CALLBACK_TIMES: CallbackTime[] = ['morning', 'noon', 'evening']
+
 const FIELD_DEFS: Array<{ name: FieldName; required: boolean }> = [
   { name: 'name', required: true },
   { name: 'phone', required: true },
@@ -44,6 +48,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     email: '',
     message: '',
   })
+  const [selectedTimes, setSelectedTimes] = useState<CallbackTime[]>([])
   const [sending, setSending] = useState(false)
   const [dots, setDots] = useState(0)
   const [plane, setPlane] = useState(false)
@@ -80,6 +85,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
   const resetForm = () => {
     clearTimers()
     setValues({ name: '', phone: '', email: '', message: '' })
+    setSelectedTimes([])
     resetLabels()
     setSending(false)
     setDots(0)
@@ -118,6 +124,16 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     }
     let result: EmailSendResult
     try {
+      // Preferred windows ride along inside the message body - the EmailJS
+      // template renders {{message}}, so they reach the inbox with no extra
+      // template variable needed.
+      const preferredTimes = CALLBACK_TIMES.filter((id) => selectedTimes.includes(id))
+        .map((id) => `${t(`contact.callback.${id}`)} (${t(`contact.callback.${id}Hours`)})`)
+        .join(', ')
+      const baseMessage =
+        values.message.trim() === ''
+          ? t('contact.modal.defaultAdviceMessage')
+          : values.message
       result = await sendContactEmail({
         name: values.name,
         phone: values.phone,
@@ -126,9 +142,9 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
             ? values.email
             : t('contact.modal.emailNotProvided'),
         message:
-          values.message.trim() === ''
-            ? t('contact.modal.defaultAdviceMessage')
-            : values.message,
+          preferredTimes === ''
+            ? baseMessage
+            : `${baseMessage}\n\n${t('contact.callback.emailLabel')}: ${preferredTimes}`,
       })
     } catch (error) {
       onOutcome({ status: 'failure', detail: String(error) })
@@ -143,6 +159,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     resetLabels()
     onOutcome({ status: 'success', name: values.name.split(' ')[0] })
     setValues({ name: '', phone: '', email: '', message: '' })
+    setSelectedTimes([])
     later(() => {
       setSending(false)
       setDots(0)
@@ -208,6 +225,55 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
           </Fragment>
         )
       })}
+
+      {/* Preferred callback time: optional multi-select chips below the
+          message - morning / noon / evening with their hour ranges. The
+          picked windows are appended to the email on send. */}
+      <div className="mb-5" data-testid={`${variant}-callback-times`}>
+        <span
+          id={`${variant}-callback-label`}
+          className="mb-2 block text-[15px] font-semibold text-soft-dark-grey"
+        >
+          {t('contact.callback.label')}
+        </span>
+        <div role="group" aria-labelledby={`${variant}-callback-label`} className="grid grid-cols-3 gap-2">
+          {CALLBACK_TIMES.map((id) => {
+            const selected = selectedTimes.includes(id)
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={selected}
+                data-testid={`${variant}-callback-${id}`}
+                onClick={() =>
+                  setSelectedTimes((prev) =>
+                    prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+                  )
+                }
+                className={cn(
+                  'group flex flex-col items-start rounded-[5px] border px-3 py-2 text-left shadow-black outline-none transition-colors duration-200',
+                  'focus-visible:ring-2 focus-visible:ring-soft-blue/40',
+                  selected
+                    ? 'border-soft-black bg-soft-black text-white'
+                    : 'border-[rgb(70,70,70)] bg-white text-soft-black hover:border-soft-black hover:bg-soft-black hover:text-white',
+                )}
+              >
+                <span className="text-[15px] font-bold leading-tight">
+                  {t(`contact.callback.${id}`)}
+                </span>
+                <span
+                  className={cn(
+                    'text-[12px] font-semibold leading-tight',
+                    selected ? 'text-soft-grey' : 'text-soft-dark-grey group-hover:text-soft-grey',
+                  )}
+                >
+                  {t(`contact.callback.${id}Hours`)}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       <button
         type="submit"

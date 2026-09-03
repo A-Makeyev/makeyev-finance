@@ -240,6 +240,16 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
         >
           {t('calculator.charts.axisBalance')}
         </text>
+
+        {/* Small-screen stand-ins for the rotated titles: short horizontal
+            captions above the axis numbers, shown on screens ≤800px (CSS). */}
+        <text x={38} y={8} className="chart-axis-title chart-axis-title-above">
+          {t('calculator.charts.axisPayment')}
+        </text>
+        <text x={685} y={8} className="chart-axis-title chart-axis-title-above">
+          {t('calculator.charts.axisBalance')}
+        </text>
+
         <text x={MARGIN.left + INNER_W / 2} y={HEIGHT - 6} className="chart-axis-title">
           {t('calculator.charts.axisYear')}
         </text>

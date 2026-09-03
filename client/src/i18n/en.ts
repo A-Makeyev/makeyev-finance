@@ -80,6 +80,16 @@ export const en: { translation: Translation } = {
       messageLabel: 'How can we help you',
       submit: 'Send',
       sending: 'Sending',
+      callback: {
+        label: 'When should we get back to you',
+        emailLabel: 'Preferred callback time',
+        morning: 'Morning',
+        noon: 'Noon',
+        evening: 'Evening',
+        morningHours: '08:00–12:00',
+        noonHours: '12:00–16:00',
+        eveningHours: '16:00–20:00',
+      },
       validation: {
         nameRequired: 'Please enter your name',
         nameInvalid: 'Name is not valid',
