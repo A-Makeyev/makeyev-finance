@@ -42,6 +42,17 @@ describe('niceTicks', () => {
   it('uses 2.5 steps when the range divides evenly into them', () => {
     expect(niceTicks(10)).toEqual([0, 2.5, 5, 7.5, 10])
   })
+
+  it('drops the max label when it would overlap the last round tick', () => {
+    // A 103K max: the round grid ends at 100K (50K step) and appending 103K
+    // printed ₪103K directly on top of ₪100K - the axis now ends on the
+    // round tick instead.
+    expect(niceTicks(103_000)).toEqual([0, 50_000, 100_000])
+  })
+
+  it('still shows the true max when it clears the round grid', () => {
+    expect(niceTicks(140_000)).toEqual([0, 50_000, 100_000, 140_000])
+  })
 })
 
 describe('donutSegments', () => {

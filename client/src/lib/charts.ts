@@ -17,8 +17,9 @@ export function formatAxisShekel(value: number): string {
 
 /**
  * "Nice" axis ticks from 0 to `max` (inclusive): picks a step from the
- * 1/2/2.5/5×10ⁿ families so labels stay round, and always returns 0 as the
- * first tick plus `max` when it lands on the step grid.
+ * 1/2/2.5/5×10ⁿ families so labels stay round. Always returns 0 first, plus
+ * `max` itself only when it sits on the grid or clears the last round tick
+ * by a quarter step (closer than that, its label would overlap).
  */
 export function niceTicks(max: number, targetCount = 4): number[] {
   if (!Number.isFinite(max) || max <= 0) return [0]
@@ -31,9 +32,13 @@ export function niceTicks(max: number, targetCount = 4): number[] {
   for (let tick = 0; tick <= max + step * 1e-9; tick += step) {
     ticks.push(Number(tick.toFixed(6)))
   }
-  // The axis can end above the last round tick - show the true max too.
+  // The axis can end above the last round tick - show the true max too,
+  // but only when it clears the last round tick by at least a quarter
+  // step. Any closer and its label prints on top of the round one below
+  // (e.g. a 103K max rendering ₪103K over ₪100K); the round tick then
+  // stays the top label, just shy of the plot's top edge.
   const last = ticks[ticks.length - 1]
-  if (max - last > step * 1e-9) ticks.push(Number(max.toFixed(6)))
+  if (max - last > step * 0.25) ticks.push(Number(max.toFixed(6)))
   return ticks
 }
 

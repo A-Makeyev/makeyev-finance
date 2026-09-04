@@ -223,9 +223,9 @@ export const en: { translation: Translation } = {
           firstPayment:
             'The payment you make in the first month after taking the mortgage, based on every track, amount and rate you entered. With a Spitzer schedule the payment stays constant, while variable or CPI-indexed tracks may change over time. This is the starting point for planning your monthly budget.',
           totalInterest:
-            'The total amount you pay the bank beyond the principal — the interest accrued on the loan over the whole term. Higher rates or longer terms mean more total interest. To reduce it: raise your down payment, shorten the term, or get a better rate.',
+            'The total amount you pay the bank beyond the principal ~ the interest accrued on the loan over the whole term. Higher rates or longer terms mean more total interest. To reduce it: raise your down payment, shorten the term, or get a better rate.',
           totalPayment:
-            'All payments over the life of the mortgage — principal and interest combined. This is the number that matters when comparing offers: a low monthly payment over a long term can still add up to a higher total cost.',
+            'All payments over the life of the mortgage ~ principal and interest combined. This is the number that matters when comparing offers: a low monthly payment over a long term can still add up to a higher total cost.',
           rateUp:
             'What would happen to your first monthly payment if every variable-rate track rose by 1%. It is a stress scenario showing how sensitive your payment is to rate increases. Fixed-rate tracks are unaffected.',
           rateDown:
@@ -233,7 +233,7 @@ export const en: { translation: Translation } = {
           highestPayment:
             'The highest monthly payment expected over the whole term. With CPI-indexed tracks the payment can rise with inflation, so the peak is not necessarily the first month. Make sure this payment still fits comfortably in your budget.',
           avgPayment:
-            'All payments over the term divided by the number of months. A useful average for quick comparisons between mixes — but remember the actual payment varies month to month.',
+            'All payments over the term divided by the number of months. A useful average for quick comparisons between mixes ~ but remember the actual payment varies month to month.',
           overpayPercent:
             'How much you repay beyond the principal, as a percentage of the loan amount. For example, 50% means you repay ₪1.50 for every ₪1 you borrowed. The lower the percentage, the cheaper the loan.',
           avgPayback:
@@ -243,7 +243,7 @@ export const en: { translation: Translation } = {
           effRate:
             'The true annual cost of the loan, accounting for monthly compounding. It is always slightly higher than the nominal rate, because interest accrues on itself every month. This is the right number for comparing offers.',
           interestShare:
-            'The share of your first monthly payment that goes to interest rather than principal. With a Spitzer schedule, early payments are almost all interest — the principal is repaid mainly toward the end of the term.',
+            'The share of your first monthly payment that goes to interest rather than principal. With a Spitzer schedule, early payments are almost all interest ~ the principal is repaid mainly toward the end of the term.',
           fiveYInterest:
             'The share of interest in all payments during the first five years. Useful when planning an early refinance or sale: early payments are mostly interest, so the debt shrinks slowly at first.',
           balance5y:

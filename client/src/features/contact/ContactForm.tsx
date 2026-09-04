@@ -46,7 +46,7 @@ function buildCalculatorSnapshot(t: TFunction): string | null {
           : 'calculator.track.methodEqualPrincipal',
       ),
     ].filter((part) => part !== '')
-    lines.push(`${t(`calculator.trackTypes.${track.type}`)} — ${parts.join(' · ')}`)
+    lines.push(`${t(`calculator.trackTypes.${track.type}`)} ~ ${parts.join(' · ')}`)
   })
   return lines.join('\n')
 }
@@ -190,11 +190,10 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
           .join(', ')
       }
       wishlistTopics.forEach(({ title, summary }, index) => {
-        // Plain-text rows: em dashes are swapped for '~' (keeping the
-        // surrounding spaces) and a trailing '.' is dropped, so the rows
-        // read cleanly inside the email's <pre> cells.
-        questionParams[`topic_${index + 1}`] = `${title} — ${summary}`
-          .replace(/—/g, '~')
+        // Plain-text rows: a '~' separator (matching the calculator
+        // snapshot lines) and a trailing '.' is dropped, so the rows read
+        // cleanly inside the email's <pre> cells.
+        questionParams[`topic_${index + 1}`] = `${title} ~ ${summary}`
           .replace(/\.$/, '')
       })
       const snapshot = buildCalculatorSnapshot(t)

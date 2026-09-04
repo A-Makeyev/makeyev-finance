@@ -122,11 +122,13 @@ export function isEmailjsAvailable(): boolean {
 //
 // Subject field:  {{subject}}
 // Email (HTML) field:
+
 // <div>
 //   <table style="border: 1px solid #555555; border-collapse: collapse; width: 100%;">
 //     <tbody style="font-family: 'Fira Code', sans-serif; font-size: 15px; text-align: center; color: #18293C">
-//       <tr style="border: 1px solid #2A85BE; background: #2A85BE; color: #F4FAFD; padding: 15px 10px;">
-//         <td colspan="2" style="padding: 10px;"><strong>Details</strong></td>
+//       <tr style="border: 1px solid #2A85BE; background: #2A85BE; color: #F4FAFD;">
+//         <td style="width: 20%; padding: 10px;"><strong>Details</strong></td>
+//         <td></td>
 //       </tr>
 //       <tr style="border: 1px solid #555555;">
 //         <td style="width: 20%; border-right: 1px solid #555555; padding: 10px;"><strong>Name</strong></td>
@@ -156,9 +158,10 @@ export function isEmailjsAvailable(): boolean {
 //         <td style="padding: 10px;"><pre style="margin: 0; white-space: pre-wrap;">{{calculator}}</pre></td>
 //       </tr>
 //       {{/calculator}}
-//       {{#topic_1}}
-//       <tr style="border: 1px solid #2A85BE; background: #2A85BE; color: #F4FAFD; padding: 15px 10px;">
-//         <td colspan="2" style="padding: 10px;"><strong>Discussion Topics</strong></td>
+//       {{#topic_1}}        
+//       <tr style="border: 1px solid #2A85BE; background: #2A85BE; color: #F4FAFD;">
+//         <td style="width: 20%; padding: 10px;"><strong>Discussion Topics</strong></td>
+//         <td></td>
 //       </tr>
 //       {{/topic_1}}
 //       {{#topic_1}}
@@ -254,3 +257,4 @@ export function isEmailjsAvailable(): boolean {
 //     </tbody>
 //   </table>
 // </div>
+
