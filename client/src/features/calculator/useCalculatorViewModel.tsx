@@ -13,7 +13,10 @@ import {
   FIRST_HOME_TAX_EXEMPTION_UP_TO,
   MIN_REAL_HOME_VALUE,
   PURPOSE_LIMITS,
+  VAT_RATE,
+  DEFAULT_APPRAISER_FEE,
   effectiveAnnualRatePercent,
+  suggestedMortgagePayment,
   suggestedPropertyValue,
   isVariableType,
   type PaymentLabelKind,
@@ -64,7 +67,10 @@ export function useCalculatorViewModel() {
   const purpose = useCalculatorStore((s) => s.purpose)
   const propertyValueText = useCalculatorStore((s) => s.propertyValueText)
   const capitalText = useCalculatorStore((s) => s.capitalText)
+  const renovationText = useCalculatorStore((s) => s.renovationAmountText)
   const incomeText = useCalculatorStore((s) => s.incomeText)
+  const otherExpenses = useCalculatorStore((s) => s.otherExpenses)
+  const ptiThresholdPercent = useCalculatorStore((s) => s.ptiThresholdPercent)
   const tracks = useCalculatorStore((s) => s.tracks)
   const requiredCapitalPercent = 100 - PURPOSE_LIMITS[purpose].limit
 
@@ -151,9 +157,21 @@ export function useCalculatorViewModel() {
   // show the same message as a green ✔️ positive line).
   const propertyValue = parseAmountText(propertyValueText)
   const capital = parseAmountText(capitalText)
+  // Renovations (שיפוצים) eat into the capital - the down-payment equity left
+  // is what the LTV ratio reflects, mirroring the store's loan derivation.
+  const capitalForLoan = Math.max(0, capital - parseAmountText(renovationText))
   const income = parseAmountText(incomeText)
   const loanAmount = tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
-  const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capital
+  const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capitalForLoan
+  const incomeValue = parseAmountText(incomeText)
+  const otherTotal = otherExpenses.reduce(
+    (sum, expense) => sum + parseAmountText(expense.amountText),
+    0,
+  )
+  const recommendedMortgagePayment =
+    incomeValue > 0
+      ? formatCurrency(suggestedMortgagePayment(incomeValue, otherTotal, ptiThresholdPercent))
+      : null
 
   if (snapshot.ltv) {
     // Precise ratio (e.g. 75.3%) so the warning never reads as
@@ -235,6 +253,76 @@ export function useCalculatorViewModel() {
         ),
       )
     }
+  }
+
+  if (snapshot.pti) {
+    // Soft payment-to-income guidance: the outflow (mortgage + listed
+    // recurring expenses) exceeds the user-adjusted ceiling. Other
+    // expenses are folded into the payment; the suggestion is the income
+    // at which the same outflow meets the ceiling.
+    warningMessages.push(
+      mark(
+        'negative',
+        <Trans
+          i18nKey="calculator.warnings.pti"
+          values={{
+            payment: formatCurrency(snapshot.pti.payment),
+            threshold: ptiThresholdPercent,
+            minIncome: formatCurrency(snapshot.pti.minIncome),
+          }}
+          components={[<strong key="pti-payment" />, <strong key="pti-minincome" />]}
+        />,
+      ),
+    )
+    if (otherTotal <= 0) {
+      // No listed expenses: the ceiling hit came from the mortgage payment
+      // alone - the reminder is unnecessary noise, skip it.
+    } else if (otherExpenses.length === 1) {
+      warningMessages.push(
+        mark(
+          'info',
+          t('calculator.warnings.ptiExpenseNote', {
+            amount: formatCurrency(otherTotal),
+          }),
+        ),
+      )
+    } else {
+      warningMessages.push(
+        mark(
+          'info',
+          t('calculator.warnings.ptiExpenseNotePlural', {
+            count: otherExpenses.length,
+            amount: formatCurrency(otherTotal),
+          }),
+        ),
+      )
+    }
+  }
+
+  // The recommended-payment guidance (החזר משכנתא מומלץ) joins the summary
+  // list - its status mirrors the ceiling check above: green when the entered
+  // outflow fits the ceiling, red when it doesn't, neutral info while no
+  // mortgage payment is entered yet. The suggestion is the same number as
+  // the income hint (income × threshold − other expenses).
+  const ptiSuggestedValue = suggestedMortgagePayment(incomeValue, otherTotal, ptiThresholdPercent)
+  if (incomeValue > 0 && ptiSuggestedValue > 0) {
+    const outflow = snapshot.totals.firstPayment + otherTotal
+    const ptiCeiling = ptiSuggestedValue + otherTotal
+    const ptiStatus: NoteStatus =
+      outflow > 0 && outflow > ptiCeiling ? 'negative' : outflow > 0 ? 'positive' : 'info'
+    warningMessages.push(
+      mark(
+        ptiStatus,
+        <Trans
+          i18nKey="calculator.ptiSuggestedPayment"
+          values={{
+            amount: formatCurrency(ptiSuggestedValue),
+            threshold: ptiThresholdPercent,
+          }}
+          components={[<strong key="pti-amount" />]}
+        />,
+      ),
+    )
   }
 
   const errorMessage = (() => {
@@ -404,6 +492,71 @@ export function useCalculatorViewModel() {
         ),
       )
     }
+    // Transaction fees (realtor / lawyer / appraiser) plus the planned
+    // renovation budget - market norms with VAT, general info. One line per
+    // fee plus a subtotal, only when a fee basis exists (property price or
+    // loan + capital fallback). The renovations slice appears on the line
+    // only when an amount was entered, so a blank field adds no noise.
+    const tx = snapshot.transactionCosts
+    if (tx !== null) {
+      const vatPercent = Math.round(VAT_RATE * 100)
+      lines.push(
+        mark(
+          'info',
+          tx.renovations > 0 ? (
+            <Trans
+              i18nKey="calculator.warnings.transactionCostsWithRenovations"
+              values={{
+                realtor: formatCurrency(tx.realtor),
+                lawyer: formatCurrency(tx.lawyer),
+                appraiser: formatCurrency(tx.appraiser),
+                renovations: formatCurrency(tx.renovations),
+                total: formatCurrency(tx.total),
+                vatPercent,
+              }}
+              components={[
+                <strong key="tx-realtor" />,
+                <strong key="tx-lawyer" />,
+                <strong key="tx-appraiser" />,
+                <strong key="tx-renovations" />,
+                <strong key="tx-total" />,
+              ]}
+            />
+          ) : (
+            <Trans
+              i18nKey="calculator.warnings.transactionCosts"
+              values={{
+                realtor: formatCurrency(tx.realtor),
+                lawyer: formatCurrency(tx.lawyer),
+                appraiser: formatCurrency(tx.appraiser),
+                total: formatCurrency(tx.total),
+                vatPercent,
+              }}
+              components={[
+                <strong key="tx-realtor" />,
+                <strong key="tx-lawyer" />,
+                <strong key="tx-appraiser" />,
+                <strong key="tx-total" />,
+              ]}
+            />
+          ),
+        ),
+      )
+    }
+    // Grand upfront total: required/entered capital + closing costs + fees,
+    // rounded to ₪500 - the single "how much cash do I need" number.
+    if (snapshot.upfrontTotal !== null) {
+      lines.push(
+        mark(
+          'info',
+          <Trans
+            i18nKey="calculator.warnings.upfrontTotal"
+            values={{ total: formatCurrency(snapshot.upfrontTotal) }}
+            components={[<strong key="upfront-total" />]}
+          />,
+        ),
+      )
+    }
     return lines
   })()
 
@@ -477,6 +630,11 @@ export function useCalculatorViewModel() {
       const hint = suggestedPropertyValue(loanAmount, purpose)
       return hint !== null ? formatGroupedNumber(hint) : undefined
     })(),
+    appraiserPlaceholder: formatGroupedNumber(DEFAULT_APPRAISER_FEE),
+    // The realtor/lawyer ₪ fee fields only make sense once a fee basis
+    // exists (property value, or the loan + capital fallback).
+    feeAmountsVisible: snapshot.transactionCosts !== null,
+    recommendedMortgagePayment,
     capitalNoteLines,
     summaryNotes,
     allGood,
@@ -486,5 +644,7 @@ export function useCalculatorViewModel() {
     visibleMonthlyRows,
     visibleScheduleTracks,
     purposeLimits: PURPOSE_LIMITS,
+    otherExpenses,
+    ptiThresholdPercent,
   }
 }

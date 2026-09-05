@@ -2414,6 +2414,300 @@ e #name,
   color: var(--calc-muted);
 }
 
+/* Transaction-cost inputs and the payment-to-income ceiling: a second
+   controls row under the regulatory limits row. Same input styling as
+   .limits-row (labels + input-wrap) but visually lighter - the fees are
+   market norms, not regulation, so the row is collapsed to a compact
+   grid that stacks on narrow screens. Logical properties only, so the
+   row mirrors itself in RTL and LTR. */
+.costs-row {
+  display: grid;
+  /* Realtor / lawyer each pair a percent + a ₪ sum inside one cell, so they
+     get the wide columns; the appraiser and renovations hold a single amount
+     each and get the narrower ones. */
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  padding-block-end: 20px;
+  margin-block-end: 20px;
+  border-block-end: 1px solid var(--calc-line);
+}
+
+.costs-row .input-wrap {
+  margin-top: 7px;
+}
+
+/* Realtor / lawyer: an editable percent paired with an editable ₪ amount
+   (VAT-inclusive) on one line. The percent column stays compact (percents
+   are short numbers) so the ₪ sum gets the lion's share of the width. The
+   ₪ side converts back into the percent so both fields always agree (the
+   percent stays canonical). The caption below the pair reminds that the ₪
+   figures include VAT. */
+.fee-inputs {
+  display: grid;
+  /* The percent gets a solid floor so its digits never clip against the %
+     suffix (a too-narrow column squeezes the input itself to a sliver),
+     while the ₪ sum still holds the larger share (formatGroupedNumber runs
+     longer, e.g. "50,000"). */
+  grid-template-columns: minmax(100px, 1fr) minmax(0, 1.5fr);
+  gap: 10px;
+  margin-top: 7px;
+}
+
+/* Without a fee basis there is no ₪ mirror to pair - the lone percent gets
+   the full group width like the appraiser field. */
+.fee-inputs.percent-only {
+  grid-template-columns: 1fr;
+}
+
+.fee-inputs .input-wrap {
+  width: 100%;
+  margin-top: 0;
+}
+
+.percent-wrap input {
+  min-width: 0;
+}
+
+.costs-row .input-wrap input::placeholder {
+  color: var(--calc-muted);
+  opacity: 0.75;
+}
+
+/* One shared caption for the whole costs row: every ₪ figure on it includes
+   18% VAT, so the reminder reads once instead of repeating under each fee
+   pair. It spans the full grid (row 2 of the costs-row) and sits at the
+   inline start. */
+.fee-vat-note {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--calc-muted);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: start;
+}
+
+.fee-vat-note-row {
+  grid-column: 1 / -1;
+}
+
+/* The percent inputs reuse the money-input frame with a % suffix. */
+.percent-wrap span {
+  padding: 0 12px;
+  color: var(--calc-teal);
+  font-weight: 700;
+}
+
+/* Other-expenses repeater: each row is remove + labeled description +
+   labeled amount, and the "add expense" button rides the end of the last
+   row's line (inline-end: left in Hebrew, right in English). On narrow
+   screens the row wraps and the add button drops to its own line, still at
+   the inline end. Row order follows the document direction (delete leads:
+   right in Hebrew, left in English). */
+.expenses-block {
+  padding-block-end: 20px;
+  margin-block-end: 20px;
+  border-block-end: 1px solid var(--calc-line);
+}
+
+/* With no rows the block collapses entirely - the add button still needs
+   a visible home, so the block only hides when the markup also marks it
+   empty (no-expenses class), not via :empty. */
+.expenses-block.no-expenses {
+  padding-block-end: 0;
+  margin-block-end: 20px;
+  border-block-end: none;
+}
+
+.expense-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-block-end: 10px;
+}
+
+.expense-row .input-group {
+  flex: 1 1 0;
+  min-width: 120px;
+}
+
+.expense-row .input-group .input-wrap {
+  width: 100%;
+  margin-top: 7px;
+}
+
+.expense-row .expense-label-wrap input::placeholder {
+  color: var(--calc-muted);
+  opacity: 0.75;
+}
+
+.expense-label-wrap input {
+  text-align: start;
+}
+
+/* Expense rows slide+fade in on mount (add) and slide+fade out on removal
+   (the page keeps the row mounted through the exit animation and removes it
+   on animationend). Rows re-render in place while typing, so the animation
+   only plays once per mount - keys never change for existing rows. */
+@keyframes expense-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes expense-row-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.expense-row {
+  animation: expense-row-in 0.28s ease-out;
+}
+
+.expense-row.removing {
+  animation: expense-row-out 0.22s ease-in forwards;
+  pointer-events: none;
+}
+
+.expense-remove-button {
+  flex: 0 0 auto;
+  width: 43px;
+  height: 43px;
+  border: 1px solid var(--calc-line);
+  background: white;
+  color: var(--calc-muted);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    transform 0.15s;
+}
+
+.expense-remove-button:hover {
+  color: #bb3a3a;
+  border-color: #bb3a3a;
+}
+
+.expense-remove-button:active {
+  transform: scale(0.92);
+}
+
+/* The add button trails the row (last child) so it sits at the inline end -
+   left in Hebrew, right in English. The input groups absorb the free space,
+   and when the row wraps to its own line on phones the button drops below,
+   still at the inline end. */
+.expense-add-button {
+  flex: 0 0 auto;
+  /* When the row wraps on phones the button lands on its own line - the
+     auto margin keeps it at the inline end there too, matching the main
+     line. On the full row the input groups already absorb the free space,
+     so this margin is a no-op. */
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  height: 43px;
+  box-sizing: border-box;
+  border: 1px dashed var(--calc-line);
+  background: transparent;
+  color: var(--calc-teal);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background-color 0.2s,
+    transform 0.15s;
+}
+
+.expense-add-button:hover {
+  border-color: var(--calc-teal);
+  background: rgba(8, 127, 120, 0.06);
+}
+
+.expense-add-button:active {
+  transform: scale(0.96);
+}
+
+/* The add button's own line sits directly below the last expense row (it
+   reuses .expense-row for the same rhythm, gap and entrance animation).
+   The button leads the line at the inline START (right in Hebrew, left in
+   English), same side as the empty-state button - the shared auto margin is
+   overridden so it reads as a "start here" control, not a trailing one. */
+.expense-add-under-last {
+  margin-block-end: 10px;
+}
+
+.expense-add-under-last .expense-add-button {
+  margin-inline-start: 0;
+}
+
+/* Empty expenses: the lone add button sits at the inline START of its line
+   (right in Hebrew, left in English) - the shared auto margin that parks the
+   in-row button at the inline end is overridden so the empty state reads as
+   a plain "start here" control. */
+.expense-row.expense-add-row {
+  margin-block-end: 0;
+}
+
+.expense-row.expense-add-row .expense-add-button {
+  margin-inline-start: 0;
+}
+
+/* Reduced motion: no slide/fade for rows, and the remove button removes
+   instantly (the page checks the same media query before animating). */
+@media (prefers-reduced-motion: reduce) {
+  .expense-row,
+  .expense-row.removing {
+    animation: none;
+  }
+
+  .expense-add-button:active,
+  .expense-remove-button:active {
+    transform: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .costs-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .costs-row {
+    grid-template-columns: 1fr;
+  }
+
+  .expense-row .input-group {
+    flex-basis: 0;
+  }
+
+  /* Roomier single-column feel: with everything stacked, trim the trailing
+     bottom margin the last row left when the add button wrapped below it. */
+  .expense-row {
+    margin-block-end: 8px;
+  }
+}
+
 .starting-amount {
   color: var(--calc-muted);
   font-size: 0.95rem;

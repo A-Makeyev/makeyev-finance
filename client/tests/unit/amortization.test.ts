@@ -3,6 +3,7 @@ import {
   allocatePreset,
   assessDti,
   assessCapital,
+  assessPti,
   assessLtv,
   autoFixVariableMix,
   averageInterestRate,
@@ -17,6 +18,7 @@ import {
   distributeEqually,
   effectiveAnnualRatePercent,
   estimateClosingCosts,
+  estimateTransactionCosts,
   first5yInterestShare,
   firstPaymentWithRateBump,
   paymentPer100k,
@@ -26,7 +28,10 @@ import {
   sumTotals,
   suggestedCapital,
   suggestedMinimumIncome,
+  suggestedMinimumIncomeForPayment,
+  suggestedMortgagePayment,
   suggestedPropertyValue,
+  totalUpfrontCash,
   variableShareExceeded,
 } from '@/lib/amortization'
 
@@ -981,5 +986,141 @@ describe('first5yInterestShare and paymentPer100k', () => {
     // 5835.73 payment on 250k → 2334.29 per ₪100k (2.5 units of 100k).
     expect(paymentPer100k([track])).toBeCloseTo((track.firstPayment / 250_000) * 100_000, 6)
     expect(paymentPer100k([])).toBe(0)
+  })
+})
+
+describe('estimateTransactionCosts', () => {
+  it('computes realtor + lawyer + appraiser with VAT on a 1M property', () => {
+    // Realtor 2% = 20,000 → 23,600 with VAT.
+    // Lawyer max(1% = 10,000, floor 6,000) = 10,000 → 11,800 with VAT.
+    // Appraiser flat 3,000 → 3,540 with VAT. Total 38,940.
+    const costs = estimateTransactionCosts(1_000_000, 2, 1, 3_000)!
+    expect(costs.realtorPreVat).toBe(20_000)
+    expect(costs.realtor).toBeCloseTo(23_600, 6)
+    expect(costs.lawyerPreVat).toBe(10_000)
+    expect(costs.lawyer).toBeCloseTo(11_800, 6)
+    expect(costs.appraiserPreVat).toBe(3_000)
+    expect(costs.appraiser).toBeCloseTo(3_540, 6)
+    expect(costs.total).toBeCloseTo(38_940, 6)
+  })
+
+  it('applies the lawyer minimum when the percent-based fee is smaller', () => {
+    // 1.5% of 600k = 9,000 beats the floor... use a small property so max()
+    // picks the 6,000 floor: 1% of 400k = 4,000 < 6,000 → 6,000 → 7,080 with VAT.
+    const costs = estimateTransactionCosts(400_000, 2, 1, 3_000)!
+    expect(costs.lawyerPreVat).toBe(6_000)
+    expect(costs.lawyer).toBeCloseTo(7_080, 6)
+    // Realtor 2% of 400k = 8,000 → 9,440 with VAT; appraiser 3,000 → 3,540.
+    expect(costs.total).toBeCloseTo(9_440 + 7_080 + 3_540, 6)
+  })
+
+  it('returns null for a non-positive property value', () => {
+    expect(estimateTransactionCosts(0, 2, 1, 3_000)).toBeNull()
+    expect(estimateTransactionCosts(-5, 2, 1, 3_000)).toBeNull()
+  })
+
+  it('handles zero percents (percent-less lawyer falls back to the minimum)', () => {
+    const costs = estimateTransactionCosts(500_000, 0, 0, 0)!
+    expect(costs.realtorPreVat).toBe(0)
+    expect(costs.realtor).toBe(0)
+    expect(costs.lawyerPreVat).toBe(6_000)
+    expect(costs.lawyer).toBeCloseTo(7_080, 6)
+    expect(costs.appraiserPreVat).toBe(0)
+    expect(costs.appraiser).toBe(0)
+    expect(costs.total).toBeCloseTo(7_080, 6)
+  })
+
+  it('adds the renovation budget as-entered (VAT-inclusive) to the total', () => {
+    // Renovations are a price the user plans, not a pre-VAT quote - the typed
+    // amount is the cash needed, so no VAT math applies to it. 1M at the
+    // defaults: 38,940 of fees + 100,000 renovations.
+    const costs = estimateTransactionCosts(1_000_000, 2, 1, 3_000, 100_000)!
+    expect(costs.renovations).toBe(100_000)
+    expect(costs.total).toBeCloseTo(38_940 + 100_000, 6)
+  })
+
+  it('clamps a negative renovation amount and defaults to zero when omitted', () => {
+    expect(estimateTransactionCosts(1_000_000, 2, 1, 3_000)!.renovations).toBe(0)
+    expect(estimateTransactionCosts(1_000_000, 2, 1, 3_000, -5_000)!.renovations).toBe(0)
+  })
+})
+
+describe('totalUpfrontCash', () => {
+  it('sums capital + closing costs + transaction costs, rounded up to ₪500', () => {
+    // 800,000 + 12,300 + 38,940 = 851,240 → ceil to ₪500 = 851,500.
+    const closing = { total: 12_300 } as never
+    const tx = { total: 38_940 } as never
+    expect(totalUpfrontCash(800_000, closing, tx)).toBe(851_500)
+  })
+
+  it('returns null only when there is no basis at all', () => {
+    expect(totalUpfrontCash(0, null, null)).toBeNull()
+    expect(totalUpfrontCash(0, { total: 5_000 } as never, null)).toBe(5_000)
+    expect(totalUpfrontCash(0, null, { total: 7_080 } as never)).toBe(7_500)
+  })
+
+  it('treats negative required capital (surplus) as zero contribution', () => {
+    // requiredCapital −5,000 + tx 7,080 = 2,080 → 2,500. Surplus subtracts,
+    // matching suggestedCapital semantics rather than clamping silently.
+    expect(totalUpfrontCash(-5_000, null, { total: 7_080 } as never)).toBe(2_500)
+  })
+
+  it('adds one-time expenses to the upfront total', () => {
+    // 800,000 + 12,300 + 38,940 + 10,000 one-time = 861,240 → 861,500.
+    const closing = { total: 12_300 } as never
+    const tx = { total: 38_940 } as never
+    expect(totalUpfrontCash(800_000, closing, tx, 10_000)).toBe(861_500)
+  })
+
+  it('one-time expenses alone keep the total visible; omitted defaults to 0', () => {
+    expect(totalUpfrontCash(0, null, null, 7_000)).toBe(7_000)
+    expect(totalUpfrontCash(0, null, null)).toBeNull()
+  })
+})
+
+describe('suggestedMortgagePayment', () => {
+  it('subtracts other monthly expenses from the 33% income recommendation', () => {
+    expect(suggestedMortgagePayment(20_000, 1_000, 33)).toBe(5_600)
+    expect(suggestedMortgagePayment(15_000, 0, 33)).toBe(4_950)
+  })
+
+  it('never recommends a negative mortgage payment', () => {
+    expect(suggestedMortgagePayment(10_000, 4_000, 33)).toBe(0)
+    expect(suggestedMortgagePayment(0, 0, 33)).toBe(0)
+  })
+})
+
+describe('assessPti', () => {
+  it('flags when payment exceeds the threshold and suggests ₪500-grid income', () => {
+    // 6,600 / 20,000 = 33% exactly → not flagged (ceiling is inclusive).
+    expect(assessPti(6_600, 20_000, 33)).toBeNull()
+    // 7,000 / 20,000 = 35% > 33% → min income ceil(7000/0.33/500)*500.
+    const flagged = assessPti(7_000, 20_000, 33)!
+    expect(flagged.minIncome).toBe(Math.ceil(7_000 / 0.33 / 500) * 500)
+    expect(flagged.thresholdPercent).toBe(33)
+    expect(flagged.payment).toBe(7_000)
+  })
+
+  it('returns null for empty income or obligation', () => {
+    expect(assessPti(0, 20_000, 33)).toBeNull()
+    expect(assessPti(7_000, 0, 33)).toBeNull()
+    expect(assessPti(-1, 20_000, 33)).toBeNull()
+  })
+
+  it('respects the adjustable threshold at its boundaries', () => {
+    // At 40% ceiling, 8,000/20,000 = 40% exactly → not flagged.
+    expect(assessPti(8_000, 20_000, 40)).toBeNull()
+    // At 20% ceiling, 4,100/20,000 = 20.5% → flagged.
+    expect(assessPti(4_100, 20_000, 20)).not.toBeNull()
+  })
+})
+
+describe('suggestedMinimumIncomeForPayment', () => {
+  it('mirrors suggestedMinimumIncome at the equivalent DTI threshold', () => {
+    // suggestedMinimumIncome is hardwired to 50%: 6,000 payment → 12,000 income.
+    expect(suggestedMinimumIncomeForPayment(6_000, 50)).toBe(12_000)
+    expect(suggestedMinimumIncome(6_000)).toBe(12_000)
+    // 33% ceiling: 6,600 → 20,000.
+    expect(suggestedMinimumIncomeForPayment(6_600, 33)).toBe(20_000)
   })
 })

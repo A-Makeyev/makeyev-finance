@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPrimeRatePercent } from '@/services/boi'
 import { useCalculatorStore } from '@/stores/calculatorStore'
-import { MAX_TRACKS, MAX_YEARS, type PropertyPurpose } from '@/lib/amortization'
+import { MAX_OTHER_EXPENSES, MAX_TRACKS, MAX_YEARS, type PropertyPurpose } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { TermSlider } from '@/components/ui/TermSlider'
 import { FlipSelect } from '@/components/ui/FlipSelect'
@@ -23,13 +23,44 @@ export function CalculatorPage() {
   const { t, i18n } = useTranslation()
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  // Expense rows playing their exit animation - the row is removed from the
+  // store only after the animation ends, so the fade-out plays in full.
+  const [removingExpenseIds, setRemovingExpenseIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
+
+  /**
+   * Remove with a fade-out; reduced-motion users get the instant removal.
+   * The actual store removal happens in finishRemoveExpense on animationend.
+   */
+  const animateRemoveExpense = (id: string) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      store.removeOtherExpense(id)
+      return
+    }
+    setRemovingExpenseIds((prev) => new Set(prev).add(id))
+  }
+
+  const finishRemoveExpense = (id: string) => {
+    if (!removingExpenseIds.has(id)) return
+    setRemovingExpenseIds((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+    store.removeOtherExpense(id)
+  }
 
   // Reset stays available whenever any data is present (including the default
   // ₪1,000,000 prefill); it is only disabled when everything is truly cleared
   // to blank - empty sum, no track amounts and no cash/property inputs.
   const canReset = useCalculatorStore((s) => {
     const sumBlank = s.startingAmountText.trim() === ''
-    const inputsBlank = s.propertyValueText === '' && s.capitalText === '' && s.incomeText === ''
+    const inputsBlank =
+      s.propertyValueText === '' &&
+      s.capitalText === '' &&
+      s.incomeText === '' &&
+      s.renovationAmountText === ''
     const hasTrackAmount = s.tracks.some((track) => track.amountText.trim() !== '')
     return !(sumBlank && inputsBlank && !hasTrackAmount)
   })
@@ -55,6 +86,13 @@ export function CalculatorPage() {
     tracks: useCalculatorStore((s) => s.tracks),
     error: useCalculatorStore((s) => s.error),
     purpose: useCalculatorStore((s) => s.purpose),
+    realtorPercentText: useCalculatorStore((s) => s.realtorPercentText),
+    lawyerPercentText: useCalculatorStore((s) => s.lawyerPercentText),
+    realtorAmountText: useCalculatorStore((s) => s.realtorAmountText),
+    lawyerAmountText: useCalculatorStore((s) => s.lawyerAmountText),
+    appraiserFeeText: useCalculatorStore((s) => s.appraiserFeeText),
+    renovationAmountText: useCalculatorStore((s) => s.renovationAmountText),
+    otherExpenses: useCalculatorStore((s) => s.otherExpenses),
     setStartingAmount: useCalculatorStore((s) => s.setStartingAmount),
     setTermYears: useCalculatorStore((s) => s.setTermYears),
     setPropertyValue: useCalculatorStore((s) => s.setPropertyValue),
@@ -64,6 +102,17 @@ export function CalculatorPage() {
     setCapitalBlur: useCalculatorStore((s) => s.setCapitalBlur),
     setIncomeBlur: useCalculatorStore((s) => s.setIncomeBlur),
     setPurpose: useCalculatorStore((s) => s.setPurpose),
+    updateRealtorPercent: useCalculatorStore((s) => s.updateRealtorPercent),
+    updateLawyerPercent: useCalculatorStore((s) => s.updateLawyerPercent),
+    updateRealtorAmount: useCalculatorStore((s) => s.updateRealtorAmount),
+    updateLawyerAmount: useCalculatorStore((s) => s.updateLawyerAmount),
+    updateAppraiserFee: useCalculatorStore((s) => s.updateAppraiserFee),
+    updateRenovationAmount: useCalculatorStore((s) => s.updateRenovationAmount),
+    addOtherExpense: useCalculatorStore((s) => s.addOtherExpense),
+    updateOtherExpenseLabel: useCalculatorStore((s) => s.updateOtherExpenseLabel),
+    updateOtherExpenseAmount: useCalculatorStore((s) => s.updateOtherExpenseAmount),
+    updateOtherExpenseOneTimeAmount: useCalculatorStore((s) => s.updateOtherExpenseOneTimeAmount),
+    removeOtherExpense: useCalculatorStore((s) => s.removeOtherExpense),
     addTrack: useCalculatorStore((s) => s.addTrack),
     reset: useCalculatorStore((s) => s.reset),
     autofixMix: useCalculatorStore((s) => s.autofixMix),
@@ -227,6 +276,200 @@ export function CalculatorPage() {
                   testId="monthly-income"
                 />
               </label>
+            </div>
+
+            {/* Transaction costs (realtor / lawyer / appraiser) - market
+                norms the user can edit, distinct from the regulatory limits
+                row above. Realtor and lawyer pair an editable percent with an
+                editable ₪ amount (VAT-inclusive) on one line; each drives the
+                other, with the percent staying canonical. The appraiser fee
+                is a single editable amount input. */}
+            <div className="costs-row" data-testid="costs-row">
+              <label className="input-group fee-group">
+                {t('calculator.realtorPercentLabel')}
+                <span className={`fee-inputs${vm.feeAmountsVisible ? '' : ' percent-only'}`}>
+                  <span className="input-wrap percent-wrap">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      value={store.realtorPercentText}
+                      onChange={(event) => store.updateRealtorPercent(event.target.value)}
+                      aria-label={t('calculator.realtorPercentLabel')}
+                      data-testid="realtor-percent"
+                    />
+                    <span aria-hidden="true">%</span>
+                  </span>
+                  {vm.feeAmountsVisible && (
+                    <MoneyInput
+                      className="fee-amount-wrap"
+                      value={store.realtorAmountText}
+                      onChange={(raw, caret) => store.updateRealtorAmount(raw, caret)}
+                      suffix="₪"
+                      ariaLabel={t('calculator.realtorAmountLabel')}
+                      testId="realtor-amount"
+                    />
+                  )}
+                </span>
+              </label>
+
+              <label className="input-group fee-group">
+                {t('calculator.lawyerPercentLabel')}
+                <span className={`fee-inputs${vm.feeAmountsVisible ? '' : ' percent-only'}`}>
+                  <span className="input-wrap percent-wrap">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      value={store.lawyerPercentText}
+                      onChange={(event) => store.updateLawyerPercent(event.target.value)}
+                      aria-label={t('calculator.lawyerPercentLabel')}
+                      data-testid="lawyer-percent"
+                    />
+                    <span aria-hidden="true">%</span>
+                  </span>
+                  {vm.feeAmountsVisible && (
+                    <MoneyInput
+                      className="fee-amount-wrap"
+                      value={store.lawyerAmountText}
+                      onChange={(raw, caret) => store.updateLawyerAmount(raw, caret)}
+                      suffix="₪"
+                      ariaLabel={t('calculator.lawyerAmountLabel')}
+                      testId="lawyer-amount"
+                    />
+                  )}
+                </span>
+              </label>
+
+              <label className="input-group">
+                {t('calculator.appraiserFeeLabel')}
+                <MoneyInput
+                  value={store.appraiserFeeText}
+                  onChange={(raw, caret) => store.updateAppraiserFee(raw, caret)}
+                  suffix="₪"
+                  placeholder={vm.appraiserPlaceholder}
+                  ariaLabel={t('calculator.appraiserFeeLabel')}
+                  testId="appraiser-fee"
+                />
+              </label>
+
+              <label className="input-group">
+                {t('calculator.renovationsLabel')}
+                <MoneyInput
+                  value={store.renovationAmountText}
+                  onChange={(raw, caret) => store.updateRenovationAmount(raw, caret)}
+                  suffix="₪"
+                  ariaLabel={t('calculator.renovationsLabel')}
+                  testId="renovations-amount"
+                />
+              </label>
+
+              {/* One shared note for the whole row: every ₪ figure in the
+                  costs row includes VAT. Spans all grid columns so it reads
+                  once instead of repeating under each fee pair. */}
+              {vm.feeAmountsVisible && (
+                <span className="fee-vat-note fee-vat-note-row">
+                  {t('calculator.feeVatIncluded')}
+                </span>
+              )}
+            </div>
+
+            {/* Other expenses (car loan etc.) - the recurring monthly amount
+                folds into the payment-to-income check, and the optional
+                one-time amount (moving, furniture) joins the upfront cash
+                total. Repeatable rows with a free-text label and two amounts. */}
+            <div
+              className={`expenses-block${store.otherExpenses.length === 0 ? ' no-expenses' : ''}`}
+              data-testid="expenses-block"
+            >
+              {store.otherExpenses.map((expense, index) => (
+                <Fragment key={expense.id}>
+                  <div
+                    className={`expense-row${removingExpenseIds.has(expense.id) ? ' removing' : ''}`}
+                    onAnimationEnd={() => finishRemoveExpense(expense.id)}
+                  >
+                  <button
+                    type="button"
+                    className="expense-remove-button"
+                    onClick={() => animateRemoveExpense(expense.id)}
+                    aria-label={t('calculator.expenseRemove')}
+                    data-testid={`expense-remove-${expense.id}`}
+                  >
+                    ×
+                  </button>
+                  <label className="input-group expense-label-group">
+                    {t('calculator.expenseLabel')}
+                    <div className="input-wrap expense-label-wrap">
+                      <input
+                        type="text"
+                        value={expense.label}
+                        placeholder={t('calculator.expenseLabelPlaceholder')}
+                        onChange={(event) =>
+                          store.updateOtherExpenseLabel(expense.id, event.target.value)
+                        }
+                        aria-label={t('calculator.expenseLabelPlaceholder')}
+                        data-testid={`expense-label-${expense.id}`}
+                      />
+                    </div>
+                  </label>
+                  <label className="input-group expense-amount-group">
+                    {t('calculator.expenseAmountLabel')}
+                    <MoneyInput
+                      value={expense.amountText}
+                      onChange={(raw, caret) =>
+                        store.updateOtherExpenseAmount(expense.id, raw, caret)
+                      }
+                      suffix="₪"
+                      placeholder={t('calculator.expenseAmountPlaceholder')}
+                      ariaLabel={t('calculator.expenseAmountLabel')}
+                      testId={`expense-amount-${expense.id}`}
+                    />
+                  </label>
+                    <label className="input-group expense-onetime-group">
+                      {t('calculator.expenseOneTimeAmountLabel')}
+                      <MoneyInput
+                        value={expense.oneTimeAmountText}
+                        onChange={(raw, caret) =>
+                          store.updateOtherExpenseOneTimeAmount(expense.id, raw, caret)
+                        }
+                        suffix="₪"
+                        placeholder={t('calculator.expenseOneTimeAmountPlaceholder')}
+                        ariaLabel={t('calculator.expenseOneTimeAmountLabel')}
+                        testId={`expense-onetime-${expense.id}`}
+                      />
+                    </label>
+                  </div>
+                  {/* The add control rides its own line directly below the
+                      last expense row, until the row cap is reached. */}
+                  {index === store.otherExpenses.length - 1 &&
+                    store.otherExpenses.length < MAX_OTHER_EXPENSES && (
+                      <div className="expense-row expense-add-under-last">
+                      <button
+                        type="button"
+                        className="expense-add-button"
+                        onClick={() => store.addOtherExpense()}
+                        data-testid="add-expense"
+                      >
+                        {t('calculator.otherExpensesAdd')} +
+                      </button>
+                    </div>
+                  )}
+                </Fragment>
+              ))}
+              {store.otherExpenses.length === 0 && (
+                <div className="expense-row expense-add-row">
+                  <button
+                    type="button"
+                    className="expense-add-button"
+                    onClick={() => store.addOtherExpense()}
+                    data-testid="add-expense"
+                  >
+                    {t('calculator.otherExpensesAdd')} +
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Summary notes: the capital/closing-cost breakdown and the

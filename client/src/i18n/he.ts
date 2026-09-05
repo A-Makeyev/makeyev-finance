@@ -130,6 +130,27 @@ export const he = {
       propertyValueLabel: 'שווי הנכס',
       capitalLabel: 'הון עצמי',
       incomeLabel: 'הכנסה פנויה נטו לחודש',
+      realtorPercentLabel: 'דמי תיווך',
+      lawyerPercentLabel: 'שכר עו"ד',
+      appraiserFeeLabel: 'שמאי',
+      renovationsLabel: 'שיפוצים',
+      realtorAmountLabel: 'דמי תיווך - סכום כולל מע"מ',
+      lawyerAmountLabel: 'שכר עו"ד - סכום כולל מע"מ',
+      feeVatIncluded: 'הסכומים כוללים מע"מ',
+      ptiThresholdLabel: 'תקרת החזר מההכנסה',
+      ptiThresholdSuffix: 'מההכנסה',
+      ptiHint:
+        'המלצה: החזר המשכנתא לא יעלה על {{threshold}}% מההכנסה הפנויה, לאחר הוצאות חודשיות נוספות.',
+      ptiSuggestedPayment:
+        'החזר משכנתא מומלץ: עד {{amount}} בחודש ({{threshold}}% מההכנסה לאחר הוצאות נוספות)',
+      expenseLabel: 'תיאור ההוצאה',
+      expenseLabelPlaceholder: 'תיאור ההוצאה (למשל: הלוואת רכב)',
+      expenseAmountLabel: 'סכום ההוצאה החודשית',
+      expenseAmountPlaceholder: 'יחושב כנגד ההכנסה החודשית',
+      expenseOneTimeAmountLabel: 'סכום ההוצאה החד-פעמית',
+      expenseOneTimeAmountPlaceholder: 'יחושב כנגד ההון העצמי',
+      otherExpensesAdd: 'הוצאות נוספות',
+      expenseRemove: 'הסר הוצאה',
       presetHeading: 'בחירת תמהיל',
       presetBasket1: 'תמהיל 1',
       presetBasket2: 'תמהיל 2',
@@ -242,7 +263,7 @@ export const he = {
           balance5y:
             'החוב שיישאר לכם אחרי חמש שנים של תשלומים. בתחילת התקופה רוב התשלום הולך לריבית, כך שאחרי חמש שנים עדיין נותר חלק גדול מהקרן. נתון חשוב לתכנון מיחזור או מכירה.',
           per100k:
-            'ההחזר החודשי מתואם לכל 100,000 ש\"ח של הלוואה. המדד מנטרל את גודל ההלוואה ומאפשר השוואה הוגנת בין הצעות בנקים עם ריביות ותקופות שונות.',
+            'ההחזר החודשי מתואם לכל 100,000 ש"ח של הלוואה. המדד מנטרל את גודל ההלוואה ומאפשר השוואה הוגנת בין הצעות בנקים עם ריביות ותקופות שונות.',
         },
         links: {
           guide: {
@@ -319,6 +340,14 @@ export const he = {
         ltvOk: 'שיעור המימון (<0>{{percent}}</0>%) עומד במותר ל{{purpose}} (עד <1>{{limit}}</1>%)',
         dti: 'הכנסה פנויה נמוכה ב-<0>{{shortfall}}</0>% מהנדרש. הבנק יבקש הכנסה חודשית פנויה של לפחות <1>{{minIncome}}</1>',
         dtiOk: 'הכנסה פנויה מספיקה לכיסוי ההחזר החודשי (<0>{{payment}}</0>)',
+        transactionCosts:
+          'עלויות עסקה (לפני מע"מ {{vatPercent}}%): תיווך <0>{{realtor}}</0> · עו"ד <1>{{lawyer}}</1> · שמאי <2>{{appraiser}}</2> · סה"כ <3>{{total}}</3> (כולל מע"מ)',
+        transactionCostsWithRenovations:
+          'עלויות עסקה (לפני מע"מ {{vatPercent}}%): תיווך <0>{{realtor}}</0> · עו"ד <1>{{lawyer}}</1> · שמאי <2>{{appraiser}}</2> · שיפוצים <3>{{renovations}}</3> · סה"כ <4>{{total}}</4> (כולל מע"מ)',
+        upfrontTotal: 'סך הכל מזומן נדרש בהתחלה (הון עצמי + עלויות): <0>{{total}}</0>',
+        pti: 'ההוצאה החודשית הכוללת (<0>{{payment}}</0>) חורגת מ{{threshold}}% מההכנסה. הכנסה מומלצת: לפחות <1>{{minIncome}}</1>',
+        ptiExpenseNote: 'החישוב כולל הוצאה נוספת שהזנת ({{amount}} בחודש)',
+        ptiExpenseNotePlural: 'החישוב כולל {{count}} הוצאות נוספות שהזנת ({{amount}} בחודש)',
         purposeFirst: 'דירה ראשונה',
         purposeUpgrade: 'שדרוג דירה',
         purposeInvestment: 'דירה להשקעה',

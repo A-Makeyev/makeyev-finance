@@ -6,6 +6,8 @@
  */
 
 export const MAX_TRACKS = 3
+/** Cap on repeatable other-expense rows (feedback request). */
+export const MAX_OTHER_EXPENSES = 3
 export const MAX_YEARS = 30
 /** Default slider term on load and after reset (feedback request). */
 export const DEFAULT_TERM_YEARS = 15
@@ -16,6 +18,15 @@ export const PRIME_MARGIN = 1.5
 export const FALLBACK_PRIME_RATE = 5.75
 export const DTI_THRESHOLD = 0.5
 export const DTI_ROUNDING_STEP = 500
+/**
+ * Default payment-to-income ceiling (from mortgage-advisor course material):
+ * banks typically cap the mortgage payment at ~33% of the borrower's net
+ * monthly income. Case-by-case in practice (20-40%), so the UI exposes it as
+ * an adjustable setting - this is only the starting value.
+ */
+export const PTI_DEFAULT_THRESHOLD = 0.33
+export const PTI_MIN_THRESHOLD = 0.2
+export const PTI_MAX_THRESHOLD = 0.4
 /** Rough buyer-side side costs (attorney, registration, surveyor) as a % of the
     effective property value - a common mid estimate in Israel (~1.5%, excluding
     purchase tax and agent commission). */
@@ -611,6 +622,104 @@ export function estimateClosingCosts(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Transaction costs (realtor, lawyer, appraiser) - market norms, not law
+// ---------------------------------------------------------------------------
+
+/**
+ * VAT (מע"מ) on professional services. Legislative rate, effective 1.1.2025
+ * (raised from 17%), still 18% in 2026 - update when the law changes, never
+ * fetched live. Market-norm fees below are quoted before VAT.
+ */
+export const VAT_RATE = 0.18
+
+/**
+ * Market-norm defaults for the transaction-cost estimate. Unlike the
+ * purchase-tax brackets and financing limits these are NOT regulated - they
+ * are editable starting values labeled "typical" in the UI, not exact
+ * figures.
+ */
+export const DEFAULT_REALTOR_PERCENT = 2
+export const DEFAULT_LAWYER_PERCENT = 1
+/** Common floor regardless of the percent (before VAT). */
+export const LAWYER_MINIMUM_FEE = 6000
+/** Flat fee - appraisers price per property, not per shekel borrowed. */
+export const DEFAULT_APPRAISER_FEE = 3000
+
+/** Adds VAT to a pre-tax amount. */
+function withVat(amount: number): number {
+  return amount * (1 + VAT_RATE)
+}
+
+/**
+ * Lawyer fee (before VAT): the higher of percent-based and the common
+ * minimum. A cleared percent (0) falls back to the minimum so an empty
+ * lawyer field still shows a realistic floor estimate.
+ */
+export function lawyerFee(propertyValue: number, percent: number): number {
+  if (propertyValue <= 0) return 0
+  return Math.max((percent / 100) * propertyValue, LAWYER_MINIMUM_FEE)
+}
+
+/**
+ * Per-property transaction-cost line items (realtor / lawyer / appraiser).
+ * The `realtor` / `lawyer` / `appraiser` fields carry VAT; the `*PreVat`
+ * fields are the raw quoted amounts before VAT.
+ */
+export interface TransactionCostsEstimate {
+  realtor: number
+  lawyer: number
+  appraiser: number
+  /** Planned renovation budget (שיפוצים) - entered VAT-inclusive, unlike the
+      pre-VAT percent fees, so the number the user types is the cash needed. */
+  renovations: number
+  realtorPreVat: number
+  lawyerPreVat: number
+  appraiserPreVat: number
+  total: number
+}
+
+/**
+ * Per-property transaction-cost estimate (before VAT, except VAT itself is
+ * included on each line): realtor % of value, lawyer max(percent, minimum),
+ * appraiser flat, plus an optional renovation budget entered as the actual
+ * (VAT-inclusive) price. All are one-time costs based on the PROPERTY value -
+ * never the loan amount - and never belong in a monthly-payment check. The
+ * renovation also eats into the initial capital upstream (see the store), so
+ * it lands in the loan, the totals and the fees line together.
+ */
+export function estimateTransactionCosts(
+  propertyValue: number,
+  realtorPercent: number,
+  lawyerPercent: number,
+  appraiserFee: number,
+  renovations: number = 0,
+): TransactionCostsEstimate | null {
+  if (propertyValue <= 0) return null
+  const realtor = (realtorPercent / 100) * propertyValue
+  const lawyer = lawyerFee(propertyValue, lawyerPercent)
+  const appraiser = appraiserFee
+  const realtorWithVat = withVat(realtor)
+  const lawyerWithVat = withVat(lawyer)
+  const appraiserWithVat = withVat(appraiser)
+  const renovationAmount = Number.isFinite(renovations) ? Math.max(0, renovations) : 0
+  return {
+    realtor: realtorWithVat,
+    lawyer: lawyerWithVat,
+    appraiser: appraiserWithVat,
+    renovations: renovationAmount,
+    realtorPreVat: realtor,
+    lawyerPreVat: lawyer,
+    appraiserPreVat: appraiser,
+    total: realtorWithVat + lawyerWithVat + appraiserWithVat + renovationAmount,
+  }
+}
+
+/**
+ * Required initial capital (הון עצמי) for a purchase: the gap between the
+ * maximum financed share (100 − purpose limit) and the effective property
+ * value. Mirrors assessCapital's effectiveValue (property else loan+capital).
+ */
 export function suggestedCapital(
   propertyValue: number,
   loanAmount: number,
@@ -632,6 +741,38 @@ export function suggestedCapital(
  * value ≥ loan + ₪100,000 no matter the financing limit.
  */
 export const MINIMUM_EQUITY = 100_000
+
+/** Upfront-cash figures round to the same ₪500 grid as suggestedCapital. */
+export const TRANSACTION_COSTS_ROUNDING_STEP = 500
+
+/**
+ * Total upfront cash (הון עצמי + all one-time costs): the required capital,
+ * the closing-cost estimate and the transaction-cost fees (each already
+ * VAT-inclusive) draw from the same pool of savings, so the affordability
+ * picture must add them. Rounded up to ₪500; null when there is no basis.
+ */
+export function totalUpfrontCash(
+  requiredCapital: number | null,
+  closingCosts: ClosingCostsEstimate | null,
+  transactionCosts: TransactionCostsEstimate | null,
+  oneTimeExpenses: number = 0,
+): number | null {
+  // A null capital (no equity basis) contributes zero - fees alone still
+  // draw from savings, so the total must still show.
+  const capital = requiredCapital ?? 0
+  if (
+    capital <= 0 &&
+    closingCosts === null &&
+    transactionCosts === null &&
+    oneTimeExpenses <= 0
+  ) {
+    return null
+  }
+  const oneTime = Number.isFinite(oneTimeExpenses) ? Math.max(0, oneTimeExpenses) : 0
+  const raw =
+    capital + (closingCosts?.total ?? 0) + (transactionCosts?.total ?? 0) + oneTime
+  return Math.ceil(raw / TRANSACTION_COSTS_ROUNDING_STEP) * TRANSACTION_COSTS_ROUNDING_STEP
+}
 
 /**
  * Property value (שווי הנכס) hint when the field is blank: the smallest value
@@ -656,6 +797,62 @@ export function assessDti(firstMonthPayment: number, income: number): DtiWarning
   const minIncome = suggestedMinimumIncome(firstMonthPayment)
   const shortfallPercent = Math.min(99, Math.round((1 - income / minIncome) * 100))
   return { payment: firstMonthPayment, minIncome, shortfallPercent }
+}
+
+export interface PTIAssessment {
+  /** Monthly outflow tested: mortgage first payment + other recurring expenses. */
+  payment: number
+  /** The user-adjusted ceiling as a percent (e.g. 33). */
+  thresholdPercent: number
+  /** Income at which the outflow exactly meets the ceiling, rounded up to ₪500. */
+  minIncome: number
+}
+
+/**
+ * Soft payment-to-income check against the adjustable ceiling (default 33%,
+ * range 20-40%). Unlike the 50% DTI regulatory check this is guidance, not a
+ * bank rule. `monthlyObligation` is the mortgage's first payment plus any
+ * recurring expenses the user listed (car loan etc.); one-time transaction
+ * costs never enter this check.
+ */
+export function suggestedMortgagePayment(
+  monthlyIncome: number,
+  otherMonthlyExpenses: number,
+  thresholdPercent: number,
+): number {
+  if (!Number.isFinite(monthlyIncome) || monthlyIncome <= 0) return 0
+  const expenses = Number.isFinite(otherMonthlyExpenses) ? Math.max(0, otherMonthlyExpenses) : 0
+  const threshold = Number.isFinite(thresholdPercent) ? thresholdPercent / 100 : PTI_DEFAULT_THRESHOLD
+  return Math.max(0, monthlyIncome * threshold - expenses)
+}
+
+export function assessPti(
+  monthlyObligation: number,
+  income: number,
+  thresholdPercent: number,
+): PTIAssessment | null {
+  if (income <= 0 || monthlyObligation <= 0) return null
+  const threshold = thresholdPercent / 100
+  if (monthlyObligation / income <= threshold) return null
+  return {
+    payment: monthlyObligation,
+    thresholdPercent,
+    minIncome: Math.ceil(monthlyObligation / threshold / DTI_ROUNDING_STEP) * DTI_ROUNDING_STEP,
+  }
+}
+
+/**
+ * Minimum income for a given outflow at the given ceiling, rounded up to
+ * ₪500 - the PTI counterpart of suggestedMinimumIncome (which is hardwired
+ * to the 50% DTI rule).
+ */
+export function suggestedMinimumIncomeForPayment(
+  monthlyObligation: number,
+  thresholdPercent: number,
+): number {
+  return (
+    Math.ceil(monthlyObligation / (thresholdPercent / 100) / DTI_ROUNDING_STEP) * DTI_ROUNDING_STEP
+  )
 }
 
 /** Variable-principal share must not exceed 2/3 (+epsilon tolerance). */

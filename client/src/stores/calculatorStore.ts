@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import {
   MAX_YEARS,
+  MAX_OTHER_EXPENSES,
   DEFAULT_TERM_YEARS,
   FALLBACK_INFLATION,
   FALLBACK_PRIME_RATE,
@@ -23,6 +24,15 @@ import {
   distributeEqually,
   EMPTY_TOTALS,
   estimateClosingCosts,
+  estimateTransactionCosts,
+  lawyerFee,
+  PTI_DEFAULT_THRESHOLD,
+  PTI_MAX_THRESHOLD,
+  PTI_MIN_THRESHOLD,
+  DEFAULT_REALTOR_PERCENT,
+  DEFAULT_LAWYER_PERCENT,
+  DEFAULT_APPRAISER_FEE,
+  VAT_RATE,
   first5yInterestShare,
   firstPaymentWithRateBump,
   isVariableType,
@@ -34,6 +44,8 @@ import {
   sumTotals,
   suggestedCapital,
   suggestedMinimumIncome,
+  assessPti,
+  totalUpfrontCash,
   variableShareExceeded,
   type AmortizationMethod,
   type ClosingCostsEstimate,
@@ -41,10 +53,12 @@ import {
   type CombinedScheduleRow,
   type DtiWarning,
   type CapitalAssessment,
+  type TransactionCostsEstimate,
   type LtvWarning,
   type PaymentLabelResolution,
   type PresetId,
   type PropertyPurpose,
+  type PTIAssessment,
   type TotalsSummary,
   type TrackResult,
   type TrackScheduleRow,
@@ -73,6 +87,15 @@ export interface TrackState {
 }
 
 export type CalculationError = { kind: 'term' } | { kind: 'positive' } | { kind: 'variableCap' }
+
+/** One repeatable expense line: a recurring monthly amount plus an optional
+    one-time amount (cash paid once, e.g. moving or furniture). */
+export interface OtherExpense {
+  id: string
+  label: string
+  amountText: string
+  oneTimeAmountText: string
+}
 
 /** Per-track payback metric (total repaid ÷ principal) for the results display. */
 export interface TrackPayback {
@@ -127,6 +150,12 @@ export interface CalculatorSnapshot {
   capitalShortfall: boolean
   /** Rough buyer-side closing costs (side costs + purchase tax) estimate. */
   closingCosts: ClosingCostsEstimate | null
+  /** Realtor / lawyer / appraiser estimate (VAT-inclusive per line). */
+  transactionCosts: TransactionCostsEstimate | null
+  /** הון עצמי + closing costs + transaction costs, rounded up to ₪500. */
+  upfrontTotal: number | null
+  /** Soft payment-to-income warning against the adjustable ceiling. */
+  pti: PTIAssessment | null
   /** Unweighted average annual rate (%) of the entered tracks. */
   avgInterestRate: number
   /** Loan-amount-weighted average annual rate (%) - blended portfolio cost. */
@@ -197,6 +226,23 @@ interface CalculatorData {
   scheduleExpanded: boolean
   primeRate: number | null
   cpiAnnualChange: number | null
+  /** Realtor commission % of property value (before VAT). */
+  realtorPercentText: string
+  /** Lawyer fee % of property value (before VAT); 0 falls back to the minimum. */
+  lawyerPercentText: string
+  /** Appraiser flat fee (before VAT). */
+  appraiserFeeText: string
+  /** Planned renovation budget (שיפוצים) - entered as the actual VAT-inclusive
+      price; it eats into the initial capital and lands in the costs total. */
+  renovationAmountText: string
+  /** VAT-inclusive ₪ mirror of the realtor percent (the percent stays canonical). */
+  realtorAmountText: string
+  /** VAT-inclusive ₪ mirror of the lawyer percent (the percent stays canonical). */
+  lawyerAmountText: string
+  /** Repeatable recurring monthly expenses (car loan, arrears, etc.). */
+  otherExpenses: OtherExpense[]
+  /** Payment-to-income ceiling in percent (20-40, default 33). */
+  ptiThresholdPercent: number
 }
 
 export interface CalculatorState extends CalculatorData {
@@ -217,6 +263,18 @@ export interface CalculatorActions {
   setCapitalBlur(): void
   setIncomeBlur(): void
   setPurpose(purpose: PropertyPurpose): void
+  updateRealtorPercent(raw: string): string
+  updateLawyerPercent(raw: string): string
+  updateRealtorAmount(raw: string, caret: number | null): { text: string; caret: number | null }
+  updateLawyerAmount(raw: string, caret: number | null): { text: string; caret: number | null }
+  updateAppraiserFee(raw: string, caret: number | null): { text: string; caret: number | null }
+  updateRenovationAmount(raw: string, caret: number | null): { text: string; caret: number | null }
+  addOtherExpense(): void
+  updateOtherExpenseLabel(id: string, label: string): void
+  updateOtherExpenseAmount(id: string, raw: string, caret: number | null): { text: string; caret: number | null }
+  updateOtherExpenseOneTimeAmount(id: string, raw: string, caret: number | null): { text: string; caret: number | null }
+  removeOtherExpense(id: string): void
+  setPtiThreshold(percent: number): void
   addTrack(values?: AddTrackValues): void
   removeTrack(id: string): void
   updateTrackAmount(
@@ -263,6 +321,9 @@ const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   suggestedCapital: null,
   capitalShortfall: false,
   closingCosts: null,
+  transactionCosts: null,
+  upfrontTotal: null,
+  pti: null,
   avgInterestRate: 0,
   weightedAvgInterestRate: 0,
   avgPaybackRatio: 0,
@@ -283,8 +344,51 @@ function getLoanAmount(s: CalculatorData): number {
   return deriveLoanAmount(
     parseAmountText(s.propertyValueText),
     parseAmountText(s.startingAmountText),
-    parseAmountText(s.capitalText),
+    effectiveCapital(s),
   )
+}
+
+/** Percent text ('', '2', '2.5') to a non-negative finite number. */
+function parsePercentText(text: string): number {
+  const value = Number(text.replace(',', '.'))
+  return Number.isFinite(value) && value > 0 ? value : 0
+}
+
+/**
+ * Capital actually left for the down payment after the planned renovations
+ * (שיפוצים) eat into it - the renovation budget is paid from savings, so the
+ * equity available shrinks and the loan grows accordingly. Never negative.
+ */
+function effectiveCapital(s: CalculatorData): number {
+  return Math.max(0, parseAmountText(s.capitalText) - parseAmountText(s.renovationAmountText))
+}
+
+/**
+ * Fee basis for the percent ↔ ₪ conversion: the property value, or the
+ * loan + capital fallback when no property is entered (same as recalc).
+ * Uses the post-renovation capital to stay consistent with the derived loan.
+ */
+function feeBasisOf(s: CalculatorData): number {
+  const property = parseAmountText(s.propertyValueText)
+  if (property > 0) return property
+  const trackSum = s.tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
+  return trackSum + effectiveCapital(s)
+}
+
+/**
+ * Percent text derived from an entered ₪ amount. Kept precise (8 decimals)
+ * so the recalculated amount round-trips to the typed figure instead of
+ * drifting by rounding the percent early; trailing zeros are trimmed.
+ */
+function percentTextFromAmount(percent: number): string {
+  if (!Number.isFinite(percent) || percent <= 0) return ''
+  return String(Number(percent.toFixed(8)))
+}
+
+/** PTI ceiling stays within the 20-40% window; NaN-safe default. */
+function clampPtiThreshold(percent: number): number {
+  if (!Number.isFinite(percent)) return PTI_DEFAULT_THRESHOLD * 100
+  return Math.min(PTI_MAX_THRESHOLD * 100, Math.max(PTI_MIN_THRESHOLD * 100, percent))
 }
 
 /** Legacy syncStartingFromProperty (calculator.js:111-128). */
@@ -303,7 +407,7 @@ function syncStartingFromProperty(s: CalculatorData): void {
   } else {
     s.startingNoNeed = false
     if (s.derivedLoanMemory > 0) {
-      const gross = Math.round(s.derivedLoanMemory + parseAmountText(s.capitalText))
+      const gross = Math.round(s.derivedLoanMemory + effectiveCapital(s))
       s.startingAmountText = gross > 0 ? formatGroupedNumber(gross) : ''
       s.derivedLoanMemory = 0
     } else if (/\D/.test(s.startingAmountText.replace(/[,\s]/g, ''))) {
@@ -426,6 +530,54 @@ function recalculate(s: CalculatorState): void {
   const property = parseAmountText(s.propertyValueText)
   const capital = parseAmountText(s.capitalText)
   const income = parseAmountText(s.incomeText)
+  // Renovations (שיפוצים) are paid from savings, so they shrink the equity
+  // actually available for the down payment - every capital-based figure
+  // below (loan, capital share, LTV, closing costs) sees the reduced amount.
+  const renovations = parseAmountText(s.renovationAmountText)
+  const capitalForLoan = Math.max(0, capital - renovations)
+
+  // Shared derived figures, identical in both branches so the equity row
+  // behaves the same with and without entered tracks.
+  // Fee basis mirrors assessCapital's effective value: the property price,
+  // or loan + capital when no property is entered (the guide's fallback).
+  const trackSum = s.tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
+  const feeBasis = property > 0 ? property : trackSum + capitalForLoan
+  const transactionCosts = estimateTransactionCosts(
+    feeBasis,
+    parsePercentText(s.realtorPercentText),
+    parsePercentText(s.lawyerPercentText),
+    s.appraiserFeeText.trim() === ''
+      ? DEFAULT_APPRAISER_FEE
+      : parseAmountText(s.appraiserFeeText),
+    renovations,
+  )
+  // The ₪ fee mirrors (realtor / lawyer) always agree with the percents:
+  // VAT-inclusive whole shekels, blank when there is no basis. The percent
+  // stays canonical - typing a ₪ amount converts to the percent, and any
+  // later basis change re-derives the ₪ from that percent.
+  if (feeBasis > 0) {
+    const realtorPreVat = (parsePercentText(s.realtorPercentText) / 100) * feeBasis
+    s.realtorAmountText =
+      realtorPreVat > 0 ? formatGroupedNumber(Math.round(realtorPreVat * (1 + VAT_RATE))) : ''
+    const lawyerPreVat = lawyerFee(feeBasis, parsePercentText(s.lawyerPercentText))
+    s.lawyerAmountText =
+      lawyerPreVat > 0 ? formatGroupedNumber(Math.round(lawyerPreVat * (1 + VAT_RATE))) : ''
+  } else {
+    s.realtorAmountText = ''
+    s.lawyerAmountText = ''
+  }
+  const otherMonthly = s.otherExpenses.reduce(
+    (sum, expense) => sum + parseAmountText(expense.amountText),
+    0,
+  )
+  // One-time expenses (furniture, moving costs, etc.) are cash paid once -
+  // they draw from savings but never recur, so they join the upfront cash
+  // total and stay out of the monthly payment-to-income checks.
+  const oneTimeExpensesTotal = s.otherExpenses.reduce(
+    (sum, expense) => sum + parseAmountText(expense.oneTimeAmountText),
+    0,
+  )
+  const ptiThreshold = clampPtiThreshold(s.ptiThresholdPercent)
 
   const invalidTerm = s.tracks.some((track) => {
     const years = Number(track.yearsText)
@@ -457,7 +609,8 @@ function recalculate(s: CalculatorState): void {
   if (!enteredIndexes.length) {
     const prev = s.snapshot
     s.error = null
-    const suggested = suggestedCapital(property, 0, capital, s.purpose)
+    const suggested = suggestedCapital(property, 0, capitalForLoan, s.purpose)
+    const closing = estimateClosingCosts(property, 0, capitalForLoan, s.purpose)
     s.snapshot = {
       totals: EMPTY_TOTALS,
       overpayPercent: 0,
@@ -472,13 +625,16 @@ function recalculate(s: CalculatorState): void {
       enteredCount: 0,
       isEmpty: true,
       highestLabel: prev.highestLabel,
-      capitalAssessment: assessCapital(capital, property, 0, s.purpose),
-      ltv: assessLtv(0, property, capital, s.purpose),
+      capitalAssessment: assessCapital(capitalForLoan, property, 0, s.purpose),
+      ltv: assessLtv(0, property, capitalForLoan, s.purpose),
       dti: assessDti(0, income),
+      pti: assessPti(otherMonthly, income, ptiThreshold),
       incomePlaceholder: prev.incomePlaceholder,
       suggestedCapital: suggested,
-      capitalShortfall: capital > 0 && suggested !== null && suggested > capital,
-      closingCosts: estimateClosingCosts(property, 0, capital, s.purpose),
+      capitalShortfall: capitalForLoan > 0 && suggested !== null && suggested > capitalForLoan,
+      closingCosts: closing,
+      transactionCosts,
+      upfrontTotal: totalUpfrontCash(suggested, closing, transactionCosts, oneTimeExpensesTotal),
       avgInterestRate: 0,
       weightedAvgInterestRate: 0,
       avgPaybackRatio: 0,
@@ -519,7 +675,8 @@ function recalculate(s: CalculatorState): void {
   const totals = sumTotals(validResults)
   const combinedRows = combineSchedules(validResults)
   const firstMonthPayment = totals.firstPayment
-  const suggested = suggestedCapital(property, totalPrincipal, capital, s.purpose)
+  const suggested = suggestedCapital(property, totalPrincipal, capitalForLoan, s.purpose)
+  const closingCosts = estimateClosingCosts(property, totalPrincipal, capitalForLoan, s.purpose)
 
   // Derived metrics for the results cards (replacing the redundant
   // "total mortgage amount" card, which only echoed user input):
@@ -565,16 +722,19 @@ function recalculate(s: CalculatorState): void {
     enteredCount: validResults.length,
     isEmpty: false,
     highestLabel: resolvePaymentLabel(validResults),
-    capitalAssessment: assessCapital(capital, property, totalPrincipal, s.purpose),
-    ltv: assessLtv(totalPrincipal, property, capital, s.purpose),
+    capitalAssessment: assessCapital(capitalForLoan, property, totalPrincipal, s.purpose),
+    ltv: assessLtv(totalPrincipal, property, capitalForLoan, s.purpose),
     dti: assessDti(firstMonthPayment, income),
     incomePlaceholder:
       firstMonthPayment > 0
         ? suggestedMinimumIncome(firstMonthPayment)
         : s.snapshot.incomePlaceholder,
     suggestedCapital: suggested,
-    capitalShortfall: capital > 0 && suggested !== null && suggested > capital,
-    closingCosts: estimateClosingCosts(property, totalPrincipal, capital, s.purpose),
+    capitalShortfall: capitalForLoan > 0 && suggested !== null && suggested > capitalForLoan,
+    closingCosts: closingCosts,
+    transactionCosts,
+    upfrontTotal: totalUpfrontCash(suggested, closingCosts, transactionCosts, oneTimeExpensesTotal),
+    pti: assessPti(firstMonthPayment + otherMonthly, income, ptiThreshold),
     avgInterestRate: averageInterestRate(validResults),
     weightedAvgInterestRate: calculateWeightedAvgInterestRate(validResults),
     avgPaybackRatio: averagePaybackRatio(validResults),
@@ -604,6 +764,8 @@ function createInitialTracks(primeRate: number | null): TrackState[] {
   )
 }
 
+let nextExpenseId = 1
+
 const initialData: CalculatorData = {
   startingAmountText: '1,000,000',
   startingNoNeed: false,
@@ -619,6 +781,14 @@ const initialData: CalculatorData = {
   scheduleExpanded: false,
   primeRate: null,
   cpiAnnualChange: null,
+  realtorPercentText: String(DEFAULT_REALTOR_PERCENT),
+  lawyerPercentText: String(DEFAULT_LAWYER_PERCENT),
+  appraiserFeeText: '',
+  renovationAmountText: '',
+  realtorAmountText: '',
+  lawyerAmountText: '',
+  otherExpenses: [{ id: `expense-${nextExpenseId++}`, label: '', amountText: '', oneTimeAmountText: '' }],
+  ptiThresholdPercent: PTI_DEFAULT_THRESHOLD * 100,
 }
 
 function createInitialState(): CalculatorState {
@@ -640,6 +810,14 @@ function createInitialState(): CalculatorState {
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
+
+/** Percent input: digits and a single decimal separator only. */
+function sanitizePercentInput(raw: string): string {
+  const cleaned = raw.replace(/[^0-9.,]/g, '').replace(',', '.')
+  const firstDot = cleaned.indexOf('.')
+  if (firstDot === -1) return cleaned
+  return cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '')
+}
 
 let rebalanceClearTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -737,6 +915,130 @@ export const useCalculatorStore = create<CalculatorStore>()(
     setPurpose: (purpose) => {
       set((s) => {
         s.purpose = purpose
+        recalculate(s)
+      })
+    },
+
+    updateRealtorPercent: (raw) => {
+      const clean = sanitizePercentInput(raw)
+      set((s) => {
+        s.realtorPercentText = clean
+        recalculate(s)
+      })
+      return clean
+    },
+
+    updateLawyerPercent: (raw) => {
+      const clean = sanitizePercentInput(raw)
+      set((s) => {
+        s.lawyerPercentText = clean
+        recalculate(s)
+      })
+      return clean
+    },
+
+    updateRealtorAmount: (raw, caret) => {
+      const formatted = formatAmountWithCaret(raw, caret)
+      set((s) => {
+        const basis = feeBasisOf(s)
+        const value = parseAmountText(formatted.text)
+        // Editing the ₪ side sets the equivalent percent (the percent stays
+        // canonical); recalculate then mirrors the ₪ back from it. A cleared
+        // or zero field is not a fee - leave the percent untouched.
+        if (basis > 0 && value > 0) {
+          s.realtorPercentText = percentTextFromAmount((value / (1 + VAT_RATE) / basis) * 100)
+        }
+        recalculate(s)
+      })
+      return formatted
+    },
+
+    updateLawyerAmount: (raw, caret) => {
+      const formatted = formatAmountWithCaret(raw, caret)
+      set((s) => {
+        const basis = feeBasisOf(s)
+        const value = parseAmountText(formatted.text)
+        if (basis > 0 && value > 0) {
+          s.lawyerPercentText = percentTextFromAmount((value / (1 + VAT_RATE) / basis) * 100)
+        }
+        recalculate(s)
+      })
+      return formatted
+    },
+
+    updateAppraiserFee: (raw, caret) => {
+      const formatted = formatAmountWithCaret(raw, caret)
+      set((s) => {
+        s.appraiserFeeText = formatted.text
+        recalculate(s)
+      })
+      return formatted
+    },
+
+    updateRenovationAmount: (raw, caret) => {
+      const formatted = formatAmountWithCaret(raw, caret)
+      set((s) => {
+        s.renovationAmountText = formatted.text
+        // Renovations eat into the capital exactly like a capital edit, so
+        // the loan re-derives the same way: sync the starting amount (or the
+        // stored memory) and re-balance the tracks against the new loan.
+        syncStartingFromProperty(s)
+        fillTracksFromLoanInput(s)
+        recalculate(s)
+      })
+      return formatted
+    },
+
+    addOtherExpense: () => {
+      set((s) => {
+        if (s.otherExpenses.length >= MAX_OTHER_EXPENSES) return
+        s.otherExpenses.push({
+          id: `expense-${nextExpenseId++}`,
+          label: '',
+          amountText: '',
+          oneTimeAmountText: '',
+        })
+        recalculate(s)
+      })
+    },
+
+    updateOtherExpenseLabel: (id, label) => {
+      set((s) => {
+        const expense = s.otherExpenses.find((entry) => entry.id === id)
+        if (expense) expense.label = label
+      })
+    },
+
+    updateOtherExpenseAmount: (id, raw, caret) => {
+      const formatted = formatAmountWithCaret(raw, caret)
+      set((s) => {
+        const expense = s.otherExpenses.find((entry) => entry.id === id)
+        if (expense) expense.amountText = formatted.text
+        recalculate(s)
+      })
+      return formatted
+    },
+
+    updateOtherExpenseOneTimeAmount: (id, raw, caret) => {
+      const formatted = formatAmountWithCaret(raw, caret)
+      set((s) => {
+        const expense = s.otherExpenses.find((entry) => entry.id === id)
+        if (expense) expense.oneTimeAmountText = formatted.text
+        recalculate(s)
+      })
+      return formatted
+    },
+
+    removeOtherExpense: (id) => {
+      set((s) => {
+        s.otherExpenses = s.otherExpenses.filter((entry) => entry.id !== id)
+        recalculate(s)
+      })
+    },
+
+    setPtiThreshold: (percent) => {
+      set((s) => {
+        s.ptiThresholdPercent = clampPtiThreshold(percent)
         recalculate(s)
       })
     },
@@ -1001,6 +1303,16 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.capitalText = ''
         s.incomeText = ''
         s.purpose = 'first'
+        s.otherExpenses = [
+          { id: `expense-${nextExpenseId++}`, label: '', amountText: '', oneTimeAmountText: '' },
+        ]
+        s.realtorPercentText = String(DEFAULT_REALTOR_PERCENT)
+        s.lawyerPercentText = String(DEFAULT_LAWYER_PERCENT)
+        s.appraiserFeeText = ''
+        s.renovationAmountText = ''
+        s.realtorAmountText = ''
+        s.lawyerAmountText = ''
+        s.ptiThresholdPercent = PTI_DEFAULT_THRESHOLD * 100
         s.termYears = DEFAULT_TERM_YEARS
         s.scheduleExpanded = false
         s.activePreset = 'basket4'
