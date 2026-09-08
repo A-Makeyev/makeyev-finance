@@ -119,15 +119,23 @@ test.describe('mortgage calculator - core UI flows', () => {
     await expect(calc.summaryNotes).toContainText('הון עצמי 40% משווי הנכס')
   })
 
-  test('DTI warning triggers above half of income and suggests a minimum', async () => {
+  test('income below the required payment flags the allowance and suggests a minimum', async () => {
     await calc.setIncome('1,000')
     await expect(calc.summaryNotes).toBeVisible()
-    // Merged DTI line (bad ❌): shortfall + required minimum income.
-    await expect(calc.summaryNotes).toContainText('מהנדרש')
-    await expect(calc.summaryNotes).toContainText('הבנק יבקש הכנסה חודשית פנויה של לפחות')
-    // Suggested minimum income placeholder: ceil(7772·2/500)·500 = 16,000.
-    // Hints are plain grouped numbers - the input renders its own ₪ suffix.
-    await expect(calc.monthlyIncome).toHaveAttribute('placeholder', formatGroupedNumber(16_000))
+    // The required payment is a neutral 💡 fact line: term and figure.
+    await expect(calc.summaryNotes).toContainText('לתקופה של 15 שנה')
+    await expect(calc.summaryNotes).toContainText('7,772')
+    // Affordability line (bad ❌, short): at the 33% ceiling the 1,000 income
+    // allows ceil(1,000 × 0.33) = 330, far below the required payment, and
+    // the line names the expected payment and the minimum income that fits.
+    await expect(calc.summaryNotes).toContainText('ההכנסה לא מספיקה להחזר החודשי הצפוי')
+    await expect(calc.summaryNotes).toContainText(ils(7_772))
+    await expect(calc.summaryNotes).toContainText('33%')
+    await expect(calc.summaryNotes).toContainText(ils(1_000))
+    await expect(calc.summaryNotes).toContainText('24,000')
+    // Income hint: ceil((7772 / 0.33 + 0)/500)·500 = 24,000 - typing it makes
+    // the ceiling allowance cover the payment.
+    await expect(calc.monthlyIncome).toHaveAttribute('placeholder', formatGroupedNumber(24_000))
   })
 
   test('variable-rate cap blocks calculation and auto-fix trims variable tracks only', async () => {

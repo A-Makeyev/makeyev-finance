@@ -25,13 +25,13 @@ import {
   EMPTY_TOTALS,
   estimateClosingCosts,
   estimateTransactionCosts,
+  LAWYER_MINIMUM_FEE,
   lawyerFee,
   PTI_DEFAULT_THRESHOLD,
   PTI_MAX_THRESHOLD,
   PTI_MIN_THRESHOLD,
   DEFAULT_REALTOR_PERCENT,
   DEFAULT_LAWYER_PERCENT,
-  DEFAULT_APPRAISER_FEE,
   VAT_RATE,
   first5yInterestShare,
   firstPaymentWithRateBump,
@@ -43,7 +43,7 @@ import {
   splitLargestForNewTrack,
   sumTotals,
   suggestedCapital,
-  suggestedMinimumIncome,
+  suggestedIncomeForAllowance,
   assessPti,
   totalUpfrontCash,
   variableShareExceeded,
@@ -152,7 +152,7 @@ export interface CalculatorSnapshot {
   closingCosts: ClosingCostsEstimate | null
   /** Realtor / lawyer / appraiser estimate (VAT-inclusive per line). */
   transactionCosts: TransactionCostsEstimate | null
-  /** הון עצמי + closing costs + transaction costs, rounded up to ₪500. */
+  /** הון עצמי + purchase tax + transaction costs, rounded up to ₪500. */
   upfrontTotal: number | null
   /** Soft payment-to-income warning against the adjustable ceiling. */
   pti: PTIAssessment | null
@@ -239,6 +239,22 @@ interface CalculatorData {
   realtorAmountText: string
   /** VAT-inclusive ₪ mirror of the lawyer percent (the percent stays canonical). */
   lawyerAmountText: string
+  /** Hint for a cleared percent field: the market default it falls back to. */
+  realtorPercentHint: string | null
+  /** Hint for a cleared percent field: the market default it falls back to. */
+  lawyerPercentHint: string | null
+  /** Hint for a cleared ₪ fee field: the default fee it falls back to. */
+  realtorAmountHint: string | null
+  /** Hint for a cleared ₪ fee field: the default fee it falls back to. */
+  lawyerAmountHint: string | null
+  /** True when the ₪6,000 pre-VAT lawyer minimum overrode a typed
+   * percent/amount below it - the UI says why the field snapped up. */
+  lawyerFloorApplied: boolean
+  /** The fee that would result from the market-norm percent (VAT incl.), for
+      the above-norm warning's comparison - needs the fee basis, so null
+      without one. Computed from the NORM percent regardless of user input. */
+  realtorNormAmount: string | null
+  lawyerNormAmount: string | null
   /** Repeatable recurring monthly expenses (car loan, arrears, etc.). */
   otherExpenses: OtherExpense[]
   /** Payment-to-income ceiling in percent (20-40, default 33). */
@@ -271,8 +287,16 @@ export interface CalculatorActions {
   updateRenovationAmount(raw: string, caret: number | null): { text: string; caret: number | null }
   addOtherExpense(): void
   updateOtherExpenseLabel(id: string, label: string): void
-  updateOtherExpenseAmount(id: string, raw: string, caret: number | null): { text: string; caret: number | null }
-  updateOtherExpenseOneTimeAmount(id: string, raw: string, caret: number | null): { text: string; caret: number | null }
+  updateOtherExpenseAmount(
+    id: string,
+    raw: string,
+    caret: number | null,
+  ): { text: string; caret: number | null }
+  updateOtherExpenseOneTimeAmount(
+    id: string,
+    raw: string,
+    caret: number | null,
+  ): { text: string; caret: number | null }
   removeOtherExpense(id: string): void
   setPtiThreshold(percent: number): void
   addTrack(values?: AddTrackValues): void
@@ -355,6 +379,25 @@ function parsePercentText(text: string): number {
 }
 
 /**
+ * Effective realtor/lawyer percent for the fee estimate: a cleared field
+ * falls back to the market norm (like the property-value hint and the
+ * appraiser's default), while an explicitly typed 0 genuinely means "no
+ * fee". Sanitized input can only be '', '0', '0.' or a positive number, so
+ * '0'-prefixed strings are the typed-zero case.
+ */
+function effectiveRealtorPercent(s: CalculatorData): number {
+  const text = s.realtorPercentText.trim()
+  if (text === '') return DEFAULT_REALTOR_PERCENT
+  return parsePercentText(text)
+}
+
+function effectiveLawyerPercent(s: CalculatorData): number {
+  const text = s.lawyerPercentText.trim()
+  if (text === '') return DEFAULT_LAWYER_PERCENT
+  return parsePercentText(text)
+}
+
+/**
  * Capital actually left for the down payment after the planned renovations
  * (שיפוצים) eat into it - the renovation budget is paid from savings, so the
  * equity available shrinks and the loan grows accordingly. Never negative.
@@ -382,7 +425,9 @@ function feeBasisOf(s: CalculatorData): number {
  */
 function percentTextFromAmount(percent: number): string {
   if (!Number.isFinite(percent) || percent <= 0) return ''
-  return String(Number(percent.toFixed(8)))
+  // Max 2 decimals (user decision): the percent snaps and the ₪ mirror
+  // re-derives from the rounded percent on the next recalculate.
+  return String(Number(percent.toFixed(2)))
 }
 
 /** PTI ceiling stays within the 20-40% window; NaN-safe default. */
@@ -488,7 +533,9 @@ function fillTracksFromLoanInput(s: CalculatorState): void {
     })
     markRebalanced(
       s,
-      s.tracks.filter((track, index) => track.amountText !== before[index]).map((track) => track.id),
+      s.tracks
+        .filter((track, index) => track.amountText !== before[index])
+        .map((track) => track.id),
     )
     return
   }
@@ -544,27 +591,66 @@ function recalculate(s: CalculatorState): void {
   const feeBasis = property > 0 ? property : trackSum + capitalForLoan
   const transactionCosts = estimateTransactionCosts(
     feeBasis,
-    parsePercentText(s.realtorPercentText),
-    parsePercentText(s.lawyerPercentText),
-    s.appraiserFeeText.trim() === ''
-      ? DEFAULT_APPRAISER_FEE
-      : parseAmountText(s.appraiserFeeText),
+    effectiveRealtorPercent(s),
+    effectiveLawyerPercent(s),
+    // שמאי counts only when typed - a blank field means "no appraiser",
+    // so the default norm never silently enters the totals.
+    s.appraiserFeeText.trim() === '' ? 0 : parseAmountText(s.appraiserFeeText),
     renovations,
   )
   // The ₪ fee mirrors (realtor / lawyer) always agree with the percents:
-  // VAT-inclusive whole shekels, blank when there is no basis. The percent
-  // stays canonical - typing a ₪ amount converts to the percent, and any
-  // later basis change re-derives the ₪ from that percent.
+  // VAT-inclusive whole shekels. The percent stays canonical - typing a ₪
+  // amount converts to the percent, and any later basis change re-derives
+  // the ₪ from that percent. A cleared pair (percent AND amount blank) falls
+  // back to the market default for the estimate and shows that default as a
+  // hint placeholder in both fields - the same UX as the property-value
+  // field - so deleting a fee never gets instantly refilled. A typed 0 is a
+  // genuine "no fee": non-empty text, zero estimate, no hint.
+  // The percent defaults are basis-independent, so their hints advertise on
+  // a blank field even before any basis exists; the ₪ hints need a basis.
+  const realtorCleared = s.realtorPercentText.trim() === ''
+  const lawyerCleared = s.lawyerPercentText.trim() === ''
+  s.realtorPercentHint = realtorCleared ? String(DEFAULT_REALTOR_PERCENT) : null
+  s.lawyerPercentHint = lawyerCleared ? String(DEFAULT_LAWYER_PERCENT) : null
   if (feeBasis > 0) {
-    const realtorPreVat = (parsePercentText(s.realtorPercentText) / 100) * feeBasis
-    s.realtorAmountText =
+    const realtorPercent = effectiveRealtorPercent(s)
+    const lawyerPercent = effectiveLawyerPercent(s)
+    const realtorPreVat = (realtorPercent / 100) * feeBasis
+    const lawyerPreVat = lawyerFee(feeBasis, lawyerPercent)
+    const realtorWithVat =
       realtorPreVat > 0 ? formatGroupedNumber(Math.round(realtorPreVat * (1 + VAT_RATE))) : ''
-    const lawyerPreVat = lawyerFee(feeBasis, parsePercentText(s.lawyerPercentText))
-    s.lawyerAmountText =
+    const lawyerWithVat =
       lawyerPreVat > 0 ? formatGroupedNumber(Math.round(lawyerPreVat * (1 + VAT_RATE))) : ''
+    // The floor silently overrides any typed percent/amount whose raw fee
+    // lands below ₪6,000 (pre-VAT) - flag it so the UI can explain why the
+    // typed number moved. A cleared pair rests on the default-percent hint,
+    // not an override, so it never flags.
+    s.lawyerFloorApplied =
+      !lawyerCleared && lawyerPreVat > 0 && (lawyerPercent / 100) * feeBasis < LAWYER_MINIMUM_FEE - 1e-6
+    // The mirror only rewrites the field while a percent is typed; a cleared
+    // pair stays blank (both fields) and gets the hint instead.
+    if (!realtorCleared) s.realtorAmountText = realtorWithVat
+    else s.realtorAmountText = ''
+    if (!lawyerCleared) s.lawyerAmountText = lawyerWithVat
+    else s.lawyerAmountText = ''
+    s.realtorAmountHint = realtorCleared ? realtorWithVat || null : null
+    s.lawyerAmountHint = lawyerCleared ? lawyerWithVat || null : null
+    // The norm comparison for the warning line: what the fee WOULD be at the
+    // market-norm percent (lawyer keeps its floor), independent of input.
+    s.realtorNormAmount = formatGroupedNumber(
+      Math.round((DEFAULT_REALTOR_PERCENT / 100) * feeBasis * (1 + VAT_RATE)),
+    )
+    s.lawyerNormAmount = formatGroupedNumber(
+      Math.round(lawyerFee(feeBasis, DEFAULT_LAWYER_PERCENT) * (1 + VAT_RATE)),
+    )
   } else {
     s.realtorAmountText = ''
     s.lawyerAmountText = ''
+    s.realtorAmountHint = null
+    s.lawyerAmountHint = null
+    s.lawyerFloorApplied = false
+    s.realtorNormAmount = null
+    s.lawyerNormAmount = null
   }
   const otherMonthly = s.otherExpenses.reduce(
     (sum, expense) => sum + parseAmountText(expense.amountText),
@@ -696,9 +782,7 @@ function recalculate(s: CalculatorState): void {
   const firstPaymentRateDown1 = firstPaymentWithRateBump(validResults, -1, inflation)
   const first5yInterestSharePercent = first5yInterestShare(validResults)
   const paymentPer100kValue = paymentPer100k(validResults)
-  const firstMonthInterest = combinedRows[0]
-    ? combinedRows[0].interest / 12
-    : 0
+  const firstMonthInterest = combinedRows[0] ? combinedRows[0].interest / 12 : 0
   const firstPaymentInterestShare =
     firstMonthPayment > 0 ? (firstMonthInterest / firstMonthPayment) * 100 : 0
   const row5 = combinedRows.find((row) => row.year === 5)
@@ -727,7 +811,10 @@ function recalculate(s: CalculatorState): void {
     dti: assessDti(firstMonthPayment, income),
     incomePlaceholder:
       firstMonthPayment > 0
-        ? suggestedMinimumIncome(firstMonthPayment)
+        ? // Allowance-based hint: the income at which the ceiling allowance
+          // (the PTI share of income minus liabilities) covers the required
+          // payment, matching the summary's monthlyAllowance line.
+          suggestedIncomeForAllowance(firstMonthPayment, otherMonthly, ptiThreshold)
         : s.snapshot.incomePlaceholder,
     suggestedCapital: suggested,
     capitalShortfall: capitalForLoan > 0 && suggested !== null && suggested > capitalForLoan,
@@ -781,13 +868,24 @@ const initialData: CalculatorData = {
   scheduleExpanded: false,
   primeRate: null,
   cpiAnnualChange: null,
-  realtorPercentText: String(DEFAULT_REALTOR_PERCENT),
-  lawyerPercentText: String(DEFAULT_LAWYER_PERCENT),
+  // Fee percents start blank: the market defaults price the estimate and
+  // surface only as hint placeholders until the user types a value.
+  realtorPercentText: '',
+  lawyerPercentText: '',
   appraiserFeeText: '',
   renovationAmountText: '',
   realtorAmountText: '',
   lawyerAmountText: '',
-  otherExpenses: [{ id: `expense-${nextExpenseId++}`, label: '', amountText: '', oneTimeAmountText: '' }],
+  realtorPercentHint: String(DEFAULT_REALTOR_PERCENT),
+  lawyerPercentHint: String(DEFAULT_LAWYER_PERCENT),
+  realtorAmountHint: null,
+  lawyerAmountHint: null,
+  lawyerFloorApplied: false,
+  realtorNormAmount: null,
+  lawyerNormAmount: null,
+  otherExpenses: [
+    { id: `expense-${nextExpenseId++}`, label: '', amountText: '', oneTimeAmountText: '' },
+  ],
   ptiThresholdPercent: PTI_DEFAULT_THRESHOLD * 100,
 }
 
@@ -811,9 +909,12 @@ function createInitialState(): CalculatorState {
 // Store
 // ---------------------------------------------------------------------------
 
-/** Percent input: digits and a single decimal separator only. */
+/** Percent input: digits and a single decimal separator, max 2 decimals. */
 function sanitizePercentInput(raw: string): string {
-  const cleaned = raw.replace(/[^0-9.,]/g, '').replace(',', '.')
+  const cleaned = raw
+    .replace(/[^0-9.,]/g, '')
+    .replace(',', '.')
+    .replace(/(\.\d\d)\d+/, '$1')
   const firstDot = cleaned.indexOf('.')
   if (firstDot === -1) return cleaned
   return cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '')
@@ -923,6 +1024,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
       const clean = sanitizePercentInput(raw)
       set((s) => {
         s.realtorPercentText = clean
+        // Clearing the percent clears its ₪ mirror with it: the pair goes
+        // blank and recalculate shows the market default as hints.
+        if (clean === '') s.realtorAmountText = ''
         recalculate(s)
       })
       return clean
@@ -932,6 +1036,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       const clean = sanitizePercentInput(raw)
       set((s) => {
         s.lawyerPercentText = clean
+        if (clean === '') s.lawyerAmountText = ''
         recalculate(s)
       })
       return clean
@@ -944,9 +1049,12 @@ export const useCalculatorStore = create<CalculatorStore>()(
         const value = parseAmountText(formatted.text)
         // Editing the ₪ side sets the equivalent percent (the percent stays
         // canonical); recalculate then mirrors the ₪ back from it. A cleared
-        // or zero field is not a fee - leave the percent untouched.
+        // or zero field is not a fee - restore the default percent so the
+        // field pair falls back to the market norm, like the property hint.
         if (basis > 0 && value > 0) {
           s.realtorPercentText = percentTextFromAmount((value / (1 + VAT_RATE) / basis) * 100)
+        } else if (basis > 0) {
+          s.realtorPercentText = ''
         }
         recalculate(s)
       })
@@ -960,6 +1068,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
         const value = parseAmountText(formatted.text)
         if (basis > 0 && value > 0) {
           s.lawyerPercentText = percentTextFromAmount((value / (1 + VAT_RATE) / basis) * 100)
+        } else if (basis > 0) {
+          s.lawyerPercentText = ''
         }
         recalculate(s)
       })
@@ -1095,7 +1205,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
         if (parseAmountText(s.propertyValueText) > 0) {
           const updated = redistributeTrackAmounts(
             parseAmountText(formatted.text),
-            s.tracks.filter((_, i) => i !== index).map((other) => parseAmountText(other.amountText)),
+            s.tracks
+              .filter((_, i) => i !== index)
+              .map((other) => parseAmountText(other.amountText)),
             getLoanAmount(s),
           )
           if (updated) {
@@ -1306,12 +1418,17 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.otherExpenses = [
           { id: `expense-${nextExpenseId++}`, label: '', amountText: '', oneTimeAmountText: '' },
         ]
-        s.realtorPercentText = String(DEFAULT_REALTOR_PERCENT)
-        s.lawyerPercentText = String(DEFAULT_LAWYER_PERCENT)
+        s.realtorPercentText = ''
+        s.lawyerPercentText = ''
         s.appraiserFeeText = ''
         s.renovationAmountText = ''
         s.realtorAmountText = ''
         s.lawyerAmountText = ''
+        s.realtorPercentHint = String(DEFAULT_REALTOR_PERCENT)
+        s.lawyerPercentHint = String(DEFAULT_LAWYER_PERCENT)
+        s.realtorAmountHint = null
+        s.lawyerAmountHint = null
+        s.lawyerFloorApplied = false
         s.ptiThresholdPercent = PTI_DEFAULT_THRESHOLD * 100
         s.termYears = DEFAULT_TERM_YEARS
         s.scheduleExpanded = false

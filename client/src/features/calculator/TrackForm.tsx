@@ -1,5 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { MAX_YEARS, TRACK_TYPES, type AmortizationMethod, type TrackType } from '@/lib/amortization'
+import {
+  MAX_RATE_PERCENT,
+  MAX_YEARS,
+  TRACK_TYPES,
+  type AmortizationMethod,
+  type TrackType,
+} from '@/lib/amortization'
 import { useCalculatorStore, type TrackState } from '@/stores/calculatorStore'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { FlipSelect } from '@/components/ui/FlipSelect'
@@ -97,7 +103,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
           <input
             type="number"
             min={0}
-            max={30}
+            max={MAX_RATE_PERCENT}
             step={0.01}
             value={track.rateText}
             onInput={(event) => updateTrackRate(track.id, event.currentTarget.value)}

@@ -155,6 +155,13 @@ html {
      every input/label/button vs the original metrics (56px inputs, 62px
      button). UA `normal` restores the legacy geometry site-wide. */
   line-height: normal;
+  /* The site never scrolls horizontally by design, but Windows font
+     rendering and zoom rounding can poke an element a fraction of a pixel
+     past the viewport, and Chrome then shows a page-width horizontal
+     scrollbar at the bottom edge (mostly on hover). Clip it: vertical
+     scrolling is untouched, and anything displaced this slightly is not
+     reachable content anyway. */
+  overflow-x: clip;
 }
 
 body {
@@ -2464,6 +2471,15 @@ e #name,
   margin-top: 0;
 }
 
+/* Why a typed lawyer fee snapped up: the ₪6,000 pre-VAT minimum took over.
+   Muted one-liner under the lawyer pair - an explanation, not an error. */
+.fee-floor-note {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--calc-muted);
+}
+
 .percent-wrap input {
   min-width: 0;
 }
@@ -3265,19 +3281,30 @@ e #name,
 }
 
 /* While a card cascade plays the button is hidden (React toggles
-   .is-visible once the cascade ends); it fades in smoothly and stays
-   unclickable while invisible. */
+   .is-visible once the cascade ends) and stays unclickable while
+   invisible. The hide must be instant: the old base rule transitioned
+   opacity over 0.4s on removal too, so collapsing left the button
+   fading out for 400ms instead of vanishing (pointer-events is not
+   animatable, so it flipped immediately regardless). CSS takes the
+   transition from the destination state, so the base (hidden) rule gets
+   a 0s opacity transition - instant hide - while .is-visible restores
+   the smooth fade for showing. */
 .results-toggle {
   opacity: 0;
   pointer-events: none;
   transition:
-    opacity 0.4s ease-out,
+    opacity 0s linear,
     color 0.2s ease;
 }
 
 .results-toggle.is-visible {
   opacity: 1;
   pointer-events: auto;
+  /* Visible state restores the smooth fade; the delayed 0s transition in
+     the base rule would otherwise also delay showing (see there). */
+  transition:
+    opacity 0.4s ease-out,
+    color 0.2s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3452,7 +3479,7 @@ e #name,
   flex-direction: row;
   flex-wrap: wrap;
   gap: 6px 20px;
-  padding: 0 8px 10px;
+  padding: 0 8px 26px;
   direction: rtl;
 }
 
@@ -3464,6 +3491,9 @@ e #name,
   flex: 1;
   min-width: 0;
   width: 100%;
+  /* Anchor for the hover tooltip, which is absolutely positioned inside
+     the plot (same pattern as .amort-chart above). */
+  position: relative;
 }
 
 .chart-legend-name {
@@ -3480,7 +3510,7 @@ e #name,
   display: flex;
   flex-wrap: wrap;
   gap: 6px 20px;
-  padding: 0 8px 10px;
+  padding: 0 8px 26px;
   color: var(--calc-ink);
   font-size: 0.9rem;
   font-weight: 700;
@@ -3527,6 +3557,17 @@ e #name,
 .chart-grid {
   stroke: var(--calc-line);
   stroke-width: 1;
+}
+
+/* Secondary (balance) axis grid in the amortization chart: dashed and
+   tinted with the balance color at low opacity. It shares its rows with
+   the solid payments grid (aligned dual-axis ticks in charts.ts) - the
+   dash pattern and tint keep the right-axis labels reading as the
+   balance line's scale, not the bars'. */
+.chart-grid-balance {
+  stroke: var(--chart-balance, #111111);
+  stroke-dasharray: 3 4;
+  opacity: 0.14;
 }
 
 .chart-tick {
@@ -3642,6 +3683,30 @@ e #name,
   stroke-linecap: round;
 }
 
+/* Hover emphasis on the line nearest the cursor: heavier stroke and full
+   opacity while the others drop back, so overlapping lines are readable.
+   A transition without a delayed 0s flip keeps both switches smooth. */
+.chart-line-track {
+  transition:
+    opacity 0.15s ease,
+    stroke-width 0.15s ease;
+}
+
+.chart-line-track.is-active {
+  stroke-width: 5;
+}
+
+.per-track-chart:hover .chart-line-track:not(.is-active) {
+  opacity: 0.45;
+}
+
+/* Hover markers on each line at the hovered year (per-track chart). */
+.chart-dot-track {
+  stroke: white;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
 .chart-dot {
   fill: var(--chart-balance, #111111);
   stroke: white;
@@ -3670,6 +3735,34 @@ e #name,
 
 .chart-tooltip strong {
   color: var(--calc-teal-dark);
+}
+
+/* Per-track tooltip: rows are track color swatch + name + balance. The
+   per-track band forces LTR for its layout (donut left, chart right), so
+   on the Hebrew page the tooltip explicitly restores RTL - the year title
+   right-aligns, each row's swatch sits to the right of the name, and rows
+   inherit it. English overrides back to LTR (same pattern as the chart
+   legend above). */
+.per-track-chart .chart-tooltip {
+  direction: rtl;
+}
+
+:root[dir='ltr'] .per-track-chart .chart-tooltip {
+  direction: ltr;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-tooltip-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 2px;
 }
 
 .amort-chart {
@@ -3914,6 +4007,15 @@ e #name,
 
 .table-wrap {
   overflow-x: auto;
+  /* Hide the horizontal scrollbar thumb (wide tables still scroll by
+     wheel, touch and keyboard - same treatment as the vertical scrollbar
+     in .schedule-content .table-wrap below). */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.table-wrap::-webkit-scrollbar {
+  display: none;
 }
 
 /* Scrollable schedule table: cap the height so long schedules (30 years, or
@@ -3933,6 +4035,17 @@ e #name,
 }
 
 .schedule-content .table-wrap::-webkit-scrollbar {
+  display: none;
+}
+
+/* Wishlist panel list: hide the scrollbar handle - the list still scrolls
+   by wheel, touch and keyboard (same treatment as the schedule tables). */
+.wishlist-list {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.wishlist-list::-webkit-scrollbar {
   display: none;
 }
 

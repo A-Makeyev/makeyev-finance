@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  alignedDualTicks,
   arcPath,
   donutSegments,
   formatAxisShekel,
@@ -52,6 +53,95 @@ describe('niceTicks', () => {
 
   it('still shows the true max when it clears the round grid', () => {
     expect(niceTicks(140_000)).toEqual([0, 50_000, 100_000, 140_000])
+  })
+
+  it('drops the max tick when its axis label matches the last round tick', () => {
+    // A ~8.2K payment max: the round grid ends at 7,500 (2.5K step) and the
+    // true max passes the quarter-step overlap check, but ₪7,500 and ₪8,200
+    // both print as "₪8K" - the axis showed the same label twice. The max
+    // tick only stays when its label differs from the one below it.
+    const ticks = niceTicks(8_200)
+    expect(ticks).toEqual([0, 2_500, 5_000, 7_500])
+    expect(new Set(ticks.map((tick) => formatAxisShekel(tick))).size).toBe(ticks.length)
+  })
+
+  it('keeps the max tick when its label differs from the last round tick', () => {
+    // 9K clears 7,500 by a full step and prints as ₪9K - a distinct label.
+    expect(niceTicks(9_000)).toEqual([0, 2_500, 5_000, 7_500, 9_000])
+  })
+})
+
+describe('alignedDualTicks', () => {
+  it('gives both axes the same gridline rows on a typical loan', () => {
+    // 60K yearly payments vs 800K balance: 4 intervals wins (payments step
+    // 20K with an 80K top; balance keeps 200K steps) - the alternative
+    // counts force one axis into 50%+ headroom.
+    const result = alignedDualTicks(60_000, 800_000)
+    expect(result).not.toBeNull()
+    expect(result!.intervals).toBe(4)
+    expect(result!.paymentTicks).toEqual([0, 20_000, 40_000, 60_000, 80_000])
+    expect(result!.balanceTicks).toEqual([0, 200_000, 400_000, 600_000, 800_000])
+    expect(result!.scaleMaxPayment).toBe(80_000)
+    expect(result!.scaleMaxBalance).toBe(800_000)
+    // No series clips above the top gridline.
+    expect(result!.scaleMaxPayment).toBeGreaterThanOrEqual(60_000)
+    expect(result!.scaleMaxBalance).toBeGreaterThanOrEqual(800_000)
+  })
+
+  it('places both tick sets at identical fractions of their scale tops', () => {
+    // The property the whole alignment is for: tick i sits at i/intervals
+    // on both axes, so the solid and dashed gridlines coincide.
+    const result = alignedDualTicks(60_000, 800_000)!
+    expect(result.paymentTicks).toHaveLength(result.balanceTicks.length)
+    result.paymentTicks.forEach((tick, index) => {
+      expect(tick / result.scaleMaxPayment).toBeCloseTo(
+        result.balanceTicks[index] / result.scaleMaxBalance,
+      )
+    })
+  })
+
+  it('uses a 2.5-family step when that lands both scales exactly on their max', () => {
+    // 50K payments / 2.5M balance: 5 intervals gives both axes zero
+    // headroom (10K and 500K steps) - no other count comes close.
+    const result = alignedDualTicks(50_000, 2_500_000)
+    expect(result!.intervals).toBe(5)
+    expect(result!.paymentTicks).toEqual([0, 10_000, 20_000, 30_000, 40_000, 50_000])
+    expect(result!.balanceTicks).toEqual([0, 500_000, 1_000_000, 1_500_000, 2_000_000, 2_500_000])
+    expect(result!.scaleMaxPayment).toBe(50_000)
+    expect(result!.scaleMaxBalance).toBe(2_500_000)
+  })
+
+  it('skips a count whose axis labels collide (1,500 and 2,000 both print "₪2K")', () => {
+    // 1,800 payments / 5,000 balance: 4-7 intervals snap the payments step
+    // to 500, whose grid puts 1,500 and 2,000 on the axis - both print
+    // "₪2K". Those counts are disqualified, so the search falls back to 2
+    // intervals (1K / 2.5K steps), the least-headroom collision-free one.
+    const result = alignedDualTicks(1_800, 5_000)
+    expect(result!.intervals).toBe(2)
+    expect(result!.paymentTicks).toEqual([0, 1_000, 2_000])
+    expect(result!.balanceTicks).toEqual([0, 2_500, 5_000])
+    // Whatever the inputs, the winner never repeats an axis label.
+    const paymentLabels = result!.paymentTicks.map((tick) => formatAxisShekel(tick))
+    const balanceLabels = result!.balanceTicks.map((tick) => formatAxisShekel(tick))
+    expect(new Set(paymentLabels).size).toBe(paymentLabels.length)
+    expect(new Set(balanceLabels).size).toBe(balanceLabels.length)
+  })
+
+  it('breaks a headroom tie toward the target count', () => {
+    // Equal maxima: 2 and 4 intervals both land exactly on the max; the
+    // one closer to the target of 4 wins.
+    const result = alignedDualTicks(100_000, 100_000)
+    expect(result!.intervals).toBe(4)
+    expect(result!.paymentTicks).toEqual([0, 25_000, 50_000, 75_000, 100_000])
+    expect(result!.balanceTicks).toEqual([0, 25_000, 50_000, 75_000, 100_000])
+  })
+
+  it('returns null for unusable maxima (caller falls back to niceTicks)', () => {
+    expect(alignedDualTicks(0, 800_000)).toBeNull()
+    expect(alignedDualTicks(60_000, 0)).toBeNull()
+    expect(alignedDualTicks(Number.NaN, 800_000)).toBeNull()
+    expect(alignedDualTicks(60_000, Number.POSITIVE_INFINITY)).toBeNull()
+    expect(alignedDualTicks(-5, 800_000)).toBeNull()
   })
 })
 
@@ -106,8 +196,23 @@ describe('xAxisTicks', () => {
   it('labels every year for typical 15-18 year terms', () => {
     const ticks = xAxisTicks(17, false)
     expect(ticks.map((tick) => tick.label)).toEqual([
-      '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
-      '11', '12', '13', '14', '15', '16', '17',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10',
+      '11',
+      '12',
+      '13',
+      '14',
+      '15',
+      '16',
+      '17',
     ])
   })
 
@@ -115,7 +220,21 @@ describe('xAxisTicks', () => {
     const ticks = xAxisTicks(30, false)
     const labeled = ticks.filter((tick) => tick.label !== null)
     expect(labeled.map((tick) => tick.label)).toEqual([
-      '1', '3', '5', '7', '9', '11', '13', '15', '17', '19', '21', '23', '25', '27', '29',
+      '1',
+      '3',
+      '5',
+      '7',
+      '9',
+      '11',
+      '13',
+      '15',
+      '17',
+      '19',
+      '21',
+      '23',
+      '25',
+      '27',
+      '29',
     ])
     // Minor ticks fill the gaps.
     expect(ticks.length).toBe(30)

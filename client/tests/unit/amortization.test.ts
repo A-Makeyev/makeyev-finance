@@ -14,6 +14,7 @@ import {
   combineSchedules,
   computePurchaseTax,
   computeTrackResult,
+  DEFAULT_LAWYER_PERCENT,
   deriveLoanAmount,
   distributeEqually,
   effectiveAnnualRatePercent,
@@ -29,6 +30,9 @@ import {
   suggestedCapital,
   suggestedMinimumIncome,
   suggestedMinimumIncomeForPayment,
+  suggestedIncomeForAllowance,
+  allowedMonthlyPayment,
+  paymentExceedsAllowed,
   suggestedMortgagePayment,
   suggestedPropertyValue,
   totalUpfrontCash,
@@ -300,20 +304,16 @@ describe('redistributeTrackAmounts', () => {
     // Loan 1,544,000: editing track 1 to 386,000 leaves 1,158,000, split
     // 50/50 between two 772,000 tracks.
     expect(redistributeTrackAmounts(386_000, [772_000, 772_000], 1_544_000)).toEqual([
-      579_000,
-      579_000,
+      579_000, 579_000,
     ])
   })
 
   it('keeps the proportions of the others, last track absorbing rounding', () => {
     expect(redistributeTrackAmounts(400_000, [100_000, 300_000], 1_000_000)).toEqual([
-      150_000,
-      450_000,
+      150_000, 450_000,
     ])
     expect(redistributeTrackAmounts(1, [100_000, 100_000, 100_000], 1_000_003)).toEqual([
-      333_334,
-      333_334,
-      333_334,
+      333_334, 333_334, 333_334,
     ])
   })
 
@@ -326,13 +326,10 @@ describe('redistributeTrackAmounts', () => {
     // that share the loan equally - the freed money is never dumped onto
     // whichever survivor was largest.
     expect(redistributeTrackAmounts(0, [1_125_000, 375_000], 2_000_000)).toEqual([
-      1_000_000,
-      1_000_000,
+      1_000_000, 1_000_000,
     ])
     expect(redistributeTrackAmounts(0, [100_000, 100_000, 100_000], 1_000_003)).toEqual([
-      333_334,
-      333_334,
-      333_335,
+      333_334, 333_334, 333_335,
     ])
   })
 
@@ -506,15 +503,15 @@ describe('computePurchaseTax (מס רכישה progressive brackets)', () => {
     )
     expect(computePurchaseTax(7_000_000, 'first')).toBeCloseTo(
       0.035 * (2_347_040 - 1_978_745) +
-      0.05 * (6_055_070 - 2_347_040) +
-      0.08 * (7_000_000 - 6_055_070),
+        0.05 * (6_055_070 - 2_347_040) +
+        0.08 * (7_000_000 - 6_055_070),
       2,
     )
     expect(computePurchaseTax(25_000_000, 'first')).toBeCloseTo(
       0.035 * (2_347_040 - 1_978_745) +
-      0.05 * (6_055_070 - 2_347_040) +
-      0.08 * (20_183_565 - 6_055_070) +
-      0.1 * (25_000_000 - 20_183_565),
+        0.05 * (6_055_070 - 2_347_040) +
+        0.08 * (20_183_565 - 6_055_070) +
+        0.1 * (25_000_000 - 20_183_565),
       2,
     )
   })
@@ -571,11 +568,18 @@ describe('estimateClosingCosts (side costs + purchase tax)', () => {
     expect(big.purchaseTaxPercent).toBeCloseTo((expected / 7_000_000) * 100, 1)
   })
 
-  it('omits the estimate for values too small to be a real home', () => {
-    expect(estimateClosingCosts(15, 0, 0, 'investment')).toBeNull()
-    expect(estimateClosingCosts(99_999, 0, 0, 'first')).toBeNull()
+  it('estimates any positive value - small values no longer vanish', () => {
+    expect(estimateClosingCosts(15, 0, 0, 'first')).not.toBeNull()
+    // 99,999: purchase tax 0 (inside the first-home exemption), side costs 1.5% → 1,500.
+    const small = estimateClosingCosts(99_999, 0, 0, 'first')!
+    expect(small.purchaseTax).toBe(0)
+    expect(small.sideCosts).toBe(1_500)
     expect(estimateClosingCosts(100_000, 0, 0, 'investment')!.purchaseTax).toBe(8_000)
-    expect(estimateClosingCosts(0, 50_000, 20_000, 'first')).toBeNull()
+    // Loan + capital fallback: 70,000 → side costs 1,050 ceiled to ₪500 = 1,500, first-home tax 0.
+    const fallback = estimateClosingCosts(0, 50_000, 20_000, 'first')!
+    expect(fallback.sideCosts).toBe(1_500)
+    expect(fallback.purchaseTax).toBe(0)
+    expect(estimateClosingCosts(0, 0, 0, 'first')).toBeNull()
   })
 })
 
@@ -1019,7 +1023,7 @@ describe('estimateTransactionCosts', () => {
     expect(estimateTransactionCosts(-5, 2, 1, 3_000)).toBeNull()
   })
 
-  it('handles zero percents (percent-less lawyer falls back to the minimum)', () => {
+  it('zero percents mean no realtor fee and the lawyer minimum floor', () => {
     const costs = estimateTransactionCosts(500_000, 0, 0, 0)!
     expect(costs.realtorPreVat).toBe(0)
     expect(costs.realtor).toBe(0)
@@ -1045,31 +1049,48 @@ describe('estimateTransactionCosts', () => {
   })
 })
 
+describe('market-norm fee defaults', () => {
+  it('prices the lawyer at 0.5 percent', () => {
+    expect(DEFAULT_LAWYER_PERCENT).toBe(0.5)
+  })
+})
+
 describe('totalUpfrontCash', () => {
-  it('sums capital + closing costs + transaction costs, rounded up to ₪500', () => {
-    // 800,000 + 12,300 + 38,940 = 851,240 → ceil to ₪500 = 851,500.
-    const closing = { total: 12_300 } as never
+  it('sums capital + purchase tax + transaction costs exactly, no rounding', () => {
+    // Only the closing estimate's purchaseTax enters - its sideCosts item
+    // (lawyer/surveyor) is already priced by the itemized fee fields, and
+    // adding both charged them twice. 800,000 + 12,300 tax + 38,940 fees =
+    // 851,240 exactly - every shekel traces to a shown line item.
+    const closing = { total: 51_240, purchaseTax: 12_300 } as never
     const tx = { total: 38_940 } as never
-    expect(totalUpfrontCash(800_000, closing, tx)).toBe(851_500)
+    expect(totalUpfrontCash(800_000, closing, tx)).toBe(851_240)
+  })
+
+  it("ignores the closing estimate's side costs entirely", () => {
+    // Same purchase tax, inflated sideCosts: the total must not move.
+    const withHugeSides = { total: 200_000, purchaseTax: 12_300 } as never
+    const tx = { total: 38_940 } as never
+    expect(totalUpfrontCash(800_000, withHugeSides, tx)).toBe(851_240)
   })
 
   it('returns null only when there is no basis at all', () => {
     expect(totalUpfrontCash(0, null, null)).toBeNull()
-    expect(totalUpfrontCash(0, { total: 5_000 } as never, null)).toBe(5_000)
-    expect(totalUpfrontCash(0, null, { total: 7_080 } as never)).toBe(7_500)
+    expect(totalUpfrontCash(0, { total: 5_000, purchaseTax: 5_000 } as never, null)).toBe(5_000)
+    expect(totalUpfrontCash(0, { total: 5_000, purchaseTax: 0 } as never, null)).toBe(0)
+    expect(totalUpfrontCash(0, null, { total: 7_080 } as never)).toBe(7_080)
   })
 
   it('treats negative required capital (surplus) as zero contribution', () => {
-    // requiredCapital −5,000 + tx 7,080 = 2,080 → 2,500. Surplus subtracts,
+    // requiredCapital −5,000 + tx 7,080 = 2,080 exactly. Surplus subtracts,
     // matching suggestedCapital semantics rather than clamping silently.
-    expect(totalUpfrontCash(-5_000, null, { total: 7_080 } as never)).toBe(2_500)
+    expect(totalUpfrontCash(-5_000, null, { total: 7_080 } as never)).toBe(2_080)
   })
 
   it('adds one-time expenses to the upfront total', () => {
-    // 800,000 + 12,300 + 38,940 + 10,000 one-time = 861,240 → 861,500.
-    const closing = { total: 12_300 } as never
+    // 800,000 + 12,300 tax + 38,940 + 10,000 one-time = 861,240 exactly.
+    const closing = { total: 51_240, purchaseTax: 12_300 } as never
     const tx = { total: 38_940 } as never
-    expect(totalUpfrontCash(800_000, closing, tx, 10_000)).toBe(861_500)
+    expect(totalUpfrontCash(800_000, closing, tx, 10_000)).toBe(861_240)
   })
 
   it('one-time expenses alone keep the total visible; omitted defaults to 0', () => {
@@ -1124,3 +1145,91 @@ describe('suggestedMinimumIncomeForPayment', () => {
     expect(suggestedMinimumIncomeForPayment(6_600, 33)).toBe(20_000)
   })
 })
+
+describe('suggestedIncomeForAllowance', () => {
+  it('suggests the income whose ceiling allowance covers the payment', () => {
+    // At the default 33% ceiling: 8,716 / 0.33 = 26,412.12 → ceil to ₪500 =
+    // 26,500. Typing 26,500 yields allowance ceil(26,500 × 0.33) = 8,745 ≥
+    // 8,716, so the hint and the summary line agree.
+    expect(suggestedIncomeForAllowance(8_716, 0)).toBe(26_500)
+    // 8,716 / 0.33 = 26,412.12 + 2,000 liabilities = 28,412.12 → 28,500.
+    expect(suggestedIncomeForAllowance(8_716, 2_000)).toBe(28_500)
+    // At a 100% ceiling the allowance is income minus liabilities, so the
+    // hint degrades to the legacy payment + liabilities rule.
+    expect(suggestedIncomeForAllowance(5_000, 2_000, 100)).toBe(7_000)
+    // 6,000 / 0.4 = 15,000 exactly; the allowance at that income equals the
+    // payment, so the verdict stays green (exceeding is a strict >).
+    expect(suggestedIncomeForAllowance(6_000, 0, 40)).toBe(15_000)
+  })
+
+  it('is null without a positive payment', () => {
+    expect(suggestedIncomeForAllowance(0, 0)).toBeNull()
+    expect(suggestedIncomeForAllowance(-100, 500)).toBeNull()
+    expect(suggestedIncomeForAllowance(Number.NaN, 0)).toBeNull()
+  })
+
+  it('treats NaN/negative liabilities as zero', () => {
+    // 5,000 / 0.33 = 15,151.52 → ceil to ₪500 = 15,500.
+    expect(suggestedIncomeForAllowance(5_000, Number.NaN)).toBe(15_500)
+    expect(suggestedIncomeForAllowance(5_000, -2_000)).toBe(15_500)
+  })
+
+  it('round-trips with allowedMonthlyPayment (hint consistency)', () => {
+    // Whatever the hint suggests, the allowance at that income must cover
+    // the payment - this is the exact property the UI depends on.
+    for (const [payment, liabilities, threshold] of [
+      [37_664.48, 0, 33],
+      [9_641, 2_000, 33],
+      [5_000.01, 1_234, 33],
+      [8_000, 500, 40],
+    ] as const) {
+      const hinted = suggestedIncomeForAllowance(payment, liabilities, threshold)
+      expect(hinted).not.toBeNull()
+      expect(
+        paymentExceedsAllowed(payment, allowedMonthlyPayment(hinted!, liabilities, threshold)),
+      ).toBe(false)
+    }
+  })
+})
+
+describe('allowedMonthlyPayment', () => {
+  it('applies the adjustable ceiling to disposable income', () => {
+    // Default 33% ceiling: (15,000 - 2,000) × 0.33 = 4,290.
+    expect(allowedMonthlyPayment(15_000, 2_000)).toBe(4_290)
+    // (12,340 - 3,000) × 0.33 = 3,082.2 → ceiled to the whole shekel = 3,083.
+    expect(allowedMonthlyPayment(12_340, 3_000)).toBe(3_083)
+    // Explicit ceilings: 40% of 20,000 = 8,000; at 100% the old
+    // income-minus-liabilities rule comes back unchanged.
+    expect(allowedMonthlyPayment(20_000, 0, 40)).toBe(8_000)
+    expect(allowedMonthlyPayment(10_000, 0, 100)).toBe(10_000)
+  })
+
+  it('never goes negative: liabilities above income clamp to 0', () => {
+    expect(allowedMonthlyPayment(5_000, 7_000)).toBe(0)
+  })
+
+  it('is null without income', () => {
+    expect(allowedMonthlyPayment(0, 2_000)).toBeNull()
+    expect(allowedMonthlyPayment(-100, 0)).toBeNull()
+    expect(allowedMonthlyPayment(Number.NaN, 0)).toBeNull()
+  })
+
+  it('treats NaN liabilities as zero', () => {
+    // 10,000 × 0.33 = 3,300.
+    expect(allowedMonthlyPayment(10_000, Number.NaN)).toBe(3_300)
+  })
+})
+
+describe('paymentExceedsAllowed', () => {
+  it('is false when the payment fits or the allowance is null', () => {
+    expect(paymentExceedsAllowed(9_641, 13_000)).toBe(false)
+    expect(paymentExceedsAllowed(13_000, 13_000)).toBe(false)
+    expect(paymentExceedsAllowed(9_641, null)).toBe(false)
+  })
+
+  it('is true only when the payment is strictly above the allowance', () => {
+    expect(paymentExceedsAllowed(13_001, 13_000)).toBe(true)
+  })
+})
+
+

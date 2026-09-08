@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
-import { formatAxisShekel, niceTicks, xAxisTicks } from '@/lib/charts'
+import { alignedDualTicks, formatAxisShekel, niceTicks, xAxisTicks } from '@/lib/charts'
+import { useTooltipClamp } from '@/hooks/useTooltipClamp'
 
 /** One chart-ready period row - mapped from the schedule table's source. */
 export interface ChartPeriodRow {
@@ -34,12 +35,19 @@ const MAX_BARS = 40
 
 /**
  * Amortization chart: stacked קרן/ריבית bars (or a continuous area for the
- * monthly horizon) with the remaining יתרה overlaid on a second axis. Fed
- * from the exact rows the schedule table renders - same source of truth.
+ * monthly horizon) with the remaining יתרה overlaid on a second axis. The
+ * two axes share one gridline count (alignedDualTicks) so the solid
+ * payments grid and the dashed balance grid sit on the same rows. Fed from
+ * the exact rows the schedule table renders - same source of truth.
  */
 export function AmortizationChart({ rows, periodLabel, monthly = false }: AmortizationChartProps) {
   const { t } = useTranslation()
   const [active, setActive] = useState<number | null>(null)
+  // Tooltip element + chart container, for the edge-clamp hook.
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const plotRef = useRef<HTMLDivElement | null>(null)
+  // Re-clamp whenever the tooltip re-anchors to another period.
+  useTooltipClamp(tooltipRef, plotRef, active)
 
   const geometry = useMemo(() => {
     if (rows.length === 0) return null
@@ -54,16 +62,22 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
     const plotW = INNER_W - pad * 2
     const slot = plotW / rows.length
     const x = (index: number) => MARGIN.left + pad + slot * (index + 0.5)
-    const yPayment = (value: number) => MARGIN.top + INNER_H * (1 - value / maxPayment)
-    const yBalance = (value: number) => MARGIN.top + INNER_H * (1 - value / maxBalance)
-    return { maxPayment, maxBalance, slot, pad, x, yPayment, yBalance }
+    // Aligned dual-axis scales: both axes share one gridline count, so the
+    // solid payments grid and the dashed balance grid coincide. Scale tops
+    // are a round step at or above the data max (headroom); the fallback
+    // (degenerate balance, e.g. all zero) keeps the old independent scales.
+    const aligned = alignedDualTicks(maxPayment, maxBalance)
+    const scaleMaxPayment = aligned ? aligned.scaleMaxPayment : maxPayment
+    const scaleMaxBalance = aligned ? aligned.scaleMaxBalance : maxBalance
+    const yPayment = (value: number) => MARGIN.top + INNER_H * (1 - value / scaleMaxPayment)
+    const yBalance = (value: number) => MARGIN.top + INNER_H * (1 - value / scaleMaxBalance)
+    return { maxPayment, maxBalance, aligned, slot, pad, x, yPayment, yBalance }
   }, [rows])
 
-
   if (!geometry) return null
-  const { maxPayment, maxBalance, slot, pad, x, yPayment, yBalance } = geometry
-  const paymentTicks = niceTicks(maxPayment)
-  const balanceTicks = niceTicks(maxBalance)
+  const { maxPayment, maxBalance, aligned, slot, pad, x, yPayment, yBalance } = geometry
+  const paymentTicks = aligned ? aligned.paymentTicks : niceTicks(maxPayment)
+  const balanceTicks = aligned ? aligned.balanceTicks : niceTicks(maxBalance)
   const useBars = rows.length <= MAX_BARS
   const barWidth = Math.min(30, slot * 0.66)
 
@@ -78,16 +92,19 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
   }
 
   return (
-    <div className="amort-chart" data-testid="amortization-chart">
+    <div className="amort-chart" data-testid="amortization-chart" ref={plotRef}>
       <div className="chart-legend" aria-hidden="true">
         <span className="chart-legend-item">
-          <i className="chart-swatch chart-swatch-principal" /> {t('calculator.schedule.principalHeader')}
+          <i className="chart-swatch chart-swatch-principal" />{' '}
+          {t('calculator.schedule.principalHeader')}
         </span>
         <span className="chart-legend-item">
-          <i className="chart-swatch chart-swatch-interest" /> {t('calculator.schedule.interestHeader')}
+          <i className="chart-swatch chart-swatch-interest" />{' '}
+          {t('calculator.schedule.interestHeader')}
         </span>
         <span className="chart-legend-item">
-          <i className="chart-swatch chart-swatch-balance" /> {t('calculator.schedule.balanceHeader')}
+          <i className="chart-swatch chart-swatch-balance" />{' '}
+          {t('calculator.schedule.balanceHeader')}
         </span>
       </div>
 
@@ -110,23 +127,40 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
               y2={yPayment(tick)}
               className="chart-grid"
             />
-            <text x={MARGIN.left - 10} y={yPayment(tick)} dy="0.32em" className="chart-tick chart-tick-end">
+            <text
+              x={MARGIN.left - 10}
+              y={yPayment(tick)}
+              dy="0.32em"
+              className="chart-tick chart-tick-end"
+            >
               {formatAxisShekel(tick)}
             </text>
           </g>
         ))}
 
-        {/* Right (balance) axis - the overlay line's scale. */}
+        {/* Right (balance) axis - the overlay line's scale. Its ticks get
+            their own faint dashed grid, tinted with the balance color, so a
+            reader can tell which axis drives which series: solid grid =
+            payments bars, dashed = the balance line. Both grids share the
+            same rows (aligned dual-axis ticks). */}
         {balanceTicks.map((tick) => (
-          <text
-            key={`b-${tick}`}
-            x={WIDTH - MARGIN.right + 10}
-            y={yBalance(tick)}
-            dy="0.32em"
-            className="chart-tick chart-tick-balance"
-          >
-            {formatAxisShekel(tick)}
-          </text>
+          <g key={`b-${tick}`}>
+            <line
+              x1={MARGIN.left}
+              x2={WIDTH - MARGIN.right}
+              y1={yBalance(tick)}
+              y2={yBalance(tick)}
+              className="chart-grid chart-grid-balance"
+            />
+            <text
+              x={WIDTH - MARGIN.right + 10}
+              y={yBalance(tick)}
+              dy="0.32em"
+              className="chart-tick chart-tick-balance"
+            >
+              {formatAxisShekel(tick)}
+            </text>
+          </g>
         ))}
 
         {/* X ticks: every year when it fits (minor ticks otherwise), always
@@ -183,14 +217,22 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
           : (() => {
               // Continuous area for long (monthly) horizons: stack edges only.
               const principalEdge = rows
-                .map((row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${yPayment(row.principal)}`)
+                .map(
+                  (row, index) =>
+                    `${index === 0 ? 'M' : 'L'} ${x(index)} ${yPayment(row.principal)}`,
+                )
                 .join(' ')
               const interestEdge = rows
-                .map((row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${yPayment(row.principal + row.interest)}`)
+                .map(
+                  (row, index) =>
+                    `${index === 0 ? 'M' : 'L'} ${x(index)} ${yPayment(row.principal + row.interest)}`,
+                )
                 .join(' ')
               const baseline = MARGIN.top + INNER_H
               const balanceEdge = rows
-                .map((row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${yBalance(row.balance)}`)
+                .map(
+                  (row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${yBalance(row.balance)}`,
+                )
                 .join(' ')
               return (
                 <>
@@ -210,7 +252,9 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
         {useBars && (
           <path
             d={rows
-              .map((row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${yBalance(row.balance)}`)
+              .map(
+                (row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${yBalance(row.balance)}`,
+              )
               .join(' ')}
             className="chart-line"
           />
@@ -257,12 +301,15 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
 
       {activeRow && (
         <div
+          ref={tooltipRef}
           className="chart-tooltip"
           role="status"
           style={{
             // Physical `left`, not insetInlineStart: the SVG is LTR while the
             // page is RTL, so the logical property would mirror the position.
-            left: `${(Math.min(Math.max(x(active!), 90), WIDTH - 90) / WIDTH) * 100}%`,
+            // The clamp hook adjusts the transform near the plot edges so
+            // the whole tooltip stays on screen.
+            left: `${(x(active!) / WIDTH) * 100}%`,
           }}
         >
           <strong>{periodLabel(activeRow.period)}</strong>

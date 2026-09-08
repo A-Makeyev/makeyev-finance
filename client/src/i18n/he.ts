@@ -129,26 +129,23 @@ export const he = {
       purposeInvestment: 'דירה להשקעה (50% מימון)',
       propertyValueLabel: 'שווי הנכס',
       capitalLabel: 'הון עצמי',
-      incomeLabel: 'הכנסה פנויה נטו לחודש',
+      incomeLabel: 'הכנסה נטו לחודש',
       realtorPercentLabel: 'דמי תיווך',
       lawyerPercentLabel: 'שכר עו"ד',
       appraiserFeeLabel: 'שמאי',
       renovationsLabel: 'שיפוצים',
       realtorAmountLabel: 'דמי תיווך - סכום כולל מע"מ',
       lawyerAmountLabel: 'שכר עו"ד - סכום כולל מע"מ',
+      lawyerFloorNote: 'מינימום שכר עו"ד חל: {{amount}} (כולל מע"מ)',
       feeVatIncluded: 'הסכומים כוללים מע"מ',
       ptiThresholdLabel: 'תקרת החזר מההכנסה',
       ptiThresholdSuffix: 'מההכנסה',
       ptiHint:
         'המלצה: החזר המשכנתא לא יעלה על {{threshold}}% מההכנסה הפנויה, לאחר הוצאות חודשיות נוספות.',
-      ptiSuggestedPayment:
-        'החזר משכנתא מומלץ: עד {{amount}} בחודש ({{threshold}}% מההכנסה לאחר הוצאות נוספות)',
       expenseLabel: 'תיאור ההוצאה',
-      expenseLabelPlaceholder: 'תיאור ההוצאה (למשל: הלוואת רכב)',
-      expenseAmountLabel: 'סכום ההוצאה החודשית',
-      expenseAmountPlaceholder: 'יחושב כנגד ההכנסה החודשית',
-      expenseOneTimeAmountLabel: 'סכום ההוצאה החד-פעמית',
-      expenseOneTimeAmountPlaceholder: 'יחושב כנגד ההון העצמי',
+      expenseLabelAria: 'תיאור ההוצאה ברשימת ההוצאות הנוספות',
+      expenseAmountLabel: 'תשלום חודשי',
+      expenseOneTimeAmountLabel: 'תשלום חד פעמי',
       otherExpensesAdd: 'הוצאות נוספות',
       expenseRemove: 'הסר הוצאה',
       presetHeading: 'בחירת תמהיל',
@@ -167,6 +164,13 @@ export const he = {
       legalNoteLinkUrl:
         'https://www.boi.org.il/information/bank-paymnts/financial-education/campaigns/boi-equator/mortgage/',
       legalNoteRisk: 'אי עמידה בהחזרים עלולה לגרור ריבית פיגורים והליכי גבייה.',
+      feeLabels: {
+        realtor: 'תיווך',
+        lawyer: 'עו"ד',
+        appraiser: 'שמאי',
+        expense: 'הוצאה',
+        renovations: 'שיפוצים',
+      },
       track: {
         legend: 'מסלול {{index}}',
         removeAria: 'הסר מסלול',
@@ -321,33 +325,39 @@ export const he = {
         variableCapLine2: ' הקטינו מסלול מסומן או הגדילו מסלול בריבית קבועה',
       },
       warnings: {
-        capital: 'הון עצמי <0>{{percent}}</0>% משווי הנכס',
+        capital: 'הון עצמי <0>{{percent}}%</0> משווי הנכס',
+        capitalLtvOk:
+          'הון עצמי <0>{{percent}}%</0> משווי הנכס ~ שיעור המימון (<1>{{ltvPercent}}%</1>) עומד במותר ל{{purpose}} (עד <2>{{limit}}%</2>)',
         capitalRequired:
-          'הון עצמי נדרש לאישור הבנק: <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
+          'הון עצמי נדרש לאישור הבנק: <0>{{required}}</0> (<1>{{requiredPercent}}%</1>)',
         capitalShortfall:
-          'הון עצמי נמוך מהנדרש ~ נדרש לפחות <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
+          'הון עצמי נמוך מהנדרש ~ נדרש לפחות <0>{{required}}</0> (<1>{{requiredPercent}}%</1>)',
         capitalPercentRequired:
-          'הון עצמי <0>{{percent}}</0>% משווי הנכס ~ נדרש לפחות <1>{{required}}</1> (<2>{{requiredPercent}}</2>%)',
-        closingCosts: 'עלויות נלוות (עו"ד, רישום ושמאי): <0>{{amount}}</0> (<1>{{percent}}</1>%)',
-        purchaseTaxNone: 'מס רכישה לא חל על {{purpose}} עד <0>{{threshold}}</0>',
-        purchaseTax: 'מס רכישה ({{purpose}}): <0>{{amount}}</0> (<1>{{percent}}</1>%)',
+          'הון עצמי <0>{{percent}}%</0> משווי הנכס ~ נדרש לפחות <1>{{required}}</1> (<2>{{requiredPercent}}%</2>)',
+        purchaseTaxNone: 'מס רכישה לא חל על {{purpose}} עד שווי של <0>{{threshold}}</0>',
+        purchaseTax: 'מס רכישה ({{purpose}}): <0>{{amount}}</0> (<1>{{percent}}%</1>)',
         purchaseTaxFirst: 'דירה ראשונה',
         purchaseTaxUpgrade: 'משפר דיור',
         purchaseTaxInvestment: 'דירה שנייה ומעלה',
-        capitalTotalRequired: 'הון עצמי + עלויות נלוות ומיסים צפויים: <0>{{total}}</0>',
-        ltv: 'שיעור המימון (<0>{{percent}}</0>%) חורג מהמותר ל{{purpose}} (עד <1>{{limit}}</1>%)',
-        ltvMaxLoan: 'ניתן לקבל משכנתא של עד <0>{{maxLoan}}</0>',
-        ltvOk: 'שיעור המימון (<0>{{percent}}</0>%) עומד במותר ל{{purpose}} (עד <1>{{limit}}</1>%)',
-        dti: 'הכנסה פנויה נמוכה ב-<0>{{shortfall}}</0>% מהנדרש. הבנק יבקש הכנסה חודשית פנויה של לפחות <1>{{minIncome}}</1>',
-        dtiOk: 'הכנסה פנויה מספיקה לכיסוי ההחזר החודשי (<0>{{payment}}</0>)',
-        transactionCosts:
-          'עלויות עסקה (לפני מע"מ {{vatPercent}}%): תיווך <0>{{realtor}}</0> · עו"ד <1>{{lawyer}}</1> · שמאי <2>{{appraiser}}</2> · סה"כ <3>{{total}}</3> (כולל מע"מ)',
-        transactionCostsWithRenovations:
-          'עלויות עסקה (לפני מע"מ {{vatPercent}}%): תיווך <0>{{realtor}}</0> · עו"ד <1>{{lawyer}}</1> · שמאי <2>{{appraiser}}</2> · שיפוצים <3>{{renovations}}</3> · סה"כ <4>{{total}}</4> (כולל מע"מ)',
-        upfrontTotal: 'סך הכל מזומן נדרש בהתחלה (הון עצמי + עלויות): <0>{{total}}</0>',
-        pti: 'ההוצאה החודשית הכוללת (<0>{{payment}}</0>) חורגת מ{{threshold}}% מההכנסה. הכנסה מומלצת: לפחות <1>{{minIncome}}</1>',
-        ptiExpenseNote: 'החישוב כולל הוצאה נוספת שהזנת ({{amount}} בחודש)',
-        ptiExpenseNotePlural: 'החישוב כולל {{count}} הוצאות נוספות שהזנת ({{amount}} בחודש)',
+        ltv: 'שיעור המימון (<0>{{percent}}%</0>) חורג מהמותר ל{{purpose}} (עד <1>{{limit}}%</1>)',
+        ltvMaxLoan:
+          'ניתן לקבל משכנתא עד <0>{{maxLoan}}</0> עם הון עצמי של <1>{{requiredCapital}}</1> לנכס בשווי הזה',
+        ltvOk: 'שיעור המימון (<0>{{percent}}%</0>) עומד במותר ל{{purpose}} (עד <1>{{limit}}%</1>)',
+        requiredPayment: 'ההחזר החודשי לתקופה של <0>{{term}}</0> שנה יהיה <1>{{payment}}</1>',
+        monthlyAllowanceOk:
+          'ההכנסה עומדת בתקרה המומלצת: עד <0>{{allowed}}</0> לחודש (<1>{{percent}}%</1> מהכנסה של <2>{{income}}</2> פחות <3>{{liabilities}}</3>)',
+        monthlyAllowanceOkNoLiabilities:
+          'ההכנסה עומדת בתקרה המומלצת: עד <0>{{allowed}}</0> לחודש (<1>{{percent}}%</1> מהכנסה של <2>{{income}}</2>)',
+        monthlyAllowanceOver:
+          'ההכנסה לא מספיקה להחזר החודשי הצפוי של <0>{{payment}}</0> (<1>{{percent}}%</1> מ-<2>{{income}}</2> פחות <3>{{liabilities}}</3>) ~ נדרשים לפחות <4>{{minIncome}}</4>',
+        monthlyAllowanceOverNoLiabilities:
+          'ההכנסה לא מספיקה להחזר החודשי הצפוי של <0>{{payment}}</0> (<1>{{percent}}%</1> מ-<2>{{income}}</2>) ~ נדרשים לפחות <3>{{minIncome}}</3>',
+        monthlyAllowanceNone:
+          'אין מקום להחזר משכנתא לתקופה של <0>{{term}}</0> שנה: התשלומים החודשיים (<1>{{liabilities}}</1>) מכסים את כל ההכנסה (<2>{{income}}</2>)',
+        feeAboveNormItem:
+          '{{fee}} <0>{{percent}}%</0> גבוה מהנורמה המקובלת בשוק <1>{{normPercent}}%</1> ~ אמור לעלות <2>{{normAmount}}</2>',
+        transactionCosts: 'עלויות עסקה צפויות: {{items}}',
+        upfrontTotal: 'סה"כ הון עצמי נדרש: <0>{{total}}</0>',
         purposeFirst: 'דירה ראשונה',
         purposeUpgrade: 'שדרוג דירה',
         purposeInvestment: 'דירה להשקעה',
@@ -386,7 +396,7 @@ export const he = {
       badge: 'נושאים שעניינו אתכם · {{count}}',
       badgeAria: 'פתיחת רשימת הנושאים שעניינו אתכם',
       panelTitle: 'הנושאים שעניינו אתכם',
-      panelHint: 'הנושאים שעניינו אתכם יוצגו ויישלחו כחלק מההודעה בטופס יצירת הקשר',
+      panelHint: 'הנושאים יוצגו ויישלחו כחלק מההודעה בטופס יצירת הקשר',
       send: 'שליחה דרך טופס יצירת הקשר',
       removeAria: 'הסרת {{title}} מהרשימה',
       addedToast: 'הנושא נוסף לנושאים שעניינו אתכם',

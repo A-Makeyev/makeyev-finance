@@ -141,19 +141,16 @@ export const en: { translation: Translation } = {
       renovationsLabel: 'Renovations',
       realtorAmountLabel: 'Realtor fee - amount incl. VAT',
       lawyerAmountLabel: 'Lawyer fee - amount incl. VAT',
+      lawyerFloorNote: 'Minimum lawyer fee applies: {{amount}} (VAT included)',
       feeVatIncluded: 'Amounts include VAT',
       ptiThresholdLabel: 'Payment share of income',
       ptiThresholdSuffix: 'of income',
       ptiHint:
         'Suggested payment: no more than {{threshold}}% of free income after additional monthly expenses.',
-      ptiSuggestedPayment:
-        'Suggested mortgage payment: up to {{amount}} per month ({{threshold}}% of income after additional expenses)',
       expenseLabel: 'Expense description',
-      expenseLabelPlaceholder: 'Expense description (e.g. car loan)',
-      expenseAmountLabel: 'Monthly expense amount',
-      expenseAmountPlaceholder: 'Counted against your monthly income',
-      expenseOneTimeAmountLabel: 'One-time expense amount',
-      expenseOneTimeAmountPlaceholder: 'Counted against your capital',
+      expenseLabelAria: 'Description of the additional expense',
+      expenseAmountLabel: 'Monthly payment',
+      expenseOneTimeAmountLabel: 'One-time payment',
       otherExpensesAdd: 'Add expense',
       expenseRemove: 'Remove expense',
       presetHeading: 'Choose a mix',
@@ -174,6 +171,13 @@ export const en: { translation: Translation } = {
         'https://www.boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/campaigns/boi-equalizer/',
       legalNoteRisk:
         'Failure to meet payments may incur late-payment interest and collection proceedings.',
+      feeLabels: {
+        realtor: 'realtor',
+        lawyer: 'lawyer',
+        appraiser: 'appraiser',
+        expense: 'expense',
+        renovations: 'renovations',
+      },
       track: {
         legend: 'Track {{index}}',
         removeAria: 'Remove track',
@@ -329,36 +333,42 @@ export const en: { translation: Translation } = {
         variableCapLine2: ' Reduce a marked track or increase a fixed-rate track',
       },
       warnings: {
-        capital: 'Capital is <0>{{percent}}</0>% of the property value',
+        capital: 'Capital is <0>{{percent}}%</0> of the property value',
+        capitalLtvOk:
+          'Capital is <0>{{percent}}%</0> of the property value ~ financing ratio (<1>{{ltvPercent}}%</1>) is within the limit for a {{purpose}} (up to <2>{{limit}}%</2>)',
         capitalRequired:
-          'Required capital for bank approval: <0>{{required}}</0> (<1>{{requiredPercent}}</1>%)',
+          'Required capital for bank approval: <0>{{required}}</0> (<1>{{requiredPercent}}%</1>)',
         capitalShortfall:
-          'Capital is below the required share ~ at least <0>{{required}}</0> (<1>{{requiredPercent}}</1>%) is needed',
+          'Capital is below the required share ~ at least <0>{{required}}</0> (<1>{{requiredPercent}}%</1>) is needed',
         capitalPercentRequired:
-          'Capital of <0>{{percent}}</0>% of the property value ~ at least <1>{{required}}</1> (<2>{{requiredPercent}}</2>%) required',
-        closingCosts:
-          'Side costs (attorney, registration & surveyor): <0>{{amount}}</0> (<1>{{percent}}</1>%)',
+          'Capital of <0>{{percent}}%</0> of the property value ~ at least <1>{{required}}</1> (<2>{{requiredPercent}}%</2>) required',
         purchaseTaxNone:
-          'Purchase tax is not applicable for a {{purpose}} up to <0>{{threshold}}</0>',
-        purchaseTax: 'Purchase tax ({{purpose}}): <0>{{amount}}</0> (<1>{{percent}}</1>%)',
+          'Purchase tax is not applicable for a {{purpose}} up to a value of <0>{{threshold}}</0>',
+        purchaseTax: 'Purchase tax ({{purpose}}): <0>{{amount}}</0> (<1>{{percent}}%</1>)',
         purchaseTaxFirst: 'first home',
         purchaseTaxUpgrade: 'home improver',
         purchaseTaxInvestment: 'second home and beyond',
-        capitalTotalRequired: 'Capital + expected side costs & taxes: <0>{{total}}</0>',
-        ltv: 'The financing ratio (<0>{{percent}}</0>%) exceeds the Bank of Israel limit for a {{purpose}} (up to <1>{{limit}}</1>%)',
-        ltvMaxLoan: 'The maximum mortgage is <0>{{maxLoan}}</0>',
+        ltv: 'The financing ratio (<0>{{percent}}%</0>) exceeds the Bank of Israel limit for a {{purpose}} (up to <1>{{limit}}%</1>)',
+        ltvMaxLoan:
+          'You can get a mortgage up to <0>{{maxLoan}}</0> with initial capital of <1>{{requiredCapital}}</1> for a property at this value',
         ltvOk:
-          'The financing ratio (<0>{{percent}}</0>%) is within the limit for a {{purpose}} (up to <1>{{limit}}</1>%)',
-        dti: 'Free income is <0>{{shortfall}}</0>% below required. The bank will ask for a net free monthly income of at least <1>{{minIncome}}</1>',
-        dtiOk: 'Free income covers the monthly payment (<0>{{payment}}</0>)',
-        transactionCosts:
-          'Transaction fees (before {{vatPercent}}% VAT): realtor <0>{{realtor}}</0> · lawyer <1>{{lawyer}}</1> · appraiser <2>{{appraiser}}</2> · total <3>{{total}}</3> (incl. VAT)',
-        transactionCostsWithRenovations:
-          'Transaction fees (before {{vatPercent}}% VAT): realtor <0>{{realtor}}</0> · lawyer <1>{{lawyer}}</1> · appraiser <2>{{appraiser}}</2> · renovations <3>{{renovations}}</3> · total <4>{{total}}</4> (incl. VAT)',
-        upfrontTotal: 'Total cash needed upfront (capital + fees): <0>{{total}}</0>',
-        pti: 'Total monthly outflow (<0>{{payment}}</0>) exceeds {{threshold}}% of income. Recommended income: at least <1>{{minIncome}}</1>',
-        ptiExpenseNote: 'The calculation includes an extra expense you entered ({{amount}} per month)',
-        ptiExpenseNotePlural: 'The calculation includes {{count}} extra expenses you entered ({{amount}} per month)',
+          'The financing ratio (<0>{{percent}}%</0>) is within the limit for a {{purpose}} (up to <1>{{limit}}%</1>)',
+        requiredPayment:
+          'The monthly payment for a <0>{{term}}</0>-year term will be <1>{{payment}}</1>',
+        monthlyAllowanceOk:
+          'The income is within the recommended ceiling: up to <0>{{allowed}}</0> a month (<1>{{percent}}%</1> of income of <2>{{income}}</2> minus <3>{{liabilities}}</3>)',
+        monthlyAllowanceOkNoLiabilities:
+          'The income is within the recommended ceiling: up to <0>{{allowed}}</0> a month (<1>{{percent}}%</1> of income of <2>{{income}}</2>)',
+        monthlyAllowanceOver:
+          'The income is not enough for the expected monthly payment of <0>{{payment}}</0> (<1>{{percent}}%</1> of <2>{{income}}</2> minus <3>{{liabilities}}</3>) - at least <4>{{minIncome}}</4> is needed',
+        monthlyAllowanceOverNoLiabilities:
+          'The income is not enough for the expected monthly payment of <0>{{payment}}</0> (<1>{{percent}}%</1> of <2>{{income}}</2>) - at least <3>{{minIncome}}</3> is needed',
+        monthlyAllowanceNone:
+          'No room for a mortgage payment over a <0>{{term}}</0>-year term: the monthly payments (<1>{{liabilities}}</1>) already cover the income (<2>{{income}}</2>)',
+        feeAboveNormItem:
+          '{{fee}} <0>{{percent}}%</0> is above the market norm <1>{{normPercent}}%</1> ~ should cost <2>{{normAmount}}</2>',
+        transactionCosts: 'Expected transaction fees: {{items}}',
+        upfrontTotal: 'Total required capital: <0>{{total}}</0>',
         purposeFirst: 'first home',
         purposeUpgrade: 'home upgrade',
         purposeInvestment: 'investment property',

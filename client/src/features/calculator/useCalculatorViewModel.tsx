@@ -6,17 +6,21 @@ import {
   formatGroupedNumber,
   formatRatePercent,
   formatRatio,
+  FEE_NORM_PERCENT,
+  isFeeAboveNorm,
   parseAmountText,
 } from '@/lib/format'
 import {
-  DTI_THRESHOLD,
   FIRST_HOME_TAX_EXEMPTION_UP_TO,
+  LAWYER_MINIMUM_FEE,
+  MAX_YEARS,
   MIN_REAL_HOME_VALUE,
   PURPOSE_LIMITS,
   VAT_RATE,
-  DEFAULT_APPRAISER_FEE,
+  allowedMonthlyPayment,
   effectiveAnnualRatePercent,
-  suggestedMortgagePayment,
+  paymentExceedsAllowed,
+  suggestedIncomeForAllowance,
   suggestedPropertyValue,
   isVariableType,
   type PaymentLabelKind,
@@ -38,9 +42,11 @@ const STATUS_PRIORITY: Record<NoteStatus, number> = { positive: 0, negative: 1, 
 /**
  * Tags a summary line with its status and leads with the matching emoji. The
  * legacy "•" bullets were removed - a line carries exactly one marker
- * (feedback request).
+ * (feedback request). `order` optionally ranks lines within their status
+ * group (lower first); lines without it keep insertion order after ranked
+ * ones.
  */
-function mark(status: NoteStatus, node: ReactNode): { status: NoteStatus; node: ReactNode } {
+function mark(status: NoteStatus, node: ReactNode, order?: number): NoteLine {
   return {
     status,
     node: (
@@ -49,10 +55,14 @@ function mark(status: NoteStatus, node: ReactNode): { status: NoteStatus; node: 
         {node}
       </>
     ),
+    order,
   }
 }
 
-export type NoteLine = { status: NoteStatus; node: ReactNode }
+export type NoteLine = { status: NoteStatus; node: ReactNode; order?: number }
+
+/** The lawyer minimum as the user sees it: VAT-inclusive whole shekels. */
+const LAWYER_FLOOR_WITH_VAT = formatGroupedNumber(Math.round(LAWYER_MINIMUM_FEE * (1 + VAT_RATE)))
 
 /**
  * Maps the raw calculation snapshot to localized display strings, preserving
@@ -67,10 +77,19 @@ export function useCalculatorViewModel() {
   const purpose = useCalculatorStore((s) => s.purpose)
   const propertyValueText = useCalculatorStore((s) => s.propertyValueText)
   const capitalText = useCalculatorStore((s) => s.capitalText)
+  const realtorPercentText = useCalculatorStore((s) => s.realtorPercentText)
+  const lawyerPercentText = useCalculatorStore((s) => s.lawyerPercentText)
   const renovationText = useCalculatorStore((s) => s.renovationAmountText)
   const incomeText = useCalculatorStore((s) => s.incomeText)
   const otherExpenses = useCalculatorStore((s) => s.otherExpenses)
   const ptiThresholdPercent = useCalculatorStore((s) => s.ptiThresholdPercent)
+  const realtorPercentHint = useCalculatorStore((s) => s.realtorPercentHint)
+  const lawyerPercentHint = useCalculatorStore((s) => s.lawyerPercentHint)
+  const realtorAmountHint = useCalculatorStore((s) => s.realtorAmountHint)
+  const lawyerAmountHint = useCalculatorStore((s) => s.lawyerAmountHint)
+  const lawyerFloorApplied = useCalculatorStore((s) => s.lawyerFloorApplied)
+  const realtorNormAmount = useCalculatorStore((s) => s.realtorNormAmount)
+  const lawyerNormAmount = useCalculatorStore((s) => s.lawyerNormAmount)
   const tracks = useCalculatorStore((s) => s.tracks)
   const requiredCapitalPercent = 100 - PURPOSE_LIMITS[purpose].limit
 
@@ -122,6 +141,12 @@ export function useCalculatorViewModel() {
     investment: t('calculator.warnings.purchaseTaxInvestment'),
   }
 
+  // The bank's required equity - shown in full everywhere (line, shortfall,
+  // placeholder). No netting against one-time payments: the bank's requirement
+  // is fixed, and the itemized costs stay separate so the summary's lines sum
+  // exactly to the upfront total. Null without a requirement.
+  const requiredCapital = snapshot.suggestedCapital
+
   // Regulatory-limit messages: capital shortfall and LTV violations are "bad"
   // (red ❌); the DTI explanation is general info (ℹ️) - feedback request.
   const warningMessages: NoteLine[] = []
@@ -133,6 +158,7 @@ export function useCalculatorViewModel() {
     !snapshot.isEmpty &&
     snapshot.capitalShortfall &&
     snapshot.suggestedCapital !== null &&
+    (requiredCapital ?? 0) > 0 &&
     !snapshot.capitalAssessment
   ) {
     warningMessages.push(
@@ -141,7 +167,7 @@ export function useCalculatorViewModel() {
         <Trans
           i18nKey="calculator.warnings.capitalShortfall"
           values={{
-            required: formatCurrency(snapshot.suggestedCapital),
+            required: formatCurrency(requiredCapital ?? snapshot.suggestedCapital),
             requiredPercent: requiredCapitalPercent,
           }}
           components={[<strong key="es-required" />, <strong key="es-pct" />]}
@@ -160,7 +186,6 @@ export function useCalculatorViewModel() {
   // Renovations (שיפוצים) eat into the capital - the down-payment equity left
   // is what the LTV ratio reflects, mirroring the store's loan derivation.
   const capitalForLoan = Math.max(0, capital - parseAmountText(renovationText))
-  const income = parseAmountText(incomeText)
   const loanAmount = tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
   const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capitalForLoan
   const incomeValue = parseAmountText(incomeText)
@@ -168,10 +193,24 @@ export function useCalculatorViewModel() {
     (sum, expense) => sum + parseAmountText(expense.amountText),
     0,
   )
-  const recommendedMortgagePayment =
-    incomeValue > 0
-      ? formatCurrency(suggestedMortgagePayment(incomeValue, otherTotal, ptiThresholdPercent))
-      : null
+
+  // Financing compliant with the purpose limit - the green mirror of the LTV
+  // violation, computed once so the capital line and the standalone LTV line
+  // agree on when the merged capital+financing line renders. Null when the
+  // ratio is violated or there is nothing to measure.
+  const ltvOkPercent = (() => {
+    if (snapshot.isEmpty || effectiveValue < MIN_REAL_HOME_VALUE || loanAmount <= 0) return null
+    const percent = (loanAmount / effectiveValue) * 100
+    if (percent > PURPOSE_LIMITS[purpose].limit + 0.01) return null
+    return Number.isInteger(percent) ? String(Math.round(percent)) : percent.toFixed(1)
+  })()
+  // The plain (non-shortfall) capital share line - the one candidate for
+  // folding the compliant-financing note into one line.
+  const capitalPlain =
+    !!snapshot.capitalAssessment &&
+    snapshot.capitalAssessment.state !== 'bad' &&
+    !(snapshot.capitalShortfall && snapshot.suggestedCapital !== null && (requiredCapital ?? 0) > 0)
+  const capitalLtvMerged = capitalPlain && ltvOkPercent !== null
 
   if (snapshot.ltv) {
     // Precise ratio (e.g. 75.3%) so the warning never reads as
@@ -179,150 +218,193 @@ export function useCalculatorViewModel() {
     const ltvPercent = Number.isInteger(snapshot.ltv.percent)
       ? String(snapshot.ltv.percentRounded)
       : snapshot.ltv.percent.toFixed(1)
-    // The violation and the "what the bank allows" follow-up read as one bad
-    // line - feedback request (sum them together).
+    // The violation alone; the remedy (max mortgage + required capital)
+    // lives on the 💡 required-payment line above (feedback request).
     warningMessages.push(
       mark(
         'negative',
-        <>
-          <Trans
-            i18nKey="calculator.warnings.ltv"
-            values={{
-              percent: ltvPercent,
-              purpose: purposeLabels[snapshot.ltv.purpose],
-              limit: snapshot.ltv.limit,
-            }}
-            components={[<strong key="ltv-percent" />, <strong key="ltv-limit" />]}
-          />
-          {' ~ '}
-          <Trans
-            i18nKey="calculator.warnings.ltvMaxLoan"
-            values={{ maxLoan: formatCurrency(snapshot.ltv.maxLoan) }}
-            components={[<strong key="ltv-maxloan" />]}
-          />
-        </>,
+        <Trans
+          i18nKey="calculator.warnings.ltv"
+          values={{
+            percent: ltvPercent,
+            purpose: purposeLabels[snapshot.ltv.purpose],
+            limit: snapshot.ltv.limit,
+          }}
+          components={[<strong key="ltv-percent" />, <strong key="ltv-limit" />]}
+        />,
       ),
     )
-  } else if (!snapshot.isEmpty && effectiveValue >= MIN_REAL_HOME_VALUE && loanAmount > 0) {
+  } else if (ltvOkPercent !== null && !capitalLtvMerged) {
     // Compliant financing ratio → green ✔️ mirror of the violation line.
-    const percent = (loanAmount / effectiveValue) * 100
-    const limit = PURPOSE_LIMITS[purpose].limit
-    if (percent <= limit + 0.01) {
-      const ltvPercent = Number.isInteger(percent)
-        ? String(Math.round(percent))
-        : percent.toFixed(1)
-      warningMessages.push(
-        mark(
-          'positive',
-          <Trans
-            i18nKey="calculator.warnings.ltvOk"
-            values={{ percent: ltvPercent, purpose: purposeLabels[purpose], limit }}
-            components={[<strong key="ltv-percent" />, <strong key="ltv-limit" />]}
-          />,
-        ),
-      )
-    }
-  }
-  if (snapshot.dti) {
-    // The payment shortfall and the bank's income requirement combine into
-    // one brief line - the shortfall is bad news (red ❌).
+    // Skipped when the capital line already folded it in (one line, not two).
     warningMessages.push(
       mark(
-        'negative',
+        'positive',
         <Trans
-          i18nKey="calculator.warnings.dti"
+          i18nKey="calculator.warnings.ltvOk"
           values={{
-            shortfall: snapshot.dti.shortfallPercent,
-            minIncome: formatCurrency(snapshot.dti.minIncome),
+            percent: ltvOkPercent,
+            purpose: purposeLabels[purpose],
+            limit: PURPOSE_LIMITS[purpose].limit,
           }}
-          components={[<strong key="dti-shortfall" />, <strong key="dti-minincome" />]}
+          components={[<strong key="ltv-percent" />, <strong key="ltv-limit" />]}
         />,
       ),
     )
-  } else if (!snapshot.isEmpty && snapshot.totals.firstPayment > 0 && income > 0) {
-    // Payment within the 50% ceiling → green ✔️ mirror of the violation line.
-    if (snapshot.totals.firstPayment / income <= DTI_THRESHOLD) {
-      warningMessages.push(
-        mark(
-          'positive',
-          <Trans
-            i18nKey="calculator.warnings.dtiOk"
-            values={{ payment: formatCurrency(snapshot.totals.firstPayment) }}
-            components={[<strong key="dti-ok-payment" />]}
-          />,
-        ),
-      )
-    }
   }
-
-  if (snapshot.pti) {
-    // Soft payment-to-income guidance: the outflow (mortgage + listed
-    // recurring expenses) exceeds the user-adjusted ceiling. Other
-    // expenses are folded into the payment; the suggestion is the income
-    // at which the same outflow meets the ceiling.
+  // One affordability line: the monthly payment the adjustable PTI ceiling
+  // allows for THIS buyer (the תקרת החזר share of net income minus the listed
+  // recurring liabilities) vs the required payment. Red ❌ when the required
+  // payment exceeds the allowance, with the minimum income that would fit
+  // mixed into the same line; green ✔️ when it fits - one rule, one number,
+  // one control. The wording mirrors the LTV lines ("עומד במותר" /
+  // "חורג מהמותר") per feedback; kept terse: "פחות" without naming the
+  // payments, "נדרשת הכנסה" without repeating the payment (the 💡 fact line
+  // above carries it).
+  const firstPayment = snapshot.totals.firstPayment
+  const allowedPayment = allowedMonthlyPayment(incomeValue, otherTotal, ptiThresholdPercent)
+  // The term behind the required payment: every amount-bearing track's
+  // years. Tracks usually share the term slider, printing "15"; when they
+  // diverge the honest range prints instead ("5-30") - the first payment is
+  // the sum across them. Stating the term inline keeps the warning
+  // comparable against bank quotes and calculators that assume another
+  // term (a 25-year quote reads very differently from a 15-year one).
+  const enteredYears = tracks
+    .filter((track) => parseAmountText(track.amountText) > 0)
+    .map((track) => Number(track.yearsText))
+    .filter((years) => Number.isFinite(years) && years >= 1 && years <= MAX_YEARS)
+  const termText = (() => {
+    if (enteredYears.length === 0) return null
+    const min = Math.min(...enteredYears)
+    const max = Math.max(...enteredYears)
+    return min === max ? String(min) : `${min}-${max}`
+  })()
+  // The required payment is a neutral fact on its own 💡 line in every
+  // scenario: the verdict lines below stay short and never repeat it
+  // (feedback). Stating the term inline keeps the figure comparable against
+  // quotes and calculators that assume another term. Order 1 places it as
+  // the second info line, right after the capital-requirement line
+  // (feedback), ahead of the transaction-cost line.
+  if (firstPayment > 0) {
     warningMessages.push(
       mark(
-        'negative',
+        'info',
         <Trans
-          i18nKey="calculator.warnings.pti"
-          values={{
-            payment: formatCurrency(snapshot.pti.payment),
-            threshold: ptiThresholdPercent,
-            minIncome: formatCurrency(snapshot.pti.minIncome),
-          }}
-          components={[<strong key="pti-payment" />, <strong key="pti-minincome" />]}
+          i18nKey="calculator.warnings.requiredPayment"
+          values={{ payment: formatCurrency(firstPayment), term: termText ?? '' }}
+          components={[<strong key="rp-term" />, <strong key="rp-payment" />]}
         />,
+        1,
       ),
     )
-    if (otherTotal <= 0) {
-      // No listed expenses: the ceiling hit came from the mortgage payment
-      // alone - the reminder is unnecessary noise, skip it.
-    } else if (otherExpenses.length === 1) {
+    // With no income entered there is no verdict to grade against; when the
+    // financing ratio is also violated, the remedy (max mortgage + the
+    // capital that unlocks it) is its own 💡 line, not a tail on the ❌ LTV
+    // line (feedback request).
+    if (allowedPayment === null && snapshot.ltv) {
       warningMessages.push(
         mark(
           'info',
-          t('calculator.warnings.ptiExpenseNote', {
-            amount: formatCurrency(otherTotal),
-          }),
+          <Trans
+            i18nKey="calculator.warnings.ltvMaxLoan"
+            values={{
+              maxLoan: formatCurrency(snapshot.ltv.maxLoan),
+              // The capital that unlocks that max loan (same figure the
+              // capital lines show).
+              requiredCapital: formatCurrency(requiredCapital ?? 0),
+            }}
+            components={[<strong key="ltv-maxloan" />, <strong key="ltv-required-capital" />]}
+          />,
+        ),
+      )
+    }
+  }
+  if (allowedPayment !== null && firstPayment > 0) {
+    if (allowedPayment === 0) {
+      // The listed monthly payments exhaust the whole net income - "up to 0 ₪"
+      // would be nonsense, so say outright that there is no room.
+      warningMessages.push(
+        mark(
+          'negative',
+          <Trans
+            i18nKey="calculator.warnings.monthlyAllowanceNone"
+            values={{
+              term: termText ?? '',
+              income: formatCurrency(incomeValue),
+              liabilities: formatCurrency(otherTotal),
+            }}
+            components={[
+              <strong key="man-term" />,
+              <strong key="man-liabilities" />,
+              <strong key="man-income" />,
+            ]}
+          />,
         ),
       )
     } else {
+      const overAllowance = paymentExceedsAllowed(firstPayment, allowedPayment)
+      // Every variant shows the entered income in the 33% parenthetical so
+      // the verdict stands on the entered figures; a תשלום חודשי is
+      // additionally addressed by name with its number (income minus
+      // monthly payments).
+      const hasLiabilities = otherTotal > 0
+      // When the ceiling is exceeded the verdict also names the minimum
+      // income that would fit the payment - mixed into the ❌ line (feedback)
+      // instead of a separate 💡 line. The ❌ wording names the expected
+      // payment itself (the figure the income must cover) instead of the
+      // allowance, per feedback.
+      const minIncome = overAllowance
+        ? suggestedIncomeForAllowance(firstPayment, otherTotal, ptiThresholdPercent)
+        : null
+      const allowanceValues = {
+        allowed: formatCurrency(allowedPayment),
+        payment: formatCurrency(firstPayment),
+        income: formatCurrency(incomeValue),
+        percent: String(ptiThresholdPercent),
+        liabilities: formatCurrency(otherTotal),
+        minIncome: minIncome !== null ? formatCurrency(minIncome) : '',
+      }
+      // Tag order must match the strings: allowed, percent, income, then
+      // monthly payments when they exist, then the minimum income when the
+      // ceiling is exceeded. The payment and its term live on the 💡 fact
+      // line above, keeping the verdict short (feedback).
+      const components = [<strong key="ma-allowed" />, <strong key="ma-percent" />]
+      components.push(<strong key="ma-income" />)
+      if (hasLiabilities) {
+        components.push(<strong key="ma-liabilities" />)
+      }
+      if (overAllowance) {
+        components.push(<strong key="ma-min-income" />)
+      }
       warningMessages.push(
         mark(
-          'info',
-          t('calculator.warnings.ptiExpenseNotePlural', {
-            count: otherExpenses.length,
-            amount: formatCurrency(otherTotal),
-          }),
+          overAllowance ? 'negative' : 'positive',
+          <Trans
+            i18nKey={
+              hasLiabilities
+                ? overAllowance
+                  ? 'calculator.warnings.monthlyAllowanceOver'
+                  : 'calculator.warnings.monthlyAllowanceOk'
+                : overAllowance
+                  ? 'calculator.warnings.monthlyAllowanceOverNoLiabilities'
+                  : 'calculator.warnings.monthlyAllowanceOkNoLiabilities'
+            }
+            values={allowanceValues}
+            components={
+              overAllowance
+                ? [
+                    <strong key="ma-payment" />,
+                    <strong key="ma-percent" />,
+                    <strong key="ma-income" />,
+                    ...(hasLiabilities ? [<strong key="ma-liabilities" />] : []),
+                    <strong key="ma-min-income" />,
+                  ]
+                : components
+            }
+          />,
         ),
       )
     }
-  }
-
-  // The recommended-payment guidance (החזר משכנתא מומלץ) joins the summary
-  // list - its status mirrors the ceiling check above: green when the entered
-  // outflow fits the ceiling, red when it doesn't, neutral info while no
-  // mortgage payment is entered yet. The suggestion is the same number as
-  // the income hint (income × threshold − other expenses).
-  const ptiSuggestedValue = suggestedMortgagePayment(incomeValue, otherTotal, ptiThresholdPercent)
-  if (incomeValue > 0 && ptiSuggestedValue > 0) {
-    const outflow = snapshot.totals.firstPayment + otherTotal
-    const ptiCeiling = ptiSuggestedValue + otherTotal
-    const ptiStatus: NoteStatus =
-      outflow > 0 && outflow > ptiCeiling ? 'negative' : outflow > 0 ? 'positive' : 'info'
-    warningMessages.push(
-      mark(
-        ptiStatus,
-        <Trans
-          i18nKey="calculator.ptiSuggestedPayment"
-          values={{
-            amount: formatCurrency(ptiSuggestedValue),
-            threshold: ptiThresholdPercent,
-          }}
-          components={[<strong key="pti-amount" />]}
-        />,
-      ),
-    )
   }
 
   const errorMessage = (() => {
@@ -366,19 +448,21 @@ export function useCalculatorViewModel() {
   // subtotal (סה"כ עלויות נלוות ומיסים) always closes the list.
   const capitalNoteLines: NoteLine[] = (() => {
     const lines: NoteLine[] = []
-    // Below a real home value there is nothing meaningful to summarize - hide
-    // the capital/closing-cost lines entirely (capital/income hints still work).
-    if (propertyValue > 0 && propertyValue < MIN_REAL_HOME_VALUE) return lines
-    // With no loan entered (track amounts empty) there is nothing meaningful
-    // to summarize - hide the capital/closing-cost lines until a real
-    // calculation exists.
-    if (snapshot.isEmpty) return lines
+    // The capital/closing-cost lines need a property basis (typed value, or
+    // loan+capital when the value is blank) - they show even when no loan is
+    // needed ("אין צורך 🥳"), because the upfront cash question (capital,
+    // purchase tax, fees) still stands. Only a fully empty form hides them.
+    if (effectiveValue <= 0) return lines
     // The capital share (actual or required) leads the list - any share that
     // meets the requirement (good or neutral) is good news; only a share
     // below the required amount is bad. When it's below the required amount,
     // the shortfall folds into the same line.
     if (snapshot.capitalAssessment) {
-      if (snapshot.capitalShortfall && snapshot.suggestedCapital !== null) {
+      if (
+        snapshot.capitalShortfall &&
+        snapshot.suggestedCapital !== null &&
+        (requiredCapital ?? 0) > 0
+      ) {
         lines.push(
           mark(
             'negative',
@@ -386,7 +470,7 @@ export function useCalculatorViewModel() {
               i18nKey="calculator.warnings.capitalPercentRequired"
               values={{
                 percent: snapshot.capitalAssessment.percent,
-                required: formatCurrency(snapshot.suggestedCapital),
+                required: formatCurrency(requiredCapital ?? snapshot.suggestedCapital),
                 requiredPercent: requiredCapitalPercent,
               }}
               components={[
@@ -399,49 +483,82 @@ export function useCalculatorViewModel() {
         )
       } else {
         const state = snapshot.capitalAssessment.state
-        lines.push(
-          mark(
-            state === 'bad' ? 'negative' : 'positive',
-            <Trans
-              i18nKey="calculator.warnings.capital"
-              values={{ percent: snapshot.capitalAssessment.percent }}
-              components={[<strong key="capital-percent" />]}
-            />,
-          ),
-        )
+        if (capitalLtvMerged) {
+          // One green line: the capital share and the compliant financing
+          // ratio, instead of two separate ✔️ lines saying the same thing.
+          lines.push(
+            mark(
+              'positive',
+              <Trans
+                i18nKey="calculator.warnings.capitalLtvOk"
+                values={{
+                  percent: snapshot.capitalAssessment.percent,
+                  ltvPercent: ltvOkPercent,
+                  purpose: purposeLabels[purpose],
+                  limit: PURPOSE_LIMITS[purpose].limit,
+                }}
+                components={[
+                  <strong key="capital-percent" />,
+                  <strong key="ltv-percent" />,
+                  <strong key="ltv-limit" />,
+                ]}
+              />,
+            ),
+          )
+        } else {
+          lines.push(
+            mark(
+              state === 'bad' ? 'negative' : 'positive',
+              <Trans
+                i18nKey="calculator.warnings.capital"
+                values={{ percent: snapshot.capitalAssessment.percent }}
+                components={[<strong key="capital-percent" />]}
+              />,
+            ),
+          )
+        }
       }
-    } else if (snapshot.suggestedCapital !== null) {
-      // Requirement is general info, not good or bad news.
+    } else if (snapshot.suggestedCapital !== null && (requiredCapital ?? 0) > 0) {
+      // Requirement is general info, not good or bad news. Order 0 leads the
+      // info group so the 💡 payment fact (order 1) lands right after it
+      // (feedback).
       lines.push(
         mark(
           'info',
           <Trans
             i18nKey="calculator.warnings.capitalRequired"
             values={{
-              required: formatCurrency(snapshot.suggestedCapital),
+              required: formatCurrency(requiredCapital ?? snapshot.suggestedCapital),
               requiredPercent: requiredCapitalPercent,
             }}
             components={[<strong key="required" />, <strong key="requiredPercent" />]}
           />,
+          0,
         ),
       )
     }
 
     if (snapshot.closingCosts !== null) {
       if (snapshot.closingCosts.purchaseTax === 0) {
-        lines.push(
-          mark(
-            'positive',
-            <Trans
-              i18nKey="calculator.warnings.purchaseTaxNone"
-              values={{
-                purpose: purchaseTaxPurposeLabels[purpose],
-                threshold: formatCurrency(FIRST_HOME_TAX_EXEMPTION_UP_TO),
-              }}
-              components={[<strong key="threshold" />]}
-            />,
-          ),
-        )
+        // "Tax-free up to X" is only meaningful against a TYPED price - with
+        // no typed שווי הנכס the effective basis is loan+capital, and showing
+        // the exemption against it confused users ("why is this here?").
+        // The regular tax line (below) still shows, since it quotes numbers.
+        if (propertyValue > 0) {
+          lines.push(
+            mark(
+              'positive',
+              <Trans
+                i18nKey="calculator.warnings.purchaseTaxNone"
+                values={{
+                  purpose: purchaseTaxPurposeLabels[purpose],
+                  threshold: formatCurrency(FIRST_HOME_TAX_EXEMPTION_UP_TO),
+                }}
+                components={[<strong key="threshold" />]}
+              />,
+            ),
+          )
+        }
       } else {
         lines.push(
           mark(
@@ -459,92 +576,104 @@ export function useCalculatorViewModel() {
         )
       }
     }
-    // Side costs (attorney, registration & surveyor) - general info.
-    if (snapshot.closingCosts !== null) {
-      lines.push(
-        mark(
-          'info',
-          <Trans
-            i18nKey="calculator.warnings.closingCosts"
-            values={{
-              amount: formatCurrency(snapshot.closingCosts.sideCosts),
-              percent: snapshot.closingCosts.sideCostsPercent,
-            }}
-            components={[<strong key="sideAmount" />, <strong key="sidePercent" />]}
-          />,
-        ),
-      )
-    }
-    // Overall cash needed upfront (capital + all side costs & taxes) - the
-    // two legacy totals merged into one line (feedback request). The total
-    // reflects the *actual* capital entered; only when none is entered does
-    // it fall back to the required (suggested) capital.
-    if (snapshot.suggestedCapital !== null && snapshot.closingCosts !== null) {
-      const capitalForTotal = capital > 0 ? capital : snapshot.suggestedCapital
-      lines.push(
-        mark(
-          'info',
-          <Trans
-            i18nKey="calculator.warnings.capitalTotalRequired"
-            values={{ total: formatCurrency(capitalForTotal + snapshot.closingCosts.total) }}
-            components={[<strong key="total" />]}
-          />,
-        ),
-      )
-    }
     // Transaction fees (realtor / lawyer / appraiser) plus the planned
-    // renovation budget - market norms with VAT, general info. One line per
-    // fee plus a subtotal, only when a fee basis exists (property price or
-    // loan + capital fallback). The renovations slice appears on the line
-    // only when an amount was entered, so a blank field adds no noise.
+    // renovation budget and each named one-time expense - every upfront
+    // item on one line, built programmatically so items appear only when
+    // they carry an amount. No subtotal here: the upfront-total line below
+    // is the sum the user needs, and a second total just repeated it.
     const tx = snapshot.transactionCosts
-    if (tx !== null) {
-      const vatPercent = Math.round(VAT_RATE * 100)
+    // Fees typed above their market norm (realtor 2%, lawyer 0.5%) get a
+    // red ❌ warning - one line per offender, so two above-norm fees read
+    // as two separate warnings instead of one run-on list.
+    if (tx !== null && isFeeAboveNorm('realtor', realtorPercentText)) {
       lines.push(
         mark(
-          'info',
-          tx.renovations > 0 ? (
-            <Trans
-              i18nKey="calculator.warnings.transactionCostsWithRenovations"
-              values={{
-                realtor: formatCurrency(tx.realtor),
-                lawyer: formatCurrency(tx.lawyer),
-                appraiser: formatCurrency(tx.appraiser),
-                renovations: formatCurrency(tx.renovations),
-                total: formatCurrency(tx.total),
-                vatPercent,
-              }}
-              components={[
-                <strong key="tx-realtor" />,
-                <strong key="tx-lawyer" />,
-                <strong key="tx-appraiser" />,
-                <strong key="tx-renovations" />,
-                <strong key="tx-total" />,
-              ]}
-            />
-          ) : (
-            <Trans
-              i18nKey="calculator.warnings.transactionCosts"
-              values={{
-                realtor: formatCurrency(tx.realtor),
-                lawyer: formatCurrency(tx.lawyer),
-                appraiser: formatCurrency(tx.appraiser),
-                total: formatCurrency(tx.total),
-                vatPercent,
-              }}
-              components={[
-                <strong key="tx-realtor" />,
-                <strong key="tx-lawyer" />,
-                <strong key="tx-appraiser" />,
-                <strong key="tx-total" />,
-              ]}
-            />
-          ),
+          'negative',
+          <Trans
+            i18nKey="calculator.warnings.feeAboveNormItem"
+            values={{
+              fee: t('calculator.feeLabels.realtor'),
+              percent: realtorPercentText,
+              normPercent: FEE_NORM_PERCENT.realtor,
+              normAmount: formatCurrency(parseAmountText(realtorNormAmount ?? '')),
+            }}
+            components={[
+              <strong key="fee-norm-percent" />,
+              <strong key="fee-norm-norm" />,
+              <strong key="fee-norm-amount" />,
+            ]}
+          />,
         ),
       )
     }
-    // Grand upfront total: required/entered capital + closing costs + fees,
-    // rounded to ₪500 - the single "how much cash do I need" number.
+    if (tx !== null && isFeeAboveNorm('lawyer', lawyerPercentText)) {
+      lines.push(
+        mark(
+          'negative',
+          <Trans
+            i18nKey="calculator.warnings.feeAboveNormItem"
+            values={{
+              fee: t('calculator.feeLabels.lawyer'),
+              percent: lawyerPercentText,
+              normPercent: FEE_NORM_PERCENT.lawyer,
+              normAmount: formatCurrency(parseAmountText(lawyerNormAmount ?? '')),
+            }}
+            components={[
+              <strong key="fee-norm-percent" />,
+              <strong key="fee-norm-norm" />,
+              <strong key="fee-norm-amount" />,
+            ]}
+          />,
+        ),
+      )
+    }
+    if (tx !== null) {
+      const items: Array<{ label: string; amount: string }> = [
+        { label: t('calculator.feeLabels.realtor'), amount: formatCurrency(tx.realtor) },
+        { label: t('calculator.feeLabels.lawyer'), amount: formatCurrency(tx.lawyer) },
+      ]
+      // שמאי appears only when typed - a blank field means "no appraiser",
+      // so the line never advertises a cost the user didn't enter.
+      if (tx.appraiser > 0) {
+        items.push({
+          label: t('calculator.feeLabels.appraiser'),
+          amount: formatCurrency(tx.appraiser),
+        })
+      }
+      if (tx.renovations > 0) {
+        items.push({
+          label: t('calculator.feeLabels.renovations'),
+          amount: formatCurrency(tx.renovations),
+        })
+      }
+      for (const expense of otherExpenses) {
+        const oneTime = parseAmountText(expense.oneTimeAmountText)
+        if (oneTime > 0) {
+          items.push({
+            // An unnamed expense falls back to the generic noun, not the
+            // field caption ("הוצאה 123 ₪", not "תיאור ההוצאה 123 ₪").
+            label: expense.label.trim() || t('calculator.feeLabels.expense'),
+            amount: formatCurrency(oneTime),
+          })
+        }
+      }
+      lines.push(
+        mark(
+          'info',
+          <Trans
+            i18nKey="calculator.warnings.transactionCosts"
+            values={{
+              items: items.map((item) => `${item.label} <0>${item.amount}</0>`).join(' · '),
+            }}
+            components={[<strong key="tx-amount" />]}
+          />,
+        ),
+      )
+    }
+    // Grand upfront total: capital + purchase tax + fees & one-time
+    // expenses, rounded to ₪500 - the single "how much cash do I need"
+    // number. The wording enumerates the parts so it's clear the required
+    // capital figure above is equity alone and this line is everything.
     if (snapshot.upfrontTotal !== null) {
       lines.push(
         mark(
@@ -562,9 +691,15 @@ export function useCalculatorViewModel() {
 
   // Everything on one list, grouped by status: good → bad → info
   // (feedback request), with one uniform font size and no yellow tint.
-  const summaryNotes: NoteLine[] = [...capitalNoteLines, ...warningMessages].sort(
-    (a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status],
-  )
+  // Within a group an explicit `order` ranks ahead of insertion order - the
+  // payment fact leads the info group, before the transaction-cost line.
+  const summaryNotes: NoteLine[] = [...capitalNoteLines, ...warningMessages].sort((a, b) => {
+    const byStatus = STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]
+    if (byStatus !== 0) return byStatus
+    const aOrder = a.order ?? Number.POSITIVE_INFINITY
+    const bOrder = b.order ?? Number.POSITIVE_INFINITY
+    return aOrder - bOrder
+  })
   // When nothing is wrong (no red ❌ lines), the whole summary reads green.
   const allGood = summaryNotes.every((line) => line.status !== 'negative')
 
@@ -619,8 +754,8 @@ export function useCalculatorViewModel() {
         ? formatGroupedNumber(snapshot.incomePlaceholder)
         : undefined,
     capitalPlaceholder:
-      snapshot.suggestedCapital !== null
-        ? formatGroupedNumber(snapshot.suggestedCapital)
+      snapshot.suggestedCapital !== null && (requiredCapital ?? 0) > 0
+        ? formatGroupedNumber(requiredCapital ?? snapshot.suggestedCapital)
         : undefined,
     // שווי הנכס hint - the smallest value satisfying both the purpose's
     // financing limit and the ₪100k minimum-equity rule. Only while the
@@ -630,11 +765,19 @@ export function useCalculatorViewModel() {
       const hint = suggestedPropertyValue(loanAmount, purpose)
       return hint !== null ? formatGroupedNumber(hint) : undefined
     })(),
-    appraiserPlaceholder: formatGroupedNumber(DEFAULT_APPRAISER_FEE),
     // The realtor/lawyer ₪ fee fields only make sense once a fee basis
     // exists (property value, or the loan + capital fallback).
     feeAmountsVisible: snapshot.transactionCosts !== null,
-    recommendedMortgagePayment,
+    // Hint placeholders for cleared fee fields: the market default each
+    // cleared pair falls back to (shown like the שווי הנכס hint).
+    realtorPercentHint,
+    lawyerPercentHint,
+    realtorAmountHint,
+    lawyerAmountHint,
+    // Why a typed lawyer fee snapped up: the ₪6,000 pre-VAT minimum took
+    // over (false when the fee is cleared, at/above the floor, or basisless).
+    lawyerFloorApplied,
+    lawyerFloorAmount: LAWYER_FLOOR_WITH_VAT,
     capitalNoteLines,
     summaryNotes,
     allGood,

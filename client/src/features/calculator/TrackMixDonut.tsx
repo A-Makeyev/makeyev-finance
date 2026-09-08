@@ -137,7 +137,10 @@ export function TrackMixDonut({ shares }: { shares: TrackShare[] }) {
           >
             <strong>{t(`calculator.trackTypes.${activeShare.type}`)}</strong>
             <span>
-              {formatCurrency(activeShare.amount)} · {Math.round((Math.max(0, activeShare.amount) / total) * 100)}%
+              {/* Same zero-guard as the legend below: with no slices there is
+                  nothing to hover, but a 0 total must never print "NaN%". */}
+              {formatCurrency(activeShare.amount)} ·{' '}
+              {total > 0 ? Math.round((Math.max(0, activeShare.amount) / total) * 100) : 0}%
             </span>
           </div>
         )}

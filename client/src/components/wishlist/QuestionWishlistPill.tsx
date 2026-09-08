@@ -73,7 +73,7 @@ export function QuestionWishlistPill() {
             {t('wishlist.panelHint')}
           </p>
 
-          <ul className="mt-3 max-h-[45vh] space-y-2 overflow-y-auto pe-1">
+          <ul className="wishlist-list mt-3 max-h-[45vh] space-y-2 overflow-y-auto pe-1">
             {topics.map(({ item, title, summary }) => (
               <li
                 key={item.id}

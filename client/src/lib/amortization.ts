@@ -9,6 +9,10 @@ export const MAX_TRACKS = 3
 /** Cap on repeatable other-expense rows (feedback request). */
 export const MAX_OTHER_EXPENSES = 3
 export const MAX_YEARS = 30
+/** Input cap on a track's annual interest percent - the rate field's max.
+ * Same number as MAX_YEARS by coincidence; the two concepts are independent
+ * (a term change must never move the rate cap or vice versa). */
+export const MAX_RATE_PERCENT = 30
 /** Default slider term on load and after reset (feedback request). */
 export const DEFAULT_TERM_YEARS = 15
 export const FALLBACK_INFLATION = 0.02
@@ -549,6 +553,31 @@ export function suggestedMinimumIncome(firstMonthPayment: number): number {
 }
 
 /**
+ * Minimum monthly income so the ceiling allowance (the PTI share of income
+ * minus liabilities) covers the mortgage's first payment: payment divided by
+ * the ceiling, plus the liabilities, rounded up to ₪500. Mirrors
+ * allowedMonthlyPayment, so the income field's hint and the allowance summary
+ * line can never disagree: typing the hinted income makes the allowance cover
+ * the payment.
+ */
+export function suggestedIncomeForAllowance(
+  firstMonthPayment: number,
+  monthlyLiabilities: number = 0,
+  thresholdPercent: number = PTI_DEFAULT_THRESHOLD * 100,
+): number | null {
+  if (!Number.isFinite(firstMonthPayment) || firstMonthPayment <= 0) return null
+  const liabilities = Number.isFinite(monthlyLiabilities) ? Math.max(0, monthlyLiabilities) : 0
+  const percent =
+    Number.isFinite(thresholdPercent) && thresholdPercent > 0
+      ? thresholdPercent
+      : PTI_DEFAULT_THRESHOLD * 100
+  return (
+    Math.ceil((firstMonthPayment / (percent / 100) + liabilities) / DTI_ROUNDING_STEP) *
+    DTI_ROUNDING_STEP
+  )
+}
+
+/**
  * Required initial capital (הון עצמי) for a purchase: the gap between the
  * maximum financed share (100 − purpose limit) and the effective property
  * value. Mirrors assessCapital's effectiveValue (property else loan+capital).
@@ -605,7 +634,10 @@ export function estimateClosingCosts(
   purpose: PropertyPurpose,
 ): ClosingCostsEstimate | null {
   const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capital
-  if (effectiveValue < MIN_REAL_HOME_VALUE) return null
+  // No value basis, no estimate. Any positive value gets one - the user asked
+  // for the estimates to behave the same below the ~₪100k "real home" line
+  // (safe: the tax brackets cap at 10%, so percents cannot distort there).
+  if (effectiveValue <= 0) return null
   const round = (value: number) => Math.ceil(value / 500) * 500
   const sideCostsPercent = SIDE_COSTS_PERCENT
   const purchaseTax = round(computePurchaseTax(effectiveValue, purpose))
@@ -640,10 +672,12 @@ export const VAT_RATE = 0.18
  * figures.
  */
 export const DEFAULT_REALTOR_PERCENT = 2
-export const DEFAULT_LAWYER_PERCENT = 1
+export const DEFAULT_LAWYER_PERCENT = 0.5
 /** Common floor regardless of the percent (before VAT). */
 export const LAWYER_MINIMUM_FEE = 6000
-/** Flat fee - appraisers price per property, not per shekel borrowed. */
+/** Flat fee - appraisers price per property, not per shekel borrowed.
+ *  Historical market default; the estimate now counts שמאי only when typed,
+ *  so a blank field means "no appraiser" rather than this value. */
 export const DEFAULT_APPRAISER_FEE = 3000
 
 /** Adds VAT to a pre-tax amount. */
@@ -742,14 +776,16 @@ export function suggestedCapital(
  */
 export const MINIMUM_EQUITY = 100_000
 
-/** Upfront-cash figures round to the same ₪500 grid as suggestedCapital. */
-export const TRANSACTION_COSTS_ROUNDING_STEP = 500
-
 /**
  * Total upfront cash (הון עצמי + all one-time costs): the required capital,
- * the closing-cost estimate and the transaction-cost fees (each already
+ * the purchase tax and the itemized transaction-cost fees (each already
  * VAT-inclusive) draw from the same pool of savings, so the affordability
- * picture must add them. Rounded up to ₪500; null when there is no basis.
+ * picture must add them. Only the closing-cost estimate's PURCHASE TAX
+ * enters - the estimate's 1.5% side-cost item is deliberately excluded
+ * because it prices the lawyer and surveyor that the itemized fee fields
+ * already cost individually; adding both charged them twice. The sum is
+ * exact - every shekel in the total traces to a shown line item, no hidden
+ * rounding buffer. Null when there is no basis.
  */
 export function totalUpfrontCash(
   requiredCapital: number | null,
@@ -760,18 +796,11 @@ export function totalUpfrontCash(
   // A null capital (no equity basis) contributes zero - fees alone still
   // draw from savings, so the total must still show.
   const capital = requiredCapital ?? 0
-  if (
-    capital <= 0 &&
-    closingCosts === null &&
-    transactionCosts === null &&
-    oneTimeExpenses <= 0
-  ) {
+  if (capital <= 0 && closingCosts === null && transactionCosts === null && oneTimeExpenses <= 0) {
     return null
   }
   const oneTime = Number.isFinite(oneTimeExpenses) ? Math.max(0, oneTimeExpenses) : 0
-  const raw =
-    capital + (closingCosts?.total ?? 0) + (transactionCosts?.total ?? 0) + oneTime
-  return Math.ceil(raw / TRANSACTION_COSTS_ROUNDING_STEP) * TRANSACTION_COSTS_ROUNDING_STEP
+  return capital + (closingCosts?.purchaseTax ?? 0) + (transactionCosts?.total ?? 0) + oneTime
 }
 
 /**
@@ -785,7 +814,10 @@ export function totalUpfrontCash(
  * Rounded up to ₪500; null when no meaningful mortgage is entered, so a
  * placeholder never shows for tiny/placeholder loan amounts.
  */
-export function suggestedPropertyValue(loanAmount: number, purpose: PropertyPurpose): number | null {
+export function suggestedPropertyValue(
+  loanAmount: number,
+  purpose: PropertyPurpose,
+): number | null {
   if (loanAmount < MIN_REAL_HOME_VALUE) return null
   const financingFloor = (loanAmount * 100) / PURPOSE_LIMITS[purpose].limit
   const raw = Math.max(financingFloor, loanAmount + MINIMUM_EQUITY)
@@ -797,6 +829,36 @@ export function assessDti(firstMonthPayment: number, income: number): DtiWarning
   const minIncome = suggestedMinimumIncome(firstMonthPayment)
   const shortfallPercent = Math.min(99, Math.round((1 - income / minIncome) * 100))
   return { payment: firstMonthPayment, minIncome, shortfallPercent }
+}
+
+/**
+ * The monthly payment the adjustable ceiling allows for THIS buyer: the PTI
+ * share (default 33%, the same תקרת החזר control as the PTI check) of the
+ * net income left after the listed recurring liabilities. Ceiled to the whole
+ * shekel, never negative; null without income. At 100% this degrades to the
+ * old pure income-minus-debts rule, so tests can pin either framing.
+ */
+export function allowedMonthlyPayment(
+  income: number,
+  monthlyLiabilities: number,
+  thresholdPercent: number = PTI_DEFAULT_THRESHOLD * 100,
+): number | null {
+  if (!Number.isFinite(income) || income <= 0) return null
+  const liabilities = Number.isFinite(monthlyLiabilities) ? Math.max(0, monthlyLiabilities) : 0
+  const percent =
+    Number.isFinite(thresholdPercent) && thresholdPercent > 0
+      ? thresholdPercent
+      : PTI_DEFAULT_THRESHOLD * 100
+  const disposable = Math.max(0, income - liabilities)
+  return Math.ceil((disposable * percent) / 100)
+}
+
+/**
+ * Whether the mortgage's first payment exceeds the buyer's allowed monthly
+ * payment (net income minus liabilities).
+ */
+export function paymentExceedsAllowed(firstMonthPayment: number, allowed: number | null): boolean {
+  return allowed !== null && firstMonthPayment > allowed
 }
 
 export interface PTIAssessment {
@@ -822,7 +884,9 @@ export function suggestedMortgagePayment(
 ): number {
   if (!Number.isFinite(monthlyIncome) || monthlyIncome <= 0) return 0
   const expenses = Number.isFinite(otherMonthlyExpenses) ? Math.max(0, otherMonthlyExpenses) : 0
-  const threshold = Number.isFinite(thresholdPercent) ? thresholdPercent / 100 : PTI_DEFAULT_THRESHOLD
+  const threshold = Number.isFinite(thresholdPercent)
+    ? thresholdPercent / 100
+    : PTI_DEFAULT_THRESHOLD
   return Math.max(0, monthlyIncome * threshold - expenses)
 }
 
@@ -972,7 +1036,9 @@ export function redistributeTrackAmounts(
   return otherAmounts.map((amount, index) => {
     if (index === count - 1) return remaining - allocated
     const share =
-      othersTotal > 0 ? Math.round((remaining * amount) / othersTotal) : Math.floor(remaining / count)
+      othersTotal > 0
+        ? Math.round((remaining * amount) / othersTotal)
+        : Math.floor(remaining / count)
     allocated += share
     return share
   })

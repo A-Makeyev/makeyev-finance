@@ -5,6 +5,26 @@ const currencyFormatter = new Intl.NumberFormat('he-IL', {
 })
 
 /**
+ * Market-norm fee percents (before VAT): realtor commission and the lawyer
+ * fee. A fee typed above its norm gets a red ❌ warning in the summary notes.
+ * These mirror DEFAULT_REALTOR_PERCENT / DEFAULT_LAWYER_PERCENT in
+ * amortization.ts - kept local to avoid a lib cross-import.
+ */
+export type FeeKind = 'realtor' | 'lawyer'
+export const FEE_NORM_PERCENT: Record<FeeKind, number> = { realtor: 2, lawyer: 0.5 }
+
+/**
+ * Whether a fee percent is strictly above its market norm. A blank field
+ * falls back to the norm itself (the store prices it at the default), so it
+ * is never above; an explicitly typed 0 ("no fee") is never above either.
+ */
+export function isFeeAboveNorm(kind: FeeKind, percentText: string): boolean {
+  if (percentText.trim() === '') return false
+  const value = Number(percentText.replace(',', '.'))
+  return Number.isFinite(value) && value > FEE_NORM_PERCENT[kind]
+}
+
+/**
  * ₪ currency formatting, identical to the legacy calculator. Guards against
  * NaN/Infinity so a bad value can never render literal "NaN ₪" / "∞ ₪" -
  * it degrades to ₪0, matching the defensive style used in amortization.ts.
@@ -74,16 +94,14 @@ function sanitizeAmountText(raw: string): string {
 }
 
 /**
- * Percent display that never rounds a small rate to "0.0%": whole numbers stay
- * whole, rates under 1% get 3 decimals, otherwise 2 decimals - trailing zeros
- * trimmed (e.g. 0.0372 → "0.037", 8.271 → "8.27", 4.50 → "4.5"). Two decimals
- * for the ≥1% branch preserve precision on real preset rates (5.75, 4.25).
+ * Percent display rounded to max 2 decimals, trailing zeros trimmed
+ * (e.g. 1.21231 → "1.21", 8.271 → "8.27", 4.50 → "4.5", 5.75 → "5.75").
+ * User decision: the 2-decimal cap applies everywhere, tiny rates included
+ * (0.0372 → "0.04"), so no display ever shows three decimals.
  */
 export function formatRatePercent(percent: number): string {
   if (!Number.isFinite(percent)) return '0'
-  if (Number.isInteger(percent)) return String(percent)
-  const decimals = percent < 1 ? 3 : 2
-  return percent.toFixed(decimals).replace(/\.?0+$/, '')
+  return percent.toFixed(2).replace(/\.?0+$/, '')
 }
 
 /**

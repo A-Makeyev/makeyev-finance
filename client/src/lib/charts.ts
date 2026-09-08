@@ -26,20 +26,110 @@ export function niceTicks(max: number, targetCount = 4): number[] {
   const rawStep = max / Math.max(1, targetCount)
   const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)))
   const residual = rawStep / magnitude
-  const factor = residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 2.5 ? 2.5 : residual <= 5 ? 5 : 10
+  const factor =
+    residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 2.5 ? 2.5 : residual <= 5 ? 5 : 10
   const step = factor * magnitude
   const ticks: number[] = []
   for (let tick = 0; tick <= max + step * 1e-9; tick += step) {
     ticks.push(Number(tick.toFixed(6)))
   }
   // The axis can end above the last round tick - show the true max too,
-  // but only when it clears the last round tick by at least a quarter
-  // step. Any closer and its label prints on top of the round one below
-  // (e.g. a 103K max rendering ₪103K over ₪100K); the round tick then
-  // stays the top label, just shy of the plot's top edge.
+  // but only when it stays legible: it must clear the last round tick by
+  // at least a quarter step (any closer and its label prints on top of the
+  // round one below), and its abbreviated label must differ from that
+  // tick's (₪7,500 and ₪8,200 both print "₪8K", which read as the same
+  // payment shown twice). Failing either check, the round tick stays the
+  // top label, just shy of the plot's top edge.
   const last = ticks[ticks.length - 1]
-  if (max - last > step * 0.25) ticks.push(Number(max.toFixed(6)))
+  if (max - last > step * 0.25 && formatAxisShekel(max) !== formatAxisShekel(last)) {
+    ticks.push(Number(max.toFixed(6)))
+  }
   return ticks
+}
+
+/** Smallest "nice" step (1/2/2.5/5×10ⁿ) that is >= value. */
+function niceStepUp(value: number): number {
+  const magnitude = Math.pow(10, Math.floor(Math.log10(value)))
+  const residual = value / magnitude
+  const factor =
+    residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 2.5 ? 2.5 : residual <= 5 ? 5 : 10
+  return factor * magnitude
+}
+
+/** Evenly stepped gridline values 0..step × intervals (`intervals` slices). */
+function axisTicks(step: number, intervals: number): number[] {
+  const ticks: number[] = []
+  for (let index = 0; index <= intervals; index++) {
+    ticks.push(Number((index * step).toFixed(6)))
+  }
+  return ticks
+}
+
+/** True when any two ticks on the axis print the same abbreviated label. */
+function hasDuplicateLabels(ticks: number[]): boolean {
+  const labels = new Set(ticks.map((tick) => formatAxisShekel(tick)))
+  return labels.size !== ticks.length
+}
+
+export interface DualAxisTicks {
+  /** Left (payments) axis gridline values: 0 .. scaleMaxPayment, evenly stepped. */
+  paymentTicks: number[]
+  /** Right (balance) axis gridline values: same count, same row fractions. */
+  balanceTicks: number[]
+  /** Plot-top of the payments scale: step × intervals (>= the data max). */
+  scaleMaxPayment: number
+  /** Plot-top of the balance scale: step × intervals (>= the data max). */
+  scaleMaxBalance: number
+  /** Shared gridline interval count (each ticks array is intervals + 1 long). */
+  intervals: number
+}
+
+/**
+ * Grid-aligned dual-axis ticks for the amortization chart: the payments
+ * scale (left) and the balance scale (right) are both cut into the same
+ * number of equal intervals with round steps, and each scale top extends
+ * to step × intervals, so the solid payments grid and the dashed balance
+ * grid draw on the same rows instead of crossing mid-plot. The shared
+ * interval count is searched around `targetCount` (2..7) and ranked by: no
+ * duplicated axis labels first (e.g. step-500 grids print 1,500 and 2,000
+ * both as "₪2K"), then the worse axis' headroom (scale top / data max - keeps the data filling
+ * the plot), then closeness to the target, then fewer gridlines. Every
+ * candidate guarantees scaleMax >= its data max, so no series clips above
+ * the top gridline. Returns null when either max is unusable; the caller
+ * then falls back to two independent niceTicks scales (grids may cross,
+ * as before).
+ */
+export function alignedDualTicks(
+  maxPayment: number,
+  maxBalance: number,
+  targetCount = 4,
+): DualAxisTicks | null {
+  const usable = (max: number) => Number.isFinite(max) && max > 0
+  if (!usable(maxPayment) || !usable(maxBalance)) return null
+  let best: DualAxisTicks | null = null
+  let bestHeadroom = Number.POSITIVE_INFINITY
+  let bestDistance = Number.POSITIVE_INFINITY
+  for (let intervals = 2; intervals <= 7; intervals++) {
+    const stepPayment = niceStepUp(maxPayment / intervals)
+    const stepBalance = niceStepUp(maxBalance / intervals)
+    const scaleMaxPayment = stepPayment * intervals
+    const scaleMaxBalance = stepBalance * intervals
+    const paymentTicks = axisTicks(stepPayment, intervals)
+    const balanceTicks = axisTicks(stepBalance, intervals)
+    if (hasDuplicateLabels(paymentTicks) || hasDuplicateLabels(balanceTicks)) continue
+    // Headroom is bounded (< 2) because a nice step is under 2× the value
+    // it was snapped from, so an absolute epsilon is a safe tie window.
+    const headroom = Math.max(scaleMaxPayment / maxPayment, scaleMaxBalance / maxBalance)
+    const distance = Math.abs(intervals - targetCount)
+    const better =
+      headroom < bestHeadroom - 1e-9 || (headroom <= bestHeadroom + 1e-9 && distance < bestDistance)
+    if (better) {
+      bestHeadroom = headroom
+      bestDistance = distance
+      best = { paymentTicks, balanceTicks, scaleMaxPayment, scaleMaxBalance, intervals }
+    }
+  }
+  return best
 }
 
 export interface DonutSegmentInput {
@@ -85,8 +175,7 @@ export function arcPath(
   endAngle: number,
 ): string {
   const sweep = endAngle - startAngle
-  const clampedEnd =
-    sweep >= Math.PI * 2 ? startAngle + Math.PI * 2 - 1e-4 : endAngle
+  const clampedEnd = sweep >= Math.PI * 2 ? startAngle + Math.PI * 2 - 1e-4 : endAngle
   const x0 = cx + rOuter * Math.cos(startAngle)
   const y0 = cy + rOuter * Math.sin(startAngle)
   const x1 = cx + rOuter * Math.cos(clampedEnd)

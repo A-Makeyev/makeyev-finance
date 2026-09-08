@@ -205,11 +205,15 @@ export function ScheduleSection() {
               <section className="schedule-track" key={`${index}-${track.type}`}>
                 <h3 className="schedule-track-heading">
                   {t(`calculator.trackTypes.${track.type}`)} · {formatCurrency(track.amount)}
-                  <span className="schedule-track-heading-ratio">
-                    {' '}
-                    · {t('calculator.schedule.paybackRatioLabel')}{' '}
-                    {formatRatio(track.rows[0]?.paybackRatio)}
-                  </span>
+                  {/* No rows, no ratio: formatRatio would print a misleading
+                      "0" (reads as payback-for-free) for an empty track. */}
+                  {track.rows[0] && (
+                    <span className="schedule-track-heading-ratio">
+                      {' '}
+                      · {t('calculator.schedule.paybackRatioLabel')}{' '}
+                      {formatRatio(track.rows[0].paybackRatio)}
+                    </span>
+                  )}
                 </h3>
                 <div className="table-wrap">
                   <table>

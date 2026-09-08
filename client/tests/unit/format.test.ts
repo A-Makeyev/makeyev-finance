@@ -6,6 +6,7 @@ import {
   formatGroupedNumber,
   formatRatePercent,
   formatRatio,
+  isFeeAboveNorm,
   parseAmountText,
 } from '@/lib/format'
 
@@ -60,6 +61,26 @@ describe('number formatting parity with legacy', () => {
   })
 })
 
+describe('isFeeAboveNorm', () => {
+  it('flags a realtor percent strictly above the 2% norm', () => {
+    expect(isFeeAboveNorm('realtor', '2')).toBe(false)
+    expect(isFeeAboveNorm('realtor', '2.01')).toBe(true)
+    expect(isFeeAboveNorm('realtor', '3.5')).toBe(true)
+    expect(isFeeAboveNorm('realtor', '0')).toBe(false)
+  })
+
+  it('flags a lawyer percent strictly above the 0.5% norm', () => {
+    expect(isFeeAboveNorm('lawyer', '0.5')).toBe(false)
+    expect(isFeeAboveNorm('lawyer', '1')).toBe(true)
+    expect(isFeeAboveNorm('lawyer', '0')).toBe(false)
+  })
+
+  it('accepts blank-field text as the default (not above the norm)', () => {
+    expect(isFeeAboveNorm('realtor', '')).toBe(false)
+    expect(isFeeAboveNorm('lawyer', '')).toBe(false)
+  })
+})
+
 describe('formatRatePercent', () => {
   it('keeps whole numbers whole and normal rates at 2 decimals', () => {
     expect(formatRatePercent(8)).toBe('8')
@@ -74,10 +95,16 @@ describe('formatRatePercent', () => {
     expect(formatRatePercent(3.0)).toBe('3')
   })
 
-  it('never rounds tiny rates to 0.0% - shows 3 decimals instead', () => {
-    expect(formatRatePercent(0.0372)).toBe('0.037')
+  it('rounds every rate to max 2 decimals', () => {
+    expect(formatRatePercent(1.21231)).toBe('1.21')
+    expect(formatRatePercent(8.271)).toBe('8.27')
+    expect(formatRatePercent(2.11864407)).toBe('2.12')
+  })
+
+  it('applies the same 2-decimal cap to tiny rates', () => {
+    expect(formatRatePercent(0.0372)).toBe('0.04')
     expect(formatRatePercent(0.1)).toBe('0.1')
-    expect(formatRatePercent(0.0005)).toBe('0.001')
+    expect(formatRatePercent(0.0005)).toBe('0')
   })
 })
 

@@ -25,9 +25,7 @@ export function CalculatorPage() {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
   // Expense rows playing their exit animation - the row is removed from the
   // store only after the animation ends, so the fade-out plays in full.
-  const [removingExpenseIds, setRemovingExpenseIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  )
+  const [removingExpenseIds, setRemovingExpenseIds] = useState<ReadonlySet<string>>(() => new Set())
 
   /**
    * Remove with a fade-out; reduced-motion users get the instant removal.
@@ -296,6 +294,7 @@ export function CalculatorPage() {
                       step="0.01"
                       value={store.realtorPercentText}
                       onChange={(event) => store.updateRealtorPercent(event.target.value)}
+                      placeholder={vm.realtorPercentHint ?? undefined}
                       aria-label={t('calculator.realtorPercentLabel')}
                       data-testid="realtor-percent"
                     />
@@ -307,6 +306,7 @@ export function CalculatorPage() {
                       value={store.realtorAmountText}
                       onChange={(raw, caret) => store.updateRealtorAmount(raw, caret)}
                       suffix="₪"
+                      placeholder={vm.realtorAmountHint ?? undefined}
                       ariaLabel={t('calculator.realtorAmountLabel')}
                       testId="realtor-amount"
                     />
@@ -325,6 +325,7 @@ export function CalculatorPage() {
                       step="0.01"
                       value={store.lawyerPercentText}
                       onChange={(event) => store.updateLawyerPercent(event.target.value)}
+                      placeholder={vm.lawyerPercentHint ?? undefined}
                       aria-label={t('calculator.lawyerPercentLabel')}
                       data-testid="lawyer-percent"
                     />
@@ -336,11 +337,17 @@ export function CalculatorPage() {
                       value={store.lawyerAmountText}
                       onChange={(raw, caret) => store.updateLawyerAmount(raw, caret)}
                       suffix="₪"
+                      placeholder={vm.lawyerAmountHint ?? undefined}
                       ariaLabel={t('calculator.lawyerAmountLabel')}
                       testId="lawyer-amount"
                     />
                   )}
                 </span>
+                {vm.lawyerFloorApplied && (
+                  <small className="fee-floor-note" data-testid="lawyer-floor-note">
+                    {t('calculator.lawyerFloorNote', { amount: vm.lawyerFloorAmount })}
+                  </small>
+                )}
               </label>
 
               <label className="input-group">
@@ -349,7 +356,6 @@ export function CalculatorPage() {
                   value={store.appraiserFeeText}
                   onChange={(raw, caret) => store.updateAppraiserFee(raw, caret)}
                   suffix="₪"
-                  placeholder={vm.appraiserPlaceholder}
                   ariaLabel={t('calculator.appraiserFeeLabel')}
                   testId="appraiser-fee"
                 />
@@ -390,43 +396,41 @@ export function CalculatorPage() {
                     className={`expense-row${removingExpenseIds.has(expense.id) ? ' removing' : ''}`}
                     onAnimationEnd={() => finishRemoveExpense(expense.id)}
                   >
-                  <button
-                    type="button"
-                    className="expense-remove-button"
-                    onClick={() => animateRemoveExpense(expense.id)}
-                    aria-label={t('calculator.expenseRemove')}
-                    data-testid={`expense-remove-${expense.id}`}
-                  >
-                    ×
-                  </button>
-                  <label className="input-group expense-label-group">
-                    {t('calculator.expenseLabel')}
-                    <div className="input-wrap expense-label-wrap">
-                      <input
-                        type="text"
-                        value={expense.label}
-                        placeholder={t('calculator.expenseLabelPlaceholder')}
-                        onChange={(event) =>
-                          store.updateOtherExpenseLabel(expense.id, event.target.value)
+                    <button
+                      type="button"
+                      className="expense-remove-button"
+                      onClick={() => animateRemoveExpense(expense.id)}
+                      aria-label={t('calculator.expenseRemove')}
+                      data-testid={`expense-remove-${expense.id}`}
+                    >
+                      ×
+                    </button>
+                    <label className="input-group expense-label-group">
+                      {t('calculator.expenseLabel')}
+                      <div className="input-wrap expense-label-wrap">
+                        <input
+                          type="text"
+                          value={expense.label}
+                          onChange={(event) =>
+                            store.updateOtherExpenseLabel(expense.id, event.target.value)
+                          }
+                          aria-label={t('calculator.expenseLabelAria')}
+                          data-testid={`expense-label-${expense.id}`}
+                        />
+                      </div>
+                    </label>
+                    <label className="input-group expense-amount-group">
+                      {t('calculator.expenseAmountLabel')}
+                      <MoneyInput
+                        value={expense.amountText}
+                        onChange={(raw, caret) =>
+                          store.updateOtherExpenseAmount(expense.id, raw, caret)
                         }
-                        aria-label={t('calculator.expenseLabelPlaceholder')}
-                        data-testid={`expense-label-${expense.id}`}
+                        suffix="₪"
+                        ariaLabel={t('calculator.expenseAmountLabel')}
+                        testId={`expense-amount-${expense.id}`}
                       />
-                    </div>
-                  </label>
-                  <label className="input-group expense-amount-group">
-                    {t('calculator.expenseAmountLabel')}
-                    <MoneyInput
-                      value={expense.amountText}
-                      onChange={(raw, caret) =>
-                        store.updateOtherExpenseAmount(expense.id, raw, caret)
-                      }
-                      suffix="₪"
-                      placeholder={t('calculator.expenseAmountPlaceholder')}
-                      ariaLabel={t('calculator.expenseAmountLabel')}
-                      testId={`expense-amount-${expense.id}`}
-                    />
-                  </label>
+                    </label>
                     <label className="input-group expense-onetime-group">
                       {t('calculator.expenseOneTimeAmountLabel')}
                       <MoneyInput
@@ -435,7 +439,6 @@ export function CalculatorPage() {
                           store.updateOtherExpenseOneTimeAmount(expense.id, raw, caret)
                         }
                         suffix="₪"
-                        placeholder={t('calculator.expenseOneTimeAmountPlaceholder')}
                         ariaLabel={t('calculator.expenseOneTimeAmountLabel')}
                         testId={`expense-onetime-${expense.id}`}
                       />
@@ -446,16 +449,16 @@ export function CalculatorPage() {
                   {index === store.otherExpenses.length - 1 &&
                     store.otherExpenses.length < MAX_OTHER_EXPENSES && (
                       <div className="expense-row expense-add-under-last">
-                      <button
-                        type="button"
-                        className="expense-add-button"
-                        onClick={() => store.addOtherExpense()}
-                        data-testid="add-expense"
-                      >
-                        {t('calculator.otherExpensesAdd')} +
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          type="button"
+                          className="expense-add-button"
+                          onClick={() => store.addOtherExpense()}
+                          data-testid="add-expense"
+                        >
+                          {t('calculator.otherExpensesAdd')} +
+                        </button>
+                      </div>
+                    )}
                 </Fragment>
               ))}
               {store.otherExpenses.length === 0 && (
