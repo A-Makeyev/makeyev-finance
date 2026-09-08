@@ -334,8 +334,6 @@ export const en: { translation: Translation } = {
       },
       warnings: {
         capital: 'Capital is <0>{{percent}}%</0> of the property value',
-        capitalLtvOk:
-          'Capital is <0>{{percent}}%</0> of the property value ~ financing ratio (<1>{{ltvPercent}}%</1>) is within the limit for a {{purpose}} (up to <2>{{limit}}%</2>)',
         capitalRequired:
           'Required capital for bank approval: <0>{{required}}</0> (<1>{{requiredPercent}}%</1>)',
         capitalShortfall:

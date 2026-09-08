@@ -326,8 +326,6 @@ export const he = {
       },
       warnings: {
         capital: 'הון עצמי <0>{{percent}}%</0> משווי הנכס',
-        capitalLtvOk:
-          'הון עצמי <0>{{percent}}%</0> משווי הנכס ~ שיעור המימון (<1>{{ltvPercent}}%</1>) עומד במותר ל{{purpose}} (עד <2>{{limit}}%</2>)',
         capitalRequired:
           'הון עצמי נדרש לאישור הבנק: <0>{{required}}</0> (<1>{{requiredPercent}}%</1>)',
         capitalShortfall:

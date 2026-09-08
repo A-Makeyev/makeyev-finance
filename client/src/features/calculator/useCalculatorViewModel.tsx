@@ -195,22 +195,15 @@ export function useCalculatorViewModel() {
   )
 
   // Financing compliant with the purpose limit - the green mirror of the LTV
-  // violation, computed once so the capital line and the standalone LTV line
-  // agree on when the merged capital+financing line renders. Null when the
-  // ratio is violated or there is nothing to measure.
+  // violation, always rendered as its own ✔️ line (feedback: never folded
+  // into the capital line). Null when the ratio is violated or there is
+  // nothing to measure.
   const ltvOkPercent = (() => {
     if (snapshot.isEmpty || effectiveValue < MIN_REAL_HOME_VALUE || loanAmount <= 0) return null
     const percent = (loanAmount / effectiveValue) * 100
     if (percent > PURPOSE_LIMITS[purpose].limit + 0.01) return null
     return Number.isInteger(percent) ? String(Math.round(percent)) : percent.toFixed(1)
   })()
-  // The plain (non-shortfall) capital share line - the one candidate for
-  // folding the compliant-financing note into one line.
-  const capitalPlain =
-    !!snapshot.capitalAssessment &&
-    snapshot.capitalAssessment.state !== 'bad' &&
-    !(snapshot.capitalShortfall && snapshot.suggestedCapital !== null && (requiredCapital ?? 0) > 0)
-  const capitalLtvMerged = capitalPlain && ltvOkPercent !== null
 
   if (snapshot.ltv) {
     // Precise ratio (e.g. 75.3%) so the warning never reads as
@@ -220,6 +213,7 @@ export function useCalculatorViewModel() {
       : snapshot.ltv.percent.toFixed(1)
     // The violation alone; the remedy (max mortgage + required capital)
     // lives on the 💡 required-payment line above (feedback request).
+    // Order 0 leads the bad (❌) group (feedback request).
     warningMessages.push(
       mark(
         'negative',
@@ -232,11 +226,12 @@ export function useCalculatorViewModel() {
           }}
           components={[<strong key="ltv-percent" />, <strong key="ltv-limit" />]}
         />,
+        0,
       ),
     )
-  } else if (ltvOkPercent !== null && !capitalLtvMerged) {
-    // Compliant financing ratio → green ✔️ mirror of the violation line.
-    // Skipped when the capital line already folded it in (one line, not two).
+  } else if (ltvOkPercent !== null) {
+    // Compliant financing ratio → green ✔️ mirror of the violation line,
+    // always its own line (feedback: not merged into the capital line).
     warningMessages.push(
       mark(
         'positive',
@@ -483,40 +478,16 @@ export function useCalculatorViewModel() {
         )
       } else {
         const state = snapshot.capitalAssessment.state
-        if (capitalLtvMerged) {
-          // One green line: the capital share and the compliant financing
-          // ratio, instead of two separate ✔️ lines saying the same thing.
-          lines.push(
-            mark(
-              'positive',
-              <Trans
-                i18nKey="calculator.warnings.capitalLtvOk"
-                values={{
-                  percent: snapshot.capitalAssessment.percent,
-                  ltvPercent: ltvOkPercent,
-                  purpose: purposeLabels[purpose],
-                  limit: PURPOSE_LIMITS[purpose].limit,
-                }}
-                components={[
-                  <strong key="capital-percent" />,
-                  <strong key="ltv-percent" />,
-                  <strong key="ltv-limit" />,
-                ]}
-              />,
-            ),
-          )
-        } else {
-          lines.push(
-            mark(
-              state === 'bad' ? 'negative' : 'positive',
-              <Trans
-                i18nKey="calculator.warnings.capital"
-                values={{ percent: snapshot.capitalAssessment.percent }}
-                components={[<strong key="capital-percent" />]}
-              />,
-            ),
-          )
-        }
+        lines.push(
+          mark(
+            state === 'bad' ? 'negative' : 'positive',
+            <Trans
+              i18nKey="calculator.warnings.capital"
+              values={{ percent: snapshot.capitalAssessment.percent }}
+              components={[<strong key="capital-percent" />]}
+            />,
+          ),
+        )
       }
     } else if (snapshot.suggestedCapital !== null && (requiredCapital ?? 0) > 0) {
       // Requirement is general info, not good or bad news. Order 0 leads the
@@ -545,6 +516,8 @@ export function useCalculatorViewModel() {
         // the exemption against it confused users ("why is this here?").
         // The regular tax line (below) still shows, since it quotes numbers.
         if (propertyValue > 0) {
+          // Order 0 leads the good (✔️) group - the exemption is the headline
+          // good news (feedback request).
           lines.push(
             mark(
               'positive',
@@ -556,6 +529,7 @@ export function useCalculatorViewModel() {
                 }}
                 components={[<strong key="threshold" />]}
               />,
+              0,
             ),
           )
         }
