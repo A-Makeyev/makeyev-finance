@@ -193,8 +193,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
         // Plain-text rows: a '~' separator (matching the calculator
         // snapshot lines) and a trailing '.' is dropped, so the rows read
         // cleanly inside the email's <pre> cells.
-        questionParams[`topic_${index + 1}`] = `${title} ~ ${summary}`
-          .replace(/\.$/, '')
+        questionParams[`topic_${index + 1}`] = `${title} ~ ${summary}`.replace(/\.$/, '')
       })
       const snapshot = buildCalculatorSnapshot(t)
       if (snapshot) {
@@ -327,7 +326,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
                   )
                 }
                 className={cn(
-                  'group flex flex-col items-start rounded-[5px] border px-3 py-2 text-left shadow-black outline-none transition-colors duration-200',
+                  'group flex flex-col items-center rounded-[5px] border px-2 py-2 text-center shadow-black outline-none transition-colors duration-200',
                   'focus-visible:ring-2 focus-visible:ring-soft-blue/40',
                   selected
                     ? 'border-soft-blue bg-soft-blue text-white'
@@ -339,7 +338,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
                 </span>
                 <span
                   className={cn(
-                    'text-[12px] font-semibold leading-tight transition-colors duration-200',
+                    'whitespace-nowrap text-[12px] font-semibold leading-tight min-[480px]:text-[13px] transition-colors duration-200',
                     selected ? 'text-white/80' : 'text-soft-dark-grey group-hover:text-white/80',
                   )}
                 >
@@ -375,7 +374,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
                 >
                   <FaTimes
                     aria-hidden="true"
-                    className="translate-y-[1px] ml-1 text-[11px] text-soft-dark-grey transition-colors hover:text-soft-red"
+                    className="translate-y-[1px] text-[11px] text-soft-dark-grey transition-colors hover:text-soft-red"
                   />
                 </button>
                 {title}

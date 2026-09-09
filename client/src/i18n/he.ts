@@ -307,7 +307,7 @@ export const he = {
       },
       dynamicNotes: {
         indexedLabel: 'ההחזר הגבוה ביותר',
-        indexedNote: 'כולל הצמדה עתידית למדד (ההחזר עשוי לעלות)',
+        indexedNote: 'כולל הצמדה עתידית למדד',
         equalPrincipalLabel: 'ההחזר החודשי הראשון',
         equalPrincipalNote: 'בקרן שווה ההחזר יורד עם השנים',
         variableLabel: 'ההחזר החודשי הנוכחי',

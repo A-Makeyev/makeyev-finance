@@ -314,7 +314,7 @@ export const en: { translation: Translation } = {
       },
       dynamicNotes: {
         indexedLabel: 'Highest payment',
-        indexedNote: 'Includes future CPI indexation (payment may rise)',
+        indexedNote: 'Includes future CPI indexation',
         equalPrincipalLabel: 'First monthly payment ',
         equalPrincipalNote: 'With equal principal, the payment decreases over the years',
         variableLabel: 'Current monthly payment',

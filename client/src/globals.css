@@ -2599,8 +2599,8 @@ e #name,
 
 .expense-remove-button {
   flex: 0 0 auto;
-  width: 43px;
-  height: 43px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--calc-line);
   background: white;
   color: var(--calc-muted);
@@ -4490,6 +4490,15 @@ tbody tr:hover {
     height: 38px;
   }
 
+  /* The expense-row remove button drops to the same 38px height as the
+     shrunken phone inputs - at 43px it poked ~5px above the field it
+     deletes (the row bottom-aligns, so the mismatch shows at the top). */
+  .expense-remove-button {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+  }
+
   .input-group,
   .starting-amount,
   .term-slider {
@@ -4531,6 +4540,23 @@ tbody tr:hover {
 
   .results-card strong {
     font-size: 1.75rem;
+  }
+
+  /* Phone grid cells are too narrow for the one-line total-payments label
+     ("Total payments over 15 years") - its nowrap min-content forced a
+     2-column grid wider than the panel (43px overflow at 360px in English).
+     Wrap here; the nowrap hint stays for tablet/desktop layouts. */
+  .total-payment-text {
+    white-space: normal;
+  }
+
+  /* Keep multi-digit values on one line, but let the card itself shrink:
+     plain nowrap made the <strong> min-content the full number width, which
+     blew past half-width cells and stretched the whole grid. */
+  .results-card strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   #schedule-summary {
@@ -4603,18 +4629,21 @@ tbody tr:hover {
    tighter charts and footer. Append-only so the 650px block stays intact.
 =========================================================================== */
 @media screen and (max-width: 400px) {
-  /* Results: one card per row - 7-digit amounts never wrap mid-number and
-     the featured card keeps its breathing room. */
+  /* Results: two cards per row - the featured (first) card still takes the
+     full row via the ≤800px .primary-result rule. */
   .results-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .results-card {
     padding: 14px 16px 12px;
   }
 
+  /* Half-width cells must still hold 7-digit totals (total interest/payments)
+     on one line - 1.9rem (the one-per-row size) overflowed them, so the
+     ≤800px two-column value size applies here too. */
   .results-card strong {
-    font-size: 1.9rem;
+    font-size: 1.45rem;
   }
 
   /* Track form: stack every field - the long track-type label ("משתנה כל 5
