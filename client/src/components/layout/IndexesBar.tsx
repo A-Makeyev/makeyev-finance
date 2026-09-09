@@ -71,6 +71,7 @@ export function useCbsFeeds(): CbsFeedsResult {
 }
 
 function FeedAnchor({ payload }: { payload: CbsIndexPayload }) {
+  const { t } = useTranslation()
   const month = payload.currentMonth
   if (!month) return null
   return (
@@ -81,14 +82,21 @@ function FeedAnchor({ payload }: { payload: CbsIndexPayload }) {
       style={{ order: Number(payload.displayOrder) }}
       className="remove-highlight"
     >
-      {payload.indexName}{' '}
+      {/* Short localized name ("CPI" etc. in English); the raw Hebrew feed
+          name stays in the search deep link and the tooltip. */}
+      <span title={payload.indexName}>
+        {t(`indexesBar.shortNames.${kindToShortNameKey(payload.searchQuery)}`)}
+      </span>{' '}
       <span style={{ color: TREND_COLORS[payload.monthDirection] }}>{month.value}</span>
+      {/* Non-breaking space: a plain collapsible space next to the empty
+          .line-break span collapses to zero width (measured in the probe),
+          gluing the number to the next label. */}
       <span className="line-break" />
-      {' שינוי חודשי '}
+      <span className="index-join">{t('indexesBar.monthlyChange')} </span>
       <span style={{ color: TREND_COLORS[payload.monthDirection] }}>
         {TREND_ARROWS[payload.monthDirection]} {adjustMinus(String(month.percent))}
       </span>
-      {' שינוי שנתי '}
+      <span className="index-join">{t('indexesBar.yearlyChange')} </span>
       <span style={{ color: TREND_COLORS[payload.yearDirection] }}>
         {TREND_ARROWS[payload.yearDirection]} {adjustMinus(String(month.percentYear))}
       </span>
@@ -123,6 +131,19 @@ export function IndexesBar({ feeds, hidden = false }: IndexesBarProps) {
       ))}
     </div>
   )
+}
+
+/**
+ * Maps a feed to its short-name i18n key. The CBS searchQuery (built from
+ * the trimmed Hebrew name) is the stable discriminator: צרכן = CPI,
+ * מגורים = residential construction inputs, otherwise commercial.
+ */
+function kindToShortNameKey(
+  searchQuery: string,
+): 'cpi' | 'residentialConstruction' | 'commercialConstruction' {
+  if (searchQuery.includes('צרכן')) return 'cpi'
+  if (searchQuery.includes('מגורים')) return 'residentialConstruction'
+  return 'commercialConstruction'
 }
 
 /** Syncs the live CPI annual change into the calculator store (recalculates indexed tracks). */

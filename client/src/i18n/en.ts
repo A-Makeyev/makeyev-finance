@@ -398,6 +398,26 @@ export const en: { translation: Translation } = {
       monthlyChange: 'Monthly change',
       yearlyChange: 'Yearly change',
       ariaLabel: 'Price indexes',
+      // Short English labels for the CBS index names (the CBS feed only
+      // publishes Hebrew names).
+      shortNames: {
+        cpi: 'CPI',
+        residentialConstruction: 'Residential input',
+        commercialConstruction: 'Commercial input',
+      },
+    },
+    marketTracker: {
+      ariaLabel: 'Market prices',
+      proxyOf: 'Tracks {{proxy}}',
+      staleTooltip: 'Cached data, may be out of date',
+      assets: {
+        sp500: 'SPY',
+        nasdaq: 'QQQ',
+        ta35: 'EIS',
+        gold: 'GOLD',
+        bitcoin: 'BTC',
+        usdils: 'USD/ILS',
+      },
     },
     wishlist: {
       save: 'Save topic',

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Outlet, useLocation } from 'react-router'
 import { applyDocumentDirection } from '@/i18n'
 import { useCbsFeeds, IndexesBar, useCpiCalculatorSync } from './IndexesBar'
+import { MarketTracker } from './MarketTracker'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
 import { OfflineBanner } from './OfflineBanner'
@@ -34,7 +35,16 @@ export function SiteLayout() {
     <>
       <ScrollToTop />
       <IndexesBar feeds={feeds} hidden={menuOpen} />
-      <Navbar indexesVisible={feeds.anySuccess} onMenuChange={setMenuOpen} />
+      {/* The Markets strip always renders (skeleton -> data -> error states
+          all keep its fixed 26px height). When the Indexes strip is absent
+          it moves to the top so the navbar offset stays correct either way. */}
+      <MarketTracker hidden={menuOpen} atTop={!feeds.anySuccess} />
+      <Navbar
+        indexesVisible={feeds.anySuccess}
+        marketsVisible
+        indexesMissing={!feeds.anySuccess}
+        onMenuChange={setMenuOpen}
+      />
       <OfflineBanner />
       <main>
         <Outlet />

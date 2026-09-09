@@ -9,9 +9,9 @@
   "scripts": {
     "dev": "vite",
     "dev:all": "concurrently -k -n ui,server -c cyan,green \"npm run dev\" \"npm run server:dev\"",
-    "server:dev": "cross-env PORT=3000 node server/server.js",
+    "server:dev": "cross-env PORT=3000 node --env-file=.env --experimental-strip-types server/server.js",
     "build": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && vite build",
-    "start": "node server/server.js",
+    "start": "node --env-file=.env --experimental-strip-types server/server.js",
     "preview": "vite preview --port 5173 --strictPort",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "lint": "eslint .",
@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

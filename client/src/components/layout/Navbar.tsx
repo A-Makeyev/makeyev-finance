@@ -31,10 +31,19 @@ const SOCIAL_ICONS = [
 
 interface NavbarProps {
   indexesVisible?: boolean
+  /** True when the Markets strip is rendered below the Indexes strip. */
+  marketsVisible?: boolean
+  /** True when the Indexes strip is absent (Markets strip sits at top). */
+  indexesMissing?: boolean
   onMenuChange?: (open: boolean) => void
 }
 
-export function Navbar({ indexesVisible = false, onMenuChange }: NavbarProps) {
+export function Navbar({
+  indexesVisible = false,
+  marketsVisible = false,
+  indexesMissing = false,
+  onMenuChange,
+}: NavbarProps) {
   const { t, i18n } = useTranslation()
   const location = useLocation()
   const scrolled = useScrolled()
@@ -120,6 +129,8 @@ export function Navbar({ indexesVisible = false, onMenuChange }: NavbarProps) {
         solid && 'navbar-scrolling',
         solid && isDesktop770 && 'nav-scrolling-resize',
         indexesVisible && !menuOpen && 'adjust-nav',
+        marketsVisible && !menuOpen && 'adjust-markets',
+        marketsVisible && !menuOpen && indexesMissing && 'no-indexes',
         linksDark && 'links-dark',
         linesDark && 'lines-dark',
       )}

@@ -387,6 +387,26 @@ export const he = {
       monthlyChange: 'שינוי חודשי',
       yearlyChange: 'שינוי שנתי',
       ariaLabel: 'מדדי מחירים',
+      // Hebrew keeps the CBS-published (trimmed) names as the canonical
+      // display; en.ts carries the short English labels.
+      shortNames: {
+        cpi: 'מדד המחירים לצרכן',
+        residentialConstruction: 'תשומה בבניין מגורים',
+        commercialConstruction: 'תשומה בבניין מסחר ומשרדים',
+      },
+    },
+    marketTracker: {
+      ariaLabel: 'מחירי שוק',
+      proxyOf: 'עוקב אחרי {{proxy}}',
+      staleTooltip: 'הנתונים מהמטמון ועשויים להיות לא עדכניים',
+      assets: {
+        sp500: 'SPY',
+        nasdaq: 'QQQ',
+        ta35: 'EIS',
+        gold: 'GOLD',
+        bitcoin: 'BTC',
+        usdils: 'USD/ILS',
+      },
     },
     wishlist: {
       save: 'מעניין אותי',

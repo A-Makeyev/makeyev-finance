@@ -68,31 +68,59 @@ to GitHub Pages and browsable at:
 The page keeps the last 10 runs, newest first, with auto-refresh when a new
 run lands.
 
-## Architecture
+## Architecture```
+
+client/
+index.html Vite entry
+public/ static assets (images, favicon)
+src/
+config/ env.ts (zod-validated env) · siteConfig.ts (public business info)
+i18n/ he.ts · en.ts · provider (document dir/lang switching)
+lib/ amortization.ts (pure mortgage math + BoI rules)
+format.ts (currency/input caret formatting) · xml.ts (CBS parser)
+services/ boi.ts · cbs.ts (typed fetch wrappers, silent-fail parity)
+market.ts (GET /api/market/quotes client + react-query hook)
+stores/ calculatorStore.ts (tracks, sync modes, dirty flags, snapshot)
+components/
+layout/ Navbar · IndexesBar · MarketTracker · Footer · OfflineBanner · Loader · Reveal
+ui/ MoneyInput · TermSlider (CSS-variable fill) · AppModal (Radix)
+features/
+calculator/ Page · TrackForm · PresetSelector · ResultsCards · ScheduleSection
+contact/ ContactForm · FloatingLabelField · MessageModal · ActionFormModal
+emailjsClient.ts (deadlock-retry) · validation.ts (zod schemas)
+pages/ Home · Services · Articles
+tests/unit/ Vitest suites for lib/ + market data
+server/ server.js (Express - serves client/dist, SPA fallback)
+market/ (market data integration: Finnhub + Frankfurter
+providers, service, cache, asset registry, /api/market/quotes
+route; API keys stay server-side only)
+e2e/ playwright config in root; pom/ · support/mocks.ts · tests/{ui,api}
 
 ```
-client/
-  index.html    Vite entry
-  public/       static assets (images, favicon)
-  src/
-    config/       env.ts (zod-validated env) · siteConfig.ts (public business info)
-    i18n/         he.ts · en.ts · provider (document dir/lang switching)
-    lib/          amortization.ts (pure mortgage math + BoI rules)
-                  format.ts (currency/input caret formatting) · xml.ts (CBS parser)
-    services/     boi.ts · cbs.ts (typed fetch wrappers, silent-fail parity)
-    stores/       calculatorStore.ts (tracks, sync modes, dirty flags, snapshot)
-    components/
-      layout/     Navbar · IndexesBar · Footer · OfflineBanner · Loader · Reveal
-      ui/         MoneyInput · TermSlider (CSS-variable fill) · AppModal (Radix)
-    features/
-      calculator/ Page · TrackForm · PresetSelector · ResultsCards · ScheduleSection
-      contact/    ContactForm · FloatingLabelField · MessageModal · ActionFormModal
-                  emailjsClient.ts (deadlock-retry) · validation.ts (zod schemas)
-    pages/        Home · Services · Articles
-  tests/unit/   Vitest suites for lib/
-server/         server.js (Express - serves client/dist, SPA fallback)
-e2e/            playwright config in root; pom/ · support/mocks.ts · tests/{ui,api}
+
+### Market tracker
+
+The "Markets" strip below the Indexes bar is powered by market-data providers
+through our own server (never from the browser - `FINNHUB_API_KEY` is
+server-only):
+
 ```
+
+Navigation (MarketTracker)
+-> GET /api/market/quotes
+-> MarketDataService (snapshot cache, per-asset failure isolation)
+-> FinnhubProvider (/quote: ETFs + BINANCE:BTCUSDT, real-time)
+-> FrankfurterProvider (ECB daily FX series: USD/ILS, keyless)
+
+```
+
+- Index levels themselves are premium-only upstream, so rows track US-listed
+  ETF proxies (S&P 500->SPY, NASDAQ->QQQ, TA-35->EIS, GOLD->GLD) plus
+  Bitcoin (BINANCE:BTCUSDT) and the ECB's USD/ILS reference rate.
+- Adding an asset (stock, coin, watchlist row) is one entry in
+  `server/market/assets.ts` - no new API logic.
+- Configuration: `FINNHUB_API_KEY`, `MARKET_DATA_CACHE_TTL`,
+  `MARKET_DATA_REFRESH_INTERVAL` (see `.env.example`).
 
 ### The calculator state machine
 
@@ -124,3 +152,4 @@ build mode instead of URL sniffing; dead legacy code (unused SMTP tokens,
 `sleep`, orphaned CSS) was dropped. Everything else is 1:1.
 
 See [SECURITY.md](./SECURITY.md) for the secret-extraction ledger.
+```

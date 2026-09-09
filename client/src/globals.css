@@ -1255,6 +1255,123 @@ img {
   cursor: pointer;
 }
 
+/* Leading non-breaking space: the labels sit next to the empty .line-break
+   span (or a colored value span), and a plain space there collapses to zero
+   width, gluing text together. Not selectable, so it never pollutes copied
+   text. */
+.indexes .index-join {
+  user-select: text;
+}
+.indexes .index-join::before {
+  /* CSS hex escape (not \u) for a non-breaking space. */
+  content: '\00a0';
+  user-select: none;
+}
+
+/* ===========================================================================
+   Markets tracker (new subsystem - market data via our own server API).
+   Deliberately mirrors the .indexes strip: same fixed position, same type
+   scale, same dark background tokens, stacked directly below it (Indexes
+   height is 35px at full width, 55/75/84px under the media queries below,
+   so each block re-pins the Markets strip to match).
+
+   Layout: five rows (ticker / price / signed change), no heading, no
+   links. Colors follow the international convention (+ green, - red),
+   unlike the Indexes strip's legacy + red convention.
+=========================================================================== */
+.markets {
+  display: flex;
+  /* Wrap like the Indexes strip: rows flow onto extra lines on narrow
+     screens instead of clipping. The bar grows downward; each breakpoint
+     below re-pins the strip's top and the navbar clears the extra height. */
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 20px;
+  row-gap: 4px;
+  background-color: var(--soft-black);
+  position: fixed;
+  min-height: 35px;
+  /* Bottom padding is the strip's own breathing room: the frosted navbar
+     slab starts exactly at the strip's bottom edge, so without it the row
+     text kisses the nav. Counts toward --markets-height (offsetHeight). */
+  padding: 5px 10px 9px;
+  z-index: 98;
+  right: 0;
+  left: 0;
+  scrollbar-width: none;
+  /* Strip text is data display, not content to copy-select; dragging
+     across the bar (e.g. while selecting page text) should not grab it. */
+  user-select: none;
+  -webkit-user-select: none;
+  /* Sits directly below the 35px Indexes strip (media queries re-pin). */
+  top: 35px;
+  direction: ltr;
+}
+
+.markets::-webkit-scrollbar {
+  display: none;
+}
+
+/* When the CBS Indexes strip is absent (feeds failed), the Markets strip
+   takes its place at the very top instead of floating mid-air. */
+.markets.markets-no-indexes {
+  top: 0;
+}
+
+.markets-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--soft-white);
+  white-space: nowrap;
+  transition: all 0.25s ease;
+}
+
+.markets-name {
+  cursor: default;
+  /* Name stays white like the Indexes strip's index names; only the
+     price + change values take the movement color. */
+  color: var(--soft-white);
+}
+
+.markets-price {
+  font-variant-numeric: tabular-nums;
+}
+
+.markets-change {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Movement colors: the EXACT Indexes strip palette tokens, mapped to the
+   user-set international convention (+ green, - red; the Indexes bar's own
+   legacy convention is + red, so the two hexes swap roles here):
+   up rgb(35,210,65), down rgb(210,60,60), flat lightblue (same as the
+   Indexes' flat). Values colored at full brightness, names white. */
+.markets-row.market-change-up .markets-price,
+.markets-row.market-change-up .markets-change {
+  color: rgb(35, 210, 65);
+}
+
+.markets-row.market-change-down .markets-price,
+.markets-row.market-change-down .markets-change {
+  color: rgb(210, 60, 60);
+}
+
+.markets-row.market-change-flat .markets-price,
+.markets-row.market-change-flat .markets-change {
+  color: lightblue;
+}
+
+/* Stale rows dim the WHOLE row (values included) below indexes brightness:
+   the numbers are visibly not-current. */
+.markets-row-stale .markets-price,
+.markets-row-stale .markets-change {
+  opacity: 0.55;
+}
+
 nav#navbar {
   direction: ltr;
   user-select: none;
@@ -1338,6 +1455,26 @@ nav#navbar .logo {
 
 nav#navbar.adjust-nav {
   top: 35px;
+}
+
+/* Markets strip sits below the Indexes strip; the navbar clears both with
+   the same top+margin scheme the taller Indexes heights use. The strip's
+   real rendered height (it wraps on narrow screens) is published by the
+   component as --markets-height and defaults to 35px (full-width height)
+   before first paint. Base rule: the navbar's own top: 35px (see
+   nav#navbar.adjust-nav) already clears the full-width Indexes bar, so the
+   margin here is ONLY the strip height. Each breakpoint below re-asserts
+   the margin as its own .adjust-nav indexes extra (20/40/49px) + the
+   measured strip height, because this rule's specificity would otherwise
+   swallow the breakpoint .adjust-nav margins (e.g. at ≤650px 49px + strip
+   on top of the 35px top). When the Indexes strip is absent the strip takes
+   the top slot (.markets-no-indexes) and the navbar clears only the strip. */
+nav#navbar.adjust-markets {
+  margin-top: var(--markets-height, 35px);
+}
+
+nav#navbar.adjust-markets.no-indexes {
+  margin-top: var(--markets-height, 35px);
 }
 
 nav#navbar.nav-scrolling-resize {
@@ -1432,9 +1569,20 @@ nav#navbar #nav-list a[data-testid='language-switch']:hover {
   transform: scale(1.15);
 }
 
+/* Legacy hidden menu toggle: must stay in the DOM (the menu's :checked
+   selectors and the label's htmlFor target it) but must never paint.
+   The old off-screen positioning still rendered a box under some layouts. */
 #nav-toggle {
-  top: -100px;
   position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 nav#navbar .menu-icon {
@@ -1626,8 +1774,18 @@ nav#navbar.nav-scrolling-resize {
     margin-top: 20px;
   }
 
+  nav#navbar.adjust-markets {
+    /* 20px (.adjust-nav indexes extra) + the strip's real (wrapped) height. */
+    margin-top: calc(20px + var(--markets-height, 35px));
+  }
+
   .indexes {
     height: 55px;
+  }
+
+  .markets {
+    /* Indexes grows to 55px here; the Markets strip follows it. */
+    top: 55px;
   }
 
   .indexes a {
@@ -1665,10 +1823,22 @@ nav#navbar.nav-scrolling-resize {
     margin-top: 40px;
   }
 
+  nav#navbar.adjust-markets {
+    /* 40px (.adjust-nav indexes extra) + the strip's real (wrapped) height. */
+    margin-top: calc(40px + var(--markets-height, 35px));
+  }
+
   .indexes {
     height: 75px;
     align-items: center;
     flex-direction: column;
+  }
+
+  .markets {
+    top: 75px;
+    /* Slightly tighter gaps than the 20px base so the wrapped rows stay
+       compact; font size matches the Indexes bar (16px) at every width. */
+    column-gap: 16px;
   }
 
   .indexes a {
@@ -1687,6 +1857,12 @@ nav#navbar.nav-scrolling-resize {
     margin-top: 49px;
   }
 
+  nav#navbar.adjust-markets {
+    /* 49px (.adjust-nav indexes extra) + the strip's real height = the
+       navbar clears the 84px Indexes bar + wrapped strip. */
+    margin-top: calc(49px + var(--markets-height, 35px));
+  }
+
   .indexes {
     /* Compact fit for the 10px index text: 6 wrapped lines (12px line
        boxes) + 10px padding = 82px. */
@@ -1695,6 +1871,23 @@ nav#navbar.nav-scrolling-resize {
 
   .indexes a {
     /* Small but readable on phones - 9px was unreadable, 11px too loud. */
+    font-size: 10px;
+  }
+
+  .markets {
+    top: 84px;
+    /* Phone width: tighter gaps and row type so the wrapped rows fit
+       like the Indexes strip does (two per line at 12px). Extra bottom
+       padding keeps the last line clear of the nav slab. */
+    column-gap: 14px;
+    row-gap: 2px;
+    padding: 3px 6px 9px;
+  }
+
+  .markets-row {
+    gap: 4px;
+    /* Matches the 10px Indexes text on phones - the two strips read as
+       one type scale. */
     font-size: 10px;
   }
 }

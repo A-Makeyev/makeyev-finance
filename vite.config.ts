@@ -15,4 +15,14 @@ export default defineConfig({
   build: {
     target: 'es2020',
   },
+  server: {
+    // Dev only: the express server (server/server.js, `npm run dev:all` on
+    // port 3000) owns /api - production serves both from one process.
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
 })

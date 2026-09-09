@@ -1,6 +1,7 @@
 import express from 'express'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { marketRouter } from './market/routes.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Overridable for tests (see server/server.test.js); defaults to the built SPA.
@@ -10,6 +11,9 @@ const distDir = process.env.DIST_DIR
 const port = Number(process.env.PORT) || 5173
 
 export const app = express()
+
+// Market data API (server-only API keys live in server/market/).
+app.use(marketRouter())
 
 // Serve the built SPA (created by `npm run build`).
 app.use(express.static(distDir))
