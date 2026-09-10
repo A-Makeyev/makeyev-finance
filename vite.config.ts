@@ -16,7 +16,7 @@ export default defineConfig({
     target: 'es2020',
   },
   server: {
-    // Dev only: the express server (server/server.js, `npm run dev:all` on
+    // Dev only: the express server (server/server.js, `npm run dev` on
     // port 3000) owns /api - production serves both from one process.
     proxy: {
       '/api': {

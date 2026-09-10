@@ -7,7 +7,7 @@ services:
     healthCheckPath: /
     envVars:
       - key: NODE_VERSION
-        value: 20
+        value: 22
       # Public-by-design (baked into the client bundle); same values as .env.example.
       - key: VITE_EMAILJS_SERVICE_ID
         value: service_k2c0eve

@@ -7,11 +7,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "vite",
-    "dev:all": "concurrently -k -n ui,server -c cyan,green \"npm run dev\" \"npm run server:dev\"",
-    "server:dev": "cross-env PORT=3000 node --env-file=.env --experimental-strip-types server/server.js",
+    "dev": "concurrently -k -n ui,server -c cyan,green \"npm run client:dev\" \"npm run server:dev\"",
+    "client:dev": "vite",
+    "server:dev": "cross-env PORT=3000 node --env-file-if-exists=.env --experimental-strip-types server/server.js",
     "build": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && vite build",
-    "start": "node --env-file=.env --experimental-strip-types server/server.js",
+    "start": "node --env-file-if-exists=.env --experimental-strip-types server/server.js",
     "preview": "vite preview --port 5173 --strictPort",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "lint": "eslint .",

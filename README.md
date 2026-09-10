@@ -27,13 +27,14 @@ tested, CI-gated React application.
 ```bash
 npm install
 cp .env.example .env      # then fill real values (dev placeholders work too)
-npm run dev               # http://localhost:5173 (Vite, HMR)
+npm run build             # once, so Express has SPA files to serve
+npm run dev               # Vite on http://localhost:5173 (HMR) + Express on http://localhost:3000
 
-# Full stack, production-like:
-npm run build && npm run dev:all   # Express on http://localhost:3000, Vite on :5173
+# UI only:
+npm run client:dev        # http://localhost:5173 (Vite, HMR)
 ```
 
-`npm run dev:all` runs Vite (UI) and the Express server (serves the built
+`npm run dev` runs Vite (UI) and the Express server (serves the built
 `client/dist/` SPA) side by side; run `npm run build` first so Express has
 files to serve.
 
@@ -41,8 +42,8 @@ files to serve.
 
 | Script                                 | Purpose                                                                                                                          |
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run dev`                          | Vite dev server                                                                                                                  |
-| `npm run dev:all`                      | Vite dev server + Express server together (run `npm run build` once first; Express serves the built SPA on :3000, Vite on :5173) |
+| `npm run client:dev`                   | Vite dev server                                                                                                                  |
+| `npm run dev`                          | Vite dev server + Express server together (run `npm run build` once first; Express serves the built SPA on :3000, Vite on :5173) |
 | `npm run server:dev`                   | Express server only, on :3000                                                                                                    |
 | `npm run build`                        | Typecheck (both tsconfigs) + production build                                                                                    |
 | `npm run preview`                      | Serve `client/dist/` on :5173                                                                                                    |
