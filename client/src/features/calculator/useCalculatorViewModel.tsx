@@ -527,25 +527,12 @@ export function useCalculatorViewModel() {
           ),
         )
       }
-    } else if (snapshot.suggestedCapital !== null && (requiredCapital ?? 0) > 0) {
-      // Requirement is general info, not good or bad news. Order 0 leads the
-      // info group so the 💡 payment fact (order 1) lands right after it
-      // (feedback).
-      lines.push(
-        mark(
-          'info',
-          <Trans
-            i18nKey="calculator.warnings.capitalRequired"
-            values={{
-              required: formatCurrency(requiredCapital ?? snapshot.suggestedCapital),
-              requiredPercent: requiredCapitalPercent,
-            }}
-            components={[<strong key="required" />, <strong key="requiredPercent" />]}
-          />,
-          0,
-        ),
-      )
     }
+    // No standalone "required capital for bank approval" 💡 line (feedback):
+    // without an entered capital the bank's equity requirement is already
+    // implied by the loan ratio, and the 💡 upfront total below is the single
+    // cash figure. The requirement still renders as an amount when it is
+    // actually missed (capitalShortfall / capitalPercentRequired above).
 
     if (snapshot.closingCosts !== null) {
       if (snapshot.closingCosts.purchaseTax === 0) {
@@ -684,8 +671,9 @@ export function useCalculatorViewModel() {
     }
     // Grand upfront total: capital + purchase tax + fees & one-time
     // expenses, rounded to ₪500 - the single "how much cash do I need"
-    // number. The wording enumerates the parts so it's clear the required
-    // capital figure above is equity alone and this line is everything.
+    // number. It reads "מומלץ לביצוע העסקה" (recommended to close the deal)
+    // rather than "required", since it is the bank's equity share plus the
+    // one-time costs around it (feedback).
     if (snapshot.upfrontTotal !== null) {
       lines.push(
         mark(

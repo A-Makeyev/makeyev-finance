@@ -218,9 +218,9 @@ export const en: { translation: Translation } = {
         defaultPaymentNote: 'Assuming a fixed rate for the entire term',
         overpayCard: 'Total cost of credit',
         overpayCaption: 'How much extra you repay on top of the principal',
-        avgPaymentCard: 'Average monthly payment',
+        avgPaymentCard: 'Average payment',
         avgPaymentCaption: 'Total cost divided evenly across every month of the term',
-        interestShareCard: 'Interest share of first payment',
+        interestShareCard: 'Interest of first payment',
         interestShareCaption: 'Early annuity payments go mostly to interest, not principal',
         balance5yCard: 'Balance after 5 years',
         balance5yCaption: 'Debt still owed after 5 years ~ for refinance or sale',
@@ -230,7 +230,7 @@ export const en: { translation: Translation } = {
         rateDownCard: 'If rates drop by 1%',
         rateDownCaption: 'First payment with every variable rate −1 point ({{delta}}%)',
         rateDownCaptionFixed: 'No variable-rate tracks ~ your payment is locked for the whole term',
-        fiveYInterestCard: 'Interest share of the first 5 years',
+        fiveYInterestCard: 'Interest of the first 5 years',
         fiveYInterestCaption: 'Share of interest in the first 5 years of payments',
         per100kCard: 'Payment per ₪100k',
         per100kCaption: 'Monthly cost scaled to ₪100k ~ compare offers fairly',
@@ -336,8 +336,6 @@ export const en: { translation: Translation } = {
         capital: 'Capital is <0>{{percent}}%</0> of the property value',
         capitalLtvOk:
           'Capital is <0>{{capitalPercent}}%</0> of the property value ~ within the limit for a {{purpose}} (up to <1>{{limit}}%</1>)',
-        capitalRequired:
-          'Required capital for bank approval: <0>{{required}}</0> (<1>{{requiredPercent}}%</1>)',
         capitalShortfall:
           'Capital is below the required share ~ at least <0>{{required}}</0> (<1>{{requiredPercent}}%</1>) is needed',
         capitalPercentRequired:
@@ -378,7 +376,7 @@ export const en: { translation: Translation } = {
         feeAboveNormItem:
           '{{fee}} <0>{{percent}}%</0> is above the market norm <1>{{normPercent}}%</1> ~ should cost <2>{{normAmount}}</2>',
         transactionCosts: 'Expected transaction fees: {{items}}',
-        upfrontTotal: 'Total required capital: <0>{{total}}</0>',
+        upfrontTotal: 'Total capital recommended to complete the deal: <0>{{total}}</0>',
         purposeFirst: 'first home',
         purposeUpgrade: 'home upgrade',
         purposeInvestment: 'investment property',

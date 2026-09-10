@@ -45,6 +45,31 @@ test.describe('mortgage calculator - core UI flows', () => {
     })
   })
 
+  test('remove-track stays centered on the select chevron column', async () => {
+    // Regression: the × was pinned at a fixed 33px while the fieldset's
+    // inline padding narrows to 12px on phones, which drifted it ~6px off the
+    // chevron column it stands on. It must line up at every width.
+    for (const width of [1280, 360]) {
+      await calc.page.setViewportSize({ width, height: 900 })
+      await calc.page.locator('[data-testid="track-1"]').scrollIntoViewIfNeeded()
+      // String-form evaluate: the e2e tsconfig has no DOM lib.
+      const gap = (await calc.page.evaluate(`(() => {
+        const field = document.querySelector('[data-testid="track-1"]')
+        const remove = field.querySelector('.remove-track')
+        const range = document.createRange()
+        range.selectNodeContents(remove)
+        const ink = range.getBoundingClientRect()
+        const cx = ink.x + ink.width / 2
+        return [...field.querySelectorAll('.select-chevron')].reduce((best, c) => {
+          const b = c.getBoundingClientRect()
+          const dx = Math.abs(b.x + b.width / 2 - cx)
+          return dx < best ? dx : best
+        }, Infinity)
+      })()`)) as number
+      expect(gap, `× vs chevron column at ${width}px`).toBeLessThanOrEqual(1)
+    }
+  })
+
   test('preset baskets populate tracks and highlight selection', async () => {
     // תמהיל 2 = two tracks (fixed + prime, half each).
     await calc.selectPreset('basket2')
@@ -129,6 +154,22 @@ test.describe('mortgage calculator - core UI flows', () => {
     await expect(calc.summaryNotes).toContainText(
       'הון עצמי 25% משווי הנכס ~ עומד במותר לדירה ראשונה (עד 75%)',
     )
+  })
+
+  test('one recommended upfront total replaces the bank-requirement line', async () => {
+    // 1M property, 250k equity (loan derives to 750k). The bank's equity
+    // requirement no longer gets its own 💡 line (feedback): the single cash
+    // line is the recommended total - 250k equity + 0 tax (first home under
+    // the exempt bracket) + 30,680 fees = 280,680.
+    await calc.setPropertyValue('1,000,000')
+    await calc.setCapital('250,000')
+
+    await expect(calc.summaryNotes).toBeVisible()
+    await expect(calc.summaryNotes).toContainText(
+      `סה"כ הון עצמי מומלץ לביצוע העסקה: ${ils(280_680)}`,
+    )
+    await expect(calc.summaryNotes).not.toContainText('אישור הבנק')
+    await expect(calc.summaryNotes).not.toContainText('הון עצמי נדרש')
   })
 
   test('green allowance line names both the payment and the ceiling', async () => {

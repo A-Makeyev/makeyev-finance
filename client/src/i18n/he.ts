@@ -223,7 +223,7 @@ export const he = {
         rateDownCard: 'אם הריבית תרד ב-1%',
         rateDownCaption: 'ההחזר הראשון כשכל ריבית משתנה יורדת בנקודה ({{delta}}%)',
         rateDownCaptionFixed: 'אין מסלולים בריבית משתנה ~ ההחזר יציב לאורך כל התקופה',
-        fiveYInterestCard: 'נתח הריבית ב-5 השנים הראשונות',
+        fiveYInterestCard: 'נתח הריבית בתחילת 5 שנים',
         fiveYInterestCaption: 'נתח הריבית מתוך התשלומים ב-5 השנים הראשונות',
         per100kCard: 'החזר לכל 100 אלף ₪',
         per100kCaption: 'ההחזר החודשי לכל 100 אלף ש"ח ~ להשוואת הצעות',
@@ -328,8 +328,6 @@ export const he = {
         capital: 'הון עצמי <0>{{percent}}%</0> משווי הנכס',
         capitalLtvOk:
           'הון עצמי <0>{{capitalPercent}}%</0> משווי הנכס ~ עומד במותר ל{{purpose}} (עד <1>{{limit}}%</1>)',
-        capitalRequired:
-          'הון עצמי נדרש לאישור הבנק: <0>{{required}}</0> (<1>{{requiredPercent}}%</1>)',
         capitalShortfall:
           'הון עצמי נמוך מהנדרש ~ נדרש לפחות <0>{{required}}</0> (<1>{{requiredPercent}}%</1>)',
         capitalPercentRequired:
@@ -367,7 +365,7 @@ export const he = {
         feeAboveNormItem:
           '{{fee}} <0>{{percent}}%</0> גבוה מהנורמה המקובלת בשוק <1>{{normPercent}}%</1> ~ אמור לעלות <2>{{normAmount}}</2>',
         transactionCosts: 'עלויות עסקה צפויות: {{items}}',
-        upfrontTotal: 'סה"כ הון עצמי נדרש: <0>{{total}}</0>',
+        upfrontTotal: 'סה"כ הון עצמי מומלץ לביצוע העסקה: <0>{{total}}</0>',
         purposeFirst: 'דירה ראשונה',
         purposeUpgrade: 'שדרוג דירה',
         purposeInvestment: 'דירה להשקעה',

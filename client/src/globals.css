@@ -3146,7 +3146,13 @@ e #name,
   gap: 14px;
   position: relative;
   border: 1px solid var(--calc-line);
-  padding: 24px 18px 16px;
+  /* The inline padding is also the anchor of the absolutely positioned
+     remove button (it stands on the chevron column of the last field), so
+     the narrow-screen overrides change this variable rather than the
+     shorthand alone - padding and button then move together instead of the
+     button drifting off the chevron. */
+  --track-pad-inline: 18px;
+  padding: 24px var(--track-pad-inline) 16px;
   margin: 0;
 }
 
@@ -3202,7 +3208,12 @@ e #name,
 
 .remove-track {
   position: absolute;
-  left: 33px;
+  /* Centered on the select chevron's column: the fieldset's inline padding
+     (18px, 12px on narrow screens) + the chevron's own 18px inset + half of
+     its rotated 8px box (4px) - half of this button's 14px box (7px).
+     Logical inset, so Hebrew RTL puts it on the left and English LTR on the
+     right without a dir override. */
+  inset-inline-end: calc(var(--track-pad-inline) + 15px);
   top: 6px;
   border: 0;
   color: var(--calc-muted);
@@ -3210,12 +3221,6 @@ e #name,
   cursor: pointer;
   font-size: 1.5rem;
   line-height: 1;
-}
-
-/* English (LTR) puts the remove-track on the right side of the fieldset. */
-:root[dir='ltr'] .remove-track {
-  left: auto;
-  right: 33px;
 }
 
 .add-track-button {
@@ -4723,8 +4728,9 @@ tbody tr:hover {
   }
 
   .mortgage-track {
+    --track-pad-inline: 12px;
     gap: 10px;
-    padding: 20px 12px 12px;
+    padding: 20px var(--track-pad-inline) 12px;
   }
 
   .results-card p {
@@ -4842,9 +4848,10 @@ tbody tr:hover {
   /* Track form: stack every field - the long track-type label ("משתנה כל 5
      שנים לא צמודה") finally fits without clipping. */
   .mortgage-track {
+    --track-pad-inline: 12px;
     grid-template-columns: 1fr;
     gap: 12px;
-    padding: 26px 12px 12px;
+    padding: 26px var(--track-pad-inline) 12px;
   }
 
   /* Neutralize the 6-col spans from the ≤1000px block - in a 1-column grid
