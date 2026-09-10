@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { adjustMinus, extractCbsIndexPayload, getXmlValue, parseXmlToJson } from '@/lib/xml'
+import { extractCbsIndexPayload, formatIndexPercent, getXmlValue, parseXmlToJson } from '@/lib/xml'
 
 const CPI_XML = `<?xml version="1.0" encoding="utf-8"?>
 <NewDataSet>
@@ -43,11 +43,33 @@ describe('getXmlValue', () => {
   })
 })
 
-describe('adjustMinus (Hebrew percent-minus convention)', () => {
-  it('moves a leading minus after the percent sign', () => {
-    expect(adjustMinus('-0.4')).toBe('0.4%-')
-    expect(adjustMinus('2.1')).toBe('2.1%')
-    expect(adjustMinus('0.0')).toBe('0.0%')
+describe('formatIndexPercent (indexes strip sign conventions)', () => {
+  it("reserves '+' for red (rising) values in both languages", () => {
+    // Up trend = red = bad in the indexes: positive values carry '+'.
+    expect(formatIndexPercent(0.4, 'up', false)).toBe('+0.4%')
+    expect(formatIndexPercent(0.4, 'up', true)).toBe('0.4%+')
+    // Green (falling) values never carry '+': yearly inflation decelerating
+    // from 1.6% to 1.5% stays positive but shows no sign - the arrow
+    // carries the trend.
+    expect(formatIndexPercent(1.5, 'down', false)).toBe('1.5%')
+    expect(formatIndexPercent(1.5, 'down', true)).toBe('1.5%')
+  })
+
+  it('keeps the minus for negative values regardless of trend', () => {
+    expect(formatIndexPercent(-0.1, 'down', false)).toBe('-0.1%')
+    expect(formatIndexPercent(-0.1, 'down', true)).toBe('0.1%-')
+    expect(formatIndexPercent(-0.1, 'up', false)).toBe('-0.1%')
+    expect(formatIndexPercent(-0.1, 'up', true)).toBe('0.1%-')
+  })
+
+  it('places the sign before the percent in English, trailing in Hebrew', () => {
+    expect(formatIndexPercent(2.1, 'up', false)).toBe('+2.1%')
+    expect(formatIndexPercent(2.1, 'up', true)).toBe('2.1%+')
+  })
+
+  it('leaves zero unsigned', () => {
+    expect(formatIndexPercent(0, 'flat', false)).toBe('0%')
+    expect(formatIndexPercent(0, 'flat', true)).toBe('0%')
   })
 })
 

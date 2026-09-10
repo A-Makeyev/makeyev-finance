@@ -146,7 +146,7 @@ export const en: { translation: Translation } = {
       ptiThresholdLabel: 'Payment share of income',
       ptiThresholdSuffix: 'of income',
       ptiHint:
-        'Suggested payment: no more than {{threshold}}% of free income after additional monthly expenses.',
+        'Suggested payment: the mortgage payment together with additional monthly expenses should not exceed {{threshold}}% of income.',
       expenseLabel: 'Expense description',
       expenseLabelAria: 'Description of the additional expense',
       expenseAmountLabel: 'Monthly payment',
@@ -334,6 +334,8 @@ export const en: { translation: Translation } = {
       },
       warnings: {
         capital: 'Capital is <0>{{percent}}%</0> of the property value',
+        capitalLtvOk:
+          'Capital is <0>{{capitalPercent}}%</0> of the property value ~ within the limit for a {{purpose}} (up to <1>{{limit}}%</1>)',
         capitalRequired:
           'Required capital for bank approval: <0>{{required}}</0> (<1>{{requiredPercent}}%</1>)',
         capitalShortfall:
@@ -351,17 +353,27 @@ export const en: { translation: Translation } = {
           'You can get a mortgage up to <0>{{maxLoan}}</0> with initial capital of <1>{{requiredCapital}}</1> for a property at this value',
         ltvOk:
           'The financing ratio (<0>{{percent}}%</0>) is within the limit for a {{purpose}} (up to <1>{{limit}}%</1>)',
-        requiredPayment:
+        // English CLDR uses one/other; _two duplicates _other because Hebrew
+        // (the reference key set) requires the key to exist (see parity test).
+        requiredPayment_one:
+          'The monthly payment for a <0>{{term}}</0>-year term will be <1>{{payment}}</1>',
+        requiredPayment_two:
+          'The monthly payment for a <0>{{term}}</0>-year term will be <1>{{payment}}</1>',
+        requiredPayment_other:
           'The monthly payment for a <0>{{term}}</0>-year term will be <1>{{payment}}</1>',
         monthlyAllowanceOk:
-          'The income is within the recommended ceiling: up to <0>{{allowed}}</0> a month (<1>{{percent}}%</1> of income of <2>{{income}}</2> minus <3>{{liabilities}}</3>)',
+          'The monthly payment of <0>{{payment}}</0> is below the recommended ceiling of <1>{{allowed}}</1> a month (<2>{{percent}}%</2> of income of <3>{{income}}</3> minus <4>{{liabilities}}</4>)',
         monthlyAllowanceOkNoLiabilities:
-          'The income is within the recommended ceiling: up to <0>{{allowed}}</0> a month (<1>{{percent}}%</1> of income of <2>{{income}}</2>)',
+          'The monthly payment of <0>{{payment}}</0> is below the recommended ceiling of <1>{{allowed}}</1> a month (<2>{{percent}}%</2> of income of <3>{{income}}</3>)',
         monthlyAllowanceOver:
           'The income is not enough for the expected monthly payment of <0>{{payment}}</0> (<1>{{percent}}%</1> of <2>{{income}}</2> minus <3>{{liabilities}}</3>) - at least <4>{{minIncome}}</4> is needed',
         monthlyAllowanceOverNoLiabilities:
           'The income is not enough for the expected monthly payment of <0>{{payment}}</0> (<1>{{percent}}%</1> of <2>{{income}}</2>) - at least <3>{{minIncome}}</3> is needed',
-        monthlyAllowanceNone:
+        monthlyAllowanceNone_one:
+          'No room for a mortgage payment over a <0>{{term}}</0>-year term: the monthly payments (<1>{{liabilities}}</1>) already cover the income (<2>{{income}}</2>)',
+        monthlyAllowanceNone_two:
+          'No room for a mortgage payment over a <0>{{term}}</0>-year term: the monthly payments (<1>{{liabilities}}</1>) already cover the income (<2>{{income}}</2>)',
+        monthlyAllowanceNone_other:
           'No room for a mortgage payment over a <0>{{term}}</0>-year term: the monthly payments (<1>{{liabilities}}</1>) already cover the income (<2>{{income}}</2>)',
         feeAboveNormItem:
           '{{fee}} <0>{{percent}}%</0> is above the market norm <1>{{normPercent}}%</1> ~ should cost <2>{{normAmount}}</2>',

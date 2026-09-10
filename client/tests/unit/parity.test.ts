@@ -30,23 +30,35 @@ describe('i18n parity', () => {
       expect(tags(ev), key).toEqual(tags(hv))
     }
   })
+  it('merged capital+financing line tags match in both languages', () => {
+    const w = (o: typeof he | typeof en) => o.translation
+    const warnings = (o: typeof he | typeof en) => w(o).calculator.warnings
+    // The merged ✔️ line (equity share + compliant financing ratio) carries
+    // the capital percent, then the limit.
+    expect(tags(String(warnings(he).capitalLtvOk))).toEqual([0, 1])
+    expect(tags(String(warnings(en).capitalLtvOk))).toEqual([0, 1])
+  })
+
   it('allowance line tags match in both languages', () => {
     const w = (o: typeof he | typeof en) => o.translation
     const warnings = (o: typeof he | typeof en) => w(o).calculator.warnings
-    // The plain payment fact (info line): payment, term.
-    expect(tags(String(warnings(he).requiredPayment))).toEqual([0, 1])
-    expect(tags(String(warnings(en).requiredPayment))).toEqual([0, 1])
-    expect(tags(String(warnings(he).monthlyAllowanceNone))).toEqual([0, 1, 2])
-    expect(tags(String(warnings(en).monthlyAllowanceNone))).toEqual([0, 1, 2])
-    // Verdict with monthly payments: allowed, percent, income, monthly
-    // payments. The payment and its term live on the 💡 requiredPayment
-    // fact line, keeping the verdict short.
-    expect(tags(String(warnings(he).monthlyAllowanceOk))).toEqual([0, 1, 2, 3])
-    expect(tags(String(warnings(en).monthlyAllowanceOk))).toEqual([0, 1, 2, 3])
-    // Without them only the monthly-payment tag drops; the entered income
+    // The plain payment fact (info line): payment, term. It exists as plural
+    // variants (Hebrew CLDR: one/two/other) with identical tag layouts.
+    for (const variant of ['one', 'two', 'other'] as const) {
+      expect(tags(String(warnings(he)[`requiredPayment_${variant}`]))).toEqual([0, 1])
+      expect(tags(String(warnings(en)[`requiredPayment_${variant}`]))).toEqual([0, 1])
+      expect(tags(String(warnings(he)[`monthlyAllowanceNone_${variant}`]))).toEqual([0, 1, 2])
+      expect(tags(String(warnings(en)[`monthlyAllowanceNone_${variant}`]))).toEqual([0, 1, 2])
+    }
+    // Green verdict with monthly payments: payment, ceiling, percent,
+    // income, then the monthly payments - the payment and the ceiling both
+    // appear so they never read as one number.
+    expect(tags(String(warnings(he).monthlyAllowanceOk))).toEqual([0, 1, 2, 3, 4])
+    expect(tags(String(warnings(en).monthlyAllowanceOk))).toEqual([0, 1, 2, 3, 4])
+    // Without them only the monthly-payments tag drops; the entered income
     // stays.
-    expect(tags(String(warnings(he).monthlyAllowanceOkNoLiabilities))).toEqual([0, 1, 2])
-    expect(tags(String(warnings(en).monthlyAllowanceOkNoLiabilities))).toEqual([0, 1, 2])
+    expect(tags(String(warnings(he).monthlyAllowanceOkNoLiabilities))).toEqual([0, 1, 2, 3])
+    expect(tags(String(warnings(en).monthlyAllowanceOkNoLiabilities))).toEqual([0, 1, 2, 3])
     // Over variants name the expected payment itself: payment, percent,
     // income, then the monthly payments when they exist, then the minimum
     // income mixed into the ❌ line.

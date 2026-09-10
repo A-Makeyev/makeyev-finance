@@ -26,7 +26,8 @@ export const TRACKER_ASSET_IDS = ['sp500', 'nasdaq', 'ta35', 'gold', 'bitcoin', 
 /**
  * Trend arrows, matching the CBS Indexes strip's convention (index bar uses
  * ⭡ / ⭣ next to each change). Rendered only for up/down; flat rows show no
- * arrow, like the indexes. Non-selectable via the strip's user-select rule.
+ * arrow, like the indexes. Placed after the signed percent ("-0.33% ⭣").
+ * Non-selectable via the strip's user-select rule.
  */
 const TREND_ARROWS: Record<'up' | 'down' | 'flat', string> = {
   up: '⭡',
@@ -147,7 +148,8 @@ function MarketRow({ assetId, name, quote, meta }: MarketRowProps) {
       <span className="markets-name">{name}</span>
       <span className="markets-price">{priceText}</span>
       <span className={`markets-change ${TREND_CLASS[trend]}`}>
-        {arrow} {changeText}
+        {changeText}
+        {arrow && ` ${arrow}`}
       </span>
     </span>
   )

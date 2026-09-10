@@ -119,11 +119,44 @@ test.describe('mortgage calculator - core UI flows', () => {
     await expect(calc.summaryNotes).toContainText('הון עצמי 40% משווי הנכס')
   })
 
+  test('compliant equity and financing ratio merge into one line', async () => {
+    // 25% equity + 75% financing on a first home: the two ✔️ facts (equity
+    // share, compliant LTV) render as a single merged line.
+    await calc.setPropertyValue('1,000,000')
+    await calc.setCapital('250,000')
+
+    await expect(calc.summaryNotes).toBeVisible()
+    await expect(calc.summaryNotes).toContainText(
+      'הון עצמי 25% משווי הנכס ~ עומד במותר לדירה ראשונה (עד 75%)',
+    )
+  })
+
+  test('green allowance line names both the payment and the ceiling', async () => {
+    // 25% equity + 75% financing, 30,000 income: the 5,829 payment fits
+    // under the 33% ceiling (9,900), so the green line quotes both numbers.
+    await calc.setPropertyValue('1,000,000')
+    await calc.setCapital('250,000')
+    await calc.setIncome('30,000')
+
+    await expect(calc.summaryNotes).toBeVisible()
+    await expect(calc.summaryNotes).toContainText(
+      `ההחזר החודשי של ${ils(5829)} נמוך מהתקרה המומלצת של ${ils(9900)} לחודש (33% מהכנסה של ${ils(30000)})`,
+    )
+
+    // A 1,000 monthly expense reduces the room left for the mortgage: the
+    // ceiling drops to 33% × 30,000 - 1,000 = 8,900, and the payment still
+    // fits underneath it.
+    await calc.page.getByTestId('expense-amount-expense-1').fill('1,000')
+    await expect(calc.summaryNotes).toContainText(
+      `ההחזר החודשי של ${ils(5829)} נמוך מהתקרה המומלצת של ${ils(8900)} לחודש (33% מהכנסה של ${ils(30000)} פחות ${ils(1000)})`,
+    )
+  })
+
   test('income below the required payment flags the allowance and suggests a minimum', async () => {
     await calc.setIncome('1,000')
     await expect(calc.summaryNotes).toBeVisible()
     // The required payment is a neutral 💡 fact line: term and figure.
-    await expect(calc.summaryNotes).toContainText('לתקופה של 15 שנה')
+    await expect(calc.summaryNotes).toContainText('לתקופה של 15 שנים')
     await expect(calc.summaryNotes).toContainText('7,772')
     // Affordability line (bad ❌, short): at the 33% ceiling the 1,000 income
     // allows ceil(1,000 × 0.33) = 330, far below the required payment, and

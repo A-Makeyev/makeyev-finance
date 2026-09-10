@@ -1152,8 +1152,10 @@ describe('suggestedIncomeForAllowance', () => {
     // 26,500. Typing 26,500 yields allowance ceil(26,500 × 0.33) = 8,745 ≥
     // 8,716, so the hint and the summary line agree.
     expect(suggestedIncomeForAllowance(8_716, 0)).toBe(26_500)
-    // 8,716 / 0.33 = 26,412.12 + 2,000 liabilities = 28,412.12 → 28,500.
-    expect(suggestedIncomeForAllowance(8_716, 2_000)).toBe(28_500)
+    // Payment plus liabilities against the ceiling: (8,716 + 2,000) / 0.33 =
+    // 32,472.73 → 32,500. Typing it yields allowance 32,500 × 0.33 − 2,000 =
+    // 8,725 ≥ 8,716.
+    expect(suggestedIncomeForAllowance(8_716, 2_000)).toBe(32_500)
     // At a 100% ceiling the allowance is income minus liabilities, so the
     // hint degrades to the legacy payment + liabilities rule.
     expect(suggestedIncomeForAllowance(5_000, 2_000, 100)).toBe(7_000)
@@ -1193,11 +1195,13 @@ describe('suggestedIncomeForAllowance', () => {
 })
 
 describe('allowedMonthlyPayment', () => {
-  it('applies the adjustable ceiling to disposable income', () => {
-    // Default 33% ceiling: (15,000 - 2,000) × 0.33 = 4,290.
-    expect(allowedMonthlyPayment(15_000, 2_000)).toBe(4_290)
-    // (12,340 - 3,000) × 0.33 = 3,082.2 → ceiled to the whole shekel = 3,083.
-    expect(allowedMonthlyPayment(12_340, 3_000)).toBe(3_083)
+  it('applies the adjustable ceiling to income minus liabilities', () => {
+    // Default 33% ceiling: 15,000 × 0.33 - 2,000 = 2,950 (the mortgage plus
+    // existing payments together stay within the ceiling).
+    expect(allowedMonthlyPayment(15_000, 2_000)).toBe(2_950)
+    // 12,340 × 0.33 = 4,072.2 - 3,000 = 1,072.2 → ceiled to the whole shekel
+    // = 1,073.
+    expect(allowedMonthlyPayment(12_340, 3_000)).toBe(1_073)
     // Explicit ceilings: 40% of 20,000 = 8,000; at 100% the old
     // income-minus-liabilities rule comes back unchanged.
     expect(allowedMonthlyPayment(20_000, 0, 40)).toBe(8_000)
@@ -1231,5 +1235,3 @@ describe('paymentExceedsAllowed', () => {
     expect(paymentExceedsAllowed(13_001, 13_000)).toBe(true)
   })
 })
-
-

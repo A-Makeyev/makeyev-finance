@@ -79,16 +79,16 @@ test.describe('Markets strip', () => {
     await expect(tracker).toHaveAttribute('data-state', 'ready')
 
     // Down and up rows carry the same arrow glyphs as the indexes strip.
-    // Order: SPY first, USD/ILS last (rightmost).
+    // Arrow trails the percent. Order: SPY first, USD/ILS last (rightmost).
     await expect(page.getByTestId('market-row-sp500')).toHaveText(/SPY\s*765\.96\s*0\.00%/)
-    await expect(page.getByTestId('market-row-nasdaq')).toHaveText(/QQQ\s*521\.40\s*⭣\s*-0\.33%/)
-    await expect(page.getByTestId('market-row-ta35')).toHaveText(/EIS\s*125\.32\s*⭣\s*-0\.78%/)
-    await expect(page.getByTestId('market-row-gold')).toHaveText(/GOLD\s*403\.35\s*⭡\s*\+0\.91%/)
+    await expect(page.getByTestId('market-row-nasdaq')).toHaveText(/QQQ\s*521\.40\s*-0\.33%\s*⭣/)
+    await expect(page.getByTestId('market-row-ta35')).toHaveText(/EIS\s*125\.32\s*-0\.78%\s*⭣/)
+    await expect(page.getByTestId('market-row-gold')).toHaveText(/GOLD\s*403\.35\s*\+0\.91%\s*⭡/)
     // Crypto price carries the $ prefix; the ETF/FX rows never do.
-    await expect(page.getByTestId('market-row-bitcoin')).toHaveText(/BTC\s*\$79,551\s*⭡\s*\+1\.24%/)
+    await expect(page.getByTestId('market-row-bitcoin')).toHaveText(/BTC\s*\$79,551\s*\+1\.24%\s*⭡/)
     // FX uses the server-declared 4-decimals precision.
     await expect(page.getByTestId('market-row-usdils')).toHaveText(
-      /USD\/ILS\s*3\.0192\s*⭡\s*\+0\.39%/,
+      /USD\/ILS\s*3\.0192\s*\+0\.39%\s*⭡/,
     )
   })
 
@@ -245,5 +245,104 @@ test.describe('Markets strip', () => {
     await expect(bar).not.toContainText('מדד המחירים לצרכן')
     await expect(bar).not.toContainText('שינוי חודשי')
     await expect(bar).not.toContainText('שינוי שנתי')
+    // Default CPI fixture: monthly 0.4 (rising), yearly 3.5 - both trends
+    // up, so both are red and carry '+'. The sign leads the percent and
+    // the arrow trails it in English reading order.
+    await expect(bar).toContainText('+0.4% ⭡')
+    await expect(bar).toContainText('+3.5% ⭡')
   })
+
+  for (const language of ['hebrew', 'english'] as const) {
+    test(`sign always renders left of the digits (${language})`, async ({ page }) => {
+      // The sign's side no longer depends on the language: English leads
+      // with it ("+0.4%") and Hebrew's trailing sign ("0.4%+") lands on
+      // the left via the RTL value span - both render the plus left of the
+      // digits. The span's pinned dir (dir implies bidi isolation) keeps
+      // this stable on pages where the document itself stays LTR (this
+      // home route is LTR even in Hebrew).
+      await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
+      await installExternalMocks(page)
+      await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+      await page.goto('/')
+
+      const bar = page.getByTestId('indexes-bar')
+      await expect(bar).toBeVisible()
+
+      // Same evaluate-string pattern as qa-visual.spec.ts (the e2e tsconfig
+      // has no DOM lib; the page context provides document).
+      const hebrew = language === 'hebrew'
+      const measured = (await page.evaluate(
+        `(() => {
+          const bar = document.querySelector('[data-testid="indexes-bar"]')
+          if (!bar) return null
+          const hebrew = ${hebrew}
+          const walker = document.createTreeWalker(bar, NodeFilter.SHOW_TEXT)
+          const values = []
+          while (walker.nextNode()) {
+            const node = walker.currentNode
+            const text = node.textContent || ''
+            // Hebrew: trailing sign ("0.4%+"); English: leading ("+0.4%").
+            const hasSign = hebrew ? /[+-]$/.test(text) : /^[+-]/.test(text)
+            if (!hasSign) continue
+            const digitIndex = text.search(/[0-9]/)
+            if (digitIndex < 0) continue
+            const signIndex = hebrew ? text.length - 1 : 0
+            const leftAt = (i) => {
+              const r = document.createRange()
+              r.setStart(node, i)
+              r.setEnd(node, i + 1)
+              return r.getBoundingClientRect().left
+            }
+            values.push({ signX: leftAt(signIndex), digitX: leftAt(digitIndex) })
+          }
+          return values
+        })()`,
+      )) as Array<{ signX: number; digitX: number }> | null
+
+      expect(measured, 'indexes bar rendered').not.toBeNull()
+      // The mocks serve the CPI fixture to all three feeds: 3 anchors x
+      // monthly + yearly = 6 signed red values (0.4%+ / 3.5%+ each).
+      expect(measured!.length).toBe(6)
+      for (const { signX, digitX } of measured!) {
+        expect(signX).toBeLessThan(digitX)
+      }
+    })
+
+    test(`change value follows its label in reading order (${language})`, async ({ page }) => {
+      // The strip renders on every page, but only the calculator route
+      // flips the document to RTL. The anchor pins its direction to the UI
+      // language so Hebrew flows RTL (and English LTR) everywhere: each
+      // change value must come after its label in reading order, mirroring
+      // the English layout.
+      await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
+      await installExternalMocks(page)
+      await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+      await page.goto('/')
+
+      const bar = page.getByTestId('indexes-bar')
+      await expect(bar).toBeVisible()
+
+      const directions = (await page.evaluate(
+        `(() => {
+          const bar = document.querySelector('[data-testid="indexes-bar"]')
+          return bar
+            ? [...bar.querySelectorAll('a')].map((a) => getComputedStyle(a).direction)
+            : null
+        })()`,
+      )) as string[] | null
+      expect(directions, 'indexes bar rendered').not.toBeNull()
+      const expected = language === 'hebrew' ? 'rtl' : 'ltr'
+      expect(directions!.every((d) => d === expected)).toBe(true)
+
+      // Text content follows DOM order, which the pinned direction makes
+      // the reading order too: each label must precede its value.
+      const text = (await bar.textContent()) ?? ''
+      const monthlyLabel = language === 'hebrew' ? 'שינוי חודשי' : 'Monthly change'
+      const yearlyLabel = language === 'hebrew' ? 'שינוי שנתי' : 'Yearly change'
+      expect(text.indexOf(monthlyLabel)).toBeGreaterThan(-1)
+      expect(text.indexOf(yearlyLabel)).toBeGreaterThan(-1)
+      expect(text.indexOf(monthlyLabel)).toBeLessThan(text.indexOf('0.4%'))
+      expect(text.indexOf(yearlyLabel)).toBeLessThan(text.indexOf('3.5%'))
+    })
+  }
 })

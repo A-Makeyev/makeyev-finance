@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { fetchCbsIndex, type CbsFeedKind } from '@/services/cbs'
-import { adjustMinus, type CbsIndexPayload, type TrendDirection } from '@/lib/xml'
+import { formatIndexPercent, type CbsIndexPayload, type TrendDirection } from '@/lib/xml'
 import { useCalculatorStore } from '@/stores/calculatorStore'
 
 /**
@@ -71,14 +71,34 @@ export function useCbsFeeds(): CbsFeedsResult {
 }
 
 function FeedAnchor({ payload }: { payload: CbsIndexPayload }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const month = payload.currentMonth
   if (!month) return null
+  // The strip renders on every page, but only the calculator route flips
+  // the document to RTL, so without pinning, Hebrew pages with an LTR
+  // document would flow inline left-to-right and each change value would
+  // sit to the RIGHT of its label - read first in RTL. Pinning the anchor
+  // to the UI language makes Hebrew flow RTL and English LTR on every
+  // page, so the label always precedes its value in reading order,
+  // mirroring the English layout.
+  const hebrew = i18n.language.startsWith('he')
+  const dir = hebrew ? 'rtl' : 'ltr'
+  // The value span pins its own dir too (dir implies bidi isolation): the
+  // trend arrow and trailing sign are bidi-neutrals whose side depends on
+  // the surrounding paragraph, so the isolation keeps Hebrew rendering the
+  // sign left of the digits and the arrow last in reading order, and
+  // English leading with the sign, on every page.
+  const change = (percent: number, direction: TrendDirection) => {
+    const signed = formatIndexPercent(percent, direction, hebrew)
+    const arrow = TREND_ARROWS[direction]
+    return hebrew ? `${arrow} ${signed}` : `${signed} ${arrow}`
+  }
   return (
     <a
       href={`https://google.com/search?q=${payload.searchQuery}`}
       target="_blank"
       rel="noreferrer"
+      dir={dir}
       style={{ order: Number(payload.displayOrder) }}
       className="remove-highlight"
     >
@@ -93,12 +113,12 @@ function FeedAnchor({ payload }: { payload: CbsIndexPayload }) {
           gluing the number to the next label. */}
       <span className="line-break" />
       <span className="index-join">{t('indexesBar.monthlyChange')} </span>
-      <span style={{ color: TREND_COLORS[payload.monthDirection] }}>
-        {TREND_ARROWS[payload.monthDirection]} {adjustMinus(String(month.percent))}
+      <span dir={dir} style={{ color: TREND_COLORS[payload.monthDirection] }}>
+        {change(month.percent, payload.monthDirection)}
       </span>
       <span className="index-join">{t('indexesBar.yearlyChange')} </span>
-      <span style={{ color: TREND_COLORS[payload.yearDirection] }}>
-        {TREND_ARROWS[payload.yearDirection]} {adjustMinus(String(month.percentYear))}
+      <span dir={dir} style={{ color: TREND_COLORS[payload.yearDirection] }}>
+        {change(month.percentYear, payload.yearDirection)}
       </span>
     </a>
   )

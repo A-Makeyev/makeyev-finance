@@ -38,16 +38,31 @@ export function getXmlValue(xml: string, key: string): string {
 }
 
 /**
- * Legacy Hebrew typographic convention: moves a leading minus AFTER the
- * percent sign ("-0.5" → "0.5%-").
+ * Formats one CBS index percent for the strip's change cells.
+ *
+ * Sign rule (user-requested, indexes strip only): '+' is reserved for RED
+ * (rising) values - in the indexes, going up is bad - so green (falling)
+ * values never carry a '+', even when the number itself is positive (e.g.
+ * yearly inflation decelerating from 1.6% to 1.5% shows "1.5%" green; the
+ * arrow carries the trend). Negative values keep their '-'; zero stays
+ * unsigned.
+ *
+ * Sign placement follows the language: Hebrew keeps the legacy trailing
+ * convention ("-0.1" → "0.1%-"), which the RTL value span renders with the
+ * sign on the visually LEFT side of the digits; English leads with the sign
+ * ("-0.1%"). The caller appends the trend arrow last in reading order.
  */
-export function adjustMinus(str: string): string {
-  if (str.includes('-')) {
-    const minus = str.substring(0, 1)
-    const value = str.substring(1)
-    return `${value}%${minus}`
-  }
-  return `${str}%`
+export function formatIndexPercent(
+  percent: number,
+  direction: TrendDirection,
+  hebrew: boolean,
+): string {
+  const raw = String(percent)
+  const isNegative = raw.startsWith('-')
+  const digits = isNegative ? raw.slice(1) : raw
+  const plus = direction === 'up' && percent > 0 ? '+' : ''
+  const sign = isNegative ? '-' : plus
+  return hebrew ? `${digits}%${sign}` : `${sign}${digits}%`
 }
 
 export interface CbsMonthData {

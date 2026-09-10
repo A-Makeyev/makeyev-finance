@@ -141,7 +141,7 @@ export const he = {
       ptiThresholdLabel: 'תקרת החזר מההכנסה',
       ptiThresholdSuffix: 'מההכנסה',
       ptiHint:
-        'המלצה: החזר המשכנתא לא יעלה על {{threshold}}% מההכנסה הפנויה, לאחר הוצאות חודשיות נוספות.',
+        'המלצה: החזר המשכנתא יחד עם ההוצאות החודשיות הנוספות לא יעלה על {{threshold}}% מההכנסה.',
       expenseLabel: 'תיאור ההוצאה',
       expenseLabelAria: 'תיאור ההוצאה ברשימת ההוצאות הנוספות',
       expenseAmountLabel: 'תשלום חודשי',
@@ -326,6 +326,8 @@ export const he = {
       },
       warnings: {
         capital: 'הון עצמי <0>{{percent}}%</0> משווי הנכס',
+        capitalLtvOk:
+          'הון עצמי <0>{{capitalPercent}}%</0> משווי הנכס ~ עומד במותר ל{{purpose}} (עד <1>{{limit}}%</1>)',
         capitalRequired:
           'הון עצמי נדרש לאישור הבנק: <0>{{required}}</0> (<1>{{requiredPercent}}%</1>)',
         capitalShortfall:
@@ -341,17 +343,27 @@ export const he = {
         ltvMaxLoan:
           'ניתן לקבל משכנתא עד <0>{{maxLoan}}</0> עם הון עצמי של <1>{{requiredCapital}}</1> לנכס בשווי הזה',
         ltvOk: 'שיעור המימון (<0>{{percent}}%</0>) עומד במותר ל{{purpose}} (עד <1>{{limit}}%</1>)',
-        requiredPayment: 'ההחזר החודשי לתקופה של <0>{{term}}</0> שנה יהיה <1>{{payment}}</1>',
+        // Hebrew CLDR has three plural categories (Intl.PluralRules('he')):
+        // one = 1, two = 2, other = 3+. All three suffix keys are required -
+        // with only _one/_other, count=2 renders the raw key.
+        requiredPayment_one: 'ההחזר החודשי לתקופה של <0>{{term}}</0> שנה יהיה <1>{{payment}}</1>',
+        requiredPayment_two: 'ההחזר החודשי לתקופה של <0>{{term}}</0> שנים יהיה <1>{{payment}}</1>',
+        requiredPayment_other:
+          'ההחזר החודשי לתקופה של <0>{{term}}</0> שנים יהיה <1>{{payment}}</1>',
         monthlyAllowanceOk:
-          'ההכנסה עומדת בתקרה המומלצת: עד <0>{{allowed}}</0> לחודש (<1>{{percent}}%</1> מהכנסה של <2>{{income}}</2> פחות <3>{{liabilities}}</3>)',
+          'ההחזר החודשי של <0>{{payment}}</0> נמוך מהתקרה המומלצת של <1>{{allowed}}</1> לחודש (<2>{{percent}}%</2> מהכנסה של <3>{{income}}</3> פחות <4>{{liabilities}}</4>)',
         monthlyAllowanceOkNoLiabilities:
-          'ההכנסה עומדת בתקרה המומלצת: עד <0>{{allowed}}</0> לחודש (<1>{{percent}}%</1> מהכנסה של <2>{{income}}</2>)',
+          'ההחזר החודשי של <0>{{payment}}</0> נמוך מהתקרה המומלצת של <1>{{allowed}}</1> לחודש (<2>{{percent}}%</2> מהכנסה של <3>{{income}}</3>)',
         monthlyAllowanceOver:
           'ההכנסה לא מספיקה להחזר החודשי הצפוי של <0>{{payment}}</0> (<1>{{percent}}%</1> מ-<2>{{income}}</2> פחות <3>{{liabilities}}</3>) ~ נדרשים לפחות <4>{{minIncome}}</4>',
         monthlyAllowanceOverNoLiabilities:
           'ההכנסה לא מספיקה להחזר החודשי הצפוי של <0>{{payment}}</0> (<1>{{percent}}%</1> מ-<2>{{income}}</2>) ~ נדרשים לפחות <3>{{minIncome}}</3>',
-        monthlyAllowanceNone:
+        monthlyAllowanceNone_one:
           'אין מקום להחזר משכנתא לתקופה של <0>{{term}}</0> שנה: התשלומים החודשיים (<1>{{liabilities}}</1>) מכסים את כל ההכנסה (<2>{{income}}</2>)',
+        monthlyAllowanceNone_two:
+          'אין מקום להחזר משכנתא לתקופה של <0>{{term}}</0> שנים: התשלומים החודשיים (<1>{{liabilities}}</1>) מכסים את כל ההכנסה (<2>{{income}}</2>)',
+        monthlyAllowanceNone_other:
+          'אין מקום להחזר משכנתא לתקופה של <0>{{term}}</0> שנים: התשלומים החודשיים (<1>{{liabilities}}</1>) מכסים את כל ההכנסה (<2>{{income}}</2>)',
         feeAboveNormItem:
           '{{fee}} <0>{{percent}}%</0> גבוה מהנורמה המקובלת בשוק <1>{{normPercent}}%</1> ~ אמור לעלות <2>{{normAmount}}</2>',
         transactionCosts: 'עלויות עסקה צפויות: {{items}}',

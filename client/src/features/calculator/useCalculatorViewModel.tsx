@@ -195,15 +195,23 @@ export function useCalculatorViewModel() {
   )
 
   // Financing compliant with the purpose limit - the green mirror of the LTV
-  // violation, always rendered as its own ✔️ line (feedback: never folded
-  // into the capital line). Null when the ratio is violated or there is
-  // nothing to measure.
+  // violation. Null when the ratio is violated or there is nothing to
+  // measure.
   const ltvOkPercent = (() => {
     if (snapshot.isEmpty || effectiveValue < MIN_REAL_HOME_VALUE || loanAmount <= 0) return null
     const percent = (loanAmount / effectiveValue) * 100
     if (percent > PURPOSE_LIMITS[purpose].limit + 0.01) return null
     return Number.isInteger(percent) ? String(Math.round(percent)) : percent.toFixed(1)
   })()
+
+  // The equity share and the compliant financing ratio are two sides of the
+  // same coin (equity + loan = property value), so when both would render as
+  // their own ✔️ line they merge into one (feedback: single line for the
+  // compliant case, replacing the separate capital and ltvOk lines).
+  const mergedCapitalLtvOk =
+    ltvOkPercent !== null &&
+    snapshot.capitalAssessment !== null &&
+    !(snapshot.capitalShortfall && snapshot.suggestedCapital !== null && (requiredCapital ?? 0) > 0)
 
   if (snapshot.ltv) {
     // Precise ratio (e.g. 75.3%) so the warning never reads as
@@ -229,9 +237,10 @@ export function useCalculatorViewModel() {
         0,
       ),
     )
-  } else if (ltvOkPercent !== null) {
-    // Compliant financing ratio → green ✔️ mirror of the violation line,
-    // always its own line (feedback: not merged into the capital line).
+  } else if (ltvOkPercent !== null && !mergedCapitalLtvOk) {
+    // Compliant financing ratio → green ✔️ mirror of the violation line.
+    // When the equity share also renders, the two merge into one line
+    // (mergedCapitalLtvOk renders from the capital list instead).
     warningMessages.push(
       mark(
         'positive',
@@ -274,6 +283,10 @@ export function useCalculatorViewModel() {
     const max = Math.max(...enteredYears)
     return min === max ? String(min) : `${min}-${max}`
   })()
+  // Plural selection for the term word (שנה/שנים): a range always reads as
+  // plural (its upper bound is ≥ 2), and no entered term falls to the
+  // "other" form so the empty term prints as before.
+  const termCount = enteredYears.length === 0 ? 0 : Math.max(...enteredYears)
   // The required payment is a neutral fact on its own 💡 line in every
   // scenario: the verdict lines below stay short and never repeat it
   // (feedback). Stating the term inline keeps the figure comparable against
@@ -286,6 +299,7 @@ export function useCalculatorViewModel() {
         'info',
         <Trans
           i18nKey="calculator.warnings.requiredPayment"
+          count={termCount}
           values={{ payment: formatCurrency(firstPayment), term: termText ?? '' }}
           components={[<strong key="rp-term" />, <strong key="rp-payment" />]}
         />,
@@ -323,6 +337,7 @@ export function useCalculatorViewModel() {
           'negative',
           <Trans
             i18nKey="calculator.warnings.monthlyAllowanceNone"
+            count={termCount}
             values={{
               term: termText ?? '',
               income: formatCurrency(incomeValue),
@@ -359,11 +374,17 @@ export function useCalculatorViewModel() {
         liabilities: formatCurrency(otherTotal),
         minIncome: minIncome !== null ? formatCurrency(minIncome) : '',
       }
-      // Tag order must match the strings: allowed, percent, income, then
-      // monthly payments when they exist, then the minimum income when the
-      // ceiling is exceeded. The payment and its term live on the 💡 fact
-      // line above, keeping the verdict short (feedback).
-      const components = [<strong key="ma-allowed" />, <strong key="ma-percent" />]
+      // Tag order must match the strings. The green variants name the
+      // expected payment first, then the ceiling, percent, income, and the
+      // monthly payments when they exist; the over variants lead with the
+      // payment and end with the minimum income when the ceiling is
+      // exceeded (feedback: green line shows both the payment and the
+      // ceiling so they never read as one number).
+      const components = [
+        <strong key="ma-payment" />,
+        <strong key="ma-allowed" />,
+        <strong key="ma-percent" />,
+      ]
       components.push(<strong key="ma-income" />)
       if (hasLiabilities) {
         components.push(<strong key="ma-liabilities" />)
@@ -473,6 +494,23 @@ export function useCalculatorViewModel() {
                 <strong key="required" />,
                 <strong key="requiredPercent" />,
               ]}
+            />,
+          ),
+        )
+      } else if (mergedCapitalLtvOk) {
+        // Equity share and compliant financing ratio as one ✔️ line - the
+        // two facts are complementary (equity + loan = property value).
+        lines.push(
+          mark(
+            'positive',
+            <Trans
+              i18nKey="calculator.warnings.capitalLtvOk"
+              values={{
+                capitalPercent: snapshot.capitalAssessment.percent,
+                purpose: purposeLabels[purpose],
+                limit: PURPOSE_LIMITS[purpose].limit,
+              }}
+              components={[<strong key="capital-percent" />, <strong key="ltv-limit" />]}
             />,
           ),
         )

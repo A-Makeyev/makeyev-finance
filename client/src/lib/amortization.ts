@@ -553,9 +553,9 @@ export function suggestedMinimumIncome(firstMonthPayment: number): number {
 }
 
 /**
- * Minimum monthly income so the ceiling allowance (the PTI share of income
- * minus liabilities) covers the mortgage's first payment: payment divided by
- * the ceiling, plus the liabilities, rounded up to ₪500. Mirrors
+ * Minimum monthly income so the ceiling allowance (the PTI share of income,
+ * minus the listed liabilities) covers the mortgage's first payment: payment
+ * plus the liabilities, divided by the ceiling, rounded up to ₪500. Mirrors
  * allowedMonthlyPayment, so the income field's hint and the allowance summary
  * line can never disagree: typing the hinted income makes the allowance cover
  * the payment.
@@ -572,7 +572,7 @@ export function suggestedIncomeForAllowance(
       ? thresholdPercent
       : PTI_DEFAULT_THRESHOLD * 100
   return (
-    Math.ceil((firstMonthPayment / (percent / 100) + liabilities) / DTI_ROUNDING_STEP) *
+    Math.ceil((firstMonthPayment + liabilities) / (percent / 100) / DTI_ROUNDING_STEP) *
     DTI_ROUNDING_STEP
   )
 }
@@ -834,9 +834,11 @@ export function assessDti(firstMonthPayment: number, income: number): DtiWarning
 /**
  * The monthly payment the adjustable ceiling allows for THIS buyer: the PTI
  * share (default 33%, the same תקרת החזר control as the PTI check) of the
- * net income left after the listed recurring liabilities. Ceiled to the whole
- * shekel, never negative; null without income. At 100% this degrades to the
- * old pure income-minus-debts rule, so tests can pin either framing.
+ * income, minus the listed recurring liabilities - the classic rule that the
+ * mortgage plus existing monthly payments together stay within the ceiling.
+ * Ceiled to the whole shekel, never negative; null without income. At 100%
+ * this degrades to the old pure income-minus-debts rule, so tests can pin
+ * either framing.
  */
 export function allowedMonthlyPayment(
   income: number,
@@ -849,8 +851,7 @@ export function allowedMonthlyPayment(
     Number.isFinite(thresholdPercent) && thresholdPercent > 0
       ? thresholdPercent
       : PTI_DEFAULT_THRESHOLD * 100
-  const disposable = Math.max(0, income - liabilities)
-  return Math.ceil((disposable * percent) / 100)
+  return Math.max(0, Math.ceil((income * percent) / 100 - liabilities))
 }
 
 /**
