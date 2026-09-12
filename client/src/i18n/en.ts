@@ -120,7 +120,6 @@ export const en: { translation: Translation } = {
         title: 'Leave your details',
         subtitle: "We'll get back to you soon",
       },
-      devAutofill: 'add details',
     },
     calculator: {
       panelHeading: 'Plan your monthly payment and total cost',

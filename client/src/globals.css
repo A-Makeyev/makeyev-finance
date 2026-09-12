@@ -5319,6 +5319,10 @@ tbody tr:hover {
   --surface-card: #172023;
   --surface-soft: #121a1c;
   --surface-modal: rgba(23, 32, 35, 0.98);
+  /* Text selection highlight. The UA default is a dark slab on the dark page,
+     and the legacy selection ink (--soft-black) is near-black, so selected
+     text all but disappears; the light tint keeps that ink readable. */
+  --selection-bg: #bfe3f5;
   --ink-rgb: 233 241 239;
   --ink: rgb(var(--ink-rgb));
   /* Muted text + soft dividers/hover fills, in channel form so Tailwind's
@@ -5394,4 +5398,10 @@ tbody tr:hover {
    hurt instead of help. */
 :root[data-theme='dark'] .expense-add-button {
   color: var(--calc-teal-dark);
+}
+
+/* Selected text: swap the UA highlight for the light `--selection-bg` token
+   above, so the legacy dark selection ink stays readable on the dark page. */
+:root[data-theme='dark'] *::selection {
+  background-color: var(--selection-bg);
 }

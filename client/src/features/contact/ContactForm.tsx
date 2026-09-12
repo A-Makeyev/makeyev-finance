@@ -412,48 +412,6 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
           </span>
         )}
       </button>
-
-      {import.meta.env.DEV && variant === 'main' && (
-        <DevAutofillButton
-          onFill={() =>
-            setValues({
-              name: isHebrew ? 'דני כהן' : 'John Doe',
-              phone: `052${String(Math.floor(Math.random() * 10_000_000)).padStart(7, '0')}`,
-              email: `${Math.random().toString(36).slice(2, 10)}@gmail.com`,
-              message: 'Hello, I need advice '.repeat(3),
-            })
-          }
-          isHebrew={isHebrew}
-        />
-      )}
     </form>
-  )
-}
-
-function DevAutofillButton({ onFill, isHebrew }: { onFill: () => void; isHebrew: boolean }) {
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    const media = window.matchMedia('(min-width: 1601px)')
-    const align = () => setVisible(media.matches)
-    align()
-    media.addEventListener('change', align)
-    return () => media.removeEventListener('change', align)
-  }, [])
-  if (!visible) return null
-  return (
-    <button
-      type="button"
-      id="dev-btn"
-      data-testid="dev-autofill"
-      onClick={onFill}
-      className="hero-btn btn-orange remove-highlight !mx-auto !flex !h-[50px] !w-full !items-center !justify-center !rounded-[5px] !p-0 !text-[16px] !font-bold"
-      style={{
-        boxShadow: 'var(--orange-shadow)',
-        margin: '12px auto 0',
-      }}
-      dir={isHebrew ? 'rtl' : 'ltr'}
-    >
-      add details
-    </button>
   )
 }

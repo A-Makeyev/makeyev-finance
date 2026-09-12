@@ -115,7 +115,6 @@ export const he = {
         title: 'השאירו פרטים',
         subtitle: 'ונחזור אליכם בהקדם האפשרי',
       },
-      devAutofill: 'add details',
     },
     calculator: {
       panelHeading: 'תכנון ההחזר החודשי והסכום הכולל',
