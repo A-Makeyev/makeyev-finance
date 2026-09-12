@@ -152,18 +152,18 @@ function Testimonial({
         {[1, 2, 3, 4, 5].map((index) => {
           if (stars >= index)
             return (
-              <FaStar key={index} aria-hidden className="fas mt-[15px] text-soft-black inline" />
+              <FaStar key={index} aria-hidden className="fas mt-[15px] text-ink inline" />
             )
           if (stars >= index - 0.5)
             return (
               <FaStarHalfAlt
                 key={index}
                 aria-hidden
-                className="fas mt-[15px] text-soft-black inline"
+                className="fas mt-[15px] text-ink inline"
               />
             )
           return (
-            <FaRegStar key={index} aria-hidden className="far mt-[15px] text-soft-black inline" />
+            <FaRegStar key={index} aria-hidden className="far mt-[15px] text-ink inline" />
           )
         })}
       </div>

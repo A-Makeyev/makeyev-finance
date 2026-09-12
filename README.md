@@ -92,9 +92,9 @@ emailjsClient.ts (deadlock-retry) · validation.ts (zod schemas)
 pages/ Home · Services · Articles
 tests/unit/ Vitest suites for lib/ + market data
 server/ server.js (Express - serves client/dist, SPA fallback)
-market/ (market data integration: Finnhub + Frankfurter
-providers, service, cache, asset registry, /api/market/quotes
-route; API keys stay server-side only)
+market/ (market data integration: Finnhub + Frankfurter +
+Yahoo providers, service, cache, asset registry,
+/api/market/quotes route; API keys stay server-side only)
 e2e/ playwright config in root; pom/ · support/mocks.ts · tests/{ui,api}
 
 ```
@@ -109,18 +109,43 @@ server-only):
 
 Navigation (MarketTracker)
 -> GET /api/market/quotes
--> MarketDataService (snapshot cache, per-asset failure isolation)
+-> MarketDataService (per-provider-group cache, per-asset failure isolation)
 -> FinnhubProvider (/quote: ETFs + BINANCE:BTCUSDT, real-time)
 -> FrankfurterProvider (ECB daily FX series: USD/ILS, keyless)
+-> YahooProvider (chart daily series: the TA-35 index + gold futures, keyless)
 
 ```
 
-- Index levels themselves are premium-only upstream, so rows track US-listed
-  ETF proxies (S&P 500->SPY, NASDAQ->QQQ, TA-35->EIS, GOLD->GLD) plus
-  Bitcoin (BINANCE:BTCUSDT) and the ECB's USD/ILS reference rate.
+- Real instruments rather than stand-ins: S&P 500/NASDAQ rows are named by
+  their ETF tickers (SPY/QQQ), and GOLD is the COMEX front-month contract
+  (Yahoo, GC=F) - dollars per troy ounce of the metal. The `futures` flag
+  makes the UI say it is the contract, not a spot quote: spot gold and index
+  levels are premium-only upstream, and the previous stand-in (GLD, the SPDR
+  ETF) is a ~0.09 oz share whose ratio drifts with the fund's fee, so a
+  ~$400 number was being shown under a metal's name. Nothing uses `proxyOf`
+  today. TA-35 is the real index level (Yahoo, TA35.TA), alongside Bitcoin
+  (BINANCE:BTCUSDT) and the ECB's USD/ILS reference rate.
+- Every row runs at its own market's speed: batches are cached per PROVIDER +
+  CADENCE group, so the registry marks a continuously-printing instrument
+  `realtime` and it gets the provider's fast TTL. Defaults: SPY/QQQ/BTC every
+  10s (18 of Finnhub's 60 free calls/min, so there is room for retries and a
+  couple more rows), the gold contract every 15s, TA-35 every 15min (Yahoo's
+  TASE feed is already ~15min delayed, so polling faster only wastes requests),
+  and USD/ILS every 15min (the ECB publishes once a business day). The client
+  polls every 10s, matching the fastest row.
+- The cache is shared by every visitor and driven by time rather than traffic:
+  one viewer or ten thousand cost the same upstream calls, and with nobody on
+  the site nothing is polled at all. `client/tests/unit/marketService.test.ts`
+  asserts the registry plus these defaults stay inside each free tier, so
+  adding rows fails loudly instead of quietly exhausting a quota.
+- Row units: USD-quoted rows carry `$`; the FX pair carries the sign of its
+  quote leg (`₪3.0192`, shekels per dollar); an index level stays bare, since
+  it is measured in points, and names that unit in its hover tooltip (the
+  strip has no room for a suffix at 360px).
 - Adding an asset (stock, coin, watchlist row) is one entry in
   `server/market/assets.ts` - no new API logic.
-- Configuration: `FINNHUB_API_KEY`, `MARKET_DATA_CACHE_TTL`,
+- Configuration: `FINNHUB_API_KEY`, `MARKET_DATA_FINNHUB_CACHE_TTL`,
+  `MARKET_DATA_YAHOO_CACHE_TTL`, `MARKET_DATA_CACHE_TTL`,
   `MARKET_DATA_REFRESH_INTERVAL` (see `.env.example`).
 
 ### The calculator state machine

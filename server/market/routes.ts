@@ -25,6 +25,8 @@ export interface MarketQuotesResponse {
     id: string
     name: string
     proxyOf?: string
+    /** Dated futures contract: its price sits above spot, and the UI says so. */
+    futures?: boolean
     symbol: string
     type: string
     decimals: number
@@ -78,6 +80,7 @@ export function marketRouter(): Router {
         type: asset.type,
         decimals: asset.decimals,
         ...(asset.proxyOf ? { proxyOf: asset.proxyOf } : {}),
+        ...(asset.futures ? { futures: true } : {}),
       }))
       const body: MarketQuotesResponse = {
         quotes: snapshot.quotes,

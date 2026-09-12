@@ -10,15 +10,16 @@
  */
 
 /** Kind of instrument behind a market asset. Drives formatting, not logic. */
-export type MarketAssetType = 'index' | 'etf' | 'equity' | 'crypto' | 'currency'
+export type MarketAssetType = 'index' | 'etf' | 'equity' | 'crypto' | 'currency' | 'commodity'
 
 /** Which upstream serves this asset (the service routes by this field). */
-export type MarketProviderName = 'finnhub' | 'frankfurter'
+export type MarketProviderName = 'finnhub' | 'frankfurter' | 'yahoo'
 
 /** The query family an asset is served from. */
 export type MarketEndpoint =
   | 'global-quote' // Finnhub US-traded ETFs/equities + exchange-prefixed crypto
   | 'fx-daily' // Frankfurter ECB daily FX series (USD/ILS)
+  | 'chart-daily' // Yahoo chart daily series (TASE index levels)
 
 /**
  * Normalized asset definition. `symbol` is the provider symbol (ETF ticker,
@@ -34,10 +35,26 @@ export interface MarketAsset {
   symbol: string
   type: MarketAssetType
   provider: MarketProviderName
-  currency: 'USD'
+  /** Quotation currency. Index levels are points in that currency's terms. */
+  currency: 'USD' | 'ILS'
   endpoint: MarketEndpoint
   /** Set when the asset proxies an index the provider does not serve. */
   proxyOf?: string
+  /**
+   * Set when `symbol` is a dated futures contract: its price is the metal (or
+   * grain, or barrel) for future delivery, which trades a little above the
+   * spot price, so the UI must say which one it is showing.
+   */
+  futures?: boolean
+  /**
+   * Set when the instrument prints continuously, so the row is polled at the
+   * provider's FAST cadence instead of its default one. It matters where a
+   * single provider serves both kinds of data: Yahoo carries the live gold
+   * contract and the TASE index whose feed runs about 15 minutes behind, and
+   * those two cannot share a TTL without either wasting requests on the
+   * delayed one or lagging on the live one.
+   */
+  realtime?: boolean
   /** Decimal places used when formatting the price. */
   decimals: number
 }
@@ -45,7 +62,7 @@ export interface MarketAsset {
 /**
  * A quote as the UI consumes it. Prices are plain numbers in the asset's
  * `currency`; change values may be null when the provider does not supply
- * them (the realtime crypto rate, for instance) - the UI renders an em-dash.
+ * them (the realtime crypto rate, for instance) - the UI renders a hyphen.
  */
 export interface MarketQuote {
   assetId: string
@@ -53,7 +70,7 @@ export interface MarketQuote {
   price: number | null
   change: number | null
   changePercent: number | null
-  currency: 'USD'
+  currency: 'USD' | 'ILS'
   /** ISO 8601 timestamp of the provider refresh (or cache write). */
   timestamp: string
   marketStatus?: 'open' | 'closed'

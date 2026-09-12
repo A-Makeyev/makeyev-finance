@@ -330,7 +330,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
                   'focus-visible:ring-2 focus-visible:ring-soft-blue/40',
                   selected
                     ? 'border-soft-blue bg-soft-blue text-white'
-                    : 'border-[rgb(70,70,70)] bg-white text-soft-black hover:border-soft-blue hover:bg-soft-blue hover:text-white',
+                    : 'border-line-soft bg-surface-card text-ink hover:border-soft-blue hover:bg-soft-blue hover:text-white',
                 )}
               >
                 <span className="text-[15px] font-bold leading-tight">
@@ -363,7 +363,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
             {wishlistTopics.map(({ item, title }) => (
               <li
                 key={item.id}
-                className="flex items-center gap-1 rounded-[5px] border border-[rgb(70,70,70)] bg-white py-1 pe-2.5 ps-1 text-[15px] font-bold leading-tight text-soft-black shadow-black"
+                className="flex items-center gap-1 rounded-[5px] border border-line-soft bg-surface-card py-1 pe-2.5 ps-1 text-[15px] font-bold leading-tight text-ink shadow-black"
               >
                 <button
                   type="button"
@@ -391,11 +391,12 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
         disabled={!allValid || sending}
         className={cn(
           'mt-6 flex h-[50px] w-full items-center justify-center rounded-[5px] border text-[16px] font-bold transition-all duration-300',
-          // Same border as the inputs in both states (white fill, soft-black
-          // border); disabled only softens the text color.
+          // Disabled keeps the neutral field border and only softens the text
+          // color; once every field is valid the border turns the same brand
+          // blue the valid fields use, so "ready to send" reads at a glance.
           sending || !allValid
-            ? 'pointer-events-none cursor-not-allowed border-soft-black bg-white text-soft-dark-grey shadow-black'
-            : 'border-soft-black bg-white text-soft-black shadow-black hover:bg-soft-black hover:text-white',
+            ? 'pointer-events-none cursor-not-allowed border-line-strong bg-surface-card text-soft-dark-grey shadow-black'
+            : 'border-soft-blue bg-surface-card text-ink shadow-black hover:bg-ink hover:text-surface-card',
         )}
       >
         {showSendingUi ? (

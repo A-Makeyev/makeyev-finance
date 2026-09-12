@@ -247,4 +247,59 @@ describe('xAxisTicks', () => {
     // Month 6 and 18 are the unlabeled minor ticks.
     expect(ticks.length).toBe(4)
   })
+
+  it('labels every year in the monthly view of a 15-year term', () => {
+    const ticks = xAxisTicks(180, true)
+    const labeled = ticks.filter((tick) => tick.label !== null)
+    expect(labeled.map((tick) => tick.label)).toEqual(
+      Array.from({ length: 15 }, (_, index) => String(index + 1)),
+    )
+    // Year-boundary ticks (15) plus the 6-month marks (15).
+    expect(ticks.length).toBe(30)
+    for (const tick of ticks) {
+      expect(tick.index % 6).toBe(5)
+    }
+  })
+
+  it('thins the monthly view to every other year exactly like the yearly view', () => {
+    // The regression this pins: a 30-year horizon used to be labeled 1..30 in
+    // the monthly tab and 1,3,5... in the yearly tab, so switching tabs
+    // changed how crowded the same axis was.
+    const monthly = xAxisTicks(360, true)
+    const yearly = xAxisTicks(30, false)
+    const labels = (ticks: Array<{ label: string | null }>) =>
+      ticks.filter((tick) => tick.label !== null).map((tick) => tick.label)
+    expect(labels(monthly)).toEqual(labels(yearly))
+    expect(labels(monthly)).toEqual([
+      '1',
+      '3',
+      '5',
+      '7',
+      '9',
+      '11',
+      '13',
+      '15',
+      '17',
+      '19',
+      '21',
+      '23',
+      '25',
+      '27',
+      '29',
+    ])
+    // Every year boundary still carries a tick, labeled or not.
+    const yearBoundaries = monthly.filter((tick) => (tick.index + 1) % 12 === 0)
+    expect(yearBoundaries).toHaveLength(30)
+  })
+
+  it('keeps about a dozen labels past 40 years in both granularities', () => {
+    // Past the calculator's 30-year maximum (MAX_YEARS), so this only guards
+    // the step rule itself: it must stay continuous if that limit ever rises.
+    expect(xAxisTicks(45, false).filter((tick) => tick.label !== null)).toHaveLength(12)
+    // 45 years = 540 months: labels land on years 1, 5, 9, ... 45.
+    const monthlyLabels = xAxisTicks(540, true)
+      .filter((tick) => tick.label !== null)
+      .map((tick) => tick.label)
+    expect(monthlyLabels).toEqual(['1', '5', '9', '13', '17', '21', '25', '29', '33', '37', '41', '45'])
+  })
 })

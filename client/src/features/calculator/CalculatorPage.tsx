@@ -559,10 +559,10 @@ export function CalculatorPage() {
       >
         <div className="p-6 pb-6">
           <div className="mb-5">
-            <h3 className="text-[20px] font-bold leading-tight text-soft-black">
+            <h3 className="text-[20px] font-bold leading-tight text-ink">
               {t('calculator.resetConfirmTitle')}
             </h3>
-            <p className="mt-4 text-[15px] leading-relaxed text-[#333]">
+            <p className="mt-4 text-[15px] leading-relaxed text-ink">
               {t('calculator.resetConfirmMessage')}
             </p>
           </div>
@@ -578,7 +578,7 @@ export function CalculatorPage() {
             <button
               type="button"
               data-testid="reset-confirm-yes"
-              className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-dark)]"
+              className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
               onClick={confirmReset}
             >
               {t('calculator.resetConfirm')}

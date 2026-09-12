@@ -55,7 +55,7 @@ export function FloatingLabelField({
         : 'focus:ring-2 focus:ring-soft-dark-grey/20'
 
   const fieldClasses = cn(
-    'peer w-full rounded-[5px] border bg-white outline-none transition-all duration-200 font-medium text-soft-black',
+    'peer w-full rounded-[5px] border bg-surface-card outline-none transition-all duration-200 font-medium text-ink',
     statusRing,
     // Equal 13px padding + a 22px line box exactly fill the 50px input,
     // so typed text sits dead-center vertically.
@@ -67,12 +67,20 @@ export function FloatingLabelField({
     // Neutral inputs keep the legacy near-black border + shadow, just a touch
     // lighter (rgb 70 vs soft-black's 15) so they read less heavy. On focus
     // the border darkens toward the original soft-black.
-    status === 'neutral' && 'border-[rgb(70,70,70)] shadow-black focus:border-soft-black',
+    status === 'neutral' && 'border-line-soft shadow-black focus:border-line-strong',
     isRtl ? 'text-right' : 'text-left',
   )
 
   return (
-    <div className="relative mb-5 w-full pt-4" data-testid={testId} data-status={status}>
+    /* `field-island`: the field and its floating label share one
+       sizing/stacking wrapper. In dark mode the theme tokens above dim the
+       field fill and keep the ink light (see FIELDS IN DARK MODE in
+       globals.css). */
+    <div
+      className="field-island relative mb-5 w-full pt-4"
+      data-testid={testId}
+      data-status={status}
+    >
       {/* Floating label - starts inside input, moves above input border on focus/filled */}
       <label
         htmlFor={id}
@@ -98,7 +106,7 @@ export function FloatingLabelField({
             : status === 'valid'
               ? 'text-soft-blue/80'
               : isFloating
-                ? 'text-soft-black'
+                ? 'text-ink'
                 : 'text-soft-dark-grey',
         )}
       >

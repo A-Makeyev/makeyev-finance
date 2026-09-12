@@ -100,6 +100,30 @@ describe('GET /api/market/quotes', () => {
     ).toBe(true)
   })
 
+  it('discloses the gold row as a futures contract, not a spot-metal quote', async () => {
+    const app = appWith({
+      available: true,
+      getQuotes: async () => ({ quotes: [makeQuote('gold')] }),
+    })
+    const listener = app as unknown as (req: unknown, res: unknown) => void
+    server.removeAllListeners('request')
+    server.on('request', listener)
+
+    const res = await fetch(`${baseUrl}/api/market/quotes?ids=gold`)
+    const body = (await res.json()) as { assets: Array<Record<string, unknown>> }
+    expect(body.assets).toHaveLength(1)
+    expect(body.assets[0]).toMatchObject({
+      id: 'gold',
+      symbol: 'GC=F',
+      type: 'commodity',
+      decimals: 2,
+      futures: true,
+    })
+    // The client renders the spot-vs-futures note off this flag, so it must
+    // survive serialization; a proxy disclosure must not come back with it.
+    expect(body.assets[0]).not.toHaveProperty('proxyOf')
+  })
+
   it('filters assets via ?ids= and rejects unknown ids', async () => {
     const getQuotes = vi.fn(async () => ({ quotes: [makeQuote('sp500')] }))
     const app = appWith({ available: true, getQuotes })

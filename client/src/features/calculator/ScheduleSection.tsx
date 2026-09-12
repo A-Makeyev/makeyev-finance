@@ -141,7 +141,9 @@ export function ScheduleSection() {
       {view === 'separate' && vm.visibleScheduleTracks.length > 0 && (
         <div className="per-track-band">
           {mixShares.some((share) => share.amount > 0) && <TrackMixDonut shares={mixShares} />}
-          <PerTrackChart tracks={vm.visibleScheduleTracks} />
+          {/* Same granularity as the per-track tables below it: one point per
+              month when the monthly tab is on, matching the total view. */}
+          <PerTrackChart tracks={vm.visibleScheduleTracks} monthly={granularity === 'monthly'} />
         </div>
       )}
 

@@ -19,6 +19,10 @@ export const he = {
       articles: 'מאמרים',
       contact: 'צרו קשר',
       switchLanguage: 'English',
+      // Theme toggle labels describe the ACTION (what clicking switches to),
+      // matching the sun/moon icon the user sees.
+      darkMode: 'מצב כהה',
+      lightMode: 'מצב בהיר',
     },
     offlineBanner: 'אין חיבור לרשת',
     footer: {
@@ -302,6 +306,7 @@ export const he = {
         yearLabel: 'שנה {{year}}',
         monthLabel: 'חודש {{month}}',
         axisPayment: 'תשלום שנתי',
+        axisMonthlyPayment: 'תשלום חודשי',
         axisBalance: 'יתרה',
         axisYear: 'שנה',
       },
@@ -388,7 +393,7 @@ export const he = {
         asideTitle: 'תשלום שנתי ראשון',
         asideCaption: 'סך התשלומים ב-12 החודשים הראשונים',
         paybackHeader: 'יחס החזר',
-        paybackRatioLabel: 'יחס החזר:',
+        paybackRatioLabel: 'יחס החזר',
         expandToYears: 'הצג פירוט ל-{{years}} שנים',
         collapseToFifteen: 'הצג 15 שנים ראשונות',
       },
@@ -408,11 +413,13 @@ export const he = {
     marketTracker: {
       ariaLabel: 'מחירי שוק',
       proxyOf: 'עוקב אחרי {{proxy}}',
+      indexPoints: 'רמת המדד בנקודות',
+      futuresNote: 'חוזה עתידי (COMEX), גבוה ממחיר הספוט',
       staleTooltip: 'הנתונים מהמטמון ועשויים להיות לא עדכניים',
       assets: {
         sp500: 'SPY',
         nasdaq: 'QQQ',
-        ta35: 'EIS',
+        ta35: 'TA-35',
         gold: 'GOLD',
         bitcoin: 'BTC',
         usdils: 'USD/ILS',

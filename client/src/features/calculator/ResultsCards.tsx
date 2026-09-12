@@ -468,7 +468,7 @@ export function ResultsCards() {
             <div className="mt-2 text-[18px] font-bold leading-snug text-[var(--calc-ink)]">
               {openCard.label}
             </div>
-            <p className="mt-4 text-[17px] leading-relaxed text-[#333]">
+            <p className="mt-4 text-[17px] leading-relaxed text-[var(--calc-ink)]">
               {t(`calculator.results.details.${openCard.key}`)}
             </p>
             <div className="mt-3 text-[14px] font-semibold leading-relaxed text-[var(--calc-muted)]">
@@ -506,7 +506,7 @@ export function ResultsCards() {
             <button
               type="button"
               data-testid="results-card-modal-gotit"
-              className="mt-3 w-full rounded-[5px] bg-[var(--calc-teal)] px-5 py-2.5 text-[16px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-dark)]"
+              className="mt-3 w-full rounded-[5px] bg-[var(--calc-teal)] px-5 py-2.5 text-[16px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
               onClick={closeDialog}
             >
               {t('calculator.results.gotIt')}

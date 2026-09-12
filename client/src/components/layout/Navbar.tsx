@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
 import {
   FaFacebookSquare,
+  FaMoon,
   FaPhoneAlt,
   FaRegEnvelope,
+  FaSun,
   FaWaze,
   FaWhatsapp,
 } from 'react-icons/fa'
@@ -12,6 +14,7 @@ import { changeLanguage } from '@/i18n'
 import { socialLinks } from '@/config/siteConfig'
 import { cn } from '@/lib/cn'
 import { useMediaQuery, useScrolled } from '@/hooks/useScrolled'
+import { useTheme } from '@/hooks/useTheme'
 
 const NAV_ITEMS = [
   { to: '/', key: 'nav.home', id: 'home' },
@@ -45,6 +48,7 @@ export function Navbar({
   onMenuChange,
 }: NavbarProps) {
   const { t, i18n } = useTranslation()
+  const { isDark, toggle: toggleTheme } = useTheme()
   const location = useLocation()
   const scrolled = useScrolled()
   const isDesktop770 = useMediaQuery('(min-width: 770px)')
@@ -127,6 +131,10 @@ export function Navbar({
       className={cn(
         'transition-colors duration-500',
         solid && 'navbar-scrolling',
+        // While the sheet is on screen the bar must shed its backdrop-filter:
+        // it would otherwise become the containing block for the fixed sheet
+        // and collapse it (see nav#navbar.menu-open in globals.css).
+        menuOpen && 'menu-open',
         solid && isDesktop770 && 'nav-scrolling-resize',
         indexesVisible && !menuOpen && 'adjust-nav',
         marketsVisible && !menuOpen && 'adjust-markets',
@@ -155,8 +163,10 @@ export function Navbar({
           )}
           onClick={onLogoClick}
         >
+          {/* The solid bar is dark in dark mode, where the dark "Logo.png"
+              would disappear, so the light transparent logo carries both. */}
           <img
-            src={solid ? '/images/Logo.png' : '/images/Logo-T.png'}
+            src={solid && !isDark ? '/images/Logo.png' : '/images/Logo-T.png'}
             alt=""
             data-testid={solid ? 'logo-solid' : 'logo-transparent'}
             className="block w-full h-auto max-h-[75px] object-contain transition-all duration-1000"
@@ -193,6 +203,34 @@ export function Navbar({
                   className="block h-4 w-6 object-cover rounded-sm shadow-sm"
                   loading="eager"
                 />
+              </a>
+            </li>
+            {/* Theme switch - sun / crescent, right beside the flag, with the
+                same behaviour: persists locally, closes the mobile menu. */}
+            <li>
+              <a
+                href="javascript:void(0);"
+                data-testid="theme-switch"
+                className="nav-link remove-highlight flex items-center"
+                title={t(isDark ? 'nav.lightMode' : 'nav.darkMode')}
+                aria-label={t(isDark ? 'nav.lightMode' : 'nav.darkMode')}
+                onClick={(event) => {
+                  event.preventDefault()
+                  if (menuOpen) closeMenu()
+                  toggleTheme()
+                }}
+              >
+                {/* Crescent / sun as a picture, the way the flag beside it
+                    is: no chip, no background box. The stylesheet tints the
+                    crescent and fades its far end so it reads as glass (see
+                    .nav-theme-icon.moon). */}
+                <span
+                  aria-hidden="true"
+                  className={isDark ? 'nav-theme-icon sun' : 'nav-theme-icon moon'}
+                  data-testid="theme-switch-icon"
+                >
+                  {isDark ? <FaSun /> : <FaMoon />}
+                </span>
               </a>
             </li>
           </div>

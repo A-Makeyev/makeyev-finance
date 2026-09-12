@@ -65,7 +65,7 @@ export function MessageModal({
           // (`.modal.active { transform: ... scale(1) rotate(360deg) }`).
           // Legacy `transition: all 0.5s` - spins AND fades on both open and
           // close; legacy default `ease` curve keeps it smooth in each dir.
-          'fixed left-1/2 top-1/2 z-[9999] w-[520px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-2 bg-soft-white shadow-[0_8px_22px_0_rgba(15,15,15,0.5)] transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]',
+          'fixed left-1/2 top-1/2 z-[9999] w-[520px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-2 bg-surface-card shadow-[0_8px_22px_0_rgba(15,15,15,0.5)] transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]',
           // Border matches the header accent: green on success, red on failure.
           success ? 'border-soft-green' : 'border-soft-red',
           active
@@ -94,7 +94,7 @@ export function MessageModal({
           </div>
           <button
             type="button"
-            className="flex items-center justify-center w-[38px] h-[38px] rounded-full text-[28px] font-semibold text-soft-black bg-transparent border-none cursor-pointer outline-none transition-[transform,color] duration-300 hover:rotate-90 hover:text-soft-red"
+            className="flex items-center justify-center w-[38px] h-[38px] rounded-full text-[28px] font-semibold text-ink bg-transparent border-none cursor-pointer outline-none transition-[transform,color] duration-300 hover:rotate-90 hover:text-soft-red"
             data-modal-close
             data-testid="message-modal-close"
             aria-label="close"
@@ -123,7 +123,7 @@ export function MessageModal({
                 {t('contact.modal.failureBodyPrefix')}{' '}
                 <a
                   href={`tel:${SITE.phoneDisplay}`}
-                  className="text-[19px] font-semibold text-soft-black hover:text-soft-blue transition-colors"
+                  className="text-[19px] font-semibold text-ink hover:text-soft-blue transition-colors"
                 >
                   {SITE.phoneDisplay}
                 </a>{' '}
@@ -156,7 +156,7 @@ export function MessageModal({
         <div
           className={cn(
             // `modal-links` restores the legacy white-on-black socials styling
-            // (`.modal-links .socials { background: var(--soft-white) }`).
+            // (`.modal-links .socials { background: var(--surface-card) }`).
             'modal-links -mt-5 flex justify-center flex-wrap gap-3 px-6 pt-1 pb-4',
             success ? 'flex' : 'hidden',
           )}

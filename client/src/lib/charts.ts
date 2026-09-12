@@ -212,17 +212,37 @@ export interface XTick {
  * label the year boundaries (every 12th month) with minor ticks at the
  * half-year. Labels are bare numbers - "שנה" lives in the tooltip/title.
  */
+/**
+ * How many periods between labeled ticks: every one up to 18, every 2nd up to
+ * 40, then roughly a dozen labels across the horizon. Shared by both
+ * granularities, so the same term gets the same label density whichever tab
+ * the reader is on.
+ */
+function labelStep(count: number): number {
+  return count <= 18 ? 1 : count <= 40 ? 2 : Math.ceil(count / 12)
+}
+
 export function xAxisTicks(count: number, monthly: boolean): XTick[] {
   const ticks: XTick[] = []
   if (monthly) {
+    // Points are months, but only year boundaries can carry a label: month
+    // numbers 1-360 would be unreadable, and the table already has its own
+    // "total months" column. The step is the YEARS one, so a 30-year horizon
+    // is labeled 1, 3, 5... in either tab instead of 30 crowded labels here
+    // and 15 there. Every 6th month keeps an unlabeled tick.
+    const yearStep = labelStep(Math.ceil(count / 12))
     for (let index = 0; index < count; index++) {
       const month = index + 1
-      if (month % 12 === 0) ticks.push({ index, label: String(month / 12) })
-      else if (month % 6 === 0) ticks.push({ index, label: null })
+      if (month % 12 === 0) {
+        const year = month / 12
+        ticks.push({ index, label: (year - 1) % yearStep === 0 ? String(year) : null })
+      } else if (month % 6 === 0) {
+        ticks.push({ index, label: null })
+      }
     }
     return ticks
   }
-  const step = count <= 18 ? 1 : count <= 40 ? 2 : Math.ceil(count / 12)
+  const step = labelStep(count)
   for (let index = 0; index < count; index++) {
     if (index % step === 0) ticks.push({ index, label: String(index + 1) })
     else if (step > 1) ticks.push({ index, label: null })

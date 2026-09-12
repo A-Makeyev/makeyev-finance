@@ -11,6 +11,35 @@
       href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=Lato:wght@100;300;400;700&display=swap"
     />
     <title>Makeyev Finance</title>
+    <script>
+      /*
+       * Pre-paint theme. Runs before the bundle so a stored (or OS-preferred)
+       * dark theme never flashes light on first load. This MIRRORS
+       * client/src/theme/index.ts - same storage key, same
+       * prefers-color-scheme fallback - and tests/unit/theme.test.ts loads
+       * this very script to prove the two agree. Update both together.
+       */
+      ;(function () {
+        var root = document.documentElement
+        var stored = 'system'
+        try {
+          var raw = localStorage.getItem('site_theme')
+          if (raw === 'light' || raw === 'dark' || raw === 'system') stored = raw
+        } catch (error) {
+          /* storage unavailable - treat as no choice yet (system) */
+        }
+        var dark = false
+        try {
+          dark =
+            stored === 'dark' ||
+            (stored === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        } catch (error) {
+          /* matchMedia unavailable - light is the safe default */
+        }
+        root.dataset.theme = dark ? 'dark' : 'light'
+        root.style.colorScheme = dark ? 'dark' : 'light'
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

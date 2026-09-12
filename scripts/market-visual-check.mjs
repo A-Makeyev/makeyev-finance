@@ -55,18 +55,22 @@ for (const { name, width, height, language } of cases) {
           {
             assetId: 'ta35',
             name: 'TA-35',
-            price: 125.32,
-            change: -0.9865,
+            price: 2345.67,
+            change: -18.46,
             changePercent: -0.781,
-            currency: 'USD',
+            // ILS, matching the registry: an index level is points, so the
+            // row must render bare (no $ prefix) in the visual check too.
+            currency: 'ILS',
             timestamp: '2026-09-08T00:00:00.000Z',
             marketStatus: 'closed',
           },
           {
             assetId: 'gold',
             name: 'GOLD',
-            price: 403.35,
-            change: 3.63,
+            // COMEX front-month futures (GC=F), matching the registry: the
+            // row must show the metal's own price, not a GLD share price.
+            price: 4408.9,
+            change: 39.7,
             changePercent: 0.9081,
             currency: 'USD',
             timestamp: '2026-09-08T00:00:00.000Z',
@@ -93,25 +97,24 @@ for (const { name, width, height, language } of cases) {
             marketStatus: 'closed',
           },
         ],
-        refreshIntervalMs: 900000,
+        refreshIntervalMs: 10000,
         assets: [
           { id: 'sp500', name: 'SPY', symbol: 'SPY', type: 'etf', decimals: 2 },
           { id: 'nasdaq', name: 'QQQ', symbol: 'QQQ', type: 'etf', decimals: 2 },
           {
             id: 'ta35',
             name: 'TA-35',
-            symbol: 'EIS',
-            type: 'etf',
+            symbol: 'TA35.TA',
+            type: 'index',
             decimals: 2,
-            proxyOf: 'Tel Aviv 35',
           },
           {
             id: 'gold',
             name: 'GOLD',
-            symbol: 'GLD',
-            type: 'etf',
+            symbol: 'GC=F',
+            type: 'commodity',
             decimals: 2,
-            proxyOf: 'Spot gold',
+            futures: true,
           },
           {
             id: 'bitcoin',

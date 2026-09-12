@@ -43,6 +43,14 @@ Do not write the em dash character (`—`, U+2014) anywhere in this project: not
 - Use logical CSS properties (`margin-inline-start`, `padding-inline-end`, etc.) and `dir`-aware flex/grid over hardcoded `left`/`right`, so direction flips automatically instead of needing a manual override per component.
 - Check a new feature in an RTL rendering and an LTR rendering before calling it done - correct in Hebrew doesn't mean correct in English, and vice versa.
 
+## Theming and dark mode
+
+- The site ships light + dark, chosen by `client/src/theme` (stored in `localStorage` under `site_theme`, defaulting to the OS preference) and applied as `data-theme` on `<html>`. The pre-paint script in `client/index.html` mirrors that logic; `client/tests/unit/theme.test.ts` loads the real script, so change both together.
+- Style new UI with the theme roles, never raw colors: `--surface-page` / `--surface-card` / `--surface-soft`, `--ink` / `--ink-muted`, `--line-strong` / `--line-soft`, `--danger`. In Tailwind that is `bg-surface-card`, `text-ink`, `border-line-strong`, etc. These flip automatically in dark mode; `bg-white` / `text-soft-black` do not.
+- The `soft-*` palette is brand hues (links, accents, error red) and stays the same in both themes, except `soft-grey` / `soft-dark-grey`, which are the divider and muted-text roles and do flip.
+- The chrome that is deliberately dark in both themes - hero image overlays, the Indexes/Markets strips, the footer, the calculator's gradient headline card - is not tokenized; leave it alone rather than "fixing" it.
+- Run `e2e/tests/ui/theme.spec.ts` and eyeball a new page in both themes (and at ~360px) before calling it done.
+
 ## CI/CD and dependencies
 
 - Run build/lint/typecheck/test yourself before considering a task done, if they're available in the repo.

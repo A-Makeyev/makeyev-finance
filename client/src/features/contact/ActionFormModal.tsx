@@ -47,12 +47,15 @@ export function ActionFormModal({ open, onOpenChange }: ActionFormModalProps) {
         tone="blue"
         testId="action-form-modal"
         dir={isHebrew ? 'rtl' : 'ltr'}
-        contentClassName="max-w-[500px] !rounded-2xl !border-soft-black !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
+        // The blue accent comes from tone="blue"; keep it (do not override
+        // the border here) so the form modal reads as the same control
+        // family as the valid fields and the send button.
+        contentClassName="max-w-[500px] !rounded-2xl !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
       >
         <div className="p-6 pb-5" dir={isHebrew ? 'rtl' : 'ltr'}>
           {/* Header */}
           <div className={`mb-4 ${isHebrew ? 'text-right' : 'text-left'}`}>
-            <h1 className="text-[28px] font-bold leading-tight text-soft-black">
+            <h1 className="text-[28px] font-bold leading-tight text-ink">
               {t('contact.actionModal.title')}
             </h1>
             <p className="mt-1 text-[17px] font-medium text-soft-blue">

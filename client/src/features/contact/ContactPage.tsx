@@ -54,7 +54,7 @@ export function ContactPage() {
       <section className="w-[80%] mx-auto pt-12 pb-14">
         {/* Form header */}
         <div className="flex flex-col items-center mb-10">
-          <h1 className="text-[1.8em] sm:text-[2.1em] lg:text-[2.6em] text-center font-bold text-soft-black leading-tight">
+          <h1 className="text-[1.8em] sm:text-[2.1em] lg:text-[2.6em] text-center font-bold text-ink leading-tight">
             {t('contact.formTitle')}
           </h1>
           <p className="mt-2 text-[16px] sm:text-[18px] lg:text-[22px] text-center text-soft-blue whitespace-pre-line">
@@ -82,7 +82,7 @@ export function ContactPage() {
             <div className="flex items-center gap-3 mb-10">
               <FaWhatsapp
                 aria-hidden="true"
-                className="text-soft-black text-[20px] font-semibold"
+                className="text-ink text-[20px] font-semibold"
               />
               <a
                 href={`https://wa.me/972${SITE.phoneDisplay.slice(1)}`}
@@ -92,7 +92,7 @@ export function ContactPage() {
                 className="group"
               >
                 <span className="relative">
-                  <p className="text-[20px] font-medium text-soft-black transition-colors group-hover:text-soft-blue">
+                  <p className="text-[20px] font-medium text-ink transition-colors group-hover:text-soft-blue">
                     {SITE.phoneDisplay}
                   </p>
                   <span className="block h-[2px] w-0 bg-soft-grey transition-all duration-300 group-hover:w-full" />
@@ -104,11 +104,11 @@ export function ContactPage() {
             <div className="flex items-center gap-3 mb-10">
               <FaRegEnvelope
                 aria-hidden="true"
-                className="text-soft-black text-[20px] font-semibold"
+                className="text-ink text-[20px] font-semibold"
               />
               <a href={MAIL_LINK} target="_blank" rel="noreferrer" data-testid="main-email" className="group">
                 <span className="relative">
-                  <p className="text-[20px] font-medium text-soft-black transition-colors group-hover:text-soft-blue">
+                  <p className="text-[20px] font-medium text-ink transition-colors group-hover:text-soft-blue">
                     {SITE.emailMain}
                   </p>
                   <span className="block h-[2px] w-0 bg-soft-grey transition-all duration-300 group-hover:w-full" />
@@ -120,11 +120,11 @@ export function ContactPage() {
             <div className="flex items-center gap-3 mb-10">
               <FaMapMarkerAlt
                 aria-hidden="true"
-                className="text-soft-black text-[20px] font-semibold"
+                className="text-ink text-[20px] font-semibold"
               />
               <a href={WAZE_LINK} target="_blank" rel="noreferrer" data-testid="main-address" className="group">
                 <span className="relative">
-                  <p className="text-[20px] font-medium text-soft-black transition-colors group-hover:text-soft-blue">
+                  <p className="text-[20px] font-medium text-ink transition-colors group-hover:text-soft-blue">
                     {SITE.address}
                   </p>
                   <span className="block h-[2px] w-0 bg-soft-grey transition-all duration-300 group-hover:w-full" />
@@ -160,7 +160,7 @@ export function ContactPage() {
             allowFullScreen
             src={GOOGLE_MAPS_EMBED}
             data-testid="map-iframe"
-            className="w-full rounded-[5px] shadow-black border border-soft-black"
+            className="w-full rounded-[5px] shadow-black border border-line-strong"
           />
         </div>
       </section>

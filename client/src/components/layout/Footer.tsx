@@ -26,7 +26,7 @@ export function SocialLinks({ variant = 'footer' }: { variant?: 'footer' | 'moda
       {SOCIAL_ENTRIES.map(({ key, hoverClass, Icon }) => (
         <a
           key={key}
-          className={`icon remove-highlight ${variant === 'modal' ? 'text-soft-black' : ''}`}
+          className={`icon remove-highlight ${variant === 'modal' ? 'text-ink' : ''}`}
           href={links[key]}
           target="_blank"
           rel="noreferrer"

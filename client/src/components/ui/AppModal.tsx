@@ -56,7 +56,7 @@ export function AppModal({
           dir={dir}
           onInteractOutside={(event) => event.preventDefault()}
           className={cn(
-            'fixed left-1/2 top-1/2 z-[1000] max-h-[85vh] w-[92vw] max-w-[500px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overflow-x-hidden rounded-[5px] border-2 bg-white shadow-[0_5px_5px_0_rgba(15,15,15,0.5)] data-[state=open]:animate-[app-modal-pop-in_300ms_cubic-bezier(0.34,1.3,0.64,1)_forwards] data-[state=closed]:animate-[app-modal-pop-out_150ms_ease-in_forwards]',
+            'fixed left-1/2 top-1/2 z-[1000] max-h-[85vh] w-[92vw] max-w-[500px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overflow-x-hidden rounded-[5px] border-2 bg-surface-card shadow-[0_5px_5px_0_rgba(15,15,15,0.5)] data-[state=open]:animate-[app-modal-pop-in_300ms_cubic-bezier(0.34,1.3,0.64,1)_forwards] data-[state=closed]:animate-[app-modal-pop-out_150ms_ease-in_forwards]',
             TONE_BORDER[tone],
             contentClassName,
           )}
@@ -64,7 +64,7 @@ export function AppModal({
           <Dialog.Close
             aria-label="close"
             data-testid={`${testId}-close`}
-            className="absolute end-[10px] top-[6px] flex h-[40px] w-[40px] items-center justify-center cursor-pointer border-none bg-none text-[28px] font-semibold leading-none text-soft-black outline-none transition-[transform,color] duration-300 hover:rotate-90 hover:text-soft-red"
+            className="absolute end-[10px] top-[6px] flex h-[40px] w-[40px] items-center justify-center cursor-pointer border-none bg-none text-[28px] font-semibold leading-none text-ink outline-none transition-[transform,color] duration-300 hover:rotate-90 hover:text-soft-red"
           >
             &#215;
           </Dialog.Close>

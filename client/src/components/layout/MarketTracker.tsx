@@ -1,12 +1,13 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMarketQuotes } from '@/services/market'
 import type { MarketAssetMeta, MarketQuote } from '@/services/marketTypes'
 import {
   formatMarketChangePercent,
-  formatMarketCryptoPrice,
-  formatMarketPrice,
+  formatMarketQuotePrice,
   marketTrendOf,
+  priceTickTrend,
+  type PriceTickDirection,
 } from '@/lib/marketFormat'
 
 /**
@@ -112,6 +113,75 @@ export function MarketTracker({ hidden = false, atTop = false }: MarketTrackerPr
   )
 }
 
+/**
+ * How long the price flash lasts on screen. Must stay in sync with the
+ * .markets-tick animation duration in globals.css - the timer only removes
+ * the already-faded node, so a mistake here delays cleanup, it does not cut
+ * the animation short.
+ */
+const FLASH_MS = 1200
+
+/**
+ * The flash pill. A tick renders ONE pill spanning the whole value pair
+ * (price + change): the percent is derived from the same move (the server
+ * computes it from the price and the previous close), so a tick that lights
+ * the price must light the percent with it, as one rectangle rather than
+ * two halves that never quite join. The parent passes the seq as the React
+ * key, so two moves in the same direction remount and replay the fade
+ * instead of inheriting a finished animation.
+ *
+ * The pill is absolutely positioned behind the digits inside the row's
+ * .markets-values wrapper (its positioning context), so it never shifts
+ * the row.
+ */
+function TickPill({ assetId, direction }: { assetId: string; direction: PriceTickDirection }) {
+  return (
+    <span
+      className={`markets-tick markets-tick-${direction}`}
+      data-tick={direction}
+      data-testid={`market-tick-${assetId}`}
+      aria-hidden="true"
+    />
+  )
+}
+
+/**
+ * Reports the direction of each visible price move so the row can flash
+ * green/red when a poll actually changes the number. Holds the previous
+ * price in a ref (first paint has nothing to compare against, so it is
+ * silent) and auto-clears the flash, the same shape the calculator's
+ * re-balance flash uses. The seq makes a repeat move in the same direction
+ * replay instead of inheriting a finished animation.
+ */
+function usePriceFlash(price: number | null, decimals: number) {
+  const previousPrice = useRef<number | null>(null)
+  const timer = useRef<number | null>(null)
+  const [flash, setFlash] = useState<{ direction: PriceTickDirection; seq: number } | null>(null)
+
+  useEffect(() => {
+    const direction = priceTickTrend(previousPrice.current, price, decimals)
+    previousPrice.current = price
+    if (!direction) return
+    setFlash((current) => ({ direction, seq: (current?.seq ?? 0) + 1 }))
+    if (timer.current !== null) window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => {
+      timer.current = null
+      setFlash(null)
+    }, FLASH_MS)
+  }, [price, decimals])
+
+  // Unmount only: clearing on every dependency change would drop the pending
+  // cleanup timer of a flash that is still on screen, leaving it stuck.
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current)
+    },
+    [],
+  )
+
+  return flash
+}
+
 interface MarketRowProps {
   assetId: string
   name: string
@@ -129,13 +199,19 @@ function MarketRow({ assetId, name, quote, meta }: MarketRowProps) {
   const arrow = TREND_ARROWS[trend]
 
   const priceText = quote
-    ? meta?.type === 'crypto'
-      ? formatMarketCryptoPrice(quote.price, decimals)
-      : formatMarketPrice(quote.price, decimals)
+    ? formatMarketQuotePrice(quote.price, decimals, quote.currency, meta?.type ?? 'etf')
     : '-'
   const changeText = formatMarketChangePercent(quote?.changePercent ?? null)
+  const flash = usePriceFlash(quote?.price ?? null, decimals)
 
   const titleParts = [`${name}: ${priceText} (${changeText})`]
+  // The strip has no room for a unit suffix, and a bare number next to the
+  // dollar-prefixed rows reads as dollars, so an index level names its unit
+  // here: index points, never shekels. Driven by the instrument type.
+  if (meta?.type === 'index') titleParts.push(t('marketTracker.indexPoints'))
+  // Gold is the metal's own price, but the front-month CONTRACT: a few percent
+  // above what a bullion dealer quotes, so the row says which one it shows.
+  if (meta?.futures) titleParts.push(t('marketTracker.futuresNote'))
   if (meta?.proxyOf) titleParts.push(t('marketTracker.proxyOf', { proxy: meta.proxyOf }))
   if (quote?.stale) titleParts.push(t('marketTracker.staleTooltip'))
 
@@ -146,10 +222,13 @@ function MarketRow({ assetId, name, quote, meta }: MarketRowProps) {
       title={titleParts.join(' ~ ')}
     >
       <span className="markets-name">{name}</span>
-      <span className="markets-price">{priceText}</span>
-      <span className={`markets-change ${TREND_CLASS[trend]}`}>
-        {changeText}
-        {arrow && ` ${arrow}`}
+      <span className="markets-values">
+        {flash && <TickPill key={flash.seq} assetId={assetId} direction={flash.direction} />}
+        <span className="markets-price">{priceText}</span>
+        <span className={`markets-change ${TREND_CLASS[trend]}`}>
+          {changeText}
+          {arrow && ` ${arrow}`}
+        </span>
       </span>
     </span>
   )

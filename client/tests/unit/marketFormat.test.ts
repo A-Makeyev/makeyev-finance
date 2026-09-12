@@ -10,9 +10,10 @@ import { describe, expect, it } from 'vitest'
 import {
   formatMarketChange,
   formatMarketChangePercent,
-  formatMarketCryptoPrice,
   formatMarketPrice,
+  formatMarketQuotePrice,
   marketTrendOf,
+  priceTickTrend,
 } from '@/lib/marketFormat'
 
 describe('formatMarketPrice', () => {
@@ -33,11 +34,38 @@ describe('formatMarketPrice', () => {
   })
 })
 
-describe('formatMarketCryptoPrice', () => {
-  it('prefixes $ only for the crypto row', () => {
-    expect(formatMarketCryptoPrice(112345, 0)).toBe('$112,345')
-    expect(formatMarketCryptoPrice(79551.34, 0)).toBe('$79,551')
-    expect(formatMarketCryptoPrice(null, 0)).toBe('-')
+describe('formatMarketQuotePrice', () => {
+  it('prefixes $ for USD-quoted instruments (ETFs, crypto, commodities)', () => {
+    expect(formatMarketQuotePrice(765.96, 2, 'USD', 'etf')).toBe('$765.96')
+    expect(formatMarketQuotePrice(521.4, 2, 'USD', 'etf')).toBe('$521.40')
+    expect(formatMarketQuotePrice(79551.34, 0, 'USD', 'crypto')).toBe('$79,551')
+    // Gold: dollars per troy ounce of the front-month contract.
+    expect(formatMarketQuotePrice(4408.9, 2, 'USD', 'commodity')).toBe('$4,408.90')
+  })
+
+  it('keeps ILS-quoted index levels plain (TA-35)', () => {
+    expect(formatMarketQuotePrice(125.32, 2, 'ILS', 'index')).toBe('125.32')
+    expect(formatMarketQuotePrice(2345.67, 2, 'ILS', 'index')).toBe('2,345.67')
+  })
+
+  it('gives FX pairs the sign of their quote leg (USD/ILS -> shekels per dollar)', () => {
+    expect(formatMarketQuotePrice(3.0192, 4, 'USD', 'currency')).toBe('₪3.0192')
+    expect(formatMarketQuotePrice(3.7621, 4, 'ILS', 'currency')).toBe('₪3.7621')
+    // The base leg being USD must not leak the dollar sign in.
+    expect(formatMarketQuotePrice(765.96, 2, 'USD', 'currency')).toBe('₪765.96')
+  })
+
+  it('never puts a currency sign on an index level (points, not shekels)', () => {
+    expect(formatMarketQuotePrice(2345.67, 2, 'ILS', 'index')).toBe('2,345.67')
+    expect(formatMarketQuotePrice(2345.67, 2, 'USD', 'index')).toBe('$2,345.67')
+  })
+
+  it('never prints NaN or Infinity and degrades null to a hyphen', () => {
+    expect(formatMarketQuotePrice(null, 2, 'USD', 'etf')).toBe('-')
+    expect(formatMarketQuotePrice(Number.NaN, 2, 'USD', 'etf')).toBe('-')
+    expect(formatMarketQuotePrice(Number.POSITIVE_INFINITY, 2, 'ILS', 'index')).toBe('-')
+    // Zero is a real FX rate and must render, not degrade to the placeholder.
+    expect(formatMarketQuotePrice(0, 4, 'USD', 'currency')).toBe('₪0.0000')
   })
 })
 
@@ -71,5 +99,37 @@ describe('marketTrendOf', () => {
     expect(marketTrendOf(0)).toBe('flat')
     expect(marketTrendOf(null)).toBe('flat')
     expect(marketTrendOf(Number.NaN)).toBe('flat')
+  })
+})
+
+describe('priceTickTrend', () => {
+  it('reports the direction of a move that changes the displayed price', () => {
+    expect(priceTickTrend(765.96, 770, 2)).toBe('up')
+    expect(priceTickTrend(765.96, 760.5, 2)).toBe('down')
+    expect(priceTickTrend(3.0192, 3.0193, 4)).toBe('up')
+    expect(priceTickTrend(79551.34, 79552.4, 0)).toBe('up')
+  })
+
+  it('stays silent when the rendered number is unchanged', () => {
+    expect(priceTickTrend(765.96, 765.96, 2)).toBeNull()
+    // Sub-precision moves: both render "765.96", so a flash would sit next to
+    // a number that never changed. Same for crypto and FX precision.
+    expect(priceTickTrend(765.961, 765.964, 2)).toBeNull()
+    expect(priceTickTrend(79551.34, 79551.49, 0)).toBeNull()
+    expect(priceTickTrend(3.01921, 3.01924, 4)).toBeNull()
+  })
+
+  it('flashes on the move that crosses a display boundary', () => {
+    // 765.964 renders 765.96, 765.965 renders 765.97 (Intl half-expand).
+    expect(priceTickTrend(765.964, 765.965, 2)).toBe('up')
+    expect(priceTickTrend(765.965, 765.964, 2)).toBe('down')
+  })
+
+  it('never flashes on first paint or on non-finite prices', () => {
+    expect(priceTickTrend(null, 765.96, 2)).toBeNull()
+    expect(priceTickTrend(765.96, null, 2)).toBeNull()
+    expect(priceTickTrend(Number.NaN, 765.96, 2)).toBeNull()
+    expect(priceTickTrend(765.96, Number.NaN, 2)).toBeNull()
+    expect(priceTickTrend(Number.POSITIVE_INFINITY, 765.96, 2)).toBeNull()
   })
 })

@@ -48,7 +48,7 @@ strong {
   align-items: center;
   align-content: center;
   justify-content: center;
-  background-color: var(--soft-white);
+  background-color: var(--surface-page);
   transition: all 1s ease-in-out;
 }
 
@@ -121,7 +121,13 @@ strong {
   --soft-yellow: rgb(250, 205, 5);
   --soft-orange: rgb(255, 125, 80);
   --soft-dark-blue: rgb(65, 120, 235);
-  --soft-dark-grey: rgb(100, 100, 100);
+  /* Grey roles are channel-triplets so Tailwind's `soft-grey`/`soft-dark-grey`
+     (rgb(var(--x) / <alpha-value>)) and the CSS rules below flip together in
+     dark mode. Light values are unchanged. */
+  --soft-grey-rgb: 200 200 200;
+  --soft-dark-grey-rgb: 100 100 100;
+  --soft-grey: rgb(var(--soft-grey-rgb));
+  --soft-dark-grey: rgb(var(--soft-dark-grey-rgb));
   --soft-black-background: rgba(15, 15, 15, 0.5);
   --soft-blue-background: rgba(35, 170, 222, 0.4);
   --soft-white-background: rgba(255, 255, 255, 0.2);
@@ -144,6 +150,64 @@ strong {
   --calc-accent-dark: #08847c;
   --calc-paper: #fffdf8;
   --calc-line: #dbe5df;
+
+  /* ---------------------------------------------------------------------
+     THEME ROLES (added for dark mode)
+     Every value below is the exact literal it replaces, so light mode is
+     pixel-identical; the `[data-theme='dark']` block at the end of this
+     file flips only these roles. Intentionally-dark chrome - the hero image
+     overlays, the Indexes/Markets strips, the footer and the calculator's
+     gradient headline card - keeps its own colors because it is dark in
+     BOTH themes and needs no override.
+     New pages should style with these roles (or the matching Tailwind
+     `surface-*`/`ink`/`hairline` colors), never with raw white/black.
+     --------------------------------------------------------------------- */
+  --surface-page: var(--soft-white);
+  --surface-card: #ffffff;
+  --surface-soft: #f1f5ef;
+  --surface-modal: rgba(240, 248, 255, 0.98);
+  /* Ink is channel-form so Tailwind's `text-ink/80`-style modifiers work. */
+  --ink-rgb: 15 15 15;
+  --ink: rgb(var(--ink-rgb));
+  --ink-muted: rgb(var(--soft-dark-grey-rgb));
+  /* Borders keep the legacy two weights: `strong` is the old 1px soft-black
+     outline, `soft` the old rgb(70,70,70) field outline. Dark mode swaps
+     them for translucent ink so edges stay edges, not hard hairlines. */
+  --line-strong: rgb(15, 15, 15);
+  --line-soft: rgb(70, 70, 70);
+  --hairline: rgba(15, 15, 15, 0.15);
+  --danger: #bb3a3a;
+  --danger-strong: #d32f2f;
+  /* Scrolled navbar: the legacy solid aliceblue bar in light. The dark block
+     below swaps in a frosted tint + blur over the same slot. */
+  --nav-glass-scrolled: var(--soft-white);
+  --nav-glass-filter: none;
+
+  /* Calculator surfaces that used to be raw white/off-white literals.
+     `--calc-input-bg` is the field fill: white here, a dim slate in dark
+     (see the dark block below and FIELDS IN DARK MODE at the end of this
+     file). `--calc-field` is the other field-level surfaces - cards,
+     buttons, tooltips - which flip with it. */
+  --calc-page: #f1f5ef;
+  --calc-input-bg: #ffffff;
+  --calc-field: #ffffff;
+  --calc-soft: #f5faf4;
+  --calc-soft-alt: #f2f7f5;
+  --calc-soft-muted: #f3f5f4;
+  --calc-note: #f0faf8;
+  /* Deeper teal: the primary button's hover fill and the headline card's
+     gradient. Both must stay a DARK teal with white text in either theme,
+     so this token deliberately does not flip. */
+  --calc-teal-deep: #07514f;
+
+  /* Chart series colors. These used to live only as per-rule fallbacks
+     (`var(--chart-balance, #111111)`); naming them lets dark mode lift the
+     series that would otherwise sink into the plot. */
+  --chart-principal: #0aa89f;
+  --chart-interest: #d2762e;
+  --chart-balance: #111111;
+  --cost-donut-principal: #087f78;
+  --cost-donut-interest: #e0a63c;
 }
 
 /* ===========================================================================
@@ -166,7 +230,7 @@ html {
 
 body {
   scroll-behavior: smooth;
-  background: var(--soft-white);
+  background: var(--surface-page);
 }
 
 * {
@@ -275,7 +339,7 @@ body {
 p {
   font-size: 20px;
   font-weight: 500;
-  color: var(--soft-black);
+  color: var(--ink);
 }
 
 a {
@@ -434,16 +498,19 @@ img {
   box-shadow: var(--white-shadow);
 }
 
+/* Used by the contact message modal's links, which sit on a light surface -
+   so this one flips with the theme (unlike .btn-white/.btn-blue, which only
+   ever render over the dark hero images). */
 .btn-black {
   background: transparent;
-  color: var(--soft-black);
+  color: var(--ink);
   box-shadow: var(--black-shadow);
-  border: 1px solid var(--soft-black);
+  border: 1px solid var(--line-strong);
 }
 
 .btn-black:hover {
-  color: var(--soft-white);
-  background: var(--soft-black);
+  color: var(--surface-card);
+  background: var(--ink);
   box-shadow: var(--white-shadow);
 }
 
@@ -657,7 +724,7 @@ img {
 
 .testi-col .fas,
 .testi-col .far {
-  color: var(--soft-black);
+  color: var(--ink);
   margin-top: 15px;
 }
 
@@ -724,7 +791,7 @@ img {
   font-weight: 600;
   background: none;
   transition: all 0.5s;
-  color: var(--soft-black);
+  color: var(--ink);
   width: 38px;
   height: 38px;
   display: inline-flex;
@@ -772,13 +839,13 @@ img {
 .contact-col form > .relative textarea {
   width: 110% !important;
   min-height: 0;
-  border-color: var(--soft-black) !important;
+  border-color: var(--line-strong) !important;
   box-shadow: var(--black-shadow) !important;
 }
 
 .contact-col form > .relative input:focus,
 .contact-col form > .relative textarea:focus {
-  border-color: var(--soft-black) !important;
+  border-color: var(--line-strong) !important;
   box-shadow: var(--black-shadow) !important;
 }
 
@@ -888,7 +955,7 @@ img {
   overflow-y: auto;
   border-radius: 20px;
   transition: all 250ms;
-  background: rgba(240, 248, 255, 0.98);
+  background: var(--surface-modal);
   border: 1px solid var(--soft-blue);
   box-shadow: 0 20px 55px rgba(15, 15, 15, 0.28);
   transform: translate3d(0, 0, 0) translate(-50%, -50%) scale(0);
@@ -912,7 +979,7 @@ img {
   margin-left: 25px;
   margin-right: 10px;
   transition: all 0.5s;
-  color: var(--soft-black);
+  color: var(--ink);
 }
 
 .form-modal-header {
@@ -928,7 +995,7 @@ img {
 .form-modal-header h1 {
   font-size: 30px;
   white-space: nowrap;
-  color: var(--soft-black);
+  color: var(--ink);
 }
 
 .form-modal-header p {
@@ -940,8 +1007,8 @@ img {
 .modal-links .socials,
 .modal-links .socials i,
 .modal-links .socials svg {
-  color: var(--soft-black);
-  background: var(--soft-white);
+  color: var(--ink);
+  background: var(--surface-card);
   gap: 12px;
 }
 
@@ -1286,7 +1353,11 @@ img {
      below re-pins the strip's top and the navbar clears the extra height. */
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
+  /* Spread the rows the way the Indexes strip above spreads its entries
+     (space-evenly, edge to edge) instead of clustering them in the middle;
+     the column gap stays as the minimum separation so a full wrapped line
+     can never touch. */
+  justify-content: space-evenly;
   column-gap: 20px;
   row-gap: 4px;
   background-color: var(--soft-black);
@@ -1294,8 +1365,9 @@ img {
   min-height: 35px;
   /* Bottom padding is the strip's own breathing room: the frosted navbar
      slab starts exactly at the strip's bottom edge, so without it the row
-     text kisses the nav. Counts toward --markets-height (offsetHeight). */
-  padding: 5px 10px 9px;
+     text kisses the nav. Counts toward --markets-height (offsetHeight), so
+     widening it pushes the navbar down with it. */
+  padding: 5px 10px 13px;
   z-index: 98;
   right: 0;
   left: 0;
@@ -1339,6 +1411,67 @@ img {
 
 .markets-price {
   font-variant-numeric: tabular-nums;
+}
+
+/* The value pair (price + change) wrapped in one inline-flex box. It is the
+   flash pill's positioning context, so a tick paints ONE rectangle behind
+   both values instead of two half-pills that never quite join across the
+   gap. Same row-height guarantee as .markets-row: the wrapper is on the
+   baseline; the absolute pill does not participate in layout. */
+.markets-values {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* Price-movement flash (see usePriceFlash in MarketTracker): when a poll
+   actually moves the displayed number, a pill fades out behind the whole
+   value pair - green when it moved up, red when it moved down, matching the
+   movement colors above. One pill spans price + change: the percent is
+   derived from the same move, so the pair lights up together as a single
+   rectangle. A positioned child at z-index -1 paints above the strip's own
+   background but under the digits, so the values' color is untouched and
+   the row never shifts. The element is re-keyed per tick in React, so two
+   moves in the same direction replay it. The strip is chrome that is
+   deliberately dark in both themes, so these are literals, not tokens. */
+.markets-tick {
+  position: absolute;
+  inset: -1px -5px;
+  z-index: -1;
+  border-radius: 4px;
+  pointer-events: none;
+  animation: market-tick-flash 1200ms ease-out forwards;
+}
+
+/* A tick paints a faint tint behind the whole value pair: green when it
+   moved up, red when it moved down, matching the movement colors above.
+   Subtle enough to read as light rather than a solid block. */
+.markets-tick-up {
+  background-color: rgba(35, 210, 65, 0.14);
+}
+
+.markets-tick-down {
+  background-color: rgba(210, 60, 60, 0.14);
+}
+
+/* Opacity is the only animated property: compositor-friendly, and the end
+   state (opacity 0) is identical to having no pill at all, so removing
+   the node can never snap. */
+@keyframes market-tick-flash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The static green/red already carries the direction; skip the fade. */
+  .markets-tick {
+    display: none;
+  }
 }
 
 .markets-change {
@@ -1548,12 +1681,15 @@ nav#navbar #nav-list a:hover {
   color: var(--soft-blue);
 }
 
-/* Language flag: no underline line, scale on hover instead, vertically centered */
-nav#navbar #nav-list a[data-testid='language-switch']::after {
+/* Language flag + theme toggle: no underline line, scale on hover instead,
+   vertically centered. Both are icon-only controls, so they share one rule. */
+nav#navbar #nav-list a[data-testid='language-switch']::after,
+nav#navbar #nav-list a[data-testid='theme-switch']::after {
   display: none !important;
 }
 
-nav#navbar #nav-list a[data-testid='language-switch'] {
+nav#navbar #nav-list a[data-testid='language-switch'],
+nav#navbar #nav-list a[data-testid='theme-switch'] {
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -1565,8 +1701,54 @@ nav#navbar #nav-list a[data-testid='language-switch'] {
   transition: transform 0.3s ease;
 }
 
-nav#navbar #nav-list a[data-testid='language-switch']:hover {
+nav#navbar #nav-list a[data-testid='language-switch']:hover,
+nav#navbar #nav-list a[data-testid='theme-switch']:hover {
   transform: scale(1.15);
+}
+
+/* The theme control is a crescent moon (light page, click to go dark) or the
+   sun (dark page, click back), sized into the same 24x16 slot as the flag.
+   No chip and no background box. */
+nav#navbar #nav-list a[data-testid='theme-switch'] .nav-theme-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The box keeps the flag's 24px width so the control row does not grow and
+     the toggle stays clear of the viewport edge at 360px. */
+  width: 24px;
+  height: 20px;
+}
+
+nav#navbar #nav-list a[data-testid='theme-switch'] .nav-theme-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Smoked-glass crescent: the moon glyph, tinted and then faded with an alpha
+   mask so it runs solid at the top-left and dissolves toward the
+   bottom-right. Over the dark bar the faded end sinks into the glass; over
+   the light bar it dissolves into the light, which is what makes it read as
+   glass rather than a flat sticker. */
+nav#navbar #nav-list a[data-testid='theme-switch'] .nav-theme-icon.moon svg {
+  color: #9aa8b8;
+  -webkit-mask-image: linear-gradient(150deg, #000 30%, rgba(0, 0, 0, 0.4) 100%);
+  mask-image: linear-gradient(150deg, #000 30%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+/* Deeper tint for the solid light bar (scrolled, or the open menu sheet in
+   light mode), where the pale silver would wash out. */
+nav#navbar.links-dark #nav-list a[data-testid='theme-switch'] .nav-theme-icon.moon svg {
+  color: #55606b;
+}
+
+/* Sun: the same shine as the crescent - solid at the top-left, dissolving
+   toward the bottom-right - in a hot orange, so the rays fade into the dark
+   bar like embers. Shown only on a dark page, where the bar stays dark in
+   every state. */
+nav#navbar #nav-list a[data-testid='theme-switch'] .nav-theme-icon.sun svg {
+  color: #ff9a3c;
+  -webkit-mask-image: linear-gradient(150deg, #000 30%, rgba(0, 0, 0, 0.4) 100%);
+  mask-image: linear-gradient(150deg, #000 30%, rgba(0, 0, 0, 0.4) 100%);
 }
 
 /* Legacy hidden menu toggle: must stay in the DOM (the menu's :checked
@@ -1611,12 +1793,31 @@ nav#navbar .menu-icon .line:hover {
 }
 
 /* Id-qualified on purpose: the glass lives on nav#navbar (an id rule), so a
-   plain class here would lose the cascade - this resets tint, blur and the
-   glass hairline back to the legacy solid white bar. */
+   plain class here would lose the cascade. Light scrolled paints the legacy
+   solid aliceblue bar again; dark keeps the top state's frosted glass, so the
+   slab still floats over the content it blurs. Both come through tokens
+   rather than a `[data-theme='dark']` override here, because that override
+   would outrank nav#navbar.menu-open below and put the blur back while the
+   mobile sheet is open (which collapses the sheet). */
 nav#navbar.navbar-scrolling {
-  color: var(--soft-black);
-  background: var(--soft-white);
+  color: var(--ink);
+  background: var(--nav-glass-scrolled);
   box-shadow: 0 5px 5px 0 var(--soft-black-background);
+  -webkit-backdrop-filter: var(--nav-glass-filter);
+  backdrop-filter: var(--nav-glass-filter);
+}
+
+/* The mobile menu sheet is `position: fixed`. A backdrop-filter makes the
+   nav the containing block for fixed descendants, which sizes that sheet
+   (top:64px / bottom:0) against the 64px bar and collapses it to zero
+   height - so while the sheet is on screen the bar drops the blur and goes
+   opaque in the sheet's own surface color, like the legacy solid bar. The
+   class is driven by menuOpen, which outlives the uncheck by the same 280ms
+   the close animation takes, so the sheet keeps a blur-free containing
+   block for the whole slide. The scrolled state above is unaffected: this
+   rule only paints while the sheet is on screen. */
+nav#navbar.menu-open {
+  background: var(--surface-page);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -1624,11 +1825,11 @@ nav#navbar.navbar-scrolling {
 /* Legacy adjustMenuOpen/adjustMenuClosed/resize painted link + hamburger
    colors via inline styles; reproduced as state classes. */
 nav#navbar.links-dark #nav-list a {
-  color: var(--soft-black);
+  color: var(--ink);
 }
 
 nav#navbar.lines-dark .menu-icon .line {
-  background: var(--soft-black);
+  background: var(--ink);
 }
 
 nav#navbar.nav-scrolling-resize {
@@ -1818,6 +2019,27 @@ nav#navbar.nav-scrolling-resize {
   }
 }
 
+@media screen and (max-width: 1250px) {
+  /* Deterministic wrap. A content-width row cannot guarantee a line count:
+     when five rows fit and the sixth then drops, it sits alone on the last
+     line (measured: 5+1 at 1000-1100px). Pinning each row to a third of the
+     line makes six rows always settle as 3 + 3, so no line ever holds a
+     single ticker. The basis subtracts the column gaps, so three rows still
+     fill the line exactly and the strip stays edge-to-edge; each row centers
+     its own content in its cell (the Indexes anchors above are centered too
+     at these widths). Above this width all six fit with room to spare, so
+     that tier keeps the natural content-width spread. */
+  .markets {
+    --markets-gap: 16px;
+    column-gap: var(--markets-gap);
+  }
+
+  .markets-row {
+    flex: 0 0 calc((100% - 2 * var(--markets-gap)) / 3);
+    justify-content: center;
+  }
+}
+
 @media screen and (max-width: 1150px) {
   .adjust-nav {
     margin-top: 40px;
@@ -1877,11 +2099,12 @@ nav#navbar.nav-scrolling-resize {
   .markets {
     top: 84px;
     /* Phone width: tighter gaps and row type so the wrapped rows fit
-       like the Indexes strip does (two per line at 12px). Extra bottom
-       padding keeps the last line clear of the nav slab. */
-    column-gap: 14px;
+       like the Indexes strip does. Extra bottom padding keeps the last
+       line clear of the nav slab. */
+    --markets-gap: 14px;
+    column-gap: var(--markets-gap);
     row-gap: 2px;
-    padding: 3px 6px 9px;
+    padding: 3px 6px 13px;
   }
 
   .markets-row {
@@ -1889,6 +2112,17 @@ nav#navbar.nav-scrolling-resize {
     /* Matches the 10px Indexes text on phones - the two strips read as
        one type scale. */
     font-size: 10px;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  /* Below this the phone tier above cannot hold three 10px rows side by side
+     (they measure ~371px together at 360px wide, and the numbers only grow),
+     so pairs are pinned instead: six rows settle as 2 + 2 + 2 rather than the
+     old 3 + 2 + 1 that left USD/ILS alone on the last line. The gap variable
+     is inherited from the tier above, so only the divisor changes here. */
+  .markets-row {
+    flex: 0 0 calc((100% - var(--markets-gap)) / 2);
   }
 }
 
@@ -1913,7 +2147,7 @@ nav#navbar.nav-scrolling-resize {
     overflow: hidden;
     flex-direction: column;
     justify-content: space-evenly;
-    background: var(--soft-white);
+    background: var(--surface-page);
     /* EXACT legacy animation: the panel's top stays pinned below the nav
        (top:100px - the nav's bottom edge once it has slid up) and `bottom`
        transitions 100% → 0, so the white slides down from the navbar to the
@@ -1927,14 +2161,14 @@ nav#navbar.nav-scrolling-resize {
 
   nav#navbar #nav-list a {
     font-size: 25px;
-    color: var(--soft-black);
+    color: var(--ink);
     white-space: normal;
     text-align: center;
     word-break: break-word;
   }
 
   nav#navbar #nav-list a::after {
-    background: var(--soft-black);
+    background: var(--ink);
   }
 
   nav#navbar .logo {
@@ -2049,6 +2283,18 @@ nav#navbar.nav-scrolling-resize {
   }
 }
 
+/* The icons row is full-width below md (Tailwind `w-full`), where the
+   column's align-items:center centers its MARGIN box too - so the base
+   margin-left pushed the row's content ~5px past the right edge (measured
+   362px at a 360px viewport). Below md the row spans the panel anyway, so
+   the margin is only needed on desktop, where it separates the row from the
+   nav links. */
+@media screen and (max-width: 767px) {
+  .nav-icons-center {
+    margin-left: 0;
+  }
+}
+
 @media screen and (max-width: 1600px) and (min-width: 1201px) {
   nav#navbar .logo {
     width: 26%;
@@ -2124,7 +2370,7 @@ nav#navbar.nav-scrolling-resize {
   width: 100%;
   border-radius: 5px;
   box-shadow: var(--black-shadow);
-  border: 1px solid var(--soft-black);
+  border: 1px solid var(--line-strong);
 }
 
 .iframe-link {
@@ -2155,7 +2401,7 @@ nav#navbar.nav-scrolling-resize {
   white-space: normal;
   text-align: center;
   word-break: break-word;
-  color: var(--soft-black);
+  color: var(--ink);
 }
 
 .form-header p {
@@ -2203,7 +2449,7 @@ nav#navbar.nav-scrolling-resize {
   font-size: 20px;
   font-weight: 600;
   margin: 10px 10px;
-  color: var(--soft-black);
+  color: var(--ink);
 }
 
 .contact-text {
@@ -2251,7 +2497,7 @@ textarea {
   transition: all 0.1s;
   box-sizing: border-box;
   box-shadow: var(--black-shadow);
-  border: 1px solid var(--soft-black);
+  border: 1px solid var(--line-strong);
 }
 
 #phone,
@@ -2421,7 +2667,7 @@ e #name,
 .modal-body-phone {
   font-size: 17px;
   font-weight: 600;
-  color: var(--soft-black);
+  color: var(--ink);
   padding: 0 1px 0 1px;
   transition: 0.5s;
 }
@@ -2470,7 +2716,7 @@ e #name,
 =========================================================================== */
 
 .calculator-page {
-  background: #f1f5ef;
+  background: var(--calc-page);
   color: var(--calc-ink);
   font-family: 'Heebo', sans-serif;
 }
@@ -2588,7 +2834,7 @@ e #name,
 }
 
 .note-line.negative {
-  color: #bb3a3a;
+  color: var(--danger);
 }
 
 .note-line.info {
@@ -2795,7 +3041,7 @@ e #name,
   width: 44px;
   height: 44px;
   border: 1px solid var(--calc-line);
-  background: white;
+  background: var(--calc-field);
   color: var(--calc-muted);
   font-size: 1.3rem;
   line-height: 1;
@@ -2807,8 +3053,8 @@ e #name,
 }
 
 .expense-remove-button:hover {
-  color: #bb3a3a;
-  border-color: #bb3a3a;
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .expense-remove-button:active {
@@ -3121,7 +3367,7 @@ e #name,
 .preset-button {
   border: 1px solid var(--calc-line);
   color: var(--calc-muted);
-  background: white;
+  background: var(--calc-field);
   cursor: pointer;
   font: inherit;
   padding: 8px 14px;
@@ -3168,12 +3414,12 @@ e #name,
 
 .mortgage-track.variable-limit-flag legend,
 .mortgage-track.variable-limit-flag .track-type {
-  color: #d32f2f;
+  color: var(--danger-strong);
 }
 
 .mortgage-track.variable-limit-flag legend::after {
   content: ' *';
-  color: #d32f2f;
+  color: var(--danger-strong);
   font-weight: 800;
 }
 
@@ -3261,7 +3507,7 @@ e #name,
   align-items: center;
   border: 1px solid var(--calc-line);
   margin-top: 7px;
-  background: white;
+  background: var(--calc-input-bg);
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
@@ -3292,7 +3538,7 @@ e #name,
 }
 
 .calculator-panel input:disabled {
-  background: #f3f5f4;
+  background: var(--calc-soft-muted);
   color: var(--calc-muted);
   cursor: not-allowed;
 }
@@ -3311,7 +3557,7 @@ e #name,
   appearance: none;
   -webkit-appearance: none;
   border: 1px solid var(--calc-line);
-  background: white;
+  background: var(--calc-input-bg);
   height: 100%;
   cursor: pointer;
   padding: 0 12px 0 36px;
@@ -3403,7 +3649,7 @@ e #name,
   flex-direction: column;
   min-height: 132px;
   padding: 18px 18px 16px;
-  background: white;
+  background: var(--calc-field);
   border: 1px solid var(--calc-line);
   /* Cards fade in one by one - each starts 70ms after its predecessor via
      the --card-index custom property set inline. "both" keeps a card
@@ -3610,7 +3856,7 @@ e #name,
 .primary-result {
   background: linear-gradient(
     115deg,
-    var(--calc-teal-dark),
+    var(--calc-teal-deep),
     var(--calc-teal) 65%,
     var(--calc-accent)
   );
@@ -3918,7 +4164,7 @@ e #name,
   transform: translateX(-50%);
   display: grid;
   gap: 2px;
-  background: white;
+  background: var(--calc-field);
   border: 1px solid var(--calc-line);
   box-shadow: 0 6px 18px rgba(15, 15, 15, 0.12);
   padding: 8px 12px;
@@ -4077,7 +4323,7 @@ e #name,
   position: absolute;
   width: 10px;
   height: 10px;
-  background: white;
+  background: var(--calc-field);
   border: 1px solid var(--calc-line);
   transform: rotate(45deg);
 }
@@ -4251,7 +4497,7 @@ e #name,
 .schedule-content .table-wrap thead th {
   position: sticky;
   top: 0;
-  background: #fff;
+  background: var(--calc-field);
   font-weight: 600;
   z-index: 1;
 }
@@ -4279,7 +4525,7 @@ e #name,
 
 .schedule-aside {
   border-right: 3px solid var(--calc-teal);
-  background: #f5faf4;
+  background: var(--calc-soft);
   text-align: center;
   padding: 18px;
 }
@@ -4339,7 +4585,7 @@ e #name,
 
 .schedule-view-button {
   padding: 8px 18px;
-  background: #fff;
+  background: var(--calc-field);
   border: 0;
   border-inline-end: 1px solid var(--calc-line);
   color: var(--calc-muted);
@@ -4358,7 +4604,7 @@ e #name,
 }
 
 .schedule-view-button:not(.active):hover {
-  background: #f2f7f5;
+  background: var(--calc-soft-alt);
 }
 
 /* One yearly table per track (added Step 3). */
@@ -4407,7 +4653,7 @@ td {
 }
 
 tbody tr:hover {
-  background: #f5faf4;
+  background: var(--calc-soft);
 }
 
 .disclaimer {
@@ -4418,7 +4664,7 @@ tbody tr:hover {
 
 .form-error {
   min-height: 22px;
-  color: #d32f2f;
+  color: var(--danger-strong);
   font-size: 0.9rem;
   margin: 12px 0 0;
 }
@@ -4455,7 +4701,7 @@ tbody tr:hover {
   border-right: 3px solid var(--calc-accent);
   margin: 25px 0 -10px;
   padding: 8px 12px;
-  background: #f0faf8;
+  background: var(--calc-note);
 }
 
 .regulatory-note strong {
@@ -4948,4 +5194,101 @@ tbody tr:hover {
   .socials svg {
     font-size: 18px;
   }
+}
+
+/* ===========================================================================
+   DARK THEME
+   Flips ONLY the role tokens defined at the top of this file. Anything
+   painted with a brand color (soft-blue links, the teal calculator accents,
+   the red error text) keeps its hue and is not repeated here. Chrome that is
+   deliberately dark in BOTH themes is absent on purpose: the hero/sub-header
+   image overlays, the Indexes and Markets strips, the footer, the mobile
+   menu panel and the calculator's gradient headline card.
+
+   `data-theme` is set on <html> by src/theme/index.ts (and by the pre-paint
+   script in index.html, which mirrors it) from the stored choice or, on a
+   first visit, prefers-color-scheme.
+=========================================================================== */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --surface-page: #0e1416;
+  --surface-card: #172023;
+  --surface-soft: #121a1c;
+  --surface-modal: rgba(23, 32, 35, 0.98);
+  --ink-rgb: 233 241 239;
+  --ink: rgb(var(--ink-rgb));
+  /* Muted text + soft dividers/hover fills, in channel form so Tailwind's
+     `soft-dark-grey`/`soft-grey` utilities flip with the CSS rules. */
+  --soft-dark-grey-rgb: 163 179 177;
+  --soft-grey-rgb: 43 56 58;
+  --ink-muted: rgb(var(--soft-dark-grey-rgb));
+  /* Legacy hard outlines become translucent ink, not glowing white lines. */
+  --line-strong: rgba(233, 241, 239, 0.3);
+  --line-soft: rgba(233, 241, 239, 0.24);
+  --hairline: rgba(233, 241, 239, 0.15);
+  /* The legacy reds are too dark to read on a dark page. */
+  --danger: #ff9a9a;
+  --danger-strong: #ff8f8f;
+  /* The 0.5px legacy drop shadows were tuned for a light page. */
+  --black-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.55);
+  --nav-glass-scrolled: rgba(6, 10, 11, 0.78);
+  --nav-glass-filter: blur(10px) saturate(140%);
+
+  /* Calculator: same surface/ink/line roles, teal kept as the brand accent
+     but brightened where it carries text or a chart label. */
+  --calc-page: #0e1416;
+  --calc-paper: #16201f;
+  --calc-field: #1e2928;
+  /* Dim field fill in dark (user-requested); the ink and border tokens set
+     above stay light on top of it. */
+  --calc-input-bg: #1e2928;
+  --calc-soft: #1c2726;
+  --calc-soft-alt: #1a2423;
+  --calc-soft-muted: #192322;
+  --calc-note: #12211f;
+  --calc-line: #2c3b39;
+  --calc-ink: #e7f0ee;
+  --calc-muted: #9caeac;
+  --calc-teal: #0e9c92;
+  --calc-teal-dark: #38d3c4;
+  --calc-accent: #17b3a8;
+  --calc-accent-dark: #2bc4b7;
+
+  /* The balance series was near-black ink; on a dark plot it flips to a
+     light line. The hued series stay recognizable but brighten a step. */
+  --chart-principal: #14c2b5;
+  --chart-interest: #e08b3c;
+  --chart-balance: #cfe3e0;
+  --cost-donut-principal: #12b3a5;
+  --cost-donut-interest: #f0b95c;
+}
+
+/* The over-limit track outline is a 60%-alpha red tuned for a light page;
+   on dark it needs the brighter red to read as a warning. */
+:root[data-theme='dark'] .mortgage-track.variable-limit-flag {
+  border-color: rgba(255, 143, 143, 0.65);
+}
+
+/* ---------------------------------------------------------------------
+   FIELDS IN DARK MODE
+   Fields are dim surfaces, not light paper (user-requested). The token flips
+   above already darken the field fills (`--calc-input-bg`, `--surface-card`)
+   while ink, borders and muted text stay light on top, so no per-field token
+   re-declaration is needed. The one thing that does need lifting is the teal
+   drawn ON a field: the ₪/% suffix drops to ~4.4:1 against the dimmed frame,
+   so it steps up to the brighter `--calc-teal-dark` (~8:1).
+   --------------------------------------------------------------------- */
+:root[data-theme='dark'] .input-wrap span,
+:root[data-theme='dark'] .percent-wrap span {
+  color: var(--calc-teal-dark);
+}
+
+/* Teal that carries TEXT on the panel rather than on a field (the add-row
+   button) needs the brighter teal in dark - the measured contrast of
+   `--calc-teal` there was 4.41. `--calc-teal` keeps its FILL role for buttons
+   and the gradient, where white text sits on top and a brighter fill would
+   hurt instead of help. */
+:root[data-theme='dark'] .expense-add-button {
+  color: var(--calc-teal-dark);
 }

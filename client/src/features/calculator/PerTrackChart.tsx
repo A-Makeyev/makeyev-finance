@@ -12,23 +12,53 @@ const MARGIN = { top: 44, right: 88, bottom: 92, left: 88 }
 const INNER_W = WIDTH - MARGIN.left - MARGIN.right
 const INNER_H = HEIGHT - MARGIN.top - MARGIN.bottom
 
-/** Hover state: the snapped year index plus which track's line is nearest. */
+/** Hover state: the snapped period index plus which track's line is nearest. */
 interface HoverState {
-  /** Row index the cursor is over (0-based; labels show index + 1). */
+  /** Row index the cursor is over (0-based; the label shows index + 1). */
   index: number
   /** Line vertically nearest the cursor - emphasized and first in the tooltip. */
   nearestTrack: number
+}
+
+/** One plotted point: a period number and the balance left after it. */
+interface BalancePoint {
+  /** Year in the yearly view, running month count in the monthly one. */
+  period: number
+  balance: number
+}
+
+/**
+ * The balance series the chart draws for one track. The tables under the chart
+ * already switch granularity, so the chart does too: the monthly view plots
+ * every month (the running month count on the x axis) instead of one point per
+ * year. Both come from the same computed rows the table renders, so the two
+ * views can never disagree.
+ */
+function balanceSeries(track: TrackSchedule, monthly: boolean): BalancePoint[] {
+  return monthly
+    ? track.monthlyRows.map((row) => ({
+        period: (row.year - 1) * 12 + row.month,
+        balance: row.closing,
+      }))
+    : track.rows.map((row) => ({ period: row.year, balance: row.balance }))
 }
 
 /**
  * Per-track comparison: one balance line per track so the different paydown
  * speeds are visible side by side. Lines keep their TYPE color (same palette
  * as the mix donut) and the x axis runs chronologically left to right.
- * Hovering snaps to the nearest year and shows a tooltip with every track's
- * balance there (nearest track first); dots mark the hovered year on each
+ * Hovering snaps to the nearest period and shows a tooltip with every track's
+ * balance there (nearest track first); dots mark the hovered period on each
  * line and the nearest line gets emphasized, disambiguating overlaps.
  */
-export function PerTrackChart({ tracks }: { tracks: TrackSchedule[] }) {
+export function PerTrackChart({
+  tracks,
+  monthly = false,
+}: {
+  tracks: TrackSchedule[]
+  /** Plots one point per month instead of per year, like the schedule tab. */
+  monthly?: boolean
+}) {
   const { t } = useTranslation()
   const [hover, setHover] = useState<HoverState | null>(null)
   // Tooltip element + plot container, for the edge-clamp hook.
@@ -39,28 +69,34 @@ export function PerTrackChart({ tracks }: { tracks: TrackSchedule[] }) {
   useTooltipClamp(tooltipRef, plotRef, hover ? `${hover.index}:${hover.nearestTrack}` : null)
 
   const geometry = useMemo(() => {
-    const nonEmpty = tracks.filter((track) => track.rows.length > 0)
+    const nonEmpty = tracks
+      .map((track) => ({ track, series: balanceSeries(track, monthly) }))
+      .filter((entry) => entry.series.length > 0)
     if (nonEmpty.length === 0) return null
-    const rowCount = Math.max(...nonEmpty.map((track) => track.rows.length))
-    const maxBalance = Math.max(...nonEmpty.map((track) => track.rows[0]?.balance ?? 0))
+    const rowCount = Math.max(...nonEmpty.map((entry) => entry.series.length))
+    const maxBalance = Math.max(...nonEmpty.map((entry) => entry.series[0]?.balance ?? 0))
     if (maxBalance <= 0) return null
     const step = INNER_W / Math.max(1, rowCount - 1)
     const x = (index: number) => MARGIN.left + index * step
     const y = (value: number) => MARGIN.top + INNER_H * (1 - value / maxBalance)
     return { nonEmpty, rowCount, maxBalance, step, x, y }
-  }, [tracks])
+  }, [tracks, monthly])
 
   if (!geometry) return null
   const { nonEmpty, rowCount, maxBalance, step, x, y } = geometry
   const ticks = niceTicks(maxBalance)
-  const xTicks = xAxisTicks(rowCount, false)
+  const xTicks = xAxisTicks(rowCount, monthly)
 
-  /** Rows of the hovered year, one per track (tracks ending early skip). */
-  const activeRows =
+  /** Points of the hovered period, one per track (tracks ending early skip). */
+  const activePoints =
     hover !== null
       ? nonEmpty
-          .map((track, trackIndex) => ({ track, trackIndex, row: track.rows[hover.index] }))
-          .filter((entry) => entry.row !== undefined)
+          .map((entry, trackIndex) => ({
+            track: entry.track,
+            trackIndex,
+            point: entry.series[hover.index],
+          }))
+          .filter((entry) => entry.point !== undefined)
       : []
 
   const handleMove = (event: React.MouseEvent<SVGSVGElement>) => {
@@ -76,10 +112,10 @@ export function PerTrackChart({ tracks }: { tracks: TrackSchedule[] }) {
     // ended (no row) can't be nearest.
     let nearestTrack = 0
     let best = Number.POSITIVE_INFINITY
-    nonEmpty.forEach((track, trackIndex) => {
-      const row = track.rows[clamped]
-      if (!row) return
-      const distance = Math.abs(svgY - y(Math.max(0, row.balance)))
+    nonEmpty.forEach((entry, trackIndex) => {
+      const point = entry.series[clamped]
+      if (!point) return
+      const distance = Math.abs(svgY - y(Math.max(0, point.balance)))
       if (distance < best) {
         best = distance
         nearestTrack = trackIndex
@@ -89,9 +125,9 @@ export function PerTrackChart({ tracks }: { tracks: TrackSchedule[] }) {
   }
 
   // Reorder for the tooltip: nearest track first, the rest in track order.
-  const orderedRows =
+  const orderedPoints =
     hover !== null
-      ? [...activeRows].sort((a, b) => {
+      ? [...activePoints].sort((a, b) => {
           const aActive = a.trackIndex === hover.nearestTrack ? 0 : 1
           const bActive = b.trackIndex === hover.nearestTrack ? 0 : 1
           return aActive - bActive
@@ -102,10 +138,15 @@ export function PerTrackChart({ tracks }: { tracks: TrackSchedule[] }) {
     <div className="per-track-chart" data-testid="per-track-chart">
       {/* Legend row sits above the plot, wrapping track names left-to-right. */}
       <div className="chart-legend" aria-hidden="true">
-        {nonEmpty.map((track, index) => (
-          <span key={`${index}-${track.type}`} className="chart-legend-item">
-            <i className="chart-swatch" style={{ background: TRACK_TYPE_COLORS[track.type] }} />
-            <span className="chart-legend-name">{t(`calculator.trackTypes.${track.type}`)}</span>
+        {nonEmpty.map((entry, index) => (
+          <span key={`${index}-${entry.track.type}`} className="chart-legend-item">
+            <i
+              className="chart-swatch"
+              style={{ background: TRACK_TYPE_COLORS[entry.track.type] }}
+            />
+            <span className="chart-legend-name">
+              {t(`calculator.trackTypes.${entry.track.type}`)}
+            </span>
           </span>
         ))}
       </div>
@@ -156,34 +197,37 @@ export function PerTrackChart({ tracks }: { tracks: TrackSchedule[] }) {
             </g>
           ))}
 
-          {nonEmpty.map((track, trackIndex) => (
+          {nonEmpty.map((entry, trackIndex) => (
             <path
-              key={`${trackIndex}-${track.type}`}
-              d={track.rows
+              key={`${trackIndex}-${entry.track.type}`}
+              d={entry.series
                 .map(
-                  (row, index) =>
-                    `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(Math.max(0, row.balance))}`,
+                  (point, index) =>
+                    `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(Math.max(0, point.balance))}`,
                 )
                 .join(' ')}
-              stroke={TRACK_TYPE_COLORS[track.type]}
+              stroke={TRACK_TYPE_COLORS[entry.track.type]}
               className={`chart-line-track${hover?.nearestTrack === trackIndex ? ' is-active' : ''}`}
             />
           ))}
 
-          {/* Hover markers on every surviving line at the hovered year. */}
-          {activeRows.map(({ track, trackIndex, row }) => (
+          {/* Hover markers on every surviving line at the hovered period. */}
+          {activePoints.map(({ track, trackIndex, point }) => (
             <circle
               key={`dot-${trackIndex}-${track.type}`}
               cx={x(hover!.index)}
-              cy={y(Math.max(0, row.balance))}
+              cy={y(Math.max(0, point.balance))}
               r={4.5}
               fill={TRACK_TYPE_COLORS[track.type]}
               className="chart-dot-track"
             />
           ))}
 
-          {/* Axis titles: balance rotated vertically at the left edge, year
-              title at the bottom. The SVG is LTR so positions are logical. */}
+          {/* Axis titles: balance rotated vertically at the left edge, period
+              title at the bottom ("year" in both modes, since that is what the
+              labeled ticks are - the monthly view labels year boundaries and
+              names the exact month in its tooltip). The SVG is LTR, so
+              positions are logical. */}
           <text
             x={10}
             y={MARGIN.top + INNER_H / 2}
@@ -202,9 +246,9 @@ export function PerTrackChart({ tracks }: { tracks: TrackSchedule[] }) {
           </text>
         </svg>
 
-        {/* Hover tooltip: hovered year plus every track's balance there,
+        {/* Hover tooltip: the hovered period plus every track's balance there,
             nearest track first - mirrors the amortization chart's tooltip. */}
-        {hover !== null && orderedRows.length > 0 && (
+        {hover !== null && orderedPoints.length > 0 && (
           <div
             ref={tooltipRef}
             className="chart-tooltip"
@@ -217,14 +261,18 @@ export function PerTrackChart({ tracks }: { tracks: TrackSchedule[] }) {
               left: `${(x(hover.index) / WIDTH) * 100}%`,
             }}
           >
-            <strong>{t('calculator.charts.yearLabel', { year: hover.index + 1 })}</strong>
-            {orderedRows.map(({ track, row }) => (
+            <strong>
+              {monthly
+                ? t('calculator.charts.monthLabel', { month: hover.index + 1 })
+                : t('calculator.charts.yearLabel', { year: hover.index + 1 })}
+            </strong>
+            {orderedPoints.map(({ track, point }) => (
               <span key={`tt-${track.type}`} className="chart-tooltip-row">
                 <i
                   className="chart-tooltip-swatch"
                   style={{ background: TRACK_TYPE_COLORS[track.type] }}
                 />
-                {t(`calculator.trackTypes.${track.type}`)}: {formatCurrency(row.balance)}
+                {t(`calculator.trackTypes.${track.type}`)}: {formatCurrency(point.balance)}
               </span>
             ))}
           </div>

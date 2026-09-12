@@ -23,6 +23,10 @@ export const en: { translation: Translation } = {
       articles: 'Articles',
       contact: 'Contact Us',
       switchLanguage: 'עברית',
+      // Theme toggle labels describe the ACTION (what clicking switches to),
+      // matching the sun/moon icon the user sees.
+      darkMode: 'Dark mode',
+      lightMode: 'Light mode',
     },
     offlineBanner: 'no internet connection',
     footer: {
@@ -309,6 +313,7 @@ export const en: { translation: Translation } = {
         yearLabel: 'Year {{year}}',
         monthLabel: 'Month {{month}}',
         axisPayment: 'Annual payment',
+        axisMonthlyPayment: 'Monthly payment',
         axisBalance: 'Balance',
         axisYear: 'Year',
       },
@@ -399,7 +404,7 @@ export const en: { translation: Translation } = {
         asideTitle: 'First annual payment',
         asideCaption: 'Sum of payments in the first 12 months',
         paybackHeader: 'Payback ratio',
-        paybackRatioLabel: 'Payback ratio:',
+        paybackRatioLabel: 'Payback ratio',
         expandToYears: 'Show breakdown for {{years}} years',
         collapseToFifteen: 'Show first 15 years',
       },
@@ -419,11 +424,13 @@ export const en: { translation: Translation } = {
     marketTracker: {
       ariaLabel: 'Market prices',
       proxyOf: 'Tracks {{proxy}}',
+      indexPoints: 'Index level in points',
+      futuresNote: 'COMEX front-month futures, above the spot price',
       staleTooltip: 'Cached data, may be out of date',
       assets: {
         sp500: 'SPY',
         nasdaq: 'QQQ',
-        ta35: 'EIS',
+        ta35: 'TA-35',
         gold: 'GOLD',
         bitcoin: 'BTC',
         usdils: 'USD/ILS',

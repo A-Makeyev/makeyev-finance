@@ -51,19 +51,19 @@ export function QuestionWishlistPill() {
           role="dialog"
           aria-label={t('wishlist.panelTitle')}
           data-testid="wishlist-panel"
-          className={`absolute bottom-full mb-2.5 w-[min(360px,calc(100vw-2.5rem))] rounded-2xl border-2 border-soft-black bg-soft-white p-4 shadow-[0_8px_22px_0_rgba(15,15,15,0.35)] ${
+          className={`absolute bottom-full mb-2.5 w-[min(360px,calc(100vw-2.5rem))] rounded-2xl border-2 border-line-strong bg-surface-card p-4 shadow-[0_8px_22px_0_rgba(15,15,15,0.35)] ${
             isHebrew ? 'right-0' : 'left-0'
           }`}
         >
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-[17px] font-bold leading-tight text-soft-black">
+            <h2 className="text-[17px] font-bold leading-tight text-ink">
               {t('wishlist.panelTitle')}
             </h2>
             <button
               type="button"
               aria-label={t('wishlist.panelTitle')}
               data-testid="wishlist-panel-close"
-              className="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[15px] text-soft-dark-grey outline-none transition-colors hover:bg-soft-grey hover:text-soft-black focus-visible:ring-2 focus-visible:ring-soft-blue/40"
+              className="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[15px] text-soft-dark-grey outline-none transition-colors hover:bg-soft-grey hover:text-ink focus-visible:ring-2 focus-visible:ring-soft-blue/40"
               onClick={() => setOpen(false)}
             >
               <FaTimes aria-hidden="true" />
@@ -77,10 +77,10 @@ export function QuestionWishlistPill() {
             {topics.map(({ item, title, summary }) => (
               <li
                 key={item.id}
-                className="flex items-start gap-2 rounded-[5px] border border-soft-grey bg-white p-3"
+                className="flex items-start gap-2 rounded-[5px] border border-soft-grey bg-surface-card p-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-[16px] font-semibold leading-snug text-soft-black">{title}</p>
+                  <p className="text-[16px] font-semibold leading-snug text-ink">{title}</p>
                   <p className="mt-1 text-[14px] leading-snug text-soft-dark-grey">{summary}</p>
                 </div>
                 <button
@@ -100,7 +100,7 @@ export function QuestionWishlistPill() {
             type="button"
             data-testid="wishlist-send"
             onClick={send}
-            className="mt-3 flex h-[44px] w-full items-center justify-center rounded-[5px] border border-soft-black bg-soft-black text-[15px] font-bold text-white transition-colors hover:bg-white hover:text-soft-black"
+            className="mt-3 flex h-[44px] w-full items-center justify-center rounded-[5px] border border-ink bg-ink text-[15px] font-bold text-surface-card transition-colors hover:bg-surface-card hover:text-ink"
           >
             {t('wishlist.send')}
           </button>
@@ -113,7 +113,7 @@ export function QuestionWishlistPill() {
         aria-expanded={open}
         aria-label={t('wishlist.badgeAria')}
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-2 rounded-full border-2 border-soft-black bg-soft-black px-4 py-2.5 text-[14px] font-semibold text-white shadow-[0_4px_14px_0_rgba(15,15,15,0.35)] outline-none transition-colors hover:bg-white hover:text-soft-black focus-visible:ring-2 focus-visible:ring-soft-blue/40"
+        className="flex items-center gap-2 rounded-full border-2 border-ink bg-ink px-4 py-2.5 text-[14px] font-semibold text-surface-card shadow-[0_4px_14px_0_rgba(15,15,15,0.35)] outline-none transition-colors hover:bg-surface-card hover:text-ink focus-visible:ring-2 focus-visible:ring-soft-blue/40"
       >
         <FaStar aria-hidden="true" className="text-[13px] text-soft-blue" />
         {t('wishlist.badge', { count: items.length })}

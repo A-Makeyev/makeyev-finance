@@ -46,7 +46,7 @@ export function QuestionWishlistToast() {
     >
       <div
         dir={isHebrew ? 'rtl' : 'ltr'}
-        className="flex max-w-[min(92vw,26rem)] items-center gap-2.5 whitespace-nowrap rounded-full bg-soft-black/90 px-5 py-2.5 text-[14px] font-semibold text-white shadow-[0_4px_14px_0_rgba(15,15,15,0.35)] backdrop-blur-sm"
+        className="flex max-w-[min(92vw,26rem)] items-center gap-2.5 whitespace-nowrap rounded-full bg-ink/90 px-5 py-2.5 text-[14px] font-semibold text-surface-card shadow-[0_4px_14px_0_rgba(15,15,15,0.35)] backdrop-blur-sm"
       >
         {added ? (
           <FaCheck aria-hidden="true" className="text-[13px] text-soft-blue" />

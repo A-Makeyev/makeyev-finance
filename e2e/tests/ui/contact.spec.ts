@@ -55,6 +55,15 @@ test.describe('contact form - validation states', () => {
     await expect(contact.fieldWrapper('email')).toHaveAttribute('data-status', 'valid')
   })
 
+  test('the send button border turns blue only once every field is valid', async () => {
+    await expect(contact.submitButton).toBeDisabled()
+    await expect(contact.submitButton).not.toHaveClass(/border-soft-blue/)
+
+    await contact.fill(VALID)
+    await expect(contact.submitButton).toBeEnabled()
+    await expect(contact.submitButton).toHaveClass(/border-soft-blue/)
+  })
+
   test('valid submission opens the success modal with first-name greeting', async () => {
     await contact.fill(VALID)
     await expect(contact.submitButton).toBeEnabled()
@@ -124,6 +133,11 @@ test.describe('action form modal (home CTAs)', () => {
     const { install } = setup(page)
     await install()
     action = new ActionFormModalPage(page)
+  })
+
+  test('the form modal wears the blue accent border', async () => {
+    await action.openViaHero()
+    await expect(action.dialog).toHaveClass(/border-soft-blue/)
   })
 
   test('opens from the hero CTA and omits the email field', async () => {

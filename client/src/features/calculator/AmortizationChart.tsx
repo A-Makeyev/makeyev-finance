@@ -83,6 +83,17 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
 
   const activeRow = active !== null ? rows[active] : null
   const xTicks = xAxisTicks(rows.length, monthly)
+  // The payments axis is a DIFFERENT scale per granularity: a yearly row
+  // carries the 12 monthly payments of its year, a monthly row one payment.
+  // Same numbers, 12x apart, so the labels must follow the mode - the monthly
+  // axis showing ₪8K under the words "annual payment" would misstate every
+  // figure on it by a factor of twelve.
+  const paymentAxisLabel = monthly
+    ? t('calculator.charts.axisMonthlyPayment')
+    : t('calculator.charts.axisPayment')
+  const paymentTooltipLabel = monthly
+    ? t('calculator.charts.axisMonthlyPayment')
+    : t('calculator.schedule.annualPaymentHeader')
 
   const handleMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -265,16 +276,19 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
           <circle cx={x(active!)} cy={yBalance(activeRow.balance)} r={4} className="chart-dot" />
         )}
 
-        {/* Axis titles: rotated vertically at the outer edges, left = annual
-            payment, right = balance; the year title stays at the bottom. The
-            chart SVG is LTR so these use logical positions, labels stay Hebrew. */}
+        {/* Axis titles: rotated vertically at the outer edges, left = payment
+            (annual or monthly, per the mode), right = balance; the bottom title
+            stays "year" in BOTH modes, because that is what the labeled ticks
+            are in both - the monthly tab plots months but labels year
+            boundaries, and each hovered point names its own month. The chart
+            SVG is LTR so these use logical positions, labels stay Hebrew. */}
         <text
           x={16}
           y={MARGIN.top + INNER_H / 2}
           className="chart-axis-title chart-axis-title-rot"
           transform={`rotate(-90 16 ${MARGIN.top + INNER_H / 2})`}
         >
-          {t('calculator.charts.axisPayment')}
+          {paymentAxisLabel}
         </text>
         <text
           x={WIDTH - 16}
@@ -288,7 +302,7 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
         {/* Small-screen stand-ins for the rotated titles: short horizontal
             captions above the axis numbers, shown on screens ≤800px (CSS). */}
         <text x={38} y={8} className="chart-axis-title chart-axis-title-above">
-          {t('calculator.charts.axisPayment')}
+          {paymentAxisLabel}
         </text>
         <text x={685} y={8} className="chart-axis-title chart-axis-title-above">
           {t('calculator.charts.axisBalance')}
@@ -323,7 +337,7 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
             {t('calculator.schedule.balanceHeader')}: {formatCurrency(activeRow.balance)}
           </span>
           <span>
-            {t('calculator.schedule.annualPaymentHeader')}: {formatCurrency(activeRow.payment)}
+            {paymentTooltipLabel}: {formatCurrency(activeRow.payment)}
           </span>
         </div>
       )}
