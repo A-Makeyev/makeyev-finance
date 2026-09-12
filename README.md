@@ -142,6 +142,12 @@ Navigation (MarketTracker)
   quote leg (`₪3.0192`, shekels per dollar); an index level stays bare, since
   it is measured in points, and names that unit in its hover tooltip (the
   strip has no room for a suffix at 360px).
+- Loading and gaps: before the first snapshot the strip holds its EXACT final
+  layout with shimmering bars for both values plus the trend arrow's line box,
+  so the height the navbar offset reads never moves as quotes land. A row whose
+  instrument has no price (its provider failed, or the request errored) is
+  dropped rather than shown as a placeholder; the strip keeps its height and
+  the hook keeps polling, so it heals itself with no retry control.
 - Adding an asset (stock, coin, watchlist row) is one entry in
   `server/market/assets.ts` - no new API logic.
 - Configuration: `FINNHUB_API_KEY`, `MARKET_DATA_FINNHUB_CACHE_TTL`,

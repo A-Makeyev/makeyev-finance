@@ -1425,6 +1425,101 @@ img {
   gap: 6px;
 }
 
+/* Loading skeleton (first fetch only). Every row keeps its ticker name and
+   reserves the space its two values will occupy, so the strip's height - the
+   value the navbar offset reads as --markets-height - is already settled
+   when the numbers land, and nothing pops in. The bars shimmer so they read
+   as "not yet" rather than as a zero. Literals, not tokens: like the rest of
+   this strip, it is chrome that is deliberately dark in both themes. */
+.markets-skeleton {
+  display: inline-block;
+  /* A bar has no text baseline; center it on the row's text line instead. */
+  align-self: center;
+  height: 0.75em;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.14);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0) 80%
+  );
+  background-repeat: no-repeat;
+  background-size: 200% 100%;
+  animation: market-skeleton-shimmer 1400ms linear infinite;
+}
+
+/* Roughly the width of the values they stand in for (the real price runs
+   ~6-8ch depending on the instrument's decimals, the signed change ~5ch),
+   so a row wraps where it will wrap once the numbers arrive and the strip
+   does not visibly reflow at narrow widths. */
+.markets-skeleton-price {
+  width: 6.5ch;
+}
+
+.markets-skeleton-change {
+  width: 5ch;
+}
+
+/* The trend arrow's line box, reserved in the skeleton. The arrow glyph falls
+   back to a font whose line box is taller than the digits' (2px per wrapped
+   line), so a skeleton without it made the strip grow when the numbers
+   arrived - and the navbar with it. The real glyph sits in a zero-width box:
+   no width, but its own line box, so the row is already exactly the height it
+   will be. Centered rather than baseline-aligned, because an overflow box's
+   baseline is its bottom edge, which would tilt the row instead of just
+   widening it.
+
+   It IS a flex item like any other, so it also picks up one .markets-values
+   gap (~6px) of extra spread in the skeleton row. Harmless: the rows are
+   still narrower than the numbers they stand in for, and the wrap stays
+   identical at every breakpoint (pinned by the skeleton-to-numbers test).
+
+   One strut is enough for both directions: measured at 10px and 16px, the up
+   and down glyphs come from the same fallback font and produce the same line
+   box, with or without an arrow on the row. */
+.markets-skeleton-arrow {
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  align-self: center;
+  visibility: hidden;
+}
+
+/* Dragging the highlight across a background twice the bar's width: the
+   gradient's own transparent ends mean the bar never flashes a hard edge. */
+@keyframes market-skeleton-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* A row that has real numbers fades in instead of snapping on. The component
+   remounts the row on the skeleton -> numbers swap (the state is part of its
+   React key), so this plays exactly once per row; later polls only patch the
+   digits, and a price tick keeps its own flash pill. No fill mode: the end
+   state is the row's own look, so the animation can never leave a transform
+   (or a stuck opacity) behind. */
+.markets-row-ready {
+  animation: market-row-in 320ms ease-out;
+}
+
+@keyframes market-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Price-movement flash (see usePriceFlash in MarketTracker): when a poll
    actually moves the displayed number, a pill fades out behind the whole
    value pair - green when it moved up, red when it moved down, matching the
@@ -1471,6 +1566,14 @@ img {
   /* The static green/red already carries the direction; skip the fade. */
   .markets-tick {
     display: none;
+  }
+
+  /* Skeleton shimmer and the row entry fade carry nothing the data itself
+     does not, so under the motion preference both settle instantly: static
+     bars, then the numbers in place. */
+  .markets-skeleton,
+  .markets-row-ready {
+    animation: none;
   }
 }
 

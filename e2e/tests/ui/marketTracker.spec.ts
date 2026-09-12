@@ -176,7 +176,9 @@ test.describe('Markets strip', () => {
     await expect(page.getByTestId('market-row-sp500')).toHaveText(/SPY\s*\$765\.96\s*0\.00%/)
     await expect(page.getByTestId('market-row-nasdaq')).toHaveText(/QQQ\s*\$521\.40\s*-0\.33%\s*⭣/)
     await expect(page.getByTestId('market-row-ta35')).toHaveText(/TA-35\s*125\.32\s*-0\.78%\s*⭣/)
-    await expect(page.getByTestId('market-row-gold')).toHaveText(/GOLD\s*\$4,408\.90\s*\+0\.91%\s*⭡/)
+    await expect(page.getByTestId('market-row-gold')).toHaveText(
+      /GOLD\s*\$4,408\.90\s*\+0\.91%\s*⭡/,
+    )
     // Crypto keeps its $ prefix.
     await expect(page.getByTestId('market-row-bitcoin')).toHaveText(/BTC\s*\$79,551\s*\+1\.24%\s*⭡/)
     // FX uses the server-declared 4-decimals precision and its own unit.
@@ -185,9 +187,7 @@ test.describe('Markets strip', () => {
     )
   })
 
-  test('no row discloses an ETF proxy any more, and gold names its contract', async ({
-    page,
-  }) => {
+  test('no row discloses an ETF proxy any more, and gold names its contract', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
     await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')
@@ -280,21 +280,31 @@ test.describe('Markets strip', () => {
     )
   })
 
-  test('shows placeholder rows while loading and never blocks the nav', async ({ page }) => {
-    // Hold the response open: the strip must render its skeleton immediately.
+  test('shows skeleton bars while loading and never blocks the nav', async ({ page }) => {
+    // Hold the response open: the strip must hold its layout with skeletons
+    // immediately, so the height the navbar offset reads is settled before
+    // any quote lands (nothing pops in and pushes the nav down).
     await page.route('**/api/market/quotes**', () => new Promise<void>(() => {}))
     await page.goto('/')
 
     const tracker = page.getByTestId('market-tracker')
     await expect(tracker).toBeVisible()
     await expect(tracker).toHaveAttribute('data-state', 'loading')
+    await expect(tracker).toHaveAttribute('aria-busy', 'true')
     await expect(page.getByTestId('navbar')).toBeVisible()
+
+    // Every ticker keeps its slot with two value bars, and no row shows a
+    // hyphen placeholder or any digit it does not have yet.
+    await expect(tracker.locator('.markets-skeleton')).toHaveCount(12)
     for (const id of ['sp500', 'nasdaq', 'ta35', 'gold', 'bitcoin', 'usdils']) {
-      await expect(page.getByTestId(`market-row-${id}`)).toHaveText(/-/)
+      const row = page.getByTestId(`market-row-${id}`)
+      await expect(row).toBeVisible()
+      await expect(row).toHaveAttribute('data-skeleton', 'true')
+      await expect(row.locator('.markets-price, .markets-change')).toHaveCount(0)
     }
   })
 
-  test('degrades to placeholders after an API failure and self-heals without a retry control', async ({
+  test('drops rows after an API failure and self-heals without a retry control', async ({
     page,
   }) => {
     let fail = true
@@ -308,10 +318,12 @@ test.describe('Markets strip', () => {
 
     const tracker = page.getByTestId('market-tracker')
     await expect(tracker).toHaveAttribute('data-state', 'error')
+    await expect(tracker).not.toHaveAttribute('aria-busy', 'true')
     await expect(page.getByTestId('navbar')).toBeVisible()
-    for (const id of ['sp500', 'nasdaq', 'ta35', 'gold', 'bitcoin', 'usdils']) {
-      await expect(page.getByTestId(`market-row-${id}`)).toHaveText(/-/)
-    }
+    // A row with no price is dropped, not left standing as a hyphen. The
+    // strip itself stays (and keeps its height) so the navbar offset holds.
+    await expect(tracker.locator('.markets-row')).toHaveCount(0)
+    expect((await tracker.boundingBox())!.height).toBeGreaterThan(30)
     // No retry control exists; recovery is automatic.
     await expect(page.getByTestId('market-retry')).toHaveCount(0)
 
@@ -324,6 +336,126 @@ test.describe('Markets strip', () => {
     await page.reload()
     await expect(tracker).toHaveAttribute('data-state', 'ready')
     await expect(page.getByTestId('market-row-bitcoin')).toContainText('$79,551')
+  })
+
+  test('drops only the row whose instrument has no price', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
+    // One provider failed: that instrument has no price, its neighbours do.
+    const partial = MIXED_QUOTES.map((quote) =>
+      quote.assetId === 'ta35'
+        ? { ...quote, price: null, change: null, changePercent: null }
+        : quote,
+    )
+    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(partial) }))
+    await page.goto('/')
+
+    const tracker = page.getByTestId('market-tracker')
+    await expect(tracker).toHaveAttribute('data-state', 'ready')
+    await expect(page.getByTestId('market-row-ta35')).toHaveCount(0)
+    await expect(tracker.locator('.markets-row')).toHaveCount(5)
+    const spy = page.getByTestId('market-row-sp500')
+    await expect(spy).toHaveText(/SPY\s*\$765\.96/)
+    await expect(spy).not.toHaveAttribute('data-skeleton', 'true')
+
+    // A row with numbers carries the entry fade; the shimmer is gone.
+    const rowAnimation = (await page.evaluate(
+      `(() => {
+        const row = document.querySelector('.markets-row-ready')
+        return row ? getComputedStyle(row).animationName : null
+      })()`,
+    )) as string | null
+    expect(rowAnimation).toBe('market-row-in')
+    await expect(tracker.locator('.markets-skeleton')).toHaveCount(0)
+  })
+
+  test('holds the same rows and the same wrap from skeleton to numbers', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
+
+    // 360/420 (pairs, three lines), 650/1000/1200 (rows pinned to a third, two
+    // lines) and 1300/1440 (all six on one line) are the widths the strip
+    // changes shape at. A skeleton whose bars are the wrong width would reflow
+    // the wrap, and one that does not reserve the trend arrow's line box would
+    // grow when the numbers arrive - either way the whole navbar gets shoved
+    // down. So the row count, the line count and the height all have to match
+    // exactly.
+    const measure = () =>
+      page.evaluate(
+        `(() => {
+          const strip = document.querySelector('[data-testid="market-tracker"]')
+          const tops = [...strip.querySelectorAll('.markets-row')]
+            .map((row) => row.getBoundingClientRect().top)
+            .sort((a, b) => a - b)
+          // Same 10px clustering as the wrap test above: baseline alignment
+          // leaves ~1px offsets on a line, real wrapped lines are ~20px apart.
+          const lines = []
+          for (const top of tops) {
+            const last = lines[lines.length - 1]
+            if (last && top - last.top < 10) last.count++
+            else lines.push({ top, count: 1 })
+          }
+          return {
+            rows: tops.length,
+            lines: lines.map((line) => line.count),
+            height: Math.round(strip.getBoundingClientRect().height),
+          }
+        })()`,
+      ) as Promise<{ rows: number; lines: number[]; height: number }>
+
+    for (const width of [360, 420, 650, 1000, 1200, 1300, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+
+      // Skeleton: the response is held open, so this is the settled shape.
+      await page.route('**/api/market/quotes**', () => new Promise<void>(() => {}))
+      await page.goto('/')
+      await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'loading')
+      // The strip's font metrics decide the line box, so wait for the swap to
+      // settle before measuring - otherwise this compares two different fonts.
+      await page.evaluate(`document.fonts.ready`)
+      const skeleton = await measure()
+
+      await page.unroute('**/api/market/quotes**')
+      await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+      await page.reload()
+      await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
+      await page.evaluate(`document.fonts.ready`)
+      const ready = await measure()
+
+      expect(ready.rows, `rows at ${width}px`).toBe(skeleton.rows)
+      expect(ready.lines, `wrap lines at ${width}px`).toEqual(skeleton.lines)
+      // The skeleton reserves the trend arrow's line box, so the numbers land
+      // in the space already set aside: the strip never changes height, and
+      // the navbar offset (--markets-height) never moves.
+      expect(ready.height, `strip height at ${width}px`).toBe(skeleton.height)
+    }
+  })
+
+  test('reduced motion keeps the skeleton bars and the rows still', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+
+    // While loading: the bars render, without the shimmer.
+    await page.route('**/api/market/quotes**', () => new Promise<void>(() => {}))
+    await page.goto('/')
+    const barAnimation = (await page.evaluate(
+      `(() => {
+        const bar = document.querySelector('[data-testid="market-tracker"] .markets-skeleton')
+        return bar ? getComputedStyle(bar).animationName : null
+      })()`,
+    )) as string | null
+    expect(barAnimation).toBe('none')
+
+    // With data: rows appear in place, without the entry fade.
+    await page.unroute('**/api/market/quotes**')
+    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await page.reload()
+    await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
+    const rowAnimation = (await page.evaluate(
+      `(() => {
+        const row = document.querySelector('.markets-row-ready')
+        return row ? getComputedStyle(row).animationName : null
+      })()`,
+    )) as string | null
+    expect(rowAnimation).toBe('none')
+    await expect(page.getByTestId('market-row-sp500')).toHaveText(/SPY\s*\$765\.96/)
   })
 
   test('marks stale snapshots so cached numbers are never shown as current', async ({ page }) => {

@@ -35,9 +35,12 @@ export function SiteLayout() {
     <>
       <ScrollToTop />
       <IndexesBar feeds={feeds} hidden={menuOpen} />
-      {/* The Markets strip always renders (skeleton -> data -> error states
-          all keep its fixed 26px height). When the Indexes strip is absent
-          it moves to the top so the navbar offset stays correct either way. */}
+      {/* The Markets strip always renders and always keeps its height, so the
+          navbar offset stays correct in every state: skeleton bars while the
+          first snapshot loads, rows once it lands, and an empty (but still
+          reserved) strip if every row fails - failed rows drop out rather
+          than sitting there as hyphens. When the Indexes strip is absent it
+          moves to the top slot. */}
       <MarketTracker hidden={menuOpen} atTop={!feeds.anySuccess} />
       <Navbar
         indexesVisible={feeds.anySuccess}
