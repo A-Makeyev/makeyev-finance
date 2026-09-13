@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer'
 import {
   MAX_YEARS,
   MAX_OTHER_EXPENSES,
+  MAX_HOME_VALUE,
   DEFAULT_TERM_YEARS,
   FALLBACK_INFLATION,
   FALLBACK_PRIME_RATE,
@@ -966,13 +967,24 @@ export const useCalculatorStore = create<CalculatorStore>()(
 
     setPropertyValue: (raw, caret) => {
       const formatted = formatAmountWithCaret(raw, caret)
+      // Home-price cap: an over-cap value clamps the typed text to ₪100M so
+      // the loan mirror, the tracks and the purchase tax all derive from the
+      // capped figure (one clamp at the input, everything downstream clean).
+      const cappedText =
+        parseAmountText(formatted.text) > MAX_HOME_VALUE
+          ? formatGroupedNumber(MAX_HOME_VALUE)
+          : formatted.text
+      // When the clamp fires, the caret can land past the shorter capped text
+      // (e.g. typing a 10th digit at the end) - pin it to the text end.
+      const cappedCaret =
+        formatted.caret === null ? null : Math.min(formatted.caret, cappedText.length)
       set((s) => {
-        s.propertyValueText = formatted.text
+        s.propertyValueText = cappedText
         syncStartingFromProperty(s)
         fillTracksFromLoanInput(s)
         recalculate(s)
       })
-      return formatted
+      return { text: cappedText, caret: cappedCaret }
     },
 
     setCapital: (raw, caret) => {

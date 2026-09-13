@@ -1,12 +1,14 @@
 import { useEffect } from 'react'
+import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 
 /**
- * Articles page - stub preserved from the live site (bare heading only,
- * exactly as the legacy articles.html rendered it - no fade-in).
+ * Articles page - the legacy heading was a stub; it now lists the real
+ * articles. Entries carry a stable link each, so adding one is a route plus a
+ * card here, not a redesign.
  */
 export function ArticlesPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   useEffect(() => {
     document.title = t('meta.articlesTitle')
@@ -17,13 +19,24 @@ export function ArticlesPage() {
       <section className="sub-header">
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('articles.title')}</h1>
-          <p className="gradient-text-no-hover">
-            <b>{t('articles.subtitle')}</b>
-          </p>
         </div>
       </section>
 
-      <h1 style={{ padding: '20px 10%' }}>{t('articles.heading')}</h1>
+      {/* The list follows the document language's direction, like the article
+          body it leads to (the site-wide LTR rule for non-calculator pages
+          stays as it is). */}
+      <section className="articles-list" dir={i18n.dir()} aria-label={t('articles.listHeading')}>
+        <h2>{t('articles.listHeading')}</h2>
+        <ul>
+          <li>
+            <Link className="article-card" to="/articles/prepayment-penalties">
+              <h3>{t('articles.prepayment.title')}</h3>
+              <p>{t('articles.prepayment.summary')}</p>
+              <span>{t('articles.prepayment.cta')}</span>
+            </Link>
+          </li>
+        </ul>
+      </section>
     </>
   )
 }

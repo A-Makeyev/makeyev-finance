@@ -39,6 +39,10 @@ export const SIDE_COSTS_PERCENT = 1.5
     estimates are meaningless noise (their ₪500 rounding / percent math would
     distort them, e.g. "3333%") and are omitted entirely. */
 export const MIN_REAL_HOME_VALUE = 100_000
+/** Input cap on the home price (שווי הנכס): no real transaction comes near
+    it, and every derived figure (the loan mirror, the purchase tax, the
+    equity split) only amplifies a typo past it. */
+export const MAX_HOME_VALUE = 100_000_000
 /** One purchase-tax (מס רכישה) bracket: value up to `upTo` (inclusive, or
     Infinity for the top bracket) is taxed at `rate` percent. */
 export interface PurchaseTaxBracket {
@@ -608,6 +612,90 @@ export function computePurchaseTax(value: number, purpose: PropertyPurpose): num
   return tax
 }
 
+/** The closing-cost estimate rounds every figure up to the nearest ₪500. */
+function roundUpTo500(value: number): number {
+  return Math.ceil(value / 500) * 500
+}
+
+/** One row of the purchase-tax ladder: a bracket and the amounts it carries. */
+export interface PurchaseTaxBreakdownRow {
+  /** Marginal rate percent for this bracket (0 for the exempt band). */
+  rate: number
+  /** Value at which this bracket starts (0 for the first bracket). */
+  from: number
+  /** Bracket cap - the value it applies up to (Infinity for the top one). */
+  to: number
+  /**
+   * The part of THIS value that lands in the bracket (the whole band is
+   * from..to; only the part the value fills shows here).
+   */
+  taxable: number
+  /** Exact tax that amount carries, unrounded. */
+  tax: number
+  /** `tax` rounded to the nearest ₪ - the figure the ladder displays. */
+  taxDisplay: number
+  /** True for the single band the value falls into (the last one it reaches). */
+  isCurrent: boolean
+  /**
+   * True once the value reaches the band (it starts below the value): the
+   * display fills the band's amounts; an unreached band displays dashes.
+   */
+  reached: boolean
+}
+
+export interface PurchaseTaxBreakdown {
+  rows: PurchaseTaxBreakdownRow[]
+  /** The value's exact tax - the figure the 💡 line and total row show. */
+  estimate: number
+}
+
+/**
+ * The purchase-tax ladder for a value: every bracket of the purpose's set
+ * (0% up to ₪1,978,745, then 3.5% / 5% / 8% / 10% for a single dwelling;
+ * 8% / 10% for an additional one), each row quoting the part of THIS value
+ * that lands in the band and the tax it carries - so the reached rows sum to
+ * the exact tax, the same figure `estimate` carries and the summary's 💡 line
+ * shows. The band the value falls into is flagged `isCurrent`; a row is
+ * flagged `reached` once the value enters its band (the display fills its
+ * amounts only then, dashes above).
+ * Returns null without a positive value.
+ */
+export function purchaseTaxBreakdown(
+  value: number,
+  purpose: PropertyPurpose,
+): PurchaseTaxBreakdown | null {
+  if (!(value > 0)) return null
+  const brackets = purchaseTaxBrackets(purpose)
+  const rows = brackets.map((bracket, index) => {
+    const from = index === 0 ? 0 : brackets[index - 1].upTo
+    const to = bracket.upTo
+    // The slice of the value this bracket actually taxes: from the bracket's
+    // start up to whichever ends first, the bracket cap or the value itself.
+    const taxable = Math.max(0, Math.min(value, to) - from)
+    const tax = (taxable * bracket.rate) / 100
+    return {
+      rate: bracket.rate,
+      from,
+      to,
+      taxable,
+      tax,
+      taxDisplay: Math.round(tax),
+      isCurrent: false,
+      reached: value > from,
+    }
+  })
+  // The value's band is the last bracket that starts below the value.
+  let currentIndex = -1
+  rows.forEach((row, index) => {
+    if (value > row.from) currentIndex = index
+  })
+  if (currentIndex >= 0) rows[currentIndex].isCurrent = true
+  return {
+    rows,
+    estimate: computePurchaseTax(value, purpose),
+  }
+}
+
 export interface ClosingCostsEstimate {
   /** Side costs excluding purchase tax (attorney, registration, surveyor). */
   sideCosts: number
@@ -621,11 +709,13 @@ export interface ClosingCostsEstimate {
 }
 
 /**
- * Rough buyer-side closing-cost estimate for the effective property value,
- * rounded to the nearest ₪500. Purchase tax follows the progressive brackets:
- * a first home pays 0% up to ₪1,978,745 and 3.5%+ above; a second home and
- * beyond pays 8% from the first shekel. Returns null when no effective value
- * is known.
+ * Buyer-side closing-cost estimate for the effective property value. Side
+ * costs (attorney, registration, surveyor) round up to the nearest ₪500 as a
+ * rough buffer; the purchase tax is quoted exact - a legal figure computed
+ * from the brackets, not a guess - so the ladder and the summary line agree
+ * with it to the shekel. A first home pays 0% up to ₪1,978,745 and 3.5%+
+ * above; a second home and beyond pays 8% from the first shekel. Returns
+ * null when no effective value is known.
  */
 export function estimateClosingCosts(
   propertyValue: number,
@@ -638,13 +728,11 @@ export function estimateClosingCosts(
   // for the estimates to behave the same below the ~₪100k "real home" line
   // (safe: the tax brackets cap at 10%, so percents cannot distort there).
   if (effectiveValue <= 0) return null
-  const round = (value: number) => Math.ceil(value / 500) * 500
   const sideCostsPercent = SIDE_COSTS_PERCENT
-  const purchaseTax = round(computePurchaseTax(effectiveValue, purpose))
-  // Effective rate from the unrounded tax so the ₪500 rounding can never
-  // inflate it (e.g. no 3333% on tiny values).
-  const purchaseTaxPercent = (computePurchaseTax(effectiveValue, purpose) / effectiveValue) * 100
-  const sideCosts = round((sideCostsPercent / 100) * effectiveValue)
+  // The tax is a bracket computation, not an estimate: no ₪500 ceiling.
+  const purchaseTax = computePurchaseTax(effectiveValue, purpose)
+  const purchaseTaxPercent = (purchaseTax / effectiveValue) * 100
+  const sideCosts = roundUpTo500((sideCostsPercent / 100) * effectiveValue)
   return {
     sideCosts,
     purchaseTax,

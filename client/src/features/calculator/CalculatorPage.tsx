@@ -1,10 +1,12 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPrimeRatePercent } from '@/services/boi'
 import { useCalculatorStore } from '@/stores/calculatorStore'
 import { MAX_OTHER_EXPENSES, MAX_TRACKS, MAX_YEARS, type PropertyPurpose } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
+import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenaltyFacts'
 import { TermSlider } from '@/components/ui/TermSlider'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { AppModal } from '@/components/ui/AppModal'
@@ -487,6 +489,67 @@ export function CalculatorPage() {
               {renderNoteLines(vm.summaryNotes)}
             </div>
 
+            {/* Purchase-tax ladder: the text breakdown of the 💡 tax line,
+                collapsed by default so the terse summary stays clean. It lists
+                every bracket, each band's amounts filled once the value
+                reaches it (unreached ones with "-"), the total row quotes the
+                same exact tax as the summary, and the band the value
+                falls into carries an accent border. Only when tax is charged. */}
+            {vm.taxBreakdown && (
+              <details className="tax-breakdown" data-testid="purchase-tax-breakdown">
+                <summary>
+                  <span className="collapse-caret" aria-hidden="true" />
+                  {t('calculator.taxBreakdown.title')}
+                </summary>
+                <table className="tax-breakdown-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{t('calculator.taxBreakdown.rateHeader')}</th>
+                      <th scope="col">{t('calculator.taxBreakdown.rangeHeader')}</th>
+                      <th scope="col">{t('calculator.taxBreakdown.taxableHeader')}</th>
+                      <th scope="col" className="tax-col">
+                        {t('calculator.taxBreakdown.taxHeader')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vm.taxBreakdown.rows.map((row) => (
+                      <tr
+                        key={row.key}
+                        className={row.isCurrent ? 'is-current' : undefined}
+                        title={row.isCurrent ? t('calculator.taxBreakdown.current') : undefined}
+                      >
+                        <td>
+                          {row.rateText}
+                          {row.isCurrent && (
+                            <span className="visually-hidden">
+                              {t('calculator.taxBreakdown.current')}
+                            </span>
+                          )}
+                        </td>
+                        <td>{row.rangeNode}</td>
+                        <td>{row.taxableText}</td>
+                        <td className="tax-col">{row.taxText}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="tax-total-row">
+                      <th scope="row" colSpan={3}>
+                        {t('calculator.taxBreakdown.total')}
+                        {/* The statutory payment window rides the total row:
+                            the figure and its deadline read as one fact. */}
+                        <span className="tax-total-deadline">
+                          {t('calculator.taxBreakdown.deadline')}
+                        </span>
+                      </th>
+                      <td className="tax-col">{vm.taxBreakdown.totalText}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </details>
+            )}
+
             <PresetSelector />
 
             <div id="tracks-list" data-testid="tracks-list">
@@ -541,6 +604,25 @@ export function CalculatorPage() {
               <strong>⚠️</strong> {t('calculator.regulatoryNote')}
             </p>
           </form>
+
+          {/* Prepayment-penalty education: the Bank of Israel exemptions and
+              the loyalty discount, stated as general background rather than
+              a computed warning, so it sits outside the form. Collapsed by
+              default; the full article is one click away. */}
+          <details className="prepayment-note" data-testid="prepayment-note">
+            <summary>
+              <span className="collapse-caret" aria-hidden="true" />
+              {t('education.prepaymentPenalty.title')}
+            </summary>
+            <p className="prepayment-note-lead">{t('education.prepaymentPenalty.lead')}</p>
+            <PrepaymentPenaltyFacts className="prepayment-facts" />
+            <p className="prepayment-note-disclaimer">
+              {t('education.prepaymentPenalty.disclaimer')}
+            </p>
+            <Link className="prepayment-note-link" to="/articles/prepayment-penalties">
+              {t('education.prepaymentPenalty.articleLink')}
+            </Link>
+          </details>
         </section>
 
         <div ref={resultsRef}>

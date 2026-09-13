@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test'
+import { ils } from '../../support/ils'
 
 /**
- * Visual-QA spec: exercises the two new UI pieces - the lawyer-floor inline
- * note and the dashed balance-axis grid - in both languages (RTL/LTR) at
- * mobile and desktop widths. Asserts layout invariants and captures element
- * screenshots into test-results/visual-qa/ for human eyeballing.
+ * Visual-QA spec: exercises new UI pieces - the lawyer-floor inline note, the
+ * dashed balance-axis grid and the purchase-tax breakdown ladder - in both
+ * languages (RTL/LTR) at mobile and desktop widths. Asserts layout invariants
+ * and captures element screenshots into test-results/visual-qa/ for human
+ * eyeballing.
  *
  * Gated behind VISUAL_QA=1 so it never runs in the normal e2e suite:
  *   VISUAL_QA=1 npx playwright test --project=ui-chromium -g "visual qa"
@@ -81,6 +83,48 @@ for (const language of ['hebrew', 'english'] as const) {
       await page.screenshot({
         path: `${SHOT_DIR}/full-${language}-${viewport.tag}.png`,
         fullPage: true,
+      })
+    })
+  }
+}
+
+for (const language of ['hebrew', 'english'] as const) {
+  for (const viewport of VIEWPORTS) {
+    test(`visual qa: purchase-tax breakdown - ${language} @ ${viewport.tag}px`, async ({
+      page,
+    }) => {
+      await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
+      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      await page.goto('/calculators')
+
+      expect(await page.locator('html').getAttribute('dir')).toBe(
+        language === 'hebrew' ? 'rtl' : 'ltr',
+      )
+
+      // 2,000,000 first home with 500,000 capital: tax is charged, so the
+      // ladder renders under the summary notes.
+      await page.getByTestId('property-value').fill('2,000,000')
+      await page.getByTestId('initial-capital').fill('500,000')
+      const breakdown = page.getByTestId('purchase-tax-breakdown')
+      await expect(breakdown).toBeVisible()
+      await breakdown.locator('summary').click()
+
+      // The ladder must fit the viewport with no horizontal page overflow.
+      const overflow = (await page.evaluate(
+        'document.documentElement.scrollWidth - document.documentElement.clientWidth',
+      )) as number
+      expect(overflow, 'horizontal overflow').toBeLessThanOrEqual(1)
+      const box = await breakdown.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box!.x).toBeGreaterThanOrEqual(0)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 1)
+
+      // Its bottom line matches the summary figure, in both languages
+      // (3.5% × 21,255 = 743.925 → displayed as 744).
+      await expect(breakdown.locator('tfoot')).toContainText(ils(744))
+
+      await breakdown.screenshot({
+        path: `${SHOT_DIR}/tax-breakdown-${language}-${viewport.tag}.png`,
       })
     })
   }

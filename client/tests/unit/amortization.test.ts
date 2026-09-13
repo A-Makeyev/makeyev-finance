@@ -23,6 +23,7 @@ import {
   first5yInterestShare,
   firstPaymentWithRateBump,
   paymentPer100k,
+  purchaseTaxBreakdown,
   redistributeTrackAmounts,
   scaleTrackAmounts,
   splitLargestForNewTrack,
@@ -531,6 +532,154 @@ describe('computePurchaseTax (מס רכישה progressive brackets)', () => {
   })
 })
 
+describe('purchaseTaxBreakdown (מס רכישה ladder)', () => {
+  it('quotes each band with the value part in it; unreached bands stay empty', () => {
+    // 2,000,000 first home: each reached row carries the part of THIS value
+    // landing in its band (the 3.5% band holds 21,255 of it, not the whole
+    // 368,295 band) and the tax on that part; the 3.5% band the value falls
+    // into is flagged current. The 5/8/10% bands are unreached, so the
+    // display dashes them out.
+    const breakdown = purchaseTaxBreakdown(2_000_000, 'first')!
+    expect(breakdown.rows.map((row) => [row.rate, row.from, row.to])).toEqual([
+      [0, 0, 1_978_745],
+      [3.5, 1_978_745, 2_347_040],
+      [5, 2_347_040, 6_055_070],
+      [8, 6_055_070, 20_183_565],
+      [10, 20_183_565, Infinity],
+    ])
+    expect(breakdown.rows.map((row) => row.taxable)).toEqual([
+      1_978_745,
+      // Only 21,255 of the 2,000,000 lands above the exemption cap.
+      21_255,
+      0,
+      0,
+      0,
+    ])
+    expect(breakdown.rows.map((row) => row.taxDisplay)).toEqual([
+      0, 744, 0, 0, 0,
+    ])
+    expect(breakdown.rows.map((row) => row.isCurrent)).toEqual([
+      false, true, false, false, false,
+    ])
+    // The value reaches the 0% and 3.5% bands only; the rest stay unfilled.
+    expect(breakdown.rows.map((row) => row.reached)).toEqual([
+      true, true, false, false, false,
+    ])
+    // The total quotes the exact tax for THIS value: 3.5% × 21,255 = 743.925,
+    // displayed to the whole shekel as 744.
+    expect(breakdown.estimate).toBeCloseTo(743.925, 6)
+  })
+
+  it('20,000,000 first home: rows are the value parts, summing to the exact tax', () => {
+    // Reported mismatch, fixed: the 8% row quoted the whole 14,128,495 band
+    // (tax 1,130,280) instead of the 13,944,930 of this value (tax
+    // 1,115,594.4), and the 10% band holds nothing of this value.
+    const breakdown = purchaseTaxBreakdown(20_000_000, 'first')!
+    expect(breakdown.rows.map((row) => [row.rate, row.taxable, row.taxDisplay])).toEqual([
+      [0, 1_978_745, 0],
+      [3.5, 368_295, 12_890],
+      [5, 3_708_030, 185_402],
+      [8, 13_944_930, 1_115_594],
+      // The value stops 183,565 short of the 10% band: unreached, dashed.
+      [10, 0, 0],
+    ])
+    expect(breakdown.rows.map((row) => row.reached)).toEqual([
+      true, true, true, true, false,
+    ])
+    expect(breakdown.rows[3].isCurrent).toBe(true)
+    // The reached rows reconstruct the exact tax: 12,890.325 + 185,401.5 +
+    // 1,115,594.4 = 1,313,886.225, and the estimate carries it unrounded.
+    const exact = breakdown.rows.reduce((sum, row) => sum + row.tax, 0)
+    expect(exact).toBeCloseTo(1_313_886.225, 2)
+    expect(exact).toBeCloseTo(computePurchaseTax(20_000_000, 'first'), 2)
+    expect(breakdown.estimate).toBeCloseTo(1_313_886.225, 2)
+  })
+
+  it('estimate is the closing-cost figure for every value, one current band', () => {
+    for (const [value, purpose] of [
+      [2_000_000, 'first'],
+      [3_000_000, 'first'],
+      [7_000_000, 'first'],
+      [25_000_000, 'first'],
+      [1_978_745, 'first'],
+      [1_500_000, 'first'],
+      [999, 'first'],
+      [100_000, 'first'],
+      [123_456, 'upgrade'],
+      [1_500_000, 'investment'],
+      [7_000_000, 'investment'],
+    ] as const) {
+      const breakdown = purchaseTaxBreakdown(value, purpose)!
+      // The estimate is exactly the figure the summary 💡 line shows.
+      expect(breakdown.estimate, `${value}-${purpose}`).toBe(
+        estimateClosingCosts(value, 0, 0, purpose)!.purchaseTax,
+      )
+      // Exactly one band is current, and it is the last one starting below.
+      expect(breakdown.rows.filter((row) => row.isCurrent), `${value}-${purpose}`).toHaveLength(1)
+      const current = breakdown.rows.findIndex((row) => row.isCurrent)
+      expect(current, `${value}-${purpose}`).toBe(
+        breakdown.rows.map((row) => value > row.from).lastIndexOf(true),
+      )
+      // The reached flag mirrors it: everything up to (and including) the
+      // current band is reached, everything above is not.
+      expect(breakdown.rows.map((row) => row.reached), `${value}-${purpose}`).toEqual(
+        breakdown.rows.map((_, index) => index <= current),
+      )
+      // The rows are the value's parts: they always sum to the exact tax.
+      expect(
+        breakdown.rows.reduce((sum, row) => sum + row.tax, 0),
+        `${value}-${purpose}`,
+      ).toBeCloseTo(computePurchaseTax(value, purpose), 2)
+    }
+  })
+
+  it('3,000,000 first home: five bands, the 5% one current', () => {
+    const breakdown = purchaseTaxBreakdown(3_000_000, 'first')!
+    expect(breakdown.rows.map((row) => [row.rate, row.taxable, row.taxDisplay])).toEqual([
+      [0, 1_978_745, 0],
+      [3.5, 368_295, 12_890],
+      // The 5% band holds 652,960 of this value (not the whole 3,708,030).
+      [5, 652_960, 32_648],
+      [8, 0, 0],
+      [10, 0, 0],
+    ])
+    expect(breakdown.rows.findIndex((row) => row.isCurrent)).toBe(2)
+    expect(breakdown.rows.map((row) => row.reached)).toEqual([true, true, true, false, false])
+    // 12,890.325 + 32,648 = 45,538.325, quoted exact.
+    expect(breakdown.estimate).toBeCloseTo(45_538.325, 6)
+  })
+
+  it('the open-ended top band shows the value part that lands in it', () => {
+    const breakdown = purchaseTaxBreakdown(7_000_000, 'investment')!
+    // 8% up to 6,055,070, then the open-ended 10% band: it holds 944,930.
+    // 8% of 6,055,070 = 484,405.6 → 484,406; 10% of 944,930 = 94,493.
+    expect(breakdown.rows.map((row) => [row.rate, row.taxable, row.taxDisplay])).toEqual([
+      [8, 6_055_070, 484_406],
+      [10, 944_930, 94_493],
+    ])
+    expect(breakdown.rows[1].isCurrent).toBe(true)
+    expect(breakdown.rows[1].reached).toBe(true)
+    expect(breakdown.estimate).toBe(
+      estimateClosingCosts(7_000_000, 0, 0, 'investment')!.purchaseTax,
+    )
+  })
+
+  it('below the exemption cap: no tax, the 0% band current', () => {
+    const breakdown = purchaseTaxBreakdown(1_978_745, 'first')!
+    expect(breakdown.rows[0]).toMatchObject({
+      rate: 0,
+      taxable: 1_978_745,
+      isCurrent: true,
+    })
+    expect(breakdown.estimate).toBe(0)
+  })
+
+  it('is null without a positive value', () => {
+    expect(purchaseTaxBreakdown(0, 'first')).toBeNull()
+    expect(purchaseTaxBreakdown(-5, 'first')).toBeNull()
+  })
+})
+
 describe('estimateClosingCosts (side costs + purchase tax)', () => {
   it('first home below the exemption: side costs only, no purchase tax', () => {
     const est = estimateClosingCosts(1_500_000, 0, 0, 'first')!
@@ -546,8 +695,9 @@ describe('estimateClosingCosts (side costs + purchase tax)', () => {
 
   it('first home above the exemption pays the progressive brackets', () => {
     const est = estimateClosingCosts(3_000_000, 0, 0, 'first')!
+    // The tax is exact - a legal figure, not rounded to the ₪500 grid.
     const expected = 0.035 * (2_347_040 - 1_978_745) + 0.05 * (3_000_000 - 2_347_040)
-    expect(est.purchaseTax).toBe(Math.ceil(expected / 500) * 500)
+    expect(est.purchaseTax).toBeCloseTo(expected, 6)
     expect(est.total).toBe(est.sideCosts + est.purchaseTax)
   })
 
@@ -563,8 +713,8 @@ describe('estimateClosingCosts (side costs + purchase tax)', () => {
     expect(est.purchaseTaxPercent).toBeCloseTo(8, 1)
     const big = estimateClosingCosts(7_000_000, 0, 0, 'investment')!
     const expected = 0.08 * 6_055_070 + 0.1 * (7_000_000 - 6_055_070)
-    expect(big.purchaseTax).toBe(Math.ceil(expected / 500) * 500)
-    // Effective rate uses the unrounded tax - no distortion from the rounding.
+    expect(big.purchaseTax).toBeCloseTo(expected, 6)
+    // Effective rate from the same tax - no rounding distortion.
     expect(big.purchaseTaxPercent).toBeCloseTo((expected / 7_000_000) * 100, 1)
   })
 

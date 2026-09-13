@@ -71,7 +71,45 @@ export const en: { translation: Translation } = {
     articles: {
       title: 'Articles',
       subtitle: 'Lorem ipsum sin omitt Lorem ipsum sin omitt',
-      heading: 'articles',
+      listHeading: 'All articles',
+      prepayment: {
+        title: 'Mortgage prepayment penalties',
+        summary:
+          'Prime tracks are always exempt, tracks that reset more than once a year have an exit point, fixed-rate tracks may be charged, and the discount grows after 3 and 5 years.',
+        cta: 'Read the article',
+      },
+    },
+    /* General educational content, not tied to any calculation. Both the
+       calculator's collapsible note and the article page read these keys, so
+       the four facts are written once per language. */
+    education: {
+      prepaymentPenalty: {
+        title: 'About prepayment penalties',
+        lead: 'A prepayment penalty is what the bank charges for repaying the mortgage before the term ends, as compensation for the profit locked into the loan.',
+        facts: {
+          prime: {
+            title: 'Prime tracks: always exempt',
+            text: 'Under Bank of Israel rules, a prime track is exempt from the prepayment penalty. Its rate follows the Bank of Israel rate, so the bank has no locked-in future profit to be compensated for.',
+          },
+          reset: {
+            title: 'Resets more than once a year: an exit point at every reset',
+            text: 'A track whose rate resets every two, three or five years has an exit point: at every rate reset you can repay it without the discounting penalty (עמלת היוון). That exemption covers the discounting penalty; small operational fees may still apply on these tracks.',
+          },
+          fixed: {
+            title: 'Fixed-rate tracks: no exemption',
+            text: 'A fixed-rate track has no exit point. If market rates at repayment time are lower than the rate fixed in the agreement, the bank may charge the discounting penalty.',
+          },
+          loyalty: {
+            title: 'Loyalty discount: 20% off after 3 years, 30% after 5 years',
+            text: 'After 3 years from the start of the loan the penalty is reduced by 20%, and after 5 years by 30%.',
+          },
+        },
+        whyPrime: 'The difference comes from prime already tracking the Bank of Israel variable rate, so the bank has no future profit locked into the agreement that early repayment takes away. On a fixed-rate track the bank committed to a fixed rate for years, and repaying early when market rates have fallen takes away that gap.',
+        timing: 'Before repaying early, ask the bank for the fee breakdown in writing and check when the next rate reset of the track falls ~ sometimes waiting for the reset saves the whole penalty.',
+        disclaimer: 'This information is general, does not depend on your calculation, and is not advice or an offer. The penalty is set by the loan agreement and by Bank of Israel rules.',
+        articleLink: 'Read the full article',
+        backToArticles: 'Back to all articles',
+      },
     },
     contact: {
       headerTitle: 'Free Consultation Call',
@@ -384,6 +422,20 @@ export const en: { translation: Translation } = {
         purposeFirst: 'first home',
         purposeUpgrade: 'home upgrade',
         purposeInvestment: 'investment property',
+      },
+      taxBreakdown: {
+        title: 'Purchase tax breakdown',
+        rateHeader: 'Bracket',
+        rangeHeader: 'Range',
+        taxableHeader: 'Taxable amount',
+        taxHeader: 'Tax due',
+        rangeUpTo: 'up to <0>{{to}}</0>',
+        rangeBetween: '<0>{{from}}</0> ~ <1>{{to}}</1>',
+        rangeAbove: '<0>{{from}}</0> and above',
+        total: 'Total tax due',
+        current: 'Current bracket',
+        notReached: '-',
+        deadline: 'Paid within 30 days of signing the sale contract',
       },
       schedule: {
         heading: 'Expected payments table',

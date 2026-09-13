@@ -2963,6 +2963,192 @@ e #name,
   color: var(--calc-muted);
 }
 
+/* Purchase-tax ladder - the collapsible text breakdown of the 💡 tax line.
+   Collapsed by default so the terse summary stays clean; the table mirrors
+   itself in RTL/LTR (logical properties only) and uses the calculator's theme
+   roles. The band the value falls into carries .is-current - an accent border
+   top and bottom - rather than an inline marker that would crowd columns. */
+.tax-breakdown {
+  margin-top: 10px;
+  color: var(--calc-muted);
+  font-size: 0.95rem;
+}
+
+.tax-breakdown > summary {
+  cursor: pointer;
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+  inline-size: fit-content;
+}
+
+/* ---------------------------------------------------------------------
+   COLLAPSE CARET - shared by the purchase-tax breakdown and the prepayment
+   note.
+   The UA marker is a tall, thin triangle (10x18px at the block's 0.95rem) and
+   its glyph sits flush at the text edge, so it can never match the ⚠️/💡
+   glyphs in the summary notes above: the ⚠️'s ink is 16x15px, and the 💡 is
+   centred in a 1.2em cell (see .note-line .note-icon). Drawing the caret means
+   both can be matched exactly - one --caret-size knob, and the same 1.2em cell
+   centring the icons use, so the caret lands under them by construction.
+   --------------------------------------------------------------------- */
+.tax-breakdown > summary,
+.prepayment-note > summary {
+  /* The caret replaces the UA marker entirely. */
+  list-style: none;
+  /* Caret box, roughly square like the ⚠️'s ink: one knob for the size, and it
+     follows the 0.85rem narrow-screen step with the rest of the block. At the
+     block's 0.95rem it renders 0.75em = 11x10px, 0.85em = 12x12px, 0.9em =
+     13x12px, 1em = 15x14px, 1.1em = 16x16px: border widths snap to whole
+     pixels, so the width and the two block halves do not round together. */
+  --caret-size: 0.75em;
+}
+
+.collapse-caret {
+  display: inline-block;
+  inline-size: 0;
+  block-size: 0;
+  /* Centred in the notes' 1.2em icon cell, so the caret sits under the 💡/⚠️
+     above it instead of at the bare text edge. */
+  margin-inline: calc((1.2em - var(--caret-size)) / 2) 0.4em;
+  /* Closed: a triangle pointing toward inline-end - right in LTR, left in
+     RTL - which the logical border gives for free, no per-direction rule. */
+  border-block: calc(var(--caret-size) / 2) solid transparent;
+  border-inline-start: var(--caret-size) solid currentColor;
+  vertical-align: middle;
+}
+
+/* Open: point down. The box stays exactly the same size (the inline borders
+   take over the width the coloured one gave up), so toggling never shifts the
+   label. Down is down in both directions, so no direction rule here either. */
+.tax-breakdown[open] > summary .collapse-caret,
+.prepayment-note[open] > summary .collapse-caret {
+  border-block: 0;
+  border-inline: calc(var(--caret-size) / 2) solid transparent;
+  border-block-start: var(--caret-size) solid currentColor;
+}
+
+.tax-breakdown[open] > summary {
+  margin-block-end: 8px;
+}
+
+.tax-breakdown-table {
+  border-collapse: collapse;
+  /* Fixed layout + wrapping cells so the ladder never widens the panel on a
+     narrow phone (auto layout sizes columns to content and overflows). */
+  table-layout: fixed;
+  inline-size: 100%;
+  max-inline-size: 620px;
+}
+
+/* Percentage widths in source order (rate, range, taxable, tax); percentages
+   keep the mirror correct in RTL/LTR. */
+.tax-breakdown-table th:nth-child(1) {
+  inline-size: 16%;
+}
+
+.tax-breakdown-table th:nth-child(2) {
+  inline-size: 36%;
+}
+
+.tax-breakdown-table th:nth-child(3) {
+  inline-size: 24%;
+}
+
+.tax-breakdown-table th:nth-child(4) {
+  inline-size: 24%;
+}
+
+.tax-breakdown-table th,
+.tax-breakdown-table td {
+  padding: 14px 20px;
+  line-height: 1.5;
+  text-align: start;
+  overflow-wrap: anywhere;
+  border-block-end: 1px solid var(--calc-line);
+}
+
+.tax-breakdown-table thead th {
+  color: var(--calc-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* The band the value falls into: a soft fill AND an accent border on both
+   block edges (2px so it wins over the 1px row dividers in the collapsed
+   table), so the row reads as highlighted and framed at once. The fill is
+   tuned down to ~40% strength so the row stands out via the frame and bold
+   text, not a heavy grey wash. */
+.tax-breakdown-table tbody tr.is-current th,
+.tax-breakdown-table tbody tr.is-current td {
+  background: color-mix(in srgb, var(--calc-line) 40%, transparent);
+  border-block: 2px solid var(--calc-accent);
+  color: var(--calc-ink);
+  font-weight: 700;
+}
+
+.tax-breakdown-table tfoot th,
+.tax-breakdown-table tfoot td {
+  color: var(--calc-ink);
+  font-weight: 700;
+}
+
+.tax-breakdown-table tfoot .tax-total-row th,
+.tax-breakdown-table tfoot .tax-total-row td {
+  border-block-end: none;
+}
+
+/* The מס לתשלום column: the money that actually adds up - the per-band tax
+   amounts and the total - carries the accent so it reads as the table's
+   payoff column at a glance. A th needs the class too; use :where() so the
+   highlight also applies when the current-row styles stack on a td. */
+.tax-breakdown-table th.tax-col,
+.tax-breakdown-table td.tax-col {
+  color: var(--calc-accent);
+  font-weight: 700;
+}
+
+/* The current band's row styles beat the per-cell accent only on background
+   and border (they target the row); the tax figure itself stays accent. */
+.tax-breakdown-table tbody tr.is-current td.tax-col {
+  color: var(--calc-accent);
+}
+
+/* The 30-day payment deadline next to the total label: a quieter caption
+   that reads as one fact with the figure beside it. */
+.tax-total-deadline {
+  display: block;
+  margin-block-start: 2px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--calc-muted);
+}
+
+/* Text for assistive tech only - keeps the visual table free of a marker tag
+   that would crowd the columns. */
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 420px) {
+  .tax-breakdown {
+    font-size: 0.85rem;
+  }
+
+  .tax-breakdown-table th,
+  .tax-breakdown-table td {
+    padding: 10px 10px;
+  }
+}
+
 /* Transaction-cost inputs and the payment-to-income ceiling: a second
    controls row under the regulatory limits row. Same input styling as
    .limits-row (labels + input-wrap) but visually lighter - the fees are
@@ -3891,7 +4077,10 @@ e #name,
 
 .term-years-value {
   display: inline;
-  color: var(--calc-teal-dark);
+  /* The years figure takes the label's own ink (user request). It used to be
+     teal like the card's headline value, but inside a running phrase that read
+     as an unrelated second highlight in the middle of one sentence. */
+  color: inherit;
   font-weight: 700;
   font-size: inherit;
   line-height: inherit;
@@ -5404,4 +5593,224 @@ tbody tr:hover {
    above, so the legacy dark selection ink stays readable on the dark page. */
 :root[data-theme='dark'] *::selection {
   background-color: var(--selection-bg);
+}
+
+/* ---------------------------------------------------------------------
+   PREPAYMENT-PENALTY EDUCATION
+   General Bank of Israel rules about עמלת פירעון מוקדם, shown in two places:
+   a collapsible note inside the calculator panel (calculator roles, closed by
+   default so the terse summary stays clean) and a full article at
+   /articles/prepayment-penalties (page theme roles). Logical properties only,
+   so both mirror automatically in RTL and LTR.
+   --------------------------------------------------------------------- */
+.prepayment-note {
+  /* Same collapsing treatment and spacing as the purchase-tax breakdown
+     block (user request), so the panel's two collapsible blocks read as one
+     thing. Block level: identical top gap, size and inherited summary line
+     height; the body copy carries the table cells' 1.5 line height instead
+     (see the lead/facts/disclaimer rules below). Keep the two in step if
+     either changes - the e2e spec compares their live computed values. */
+  margin-top: 10px;
+  /* Indent the block so it reads as nested under the ⚠️ warning above (the
+     marker sits 10px inside the warning; this lands the note's caret on the
+     ⚠️'s ink centre). Logical property, so it indents from the right in RTL
+     and from the left in LTR by itself. */
+  padding-inline-start: 11.5px;
+  color: var(--calc-muted);
+  font-size: 0.95rem;
+}
+
+/* The purchase-tax breakdown steps down to 0.85rem on narrow screens (its own
+   <=420px block, earlier in the file). This rule lands later, so the matching
+   step is repeated here to keep the two blocks at one size; the e2e spec
+   compares their computed sizes at 360px and 1280px, so a future divergence
+   fails a test instead of drifting quietly. */
+@media (max-width: 420px) {
+  .prepayment-note {
+    font-size: 0.85rem;
+  }
+}
+
+.prepayment-note > summary {
+  cursor: pointer;
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+  inline-size: fit-content;
+}
+
+.prepayment-note[open] > summary {
+  /* Same open-state gap as .tax-breakdown[open] > summary. */
+  margin-block-end: 8px;
+}
+
+/* The global `p` base rule sizes every paragraph at 20px, which made the note's
+   body read larger than its own summary and larger than the tax table's cells.
+   Point the paragraphs at the block size instead, so "same as the tax
+   breakdown" holds for the text and not just for the container. */
+.prepayment-note p {
+  font-size: 1em;
+}
+
+.prepayment-note-lead {
+  margin-block: 0 14px;
+  max-inline-size: 720px;
+  /* The tax table's cells run at 1.5; the note's body copy matches so the two
+     blocks share one text rhythm. */
+  line-height: 1.5;
+}
+
+.prepayment-facts {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: 1.5;
+}
+
+.prepayment-facts li {
+  padding-inline-start: 12px;
+  border-inline-start: 3px solid var(--calc-line);
+}
+
+.prepayment-facts h4 {
+  margin: 0 0 4px;
+  color: var(--calc-ink);
+  /* Same size as the fact text: the hierarchy reads from weight and ink
+     color, not from a size step. */
+  font-size: 1em;
+  font-weight: 700;
+}
+
+.prepayment-facts p {
+  margin: 0;
+}
+
+.prepayment-note-disclaimer {
+  margin-block: 14px 8px;
+  /* Size comes from the block via `.prepayment-note p` above; this is the same
+     1.5 rhythm the rest of the note's body uses. */
+  line-height: 1.5;
+}
+
+.prepayment-note-link {
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* The article surfaces are always LTR today (only the calculator goes RTL
+   for Hebrew), but the layout is written with logical properties so a future
+   direction rule change mirrors them without a per-component override. */
+.articles-list,
+.article-page {
+  inline-size: 90%;
+  max-inline-size: 820px;
+  margin-block: 40px 60px;
+  margin-inline: auto;
+}
+
+.articles-list > h2 {
+  margin-block: 0 16px;
+  color: var(--ink);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.articles-list ul {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.article-card {
+  display: block;
+  padding: 20px 22px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-card);
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
+}
+
+.article-card:hover {
+  border-color: var(--soft-blue);
+  transform: translateY(-2px);
+}
+
+.article-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.article-card p {
+  margin: 0 0 12px;
+  color: var(--ink-muted);
+}
+
+.article-card span {
+  color: var(--soft-blue);
+  font-weight: 700;
+}
+
+.article-page {
+  color: var(--ink);
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+.article-paragraph {
+  margin-block: 0 18px;
+}
+
+.article-facts {
+  display: grid;
+  gap: 18px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.article-facts li {
+  padding: 16px 18px;
+  border-inline-start: 3px solid var(--soft-blue);
+  border-radius: 6px;
+  background: var(--surface-card);
+}
+
+.article-facts h4 {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.article-facts p {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.article-disclaimer {
+  margin-block: 24px 18px;
+  color: var(--ink-muted);
+  font-size: 0.92rem;
+}
+
+.article-back {
+  color: var(--soft-blue);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .article-card,
+  .article-card:hover {
+    transform: none;
+  }
 }

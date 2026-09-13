@@ -14,9 +14,6 @@ export function ServicesPage() {
       <section className="sub-header">
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('services.title')}</h1>
-          <p className="gradient-text-no-hover">
-            <b>{t('services.subtitle')}</b>
-          </p>
         </div>
       </section>
 

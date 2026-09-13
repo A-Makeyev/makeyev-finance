@@ -20,11 +20,13 @@ import {
   allowedMonthlyPayment,
   effectiveAnnualRatePercent,
   paymentExceedsAllowed,
+  purchaseTaxBreakdown,
   suggestedIncomeForAllowance,
   suggestedPropertyValue,
   isVariableType,
   type PaymentLabelKind,
   type PropertyPurpose,
+  type PurchaseTaxBreakdownRow,
 } from '@/lib/amortization'
 
 /** Line status for the summary notes: good news, bad news, or general info. */
@@ -60,6 +62,39 @@ function mark(status: NoteStatus, node: ReactNode, order?: number): NoteLine {
 }
 
 export type NoteLine = { status: NoteStatus; node: ReactNode; order?: number }
+
+/**
+ * The range cell of one purchase-tax ladder row: "up to X" for the first
+ * bracket, "X ~ Y" for the middle ones, and "X and above" for the open-ended
+ * top bracket. The numbers stay bold (Trans) like the rest of the summary.
+ */
+function purchaseTaxRange(row: PurchaseTaxBreakdownRow): ReactNode {
+  if (!Number.isFinite(row.to)) {
+    return (
+      <Trans
+        i18nKey="calculator.taxBreakdown.rangeAbove"
+        values={{ from: formatCurrency(row.from) }}
+        components={[<strong key="tb-from" />]}
+      />
+    )
+  }
+  if (row.from === 0) {
+    return (
+      <Trans
+        i18nKey="calculator.taxBreakdown.rangeUpTo"
+        values={{ to: formatCurrency(row.to) }}
+        components={[<strong key="tb-to" />]}
+      />
+    )
+  }
+  return (
+    <Trans
+      i18nKey="calculator.taxBreakdown.rangeBetween"
+      values={{ from: formatCurrency(row.from), to: formatCurrency(row.to) }}
+      components={[<strong key="tb-from" />, <strong key="tb-to" />]}
+    />
+  )
+}
 
 /** The lawyer minimum as the user sees it: VAT-inclusive whole shekels. */
 const LAWYER_FLOOR_WITH_VAT = formatGroupedNumber(Math.round(LAWYER_MINIMUM_FEE * (1 + VAT_RATE)))
@@ -188,6 +223,35 @@ export function useCalculatorViewModel() {
   const capitalForLoan = Math.max(0, capital - parseAmountText(renovationText))
   const loanAmount = tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
   const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capitalForLoan
+
+  // Purchase-tax ladder behind the 💡 tax line: the purpose's full bracket
+  // set, each row quoting the part of THIS value that lands in the band and
+  // the tax it carries - so the displayed rows add up to the total row, and
+  // the total equals the summary's 💡 figure (the exact bracket tax). A band
+  // fills only once the value reaches it; an unreached band shows a dash in
+  // its amount columns. Only built when tax is actually charged - the exempt
+  // case already reads as the single "tax-free up to X" line.
+  const taxBreakdown = (() => {
+    if (snapshot.closingCosts === null || snapshot.closingCosts.purchaseTax <= 0) return null
+    const breakdown = purchaseTaxBreakdown(effectiveValue, purpose)
+    if (breakdown === null) return null
+    const dash = t('calculator.taxBreakdown.notReached')
+    return {
+      rows: breakdown.rows.map((row) => ({
+        key: `${row.from}-${row.to}`,
+        rateText: `${formatRatePercent(row.rate)}%`,
+        rangeNode: purchaseTaxRange(row),
+        // Filled only when the value reaches the band, so every visible
+        // amount is money the user actually owes in that band.
+        taxableText: row.reached ? formatCurrency(row.taxable) : dash,
+        taxText: row.reached ? formatCurrency(row.taxDisplay) : dash,
+        isCurrent: row.isCurrent,
+      })),        // The bottom line quotes the same exact tax as the 💡 line and the
+        // per-band rows (formatCurrency rounds to whole shekels).
+        totalText: formatCurrency(breakdown.estimate),
+    }
+  })()
+
   const incomeValue = parseAmountText(incomeText)
   const otherTotal = otherExpenses.reduce(
     (sum, expense) => sum + parseAmountText(expense.amountText),
@@ -290,9 +354,9 @@ export function useCalculatorViewModel() {
   // The required payment is a neutral fact on its own 💡 line in every
   // scenario: the verdict lines below stay short and never repeat it
   // (feedback). Stating the term inline keeps the figure comparable against
-  // quotes and calculators that assume another term. Order 1 places it as
-  // the second info line, right after the capital-requirement line
-  // (feedback), ahead of the transaction-cost line.
+  // quotes and calculators that assume another term. Order 1 places it right
+  // after the purchase-tax line (order 0, which leads the 💡 group) and
+  // ahead of the transaction-cost line (feedback).
   if (firstPayment > 0) {
     warningMessages.push(
       mark(
@@ -559,6 +623,8 @@ export function useCalculatorViewModel() {
           )
         }
       } else {
+        // Order 0 leads the 💡 info group (feedback request): the purchase
+        // tax is the first general fact, ahead of the required-payment line.
         lines.push(
           mark(
             'info',
@@ -571,6 +637,7 @@ export function useCalculatorViewModel() {
               }}
               components={[<strong key="taxAmount" />, <strong key="taxPercent" />]}
             />,
+            0,
           ),
         )
       }
@@ -780,6 +847,7 @@ export function useCalculatorViewModel() {
     lawyerFloorAmount: LAWYER_FLOOR_WITH_VAT,
     capitalNoteLines,
     summaryNotes,
+    taxBreakdown,
     allGood,
     capitalState: snapshot.capitalAssessment?.state ?? null,
     warningMessages,
