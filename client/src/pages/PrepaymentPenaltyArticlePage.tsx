@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
+import { usePageMeta } from '@/hooks/usePageMeta'
 import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenaltyFacts'
 
 /**
@@ -17,13 +17,11 @@ import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenalty
 export function PrepaymentPenaltyArticlePage() {
   const { t, i18n } = useTranslation()
 
-  useEffect(() => {
-    document.title = t('articles.prepayment.title')
-  }, [t])
+  usePageMeta(t('articles.prepayment.title'), t('meta.articlesPrepaymentDescription'))
 
   return (
     <>
-      <section className="sub-header">
+      <section className="sub-header article-sub-header">
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('articles.prepayment.title')}</h1>
         </div>

@@ -9,6 +9,7 @@ import { ServicesPage } from '@/pages/ServicesPage'
 import { CalculatorPage } from '@/features/calculator/CalculatorPage'
 import { ArticlesPage } from '@/pages/ArticlesPage'
 import { PrepaymentPenaltyArticlePage } from '@/pages/PrepaymentPenaltyArticlePage'
+import { MovingChecklistArticlePage } from '@/pages/MovingChecklistArticlePage'
 import { ContactPage } from '@/features/contact/ContactPage'
 
 const queryClient = new QueryClient({
@@ -37,6 +38,7 @@ export function App() {
               path="/articles/prepayment-penalties"
               element={<PrepaymentPenaltyArticlePage />}
             />
+            <Route path="/articles/moving-checklist" element={<MovingChecklistArticlePage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="*" element={<HomePage />} />
           </Route>

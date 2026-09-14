@@ -10,6 +10,7 @@ Do not write the em dash character (`—`, U+2014) anywhere in this project: not
 
 ## Ground rules
 
+- No need to overcomplicate easy solutions.
 - Don't restructure, rename, or "clean up" working code as a side effect of an unrelated task. Flag it and ask instead.
 - When a change is architectural (new subsystem, new data model, new dependency, anything hard to undo later) - propose the shape first rather than building against assumptions. This applies especially as the app grows beyond the calculator (auth, CRM, blog, marketing all landing in this repo) - each of those is a real design decision, not a default to pick silently.
 - If you're not sure whether existing behavior is a bug or intentional, ask before "fixing" it.

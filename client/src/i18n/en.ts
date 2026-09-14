@@ -14,6 +14,12 @@ export const en: { translation: Translation } = {
       servicesTitle: 'Our Services - Makeyev Finance',
       calculatorsTitle: 'Mortgage Calculator | Makeyev Finance',
       articlesTitle: 'Articles - Makeyev Finance',
+      articlesDescription:
+        'Articles and guides on mortgages and finance: prepayment penalties, track mixes and more.',
+      articlesMovingChecklistDescription:
+        'A moving checklist: electricity, water, arnona, gas and building committee accounts, photographing meters on moving day, the documents to gather, and returning deposits.',
+      articlesPrepaymentDescription:
+        'When the prepayment penalty applies: prime tracks are always exempt, rate-reset tracks have an exit point, fixed-rate tracks may be charged, and the discount grows after 3 and 5 years.',
       contactTitle: 'Contact Us - Makeyev Finance',
     },
     nav: {
@@ -78,11 +84,71 @@ export const en: { translation: Translation } = {
           'Prime tracks are always exempt, tracks that reset more than once a year have an exit point, fixed-rate tracks may be charged, and the discount grows after 3 and 5 years.',
         cta: 'Read the article',
       },
+      movingChecklist: {
+        title: 'What to transfer when you move apartments',
+        summary:
+          'A moving checklist: electricity, water, arnona, gas and building committee accounts, photographing meters on moving day, the documents to gather, and returning deposits.',
+        cta: 'Read the article',
+      },
     },
     /* General educational content, not tied to any calculation. Both the
        calculator's collapsible note and the article page read these keys, so
        the four facts are written once per language. */
     education: {
+      movingChecklist: {
+        intro:
+          'Moving is where small forgotten things get expensive: accounts left in the previous resident\'s name, meters nobody photographed, deposits left with the landlord. This list gathers what actually needs transferring, and in what order.',
+        documentsLead:
+          'Before you start: gather the documents every provider will ask for up front, instead of chasing them one at a time. Usually required: a signed lease or purchase agreement, the ID of both the outgoing and incoming resident, and often a photocopy of the ID including the sefach (the ID attachment page).',
+        sections: {
+          municipalities: {
+            title: 'Municipal tax (arnona)',
+            items: [
+              'Close the arnona (municipal tax) account of the apartment you are leaving and switch the account to the new payer, in both apartments.',
+              'Ask for written confirmation that the account was updated, and keep it.',
+              'Note: if previous residents left without transferring the account, arnona debts can land on the owner or the new resident. Do not assume the account is in order - check it.',
+            ],
+          },
+          utilities: {
+            title: 'Electricity, water, gas and the building committee',
+            items: [
+              'Electricity: close the account and switch it to the new payer.',
+              'Water: close the account and switch it to the new payer (per your local provider).',
+              'Gas: close the account and switch it to the new payer.',
+              'Building committee (vaad bayit): close the account and switch it to the new payer, via the committee or the management company.',
+            ],
+          },
+          meters: {
+            title: 'Photograph the meters on moving day',
+            items: [
+              'Photograph the electricity meter and the water meter on move-in day and on move-out day, with a clear reading.',
+              'Why it matters: without a dated photo of the reading, you can end up billed for the previous or next occupant\'s usage.',
+              'Document the apartment\'s condition with photos and video on move-in and move-out day, next to the meter shots, to prevent damage disputes.',
+            ],
+            callout:
+              'Property owners: if outgoing residents leave without transferring accounts into their own names, and new residents do not register in time, the debt can land on you as the owner. Make sure the accounts were actually updated, not just "in process".',
+          },
+          logistics: {
+            title: 'Mail, communications and parking',
+            items: [
+              'Mail: update the address and names with the services that send you important mail.',
+              'TV, internet and phone: depends on the tenant - close or transfer as needed.',
+              'Parking (if there is one): get a proper walkthrough of the parking arrangement (robotic parking, a lift, or stacked spaces) and hand over the parking chip.',
+            ],
+          },
+          deposits: {
+            title: 'Deposits',
+            items: [
+              'After confirming that no debts remain, return the deposits to the previous tenant.',
+            ],
+          },
+        },
+        timing:
+          'Transferring accounts usually takes a few business days once submitted. Start early enough before your move date so the accounts actually switch on move-in day.',
+        disclaimer:
+          'This information is general and is not advice. Some services are handled per municipality, and requirements and channels may change - check with the provider for your address.',
+        backToArticles: 'Back to all articles',
+      },
       prepaymentPenalty: {
         title: 'About prepayment penalties',
         lead: 'A prepayment penalty is what the bank charges for repaying the mortgage before the term ends, as compensation for the profit locked into the loan.',

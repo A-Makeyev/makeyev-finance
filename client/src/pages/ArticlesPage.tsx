@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
+import { usePageMeta } from '@/hooks/usePageMeta'
 
 /**
  * Articles page - the legacy heading was a stub; it now lists the real
@@ -10,9 +10,7 @@ import { useTranslation } from 'react-i18next'
 export function ArticlesPage() {
   const { t, i18n } = useTranslation()
 
-  useEffect(() => {
-    document.title = t('meta.articlesTitle')
-  }, [t])
+  usePageMeta(t('meta.articlesTitle'), t('meta.articlesDescription'))
 
   return (
     <>
@@ -33,6 +31,13 @@ export function ArticlesPage() {
               <h3>{t('articles.prepayment.title')}</h3>
               <p>{t('articles.prepayment.summary')}</p>
               <span>{t('articles.prepayment.cta')}</span>
+            </Link>
+          </li>
+          <li>
+            <Link className="article-card" to="/articles/moving-checklist">
+              <h3>{t('articles.movingChecklist.title')}</h3>
+              <p>{t('articles.movingChecklist.summary')}</p>
+              <span>{t('articles.movingChecklist.cta')}</span>
             </Link>
           </li>
         </ul>

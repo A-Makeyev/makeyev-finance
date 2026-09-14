@@ -264,9 +264,10 @@ for (const language of ['hebrew', 'english'] as const) {
         })
       }
 
-      // The articles list links to the same page.
+      // The articles list links to the same page. The list carries more than
+      // one article now, so target this article's card via its href.
       await page.goto('/articles')
-      const card = page.locator('.article-card')
+      const card = page.locator('.article-card[href="/articles/prepayment-penalties"]')
       await expect(card).toBeVisible()
       await card.click()
       await expect(page).toHaveURL(/\/articles\/prepayment-penalties$/)

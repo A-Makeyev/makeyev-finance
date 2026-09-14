@@ -3808,7 +3808,7 @@ e #name,
 }
 
 .input-wrap span {
-  padding: 0 12px;
+  padding: 0 15px;
   color: var(--calc-teal);
   font-weight: 700;
 }
@@ -5710,6 +5710,15 @@ tbody tr:hover {
   margin-inline: auto;
 }
 
+/* The shared sub-header keeps its h1 on one line (.sub-header h1 is
+   white-space: nowrap), which suits the short fixed page titles but overflows
+   a phone (360px) once a title is a sentence. Article titles come from
+   content, so the article pages opt into wrapping; higher specificity than
+   the base rules, so placement here is enough. */
+.sub-header.article-sub-header h1 {
+  white-space: normal;
+}
+
 .articles-list > h2 {
   margin-block: 0 16px;
   color: var(--ink);
@@ -5765,6 +5774,38 @@ tbody tr:hover {
   line-height: 1.8;
 }
 
+/* Long-form article sections (the moving checklist is the first user):
+   headings and items styled from the theme tokens only, and logical
+   properties so an RTL body mirrors without overrides. */
+.article-section h2 {
+  margin-block: 26px 12px;
+  color: var(--ink);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.article-section ul {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding-inline-start: 1.4em;
+}
+
+.article-section li::marker {
+  color: var(--soft-blue);
+}
+
+/* The owner-liability warning: same box language as .article-facts li, in
+   soft-red so it reads as a caution rather than a regular note. */
+.article-callout {
+  margin-block: 4px 14px;
+  padding: 14px 16px;
+  border-inline-start: 3px solid var(--soft-red);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
 .article-paragraph {
   margin-block: 0 18px;
 }
@@ -5812,5 +5853,15 @@ tbody tr:hover {
   .article-card,
   .article-card:hover {
     transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .article-section h2 {
+    font-size: 1.1rem;
+  }
+
+  .article-callout {
+    padding: 12px 14px;
   }
 }

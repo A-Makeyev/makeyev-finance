@@ -43,6 +43,14 @@ describe('prepayment-penalty education content', () => {
         expect(translation.articles.prepayment.summary.trim()).not.toBe('')
       })
 
+      it('fills the per-page meta description', () => {
+        // The article page sets <meta name="description"> from this key
+        // (usePageMeta), so a blank value would ship an empty tag.
+        const description = translation.meta.articlesPrepaymentDescription
+        expect(description.trim()).not.toBe('')
+        expect(description).not.toContain('\u2014')
+      })
+
       it('uses no em dash in any of its strings', () => {
         const strings = [
           content.title,
