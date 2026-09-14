@@ -509,6 +509,27 @@ function snapTracksToLoan(s: CalculatorState): void {
 }
 
 /**
+ * True when the tracks still hold the active preset's OWN allocation, at
+ * whatever scale - nobody has edited the mix by hand. Re-allocating such a
+ * lineup from the preset at a new loan is exact, where the legacy
+ * proportional snap copies the previous (rounded) amounts: keying a price in
+ * walks the loan through ₪1, ₪10, ₪100 ..., and at ₪10 the recommended
+ * 40/34/26 has to round to 4/3/3. Left alone, those rounded amounts become the
+ * proportions every later scale-up copies - 70% variable, past the Bank of
+ * Israel 2/3 cap, which freezes the summary and hides the 💡 tax line and its
+ * ladder while the price field reads full.
+ */
+function amountsMirrorPreset(s: CalculatorState, presetId: PresetId): boolean {
+  const amounts = s.tracks.map((track) => parseAmountText(track.amountText))
+  const total = amounts.reduce((sum, amount) => sum + amount, 0)
+  const allocated = allocatePreset(presetId, total, s.primeRate)
+  return (
+    allocated.length === amounts.length &&
+    allocated.every((track, index) => track.amount === amounts[index])
+  )
+}
+
+/**
  * Snap for loan-defining inputs (starting amount, property value, capital):
  * the legacy proportional snap keeps empty tracks at zero, so typing a loan
  * while other tracks are blank dumps the whole amount into whichever single
@@ -526,7 +547,11 @@ function fillTracksFromLoanInput(s: CalculatorState): void {
     preset !== null &&
     preset.length === s.tracks.length &&
     preset.every((definition, index) => definition.type === s.tracks[index].type)
-  if (loanAmount > 0 && amounts.some((amount) => amount === 0) && lineupMatches) {
+  if (
+    loanAmount > 0 &&
+    lineupMatches &&
+    (amounts.some((amount) => amount === 0) || amountsMirrorPreset(s, s.activePreset!))
+  ) {
     const before = s.tracks.map((track) => track.amountText)
     const allocated = allocatePreset(s.activePreset!, loanAmount, s.primeRate)
     s.tracks.forEach((track, index) => {

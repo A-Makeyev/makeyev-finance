@@ -272,6 +272,46 @@ test.describe('mortgage calculator - core UI flows', () => {
     expect(rect.right).toBeLessThanOrEqual(rect.viewport + 1)
   })
 
+  test('typing the home price keeps the mix and shows the tax ladder', async () => {
+    // Typing passes through sub-₪1,000 values, where the recommended mix's
+    // shares cannot be split across the tracks in whole shekels. The mix must
+    // still be the recommended 40/34/26 afterwards - the drifting 40/30/30
+    // carries 70% variable, trips the BoI 2/3 cap and freezes the summary, so
+    // the 💡 tax line and its ladder vanish while the price reads ₪100M.
+    await calc.propertyValue.click()
+    await calc.propertyValue.pressSequentially('100000000', { delay: 10 })
+    await expect(calc.propertyValue).toHaveValue('100,000,000')
+    await expect(calc.formError).toBeHidden()
+    await expect(calc.track(1).amount()).toHaveValue('40,000,000')
+    await expect(calc.track(2).amount()).toHaveValue('34,000,000')
+    await expect(calc.track(3).amount()).toHaveValue('26,000,000')
+
+    // The 💡 tax line is there, and the ladder behind it opens on the same tax.
+    await expect(calc.summaryNotes).toContainText('מס רכישה')
+    await expect(calc.summaryNotes).toContainText(ils(9_310_215))
+    const breakdown = calc.page.getByTestId('purchase-tax-breakdown')
+    await expect(breakdown).toBeVisible()
+    await breakdown.locator('summary').click()
+    await expect(breakdown.locator('tfoot')).toContainText(ils(9_310_215))
+  })
+
+  test('typing the loan amount keeps the mix and shows the tax ladder', async () => {
+    // Same keyed-digits exposure as the home price: the loan walks through
+    // sub-₪1,000 values while typing, and the final mix must still be the
+    // recommended 40/34/26 (a drifting 40/30/30 trips the BoI 2/3 cap and
+    // freezes the summary behind the error). Loan-only basis: 2,000,000 is
+    // past the 1,978,745 exemption, so the 💡 tax line and its ladder show.
+    await calc.startingAmount.fill('')
+    await calc.startingAmount.pressSequentially('2000000', { delay: 10 })
+    await expect(calc.startingAmount).toHaveValue('2,000,000')
+    await expect(calc.formError).toBeHidden()
+    await expect(calc.track(1).amount()).toHaveValue('800,000')
+    await expect(calc.track(2).amount()).toHaveValue('680,000')
+    await expect(calc.track(3).amount()).toHaveValue('520,000')
+    await expect(calc.summaryNotes).toContainText(ils(744))
+    await expect(calc.page.getByTestId('purchase-tax-breakdown')).toBeVisible()
+  })
+
   test('home-price input caps at ₪100M', async () => {
     // Typing 150M clamps to 100,000,000 (grouped); every derived figure (the
     // summary tax line among them) then derives from the capped value.
