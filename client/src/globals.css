@@ -3429,7 +3429,15 @@ e #name,
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1160px) {
+  /* The costs row folds to two columns as soon as the shell starts shrinking
+     (the shell is min(1120px, 100% - 40px), so 1160px is its full width plus
+     the gutters). Four columns only hold while the panel is at its widest:
+     each fee pair then gets 293px, which leaves the ₪ amount a 125px field.
+     Narrower than that the percent hits its 100px floor and every further
+     pixel comes off the amount - at 940px it was down to 72px, hiding the
+     leading digits of amounts like "23,600". Folded to two columns the pair
+     has ~380px per cell and the amount keeps ~176px. */
   .costs-row {
     grid-template-columns: 1fr 1fr;
     gap: 14px;
@@ -3437,10 +3445,6 @@ e #name,
 }
 
 @media (max-width: 480px) {
-  .costs-row {
-    grid-template-columns: 1fr;
-  }
-
   .expense-row .input-group {
     flex-basis: 0;
   }
@@ -5209,6 +5213,15 @@ tbody tr:hover {
   .calculator-panel,
   .schedule-section {
     padding: 20px 14px;
+  }
+
+  /* The two-column costs row runs out of room here: half of a ~600px panel
+     leaves each fee pair ~290px, and once the percent is at its 100px floor
+     the ₪ amount is down to ~125px (at 480px it fell to 53px, hiding most of
+     the number). Stacked one per line every field gets the full panel width
+     again, same as the lone appraiser / renovations amounts. */
+  .costs-row {
+    grid-template-columns: 1fr;
   }
 
   .panel-heading h2,

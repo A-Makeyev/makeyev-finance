@@ -19,6 +19,10 @@ if (!process.env.VISUAL_QA) {
 const SHOT_DIR = 'test-results/visual-qa'
 const VIEWPORTS = [
   { width: 360, height: 800, tag: '360' },
+  // Tablet / small-laptop width: the costs row used to squeeze the ₪ side of
+  // the realtor / lawyer fee pairs here (see the layout test in
+  // calculator.spec.ts).
+  { width: 1024, height: 900, tag: '1024' },
   { width: 1280, height: 900, tag: '1280' },
 ]
 

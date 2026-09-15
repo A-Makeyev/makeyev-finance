@@ -70,6 +70,49 @@ test.describe('mortgage calculator - core UI flows', () => {
     }
   })
 
+  test('fee amounts keep the room to show a full ₪ figure at every width', async () => {
+    // Regression: the costs row's four columns squeezed the ₪ side of the
+    // realtor / lawyer pairs - the percent sits on a 100px floor, so every
+    // pixel the row lost came off the amount, leaving it 72px at 940px and
+    // 53px at 481px. The leading digits of a real fee ("23,600") were hidden
+    // while the field looked fine. The row must fold to fewer columns before
+    // the amount runs out of room. 940 and 560 are the widths that used to
+    // squeeze the pair; the rest guard the other layouts around them.
+    const widths = [1440, 1160, 1024, 940, 700, 560, 360]
+    for (const width of widths) {
+      await calc.page.setViewportSize({ width, height: 900 })
+      await calc.page.locator('[data-testid="lawyer-amount"]').scrollIntoViewIfNeeded()
+      // String-form evaluate: the e2e tsconfig has no DOM lib.
+      const metrics = (await calc.page.evaluate(`(() => {
+        const ctx = document.createElement('canvas').getContext('2d')
+        const digits = '1,000,000'
+        const fields = ['realtor-amount', 'lawyer-amount'].map((id) => {
+          const el = document.querySelector('[data-testid="' + id + '"]')
+          const cs = getComputedStyle(el)
+          ctx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily
+          const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+          return {
+            room: el.clientWidth - pad,
+            needed: ctx.measureText(digits).width,
+          }
+        })
+        return {
+          fields,
+          overflow:
+            document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        }
+      })()`)) as { fields: { room: number; needed: number }[]; overflow: number }
+
+      for (const field of metrics.fields) {
+        expect(
+          field.room,
+          `₪ text area at ${width}px (needs ${Math.ceil(field.needed)})`,
+        ).toBeGreaterThanOrEqual(field.needed)
+      }
+      expect(metrics.overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(1)
+    }
+  })
+
   test('preset baskets populate tracks and highlight selection', async () => {
     // תמהיל 2 = two tracks (fixed + prime, half each).
     await calc.selectPreset('basket2')
