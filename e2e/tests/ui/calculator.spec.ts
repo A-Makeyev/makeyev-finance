@@ -300,9 +300,6 @@ test.describe('mortgage calculator - core UI flows', () => {
     expect(taxColStyles[0]).toBe(taxColStyles[2])
     expect(taxColStyles[0]).not.toBe(taxColStyles[1])
 
-    // The 30-day deadline rides the total row as a caption.
-    await expect(breakdown.locator('.tax-total-deadline')).toContainText('30')
-
     // Narrow phone width: the ladder stays inside the panel.
     await calc.page.setViewportSize({ width: 360, height: 900 })
     await expect(breakdown).toBeVisible()

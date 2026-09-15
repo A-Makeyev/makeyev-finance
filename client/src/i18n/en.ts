@@ -482,7 +482,7 @@ export const en: { translation: Translation } = {
         monthlyAllowanceNone_other:
           'No room for a mortgage payment over a <0>{{term}}</0>-year term: the monthly payments (<1>{{liabilities}}</1>) already cover the income (<2>{{income}}</2>)',
         feeAboveNormItem:
-          '{{fee}} <0>{{percent}}%</0> is above the market norm <1>{{normPercent}}%</1> ~ should cost <2>{{normAmount}}</2>',
+          'Payment of <0>{{percent}}%</0> for {{fee}} is above the market norm of <1>{{normPercent}}%</1> (<2>{{normAmount}}</2>)',
         transactionCosts: 'Expected transaction fees: {{items}}',
         upfrontTotal: 'Total capital recommended to complete the deal: <0>{{total}}</0>',
         purposeFirst: 'first home',
@@ -501,7 +501,6 @@ export const en: { translation: Translation } = {
         total: 'Total tax due',
         current: 'Current bracket',
         notReached: '-',
-        deadline: 'Paid within 30 days of signing the sale contract',
       },
       schedule: {
         heading: 'Expected payments table',

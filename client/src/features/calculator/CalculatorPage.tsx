@@ -494,7 +494,9 @@ export function CalculatorPage() {
                 every bracket, each band's amounts filled once the value
                 reaches it (unreached ones with "-"), the total row quotes the
                 same exact tax as the summary, and the band the value
-                falls into carries an accent border. Only when tax is charged. */}
+                falls into carries an accent border. Always shown when a value
+                basis exists - below the exemption the 0% band just reads as
+                the full value at zero tax. */}
             {vm.taxBreakdown && (
               <details className="tax-breakdown" data-testid="purchase-tax-breakdown">
                 <summary>
@@ -537,11 +539,6 @@ export function CalculatorPage() {
                     <tr className="tax-total-row">
                       <th scope="row" colSpan={3}>
                         {t('calculator.taxBreakdown.total')}
-                        {/* The statutory payment window rides the total row:
-                            the figure and its deadline read as one fact. */}
-                        <span className="tax-total-deadline">
-                          {t('calculator.taxBreakdown.deadline')}
-                        </span>
                       </th>
                       <td className="tax-col">{vm.taxBreakdown.totalText}</td>
                     </tr>

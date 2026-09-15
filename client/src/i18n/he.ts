@@ -470,7 +470,7 @@ export const he = {
         monthlyAllowanceNone_other:
           'אין מקום להחזר משכנתא לתקופה של <0>{{term}}</0> שנים: התשלומים החודשיים (<1>{{liabilities}}</1>) מכסים את כל ההכנסה (<2>{{income}}</2>)',
         feeAboveNormItem:
-          '{{fee}} <0>{{percent}}%</0> גבוה מהנורמה המקובלת בשוק <1>{{normPercent}}%</1> ~ אמור לעלות <2>{{normAmount}}</2>',
+          'תשלום <0>{{percent}}%</0> עבור {{fee}} גבוה מהנורמה המקובלת בשוק שהיא <1>{{normPercent}}%</1> (<2>{{normAmount}}</2>)',
         transactionCosts: 'עלויות עסקה צפויות: {{items}}',
         upfrontTotal: 'סה"כ הון עצמי מומלץ לביצוע העסקה: <0>{{total}}</0>',
         purposeFirst: 'דירה ראשונה',
@@ -489,7 +489,6 @@ export const he = {
         total: 'סה"כ מס לתשלום',
         current: 'מדרגה נוכחית',
         notReached: '-',
-        deadline: 'משולם תוך 30 יום מחתימת חוזה המכר',
       },
       schedule: {
         heading: 'טבלת החזרים צפויים',

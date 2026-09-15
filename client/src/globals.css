@@ -3113,17 +3113,6 @@ e #name,
   color: var(--calc-accent);
 }
 
-/* The 30-day payment deadline next to the total label: a quieter caption
-   that reads as one fact with the figure beside it. */
-.tax-total-deadline {
-  display: block;
-  margin-block-start: 2px;
-  font-size: 0.8rem;
-  font-weight: 400;
-  line-height: 1.4;
-  color: var(--calc-muted);
-}
-
 /* Text for assistive tech only - keeps the visual table free of a marker tag
    that would crowd the columns. */
 .visually-hidden {

@@ -229,10 +229,10 @@ export function useCalculatorViewModel() {
   // the tax it carries - so the displayed rows add up to the total row, and
   // the total equals the summary's 💡 figure (the exact bracket tax). A band
   // fills only once the value reaches it; an unreached band shows a dash in
-  // its amount columns. Only built when tax is actually charged - the exempt
-  // case already reads as the single "tax-free up to X" line.
+  // its amount columns. Always built when a value basis exists - below the
+  // exemption the 0% band simply covers the whole value at zero tax.
   const taxBreakdown = (() => {
-    if (snapshot.closingCosts === null || snapshot.closingCosts.purchaseTax <= 0) return null
+    if (snapshot.closingCosts === null) return null
     const breakdown = purchaseTaxBreakdown(effectiveValue, purpose)
     if (breakdown === null) return null
     const dash = t('calculator.taxBreakdown.notReached')
