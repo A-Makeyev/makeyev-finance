@@ -70,9 +70,12 @@ function isHebrew(language: Language): boolean {
 
 export function applyDocumentDirection(pathname: string): void {
   const language: Language = i18n.language.startsWith('he') ? 'hebrew' : 'english'
-  // Arabic/Hebrew calculator stays RTL; English is LTR so all text and
-  // controls read left-to-right.
-  const rtl = pathname.startsWith('/calculators') && isHebrew(language)
+  // The Hebrew calculator AND comparison page stay RTL (both are
+  // Hebrew-language mortgage tools); English is LTR everywhere so all text
+  // and controls read left-to-right.
+  const rtl =
+    (pathname.startsWith('/calculators') || pathname.startsWith('/compare')) &&
+    isHebrew(language)
   document.documentElement.dir = rtl ? 'rtl' : 'ltr'
 }
 

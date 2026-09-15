@@ -1,0 +1,54 @@
+Ideas for my business
+~~~~~~~~~~~~~~~~~~~~~
+
+1) Make wall sticker with QR code to my website, with saying free wifi
+
+2) 
+
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+add affiliate next to lawyer, realtor etc
+
+email about rate change (change to node mailer)
+
+
+recommend mix based on investor or home owner who lives there
+compare mortgage mixes
+
+
+הסבר על כל תמהיל
+מה כדאי לסגור קודם
+איזה מסלול לעשות שפיצר ואיזה קרן שווה
+
+
+investment property or home to live?
+add mix based on logic, investment input how much rent you get -> mortgage should be 30 years
+rent bigger to home payment
+
+to live should finish faster and pay less rates
+
+
+make login, roles, save to mongodb, save users mortgage, pension details, tasks, remindeds
+save advisors clients, details
+
+
+add articles, based on mortgage book
+
+
+users panel, each client gets page with his details
+
+advisor panel, more tools, crm app
+quick links to bank, needed files
+
+
+display his mortgage, loans, pension etc
+how long left, suggest improvments
+ai chat ?
+
+
+ 
+ 

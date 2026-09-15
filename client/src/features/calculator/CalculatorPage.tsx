@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPrimeRatePercent } from '@/services/boi'
 import { useCalculatorStore } from '@/stores/calculatorStore'
+import { seedFromCalculator } from '@/stores/comparisonStore'
 import { MAX_OTHER_EXPENSES, MAX_TRACKS, MAX_YEARS, type PropertyPurpose } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenaltyFacts'
@@ -23,6 +24,7 @@ import { useCalculatorViewModel, type NoteLine } from './useCalculatorViewModel'
  */
 export function CalculatorPage() {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
   // Expense rows playing their exit animation - the row is removed from the
@@ -75,6 +77,25 @@ export function CalculatorPage() {
   useEffect(() => {
     document.title = t('meta.calculatorsTitle')
   }, [t])
+
+  /** Seed the comparison with the current mix + inputs, then navigate there. */
+  const openComparison = () => {
+    seedFromCalculator({
+      propertyValueText: useCalculatorStore.getState().propertyValueText,
+      capitalText: useCalculatorStore.getState().capitalText,
+      incomeText: useCalculatorStore.getState().incomeText,
+      purpose: useCalculatorStore.getState().purpose,
+      realtorPercentText: useCalculatorStore.getState().realtorPercentText,
+      lawyerPercentText: useCalculatorStore.getState().lawyerPercentText,
+      appraiserFeeText: useCalculatorStore.getState().appraiserFeeText,
+      renovationAmountText: useCalculatorStore.getState().renovationAmountText,
+      otherExpenses: useCalculatorStore.getState().otherExpenses,
+      ptiThresholdPercent: useCalculatorStore.getState().ptiThresholdPercent,
+      termYears: useCalculatorStore.getState().termYears,
+      tracks: useCalculatorStore.getState().tracks,
+    })
+    navigate('/compare')
+  }
 
   const store = {
     startingAmountText: useCalculatorStore((s) => s.startingAmountText),
@@ -175,16 +196,27 @@ export function CalculatorPage() {
             <div>
               <h2>{t('calculator.panelHeading')}</h2>
             </div>
-            <button
-              id="reset-calculator"
-              data-testid="reset-calculator"
-              className="reset-button"
-              type="button"
-              disabled={!canReset}
-              onClick={() => setResetConfirmOpen(true)}
-            >
-              {t('calculator.reset')}
-            </button>
+            <div className="panel-heading-actions">
+              <button
+                id="open-comparison"
+                data-testid="open-comparison"
+                className="reset-button"
+                type="button"
+                onClick={openComparison}
+              >
+                {t('compare.openFromCalculator')}
+              </button>
+              <button
+                id="reset-calculator"
+                data-testid="reset-calculator"
+                className="reset-button"
+                type="button"
+                disabled={!canReset}
+                onClick={() => setResetConfirmOpen(true)}
+              >
+                {t('calculator.reset')}
+              </button>
+            </div>
           </div>
 
           <form id="mortgage-form" noValidate onSubmit={handleSubmit}>

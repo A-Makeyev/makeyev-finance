@@ -5876,3 +5876,335 @@ tbody tr:hover {
     padding: 12px 14px;
   }
 }
+
+/* ===========================================================================
+   COMPARE PAGE (/compare) - side-by-side mortgage scenario comparison.
+   Reuses the calculator's field classes (input-group/input-wrap/mortgage-track)
+   and its theme tokens (--calc-*), so RTL mirroring and dark mode come from
+   the same machinery. Layout logic is direction-agnostic (logical properties
+   only) and switches table -> stacked cards at 768px via useMediaQuery.
+=========================================================================== */
+.compare-shell {
+  width: min(1240px, calc(100% - 40px));
+  margin: -76px auto 80px;
+  position: relative;
+  z-index: 2;
+}
+
+.compare-subtitle {
+  color: var(--calc-muted);
+  margin: 0 0 18px;
+  font-size: 1.05rem;
+}
+
+.compare-shared {
+  background: var(--calc-paper);
+  border: 1px solid rgba(8, 127, 120, 0.14);
+  box-shadow: 0 20px 55px rgba(22, 50, 53, 0.1);
+  padding: 26px 30px;
+  margin-bottom: 26px;
+}
+
+.compare-shared h2 {
+  margin: 0 0 16px;
+  font-size: 1.35rem;
+  color: var(--calc-ink);
+}
+
+.compare-shared-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.compare-shared-note {
+  margin: 14px 0 0;
+  font-size: 0.95rem;
+  color: var(--calc-muted);
+}
+
+.compare-shared-note a {
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+}
+
+.compare-editors {
+  margin-bottom: 26px;
+}
+
+.compare-editors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.compare-scenario-editor {
+  background: var(--calc-paper);
+  border: 1px solid rgba(8, 127, 120, 0.14);
+  box-shadow: 0 20px 55px rgba(22, 50, 53, 0.1);
+  padding: 20px 22px 22px;
+  height: 100%;
+}
+
+.compare-scenario-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.compare-scenario-name {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--calc-ink);
+  background: var(--calc-input-bg);
+  border: 1px solid var(--calc-line);
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+.compare-icon-button {
+  border: 0;
+  background: transparent;
+  color: var(--calc-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 4px 6px;
+}
+
+.compare-icon-button:hover {
+  color: var(--danger);
+}
+
+.compare-term-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  color: var(--calc-ink);
+  flex-wrap: wrap;
+}
+
+.compare-track {
+  margin-bottom: 14px;
+}
+
+/* The duplicate control rides the legend, inline after its text. */
+.compare-track legend .compare-duplicate {
+  margin-inline-start: 8px;
+  font-size: 0.95rem;
+}
+
+.compare-add-scenario {
+  display: block;
+  margin: 4px auto 0;
+  border: 1px solid var(--calc-line);
+  background: transparent;
+  color: var(--calc-teal-dark);
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 26px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.compare-add-scenario:hover {
+  background: var(--calc-soft);
+}
+
+/* Comparison table: scenarios as columns, metrics as rows. */
+.compare-table-wrap {
+  background: var(--calc-paper);
+  border: 1px solid rgba(8, 127, 120, 0.14);
+  box-shadow: 0 20px 55px rgba(22, 50, 53, 0.1);
+  padding: 10px 18px 18px;
+  overflow-x: auto;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--calc-ink);
+}
+
+.compare-table th,
+.compare-table td {
+  text-align: start;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--calc-line);
+  vertical-align: top;
+}
+
+.compare-table thead th {
+  font-size: 1.05rem;
+  color: var(--calc-teal-dark);
+}
+
+.compare-table tbody th {
+  color: var(--calc-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.compare-table td {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.compare-table td.best {
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+}
+
+.compare-best-badge {
+  display: inline-block;
+  margin-inline-start: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--calc-teal);
+  border-radius: 999px;
+  padding: 2px 9px;
+  vertical-align: middle;
+}
+
+.compare-status-list {
+  display: grid;
+  gap: 6px;
+  white-space: normal;
+}
+
+.compare-status {
+  display: block;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.compare-status.ok {
+  color: var(--calc-accent);
+}
+
+.compare-status.bad {
+  color: var(--danger);
+}
+
+.compare-status.muted {
+  color: var(--calc-muted);
+}
+
+.compare-card {
+  background: var(--calc-paper);
+  border: 1px solid rgba(8, 127, 120, 0.14);
+  box-shadow: 0 20px 55px rgba(22, 50, 53, 0.1);
+  padding: 20px 22px;
+  color: var(--calc-ink);
+}
+
+.compare-card h2 {
+  margin: 0 0 14px;
+  font-size: 1.2rem;
+  color: var(--calc-teal-dark);
+}
+
+.compare-card-metrics {
+  margin: 0 0 14px;
+}
+
+.compare-card-metrics > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--calc-line);
+}
+
+.compare-card-metrics > div.best dd {
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+}
+
+.compare-card-metrics dt {
+  color: var(--calc-muted);
+  font-size: 0.92rem;
+}
+
+.compare-card-metrics dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.compare-switcher {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.compare-switcher button {
+  flex: 1 1 auto;
+  border: 1px solid var(--calc-line);
+  background: var(--calc-paper);
+  color: var(--calc-muted);
+  font: inherit;
+  font-weight: 700;
+  padding: 9px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compare-switcher button.active {
+  background: var(--calc-teal);
+  border-color: var(--calc-teal);
+  color: #fff;
+}
+
+.compare-disclaimer {
+  margin: 18px 0 0;
+  color: var(--calc-muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 760px) {
+  .compare-shared-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .compare-shared {
+    padding: 20px 16px;
+  }
+
+  .compare-shared-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-scenario-editor {
+    padding: 18px 14px 16px;
+  }
+
+  /* The metric label ("Total payments over 25 years") and its value finally
+     share a row instead of squeezing: wrap under the label when tight. */
+  .compare-card-metrics > div {
+    flex-wrap: wrap;
+  }
+}
+
+/* Heading-actions row on the calculator panel: compare CTA + reset side by
+   side, both keeping the quiet reset-button styling. */
+.panel-heading-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}

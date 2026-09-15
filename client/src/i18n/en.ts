@@ -97,7 +97,7 @@ export const en: { translation: Translation } = {
     education: {
       movingChecklist: {
         intro:
-          'Moving is where small forgotten things get expensive: accounts left in the previous resident\'s name, meters nobody photographed, deposits left with the landlord. This list gathers what actually needs transferring, and in what order.',
+          "Moving is where small forgotten things get expensive: accounts left in the previous resident's name, meters nobody photographed, deposits left with the landlord. This list gathers what actually needs transferring, and in what order.",
         documentsLead:
           'Before you start: gather the documents every provider will ask for up front, instead of chasing them one at a time. Usually required: a signed lease or purchase agreement, the ID of both the outgoing and incoming resident, and often a photocopy of the ID including the sefach (the ID attachment page).',
         sections: {
@@ -122,8 +122,8 @@ export const en: { translation: Translation } = {
             title: 'Photograph the meters on moving day',
             items: [
               'Photograph the electricity meter and the water meter on move-in day and on move-out day, with a clear reading.',
-              'Why it matters: without a dated photo of the reading, you can end up billed for the previous or next occupant\'s usage.',
-              'Document the apartment\'s condition with photos and video on move-in and move-out day, next to the meter shots, to prevent damage disputes.',
+              "Why it matters: without a dated photo of the reading, you can end up billed for the previous or next occupant's usage.",
+              "Document the apartment's condition with photos and video on move-in and move-out day, next to the meter shots, to prevent damage disputes.",
             ],
             callout:
               'Property owners: if outgoing residents leave without transferring accounts into their own names, and new residents do not register in time, the debt can land on you as the owner. Make sure the accounts were actually updated, not just "in process".',
@@ -170,9 +170,12 @@ export const en: { translation: Translation } = {
             text: 'After 3 years from the start of the loan the penalty is reduced by 20%, and after 5 years by 30%.',
           },
         },
-        whyPrime: 'The difference comes from prime already tracking the Bank of Israel variable rate, so the bank has no future profit locked into the agreement that early repayment takes away. On a fixed-rate track the bank committed to a fixed rate for years, and repaying early when market rates have fallen takes away that gap.',
-        timing: 'Before repaying early, ask the bank for the fee breakdown in writing and check when the next rate reset of the track falls ~ sometimes waiting for the reset saves the whole penalty.',
-        disclaimer: 'This information is general, does not depend on your calculation, and is not advice or an offer. The penalty is set by the loan agreement and by Bank of Israel rules.',
+        whyPrime:
+          'The difference comes from prime already tracking the Bank of Israel variable rate, so the bank has no future profit locked into the agreement that early repayment takes away. On a fixed-rate track the bank committed to a fixed rate for years, and repaying early when market rates have fallen takes away that gap.',
+        timing:
+          'Before repaying early, ask the bank for the fee breakdown in writing and check when the next rate reset of the track falls ~ sometimes waiting for the reset saves the whole penalty.',
+        disclaimer:
+          'This information is general, does not depend on your calculation, and is not advice or an offer. The penalty is set by the loan agreement and by Bank of Israel rules.',
         articleLink: 'Read the full article',
         backToArticles: 'Back to all articles',
       },
@@ -524,6 +527,64 @@ export const en: { translation: Translation } = {
         expandToYears: 'Show breakdown for {{years}} years',
         collapseToFifteen: 'Show first 15 years',
       },
+    },
+    compare: {
+      metaTitle: 'Mortgage comparison | Makeyev Finance',
+      heading: 'Mortgage scenario comparison',
+      subtitle: 'Same property, same capital, same income - different mortgage mixes side by side.',
+      openFromCalculator: 'Compare mixes',
+      // Shared inputs (describing the buyer and the property, entered once).
+      sharedInputsHeading: 'Property and buyer',
+      purposeLabel: 'Purpose of purchase',
+      propertyValueLabel: 'Property value',
+      capitalLabel: 'Initial capital',
+      incomeLabel: 'Net monthly income',
+      // Scenario column/section headers.
+      scenarioLabelAria: 'Scenario name',
+      scenarioUntitle: 'Scenario {{index}}',
+      scenarioRemove: 'Remove scenario',
+      scenarioDuplicate: 'Duplicate scenario',
+      scenarioAdd: 'Add scenario +',
+      scenarioTermLabel: 'Term',
+      scenarioTermSuffix: 'years',
+      trackAdd: 'Add track +',
+      trackLegend: 'Track {{index}}',
+      trackRemoveAria: 'Remove track',
+      trackAmountLabel: 'Amount',
+      trackYearsLabel: 'Term',
+      trackYearsSuffix: 'years',
+      trackRateLabel: 'Rate',
+      trackTypeLabel: 'Track type',
+      trackMethodLabel: 'Amortization',
+      // Comparison table: metric rows (vocabulary mirrors calculator.results).
+      metricFirstPayment: 'First monthly payment',
+      metricRateUp: 'If rates rise by 1%',
+      metricTotalPayment: 'Total payments over {{years}} years',
+      metricTotalInterest: 'Total interest',
+      metricWeightedRate: 'Weighted average rate',
+      metricOverpay: 'Total cost of credit',
+      metricPayback: 'Average payback ratio',
+      metricTerm: 'Term',
+      metricTermValue: '{{years}} years',
+      metricMix: 'Track mix',
+      metricUpfront: 'Total capital recommended to complete the deal',
+      metricLoan: 'Total mortgage',
+      // Regulatory status per scenario.
+      statusHeading: 'Regulatory status',
+      statusLtvOk: 'Financing within limit',
+      statusLtvOver: 'Financing above the limit ({{percent}}% over {{limit}}%)',
+      statusDtiOk: 'Income sufficient (DTI)',
+      statusDtiOver: 'DTI: income of at least {{minIncome}} required',
+      statusPtiOk: 'Payment within the recommended ceiling',
+      statusPtiOver: 'Above the {{threshold}}%-of-income payment ceiling',
+      statusEmpty: 'Add tracks to see figures',
+      statusErrorPositive: 'Enter a positive amount and a 1-30 year term in every track',
+      statusErrorVariableCap: 'Exceeds the Bank of Israel two-thirds variable-rate cap',
+      // Mobile stacked view.
+      scenarioSwitcherAria: 'Switch between scenarios',
+      bestBadge: 'Best',
+      disclaimer:
+        'This comparison uses the same calculations as the main calculator and is a general estimate only - not an offer or loan approval.',
     },
     indexesBar: {
       monthlyChange: 'Monthly change',

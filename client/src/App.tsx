@@ -7,6 +7,7 @@ import { QuestionWishlistToast } from '@/components/wishlist/QuestionWishlistToa
 import { HomePage } from '@/pages/HomePage'
 import { ServicesPage } from '@/pages/ServicesPage'
 import { CalculatorPage } from '@/features/calculator/CalculatorPage'
+import { ComparePage } from '@/features/compare/ComparePage'
 import { ArticlesPage } from '@/pages/ArticlesPage'
 import { PrepaymentPenaltyArticlePage } from '@/pages/PrepaymentPenaltyArticlePage'
 import { MovingChecklistArticlePage } from '@/pages/MovingChecklistArticlePage'
@@ -33,6 +34,7 @@ export function App() {
             <Route index element={<HomePage />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/calculators" element={<CalculatorPage />} />
+            <Route path="/compare" element={<ComparePage />} />
             <Route path="/articles" element={<ArticlesPage />} />
             <Route
               path="/articles/prepayment-penalties"
