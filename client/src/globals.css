@@ -5043,6 +5043,15 @@ tbody tr:hover {
     grid-template-columns: repeat(3, 1fr);
   }
 
+  /* Desktop's 2-cell span assumed a 5-column grid (3 featured cards + toggle
+     = one row). In the 3-column grid it leaves the toggle under the first two
+     cards with the third cell empty - visibly off center, in both directions.
+     Full row here so the centered label sits under the middle card, matching
+     how the toggle already reads at ≤800px. */
+  .results-toggle {
+    grid-column: 1 / -1;
+  }
+
   /* Donut and per-track chart stack once the side-by-side band gets tight,
      each centered on the row - chart on top, donut below it. */
   .per-track-band,
