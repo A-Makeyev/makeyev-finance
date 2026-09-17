@@ -3807,7 +3807,13 @@ e #name,
 }
 
 .calculator-panel input,
-.calculator-panel select {
+.calculator-panel select,
+/* The compare page reuses .input-wrap / .select-wrap outside .calculator-panel,
+   so its fields need the same base sizing (fluid width, no UA border, panel
+   type). :where() keeps the compound at the calculator rule's own specificity,
+   so control-specific rules - .compare-scenario-name, the range input in
+   .term-slider-wrap - still win. */
+.compare-shell :where(input, select) {
   width: 100%;
   min-width: 0;
   border: 0;
@@ -5228,7 +5234,8 @@ tbody tr:hover {
   }
 
   .calculator-panel input,
-  .calculator-panel select {
+  .calculator-panel select,
+  .compare-shell :where(input, select) {
     font-size: 0.85rem;
     padding: 10px;
   }
@@ -5891,6 +5898,64 @@ tbody tr:hover {
   z-index: 2;
 }
 
+/* Way back to the calculator (the page normally opens from there) - replaces
+   the link that used to sit in the shared card wearing the calculator's own
+   "compare mixes" label. */
+.compare-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+  white-space: nowrap;
+  font-size: 0.95rem;
+  /* Hover affordance is the color shift plus the arrow nudge - no underline.
+     The nudge rides the `translate` property, which composes with the RTL
+     mirror's `transform` below instead of overwriting it. */
+  transition: color 160ms ease;
+}
+
+.compare-back:hover,
+.compare-back:focus-visible {
+  color: var(--calc-accent);
+}
+
+.compare-back-icon {
+  line-height: 1;
+  transition: translate 160ms ease;
+}
+
+.compare-back:hover .compare-back-icon {
+  /* The icon points toward the inline end (mirrored under RTL), so the nudge
+     follows its own pointing. `translate` applies in parent space, outside
+     the RTL mirror's `transform`, hence the explicit per-direction sign. */
+  translate: 3px 0;
+}
+
+/* "Back" points the way the layout reads: the arrow is mirrored under RTL,
+   where forward runs right-to-left - and its hover nudge flips with it. */
+:root[dir='rtl'] .compare-back-icon {
+  transform: scaleX(-1);
+}
+
+:root[dir='rtl'] .compare-back:hover .compare-back-icon {
+  translate: -3px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compare-back,
+  .compare-back-icon {
+    transition: none;
+  }
+
+  /* Match the RTL hover rule's specificity so the nudge really dies in
+     Hebrew too, not just in LTR. */
+  .compare-back:hover .compare-back-icon,
+  :root[dir='rtl'] .compare-back:hover .compare-back-icon {
+    translate: none;
+  }
+}
+
 .compare-subtitle {
   color: var(--calc-muted);
   margin: 0 0 18px;
@@ -5906,26 +5971,41 @@ tbody tr:hover {
 }
 
 .compare-shared h2 {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 1.35rem;
   color: var(--calc-ink);
 }
 
+/* Heading row: the section title and the way back to the calculator sit on
+   the same line, at opposite sides, flipping with direction. */
+.compare-shared-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 50px;
+}
+
+/* auto-fit with a 300px floor rather than a fixed 4 columns: the widest purpose
+   option ("דירה להשקעה (50% מימון)" / "Investment property (50% financing)")
+   needs ~295px of field, so the old 4-column row clipped it to half words
+   between 900 and 1100px and the select's own value at 1024px. The grid now
+   breaks to fewer columns (3 up on the widest shell, 2 down to ~750px, 1 on
+   phones) instead of squeezing a select below its text. */
 .compare-shared-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 18px;
 }
 
-.compare-shared-note {
-  margin: 14px 0 0;
-  font-size: 0.95rem;
-  color: var(--calc-muted);
-}
-
-.compare-shared-note a {
-  color: var(--calc-teal-dark);
-  font-weight: 700;
+/* Other-expense rows in the shared card: the calculator's block (same row
+   markup and styles), separated from the buyer-input grid above by a
+   hairline so it reads as its own group. */
+.compare-expenses {
+  margin-block-start: 20px;
+  padding-block-start: 16px;
+  border-block-start: 1px dashed var(--calc-line);
 }
 
 .compare-editors {
@@ -5965,6 +6045,52 @@ tbody tr:hover {
   padding: 8px 12px;
 }
 
+/* סכום המשכנתא row inside the scenario editor: same label-over-input shape
+   as the calculator's .starting-amount, compacted for a 300-610px column. */
+.compare-sum-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--calc-muted);
+}
+
+.compare-sum-row .input-wrap {
+  width: 100%;
+}
+
+/* Preset mixes (תמהיל 1-4): the calculator's .preset-list/.preset-button
+   restyled for the scenario column with the same active treatment. */
+.compare-preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.compare-preset-button {
+  border: 1px solid var(--calc-line);
+  color: var(--calc-muted);
+  background: var(--calc-field);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.compare-preset-button:hover,
+.compare-preset-button.active {
+  border-color: var(--calc-teal);
+  color: white;
+  background: linear-gradient(85deg, var(--calc-teal), var(--calc-accent));
+}
+
 .compare-icon-button {
   border: 0;
   background: transparent;
@@ -5980,17 +6106,106 @@ tbody tr:hover {
   color: var(--danger);
 }
 
+/* Scenario term row: the slider claims its own full-width line under the
+   "term" label / "N years" value pair (it was squeezed into 187px of the row
+   and wrapped unpredictably at narrow column widths). The bottom padding
+   mirrors .starting-point on the calculator page - it reserves the strip the
+   slider's value bubble drops into, so the bubble clears the first track. */
 .compare-term-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding-bottom: 24px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--calc-line);
   color: var(--calc-ink);
   flex-wrap: wrap;
 }
 
-.compare-track {
+.compare-term-row > span {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--calc-teal-dark);
+}
+
+.compare-term-row .term-slider-wrap {
+  /* order 2: the "N years" value stays on the label line (visually after the
+     label), while the slider wraps below both. */
+  order: 2;
+  flex: 1 1 100%;
+  min-width: 0;
+  height: 44px;
+  margin-top: 0;
+}
+
+.compare-term-row .slider-current {
+  /* Same geometry as the calculator's slider, but the shorter 44px row means
+     the bubble needs one notch less before it clears the row. */
+  top: 40px;
+}
+
+/* The calculator's fieldset is a 5-column row sized for its wide panel; a
+   comparison column is 300-610px wide, where those columns (plus the fields'
+   intrinsic width) pushed the whole fieldset - and its absolutely positioned
+   remove button - hundreds of pixels outside its card. Compact it to two
+   fluid columns with the intrinsic minimums switched off, and let the long
+   fields (track type, amount, amortization method) take the full width.
+
+   Every layout rule below is prefixed with .compare-shell because the
+   calculator's own track overrides (≤1000px six-column spans, ≤650px single
+   column) also match this fieldset: with a two-column grid their spans pushed
+   the grid into implicit columns, so the specificity has to win regardless of
+   the two blocks' order in this file. */
+.compare-shell .compare-track {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+  --track-pad-inline: 16px;
+  padding: 24px var(--track-pad-inline) 16px;
   margin-bottom: 14px;
+}
+
+.compare-shell .compare-track .input-group:nth-of-type(1),
+.compare-shell .compare-track .input-group:nth-of-type(2),
+.compare-shell .compare-track .input-group:nth-of-type(5) {
+  grid-column: 1 / -1;
+}
+
+.compare-shell .compare-track .input-group:nth-of-type(3) {
+  grid-column: 1 / 2;
+}
+
+.compare-shell .compare-track .input-group:nth-of-type(4) {
+  grid-column: 2 / 3;
+}
+
+/* The seeded default mix puts the long type label (English "Variable indexed
+   every 5 years") into the tightest 3-scenario column, where 1rem text needs
+   ~206px and 0.875rem still needs ~190px against ~185px of room (1024px with
+   three scenarios). Two steps down (13px) leaves ~9px of slack; the
+   calculator's own selects are untouched. */
+.compare-shell .select-wrap select {
+  font-size: 0.8125rem;
+}
+
+/* The ₪ / % / שנים suffixes keep the calculator's generous 15px inline padding,
+   which eats half of a ~130px phone column's text area. */
+.compare-track .input-wrap span {
+  padding: 0 10px;
+}
+
+/* Same anchoring rule as the calculator's track (pad + 15px centres the button
+   on the select chevron column): the type / amount / method fields all span the
+   full width here, so their chevrons and the amount's ₪ share one inline-end
+   column and the button lands above them. top: 6px keeps it inside the
+   fieldset's top padding, level with the legend. */
+.compare-shell .compare-track .remove-track {
+  inset-inline-end: calc(var(--track-pad-inline) + 15px);
+  top: 6px;
+}
+
+.compare-shell .compare-track legend {
+  padding: 0 6px;
 }
 
 /* The duplicate control rides the legend, inline after its text. */
@@ -6001,7 +6216,8 @@ tbody tr:hover {
 
 .compare-add-scenario {
   display: block;
-  margin: 4px auto 0;
+  /* Clear of the scenario cards above it (it used to hug the grid). */
+  margin: 26px auto 0;
   border: 1px solid var(--calc-line);
   background: transparent;
   color: var(--calc-teal-dark);
@@ -6038,6 +6254,11 @@ tbody tr:hover {
   padding: 11px 14px;
   border-bottom: 1px solid var(--calc-line);
   vertical-align: top;
+  /* The bare `table` rule above keeps every table on one nowrap line, which
+     suits the schedule tables but is what pushed this one wider than its card
+     (metric names, currency values, the mix line and the status chips all
+     refused to wrap). This table opts back into wrapping. */
+  white-space: normal;
 }
 
 .compare-table thead th {
@@ -6048,12 +6269,12 @@ tbody tr:hover {
 .compare-table tbody th {
   color: var(--calc-muted);
   font-weight: 600;
-  white-space: nowrap;
 }
 
 .compare-table td {
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  /* A long word in a narrow column breaks instead of widening the table. */
+  overflow-wrap: break-word;
 }
 
 .compare-table td.best {
@@ -6175,9 +6396,43 @@ tbody tr:hover {
   font-size: 0.9rem;
 }
 
-@media (max-width: 760px) {
-  .compare-shared-grid {
-    grid-template-columns: 1fr 1fr;
+@media (max-width: 500px) {
+  /* The hero's h1 is nowrap by default; "Mortgage scenario comparison" is the
+     longest title on the site and overhung a 360px viewport by 23px. This page
+     only (see the compare-sub-header modifier on /compare). */
+  .compare-sub-header .text-box h1 {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 900px) {
+  /* The desktop editors grid drops to two ~350px columns here: tighten the
+     card padding and the gap so the compact track keeps its breathing room. */
+  .compare-editors-grid {
+    gap: 16px;
+  }
+
+  .compare-scenario-editor {
+    padding: 18px 16px;
+  }
+}
+
+@media (max-width: 800px) {
+  /* Mirrors .calculator-shell: stop pulling up into the hero with the desktop
+     offset and use the narrower phone gutter. */
+  .compare-shell {
+    width: calc(100% - 24px);
+    margin-top: -42px;
+  }
+}
+
+@media (max-width: 650px) {
+  .compare-shared {
+    padding: 22px 18px;
+  }
+
+  .compare-shared h2 {
+    font-size: 1.2rem;
   }
 }
 
@@ -6186,12 +6441,8 @@ tbody tr:hover {
     padding: 20px 16px;
   }
 
-  .compare-shared-grid {
-    grid-template-columns: 1fr;
-  }
-
   .compare-scenario-editor {
-    padding: 18px 14px 16px;
+    padding: 16px 14px;
   }
 
   /* The metric label ("Total payments over 25 years") and its value finally
@@ -6207,4 +6458,5 @@ tbody tr:hover {
   display: flex;
   align-items: flex-start;
   gap: 18px;
+  margin-bottom: 50px;
 }

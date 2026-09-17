@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import {
+  MAX_OTHER_EXPENSES,
   MAX_TRACKS,
   MAX_YEARS,
   TRACK_TYPES,
@@ -9,6 +10,7 @@ import {
   type PropertyPurpose,
 } from '@/lib/amortization'
 import { formatCurrency, formatRatePercent, formatRatio } from '@/lib/format'
+import { PRESET_IDS } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { TermSlider } from '@/components/ui/TermSlider'
@@ -60,6 +62,11 @@ export function ComparePage() {
     setCapital: useComparisonStore((s) => s.setCapital),
     setIncome: useComparisonStore((s) => s.setIncome),
     setPurpose: useComparisonStore((s) => s.setPurpose),
+    addSharedExpense: useComparisonStore((s) => s.addSharedExpense),
+    updateSharedExpenseLabel: useComparisonStore((s) => s.updateSharedExpenseLabel),
+    updateSharedExpenseMonthly: useComparisonStore((s) => s.updateSharedExpenseMonthly),
+    updateSharedExpenseOneTime: useComparisonStore((s) => s.updateSharedExpenseOneTime),
+    removeSharedExpense: useComparisonStore((s) => s.removeSharedExpense),
     addScenario: useComparisonStore((s) => s.addScenario),
     duplicateScenario: useComparisonStore((s) => s.duplicateScenario),
     removeScenario: useComparisonStore((s) => s.removeScenario),
@@ -74,6 +81,8 @@ export function ComparePage() {
     changeTrackType: useComparisonStore((s) => s.changeTrackType),
     changeTrackMethod: useComparisonStore((s) => s.changeTrackMethod),
     setScenarioTermYears: useComparisonStore((s) => s.setScenarioTermYears),
+    setScenarioMortgageSum: useComparisonStore((s) => s.setScenarioMortgageSum),
+    loadScenarioPreset: useComparisonStore((s) => s.loadScenarioPreset),
   }
 
   useEffect(() => {
@@ -89,11 +98,17 @@ export function ComparePage() {
     [results],
   )
 
+  /**
+   * A blank scenario has no figures to report - it shows a dash rather than a
+   * ₪0 that would read as a real (free) mortgage.
+   */
+  const dashIfEmpty = (result: ScenarioResult, text: string) => (result.isEmpty ? '-' : text)
+
   const metrics: MetricDef[] = [
     {
       key: 'firstPayment',
       label: () => t('compare.metricFirstPayment'),
-      value: (result) => formatCurrency(result.totals.firstPayment),
+      value: (result) => dashIfEmpty(result, formatCurrency(result.totals.firstPayment)),
       best: (result) => (result.error || result.isEmpty ? null : result.totals.firstPayment),
       isCurrency: true,
     },
@@ -107,40 +122,47 @@ export function ComparePage() {
     },
     {
       key: 'totalPayment',
-      label: () => t('compare.metricTotalPayment', { years: maxTerm }),
-      value: (result) => formatCurrency(result.totals.totalPaid),
+      // With every scenario blank there is no term to name, so the row falls
+      // back to the unqualified label.
+      label: () =>
+        maxTerm > 0
+          ? t('compare.metricTotalPayment', { years: maxTerm })
+          : t('compare.metricTotalPaymentGeneric'),
+      value: (result) => dashIfEmpty(result, formatCurrency(result.totals.totalPaid)),
       best: (result) => (result.error || result.isEmpty ? null : result.totals.totalPaid),
       isCurrency: true,
     },
     {
       key: 'totalInterest',
       label: () => t('compare.metricTotalInterest'),
-      value: (result) => formatCurrency(result.totals.totalInterest),
+      value: (result) => dashIfEmpty(result, formatCurrency(result.totals.totalInterest)),
       best: (result) => (result.error || result.isEmpty ? null : result.totals.totalInterest),
       isCurrency: true,
     },
     {
       key: 'weightedRate',
       label: () => t('compare.metricWeightedRate'),
-      value: (result) => `${formatRatePercent(result.weightedAvgInterestRate)}%`,
+      value: (result) =>
+        dashIfEmpty(result, `${formatRatePercent(result.weightedAvgInterestRate)}%`),
       best: (result) => (result.error || result.isEmpty ? null : result.weightedAvgInterestRate),
     },
     {
       key: 'overpay',
       label: () => t('compare.metricOverpay'),
-      value: (result) => `${formatRatePercent(result.overpayPercent)}%`,
+      value: (result) => dashIfEmpty(result, `${formatRatePercent(result.overpayPercent)}%`),
       best: (result) => (result.error || result.isEmpty ? null : result.overpayPercent),
     },
     {
       key: 'payback',
       label: () => t('compare.metricPayback'),
-      value: (result) => formatRatio(result.avgPaybackRatio),
+      value: (result) => dashIfEmpty(result, formatRatio(result.avgPaybackRatio)),
       best: (result) => (result.error || result.isEmpty ? null : result.avgPaybackRatio),
     },
     {
       key: 'term',
       label: () => t('compare.metricTerm'),
-      value: (result) => t('compare.metricTermValue', { years: result.maxTermYears }),
+      value: (result) =>
+        result.isEmpty ? '-' : t('compare.metricTermValue', { years: result.maxTermYears }),
       best: () => null,
     },
     {
@@ -155,13 +177,14 @@ export function ComparePage() {
     {
       key: 'loan',
       label: () => t('compare.metricLoan'),
-      value: (result) => formatCurrency(result.loanAmount),
+      value: (result) => dashIfEmpty(result, formatCurrency(result.loanAmount)),
       best: () => null,
     },
     {
       key: 'upfront',
       label: () => t('compare.metricUpfront'),
-      value: (result) => (result.upfrontTotal !== null ? formatCurrency(result.upfrontTotal) : '-'),
+      value: (result) =>
+        !result.isEmpty && result.upfrontTotal !== null ? formatCurrency(result.upfrontTotal) : '-',
       best: () => null,
     },
   ]
@@ -266,8 +289,48 @@ export function ComparePage() {
               ×
             </button>
           )}
+        </div>{' '}
+        {/* סכום המשכנתא: the loan-defining input, calculator parity. With a
+            property value set it mirrors property - capital and locks (the
+            loan derives from the property); without one it defines the loan
+            and fills/scales the tracks as it is typed. */}
+        <label className="compare-sum-row">
+          {t('calculator.startingAmountLabel')}
+          <MoneyInput
+            value={scenario.mortgageSumText}
+            onChange={(raw, caret) => actions.setScenarioMortgageSum(scenario.id, raw, caret)}
+            suffix="₪"
+            ariaLabel={t('calculator.startingAmountLabel')}
+            testId={`compare-mortgage-sum-${scenarioIndex + 1}`}
+          />
+        </label>
+        {/* Preset mixes (תמהיל 1-4), calculator parity: clicking one replaces
+            the scenario's tracks with the preset's allocation at the current
+            loan (or the tracks' total). The active preset stays highlighted.
+            A blank scenario keeps the mix shape at zero amounts; typing a sum
+            allocates it. */}
+        <div
+          className="compare-preset-list"
+          role="group"
+          aria-label={t('calculator.presetHeading')}
+        >
+          {PRESET_IDS.map((presetId) => (
+            <button
+              key={presetId}
+              type="button"
+              className={
+                scenario.activePreset === presetId
+                  ? 'compare-preset-button active'
+                  : 'compare-preset-button'
+              }
+              aria-pressed={scenario.activePreset === presetId}
+              data-testid={`compare-preset-${scenarioIndex + 1}-${presetId}`}
+              onClick={() => actions.loadScenarioPreset(scenario.id, presetId)}
+            >
+              {t(`calculator.preset${presetId.charAt(0).toUpperCase()}${presetId.slice(1)}`)}
+            </button>
+          ))}
         </div>
-
         <label className="compare-term-row">
           {t('compare.scenarioTermLabel')}
           <TermSlider
@@ -284,7 +347,6 @@ export function ComparePage() {
             {scenario.termYears} {t('compare.scenarioTermSuffix')}
           </span>
         </label>
-
         {scenario.tracks.map((track, trackIndex) => (
           <fieldset
             key={track.id}
@@ -391,7 +453,6 @@ export function ComparePage() {
             </label>
           </fieldset>
         ))}
-
         {scenario.tracks.length < MAX_TRACKS && (
           <button
             type="button"
@@ -415,7 +476,10 @@ export function ComparePage() {
 
   return (
     <>
-      <section className="sub-header">
+      {/* compare-sub-header: page-scoped hero modifier (same convention as
+          contact-sub-header) - the English title is the longest on the site
+          and needs to wrap instead of overhanging narrow viewports. */}
+      <section className="sub-header compare-sub-header">
         <div className="text-box main-heading">
           <h1 className="gradient-text-no-hover">{t('compare.heading')}</h1>
         </div>
@@ -424,13 +488,26 @@ export function ComparePage() {
       <main className="compare-shell" data-testid="compare-shell">
         <p className="compare-subtitle">{t('compare.subtitle')}</p>
 
-        {/* Shared inputs: property and buyer, entered once for all scenarios. */}
+        {/* Shared inputs: property and buyer, entered once for all scenarios.
+            The way back to the calculator the comparison was seeded from sits
+            on the heading row, at the opposite side; the arrow is mirrored by
+            the stylesheet under RTL, so "back" points the way it reads. */}
         <section
           className="compare-shared"
           data-testid="compare-shared"
           aria-label={t('compare.sharedInputsHeading')}
         >
-          <h2>{t('compare.sharedInputsHeading')}</h2>
+          <div className="compare-shared-head">
+            <h2>{t('compare.sharedInputsHeading')}</h2>
+            <Link className="compare-back" to="/calculators" data-testid="compare-back">
+              {/* The arrow is mirrored by the stylesheet under RTL, so "back"
+                  points the way the layout reads (e2e measures its geometry). */}
+              {t('compare.backToCalculator')}
+              <span className="compare-back-icon" aria-hidden="true">
+                →
+              </span>
+            </Link>
+          </div>
           <div className="compare-shared-grid">
             <label className="input-group">
               {t('compare.purposeLabel')}
@@ -475,9 +552,92 @@ export function ComparePage() {
               />
             </label>
           </div>
-          <p className="compare-shared-note">
-            <Link to="/calculators">{t('compare.openFromCalculator')}</Link>
-          </p>
+
+          {/* Other expenses (calculator parity): the monthly amounts fold
+              into every scenario's payment-to-income check and the one-time
+              amounts join the upfront cash total. They describe the buyer,
+              not the scenario, so they sit with the shared inputs; the rows
+              reuse the calculator's .expense-row rhythm and vocabulary. */}
+          <div className="compare-expenses" data-testid="compare-expenses">
+            {shared.otherExpenses.map((expense) => (
+              <div key={expense.id} className="expense-row">
+                <button
+                  type="button"
+                  className="expense-remove-button"
+                  onClick={() => actions.removeSharedExpense(expense.id)}
+                  aria-label={t('calculator.expenseRemove')}
+                  data-testid={`compare-expense-remove-${expense.id}`}
+                >
+                  ×
+                </button>
+                <label className="input-group expense-label-group">
+                  {t('calculator.expenseLabel')}
+                  <div className="input-wrap expense-label-wrap">
+                    <input
+                      type="text"
+                      value={expense.label}
+                      onChange={(event) =>
+                        actions.updateSharedExpenseLabel(expense.id, event.target.value)
+                      }
+                      aria-label={t('calculator.expenseLabelAria')}
+                      data-testid={`compare-expense-label-${expense.id}`}
+                    />
+                  </div>
+                </label>
+                <label className="input-group expense-amount-group">
+                  {t('calculator.expenseAmountLabel')}
+                  <MoneyInput
+                    value={expense.monthlyText}
+                    onChange={(raw, caret) =>
+                      actions.updateSharedExpenseMonthly(expense.id, raw, caret)
+                    }
+                    suffix="₪"
+                    ariaLabel={t('calculator.expenseAmountLabel')}
+                    testId={`compare-expense-amount-${expense.id}`}
+                  />
+                </label>
+                <label className="input-group expense-onetime-group">
+                  {t('calculator.expenseOneTimeAmountLabel')}
+                  <MoneyInput
+                    value={expense.oneTimeText}
+                    onChange={(raw, caret) =>
+                      actions.updateSharedExpenseOneTime(expense.id, raw, caret)
+                    }
+                    suffix="₪"
+                    ariaLabel={t('calculator.expenseOneTimeAmountLabel')}
+                    testId={`compare-expense-onetime-${expense.id}`}
+                  />
+                </label>
+              </div>
+            ))}
+            {/* The add control trails the rows (or stands alone when empty),
+                start-aligned exactly like the calculator's block. */}
+            {shared.otherExpenses.length === 0 ? (
+              <div className="expense-row expense-add-row">
+                <button
+                  type="button"
+                  className="expense-add-button"
+                  onClick={() => actions.addSharedExpense()}
+                  data-testid="compare-add-expense"
+                >
+                  {t('calculator.otherExpensesAdd')} +
+                </button>
+              </div>
+            ) : (
+              shared.otherExpenses.length < MAX_OTHER_EXPENSES && (
+                <div className="expense-row expense-add-under-last">
+                  <button
+                    type="button"
+                    className="expense-add-button"
+                    onClick={() => actions.addSharedExpense()}
+                    data-testid="compare-add-expense"
+                  >
+                    {t('calculator.otherExpensesAdd')} +
+                  </button>
+                </div>
+              )
+            )}
+          </div>
         </section>
 
         {/* Scenario editors: table columns on desktop, the active scenario's

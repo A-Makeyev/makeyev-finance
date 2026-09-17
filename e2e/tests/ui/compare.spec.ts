@@ -37,19 +37,42 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(firstPaymentCell).toContainText(ils(7_772))
   })
 
-  test('default (direct) visit starts with two identical scenarios', async ({ page }) => {
+  test('default (direct) visit opens scenario 1 with the calculator default mix', async ({
+    page,
+  }) => {
     await page.goto('/compare')
     await expect(page.getByTestId('compare-shell')).toBeVisible()
     await expect(page.getByTestId('compare-table')).toBeVisible()
-    // Two scenario columns, identical values, best badge hidden (a tie of
-    // all columns highlights nothing).
+    // Scenario 1 (תרחיש 1) opens with the calculator's own ₪1,000,000
+    // תמהיל מומלץ: 400k prime @ 5.75 + 340k fixed @ 4.5 + 260k indexed @ 3.0
+    // (fallback prime - the compare page does not fetch the live BOI rate).
+    await expect(page.getByTestId('compare-track-amount-1-1')).toHaveValue('400,000')
+    await expect(page.getByTestId('compare-track-rate-1-1')).toHaveValue('5.75')
+    // Scenario 2 stays blank: the alternative mix is the user's to define.
+    await expect(page.getByTestId('compare-track-amount-2-1')).toHaveValue('')
+    await expect(page.getByTestId('compare-track-rate-2-1')).toHaveValue('4.5')
     const row = page.getByTestId('compare-row-firstPayment')
     await expect(row.locator('td')).toHaveCount(2)
+    // One priced column has nothing to beat yet: no best highlighting.
     await expect(row.locator('td.best')).toHaveCount(0)
+    // Scenario 1's mix prices at ₪7,718 (hand-checked golden: 15y annuity);
+    // the blank column reads as "no figures yet", not as a ₪0 mortgage.
+    await expect(row.locator('td').first()).toHaveText(ils(7_718))
+    await expect(row.locator('td').nth(1)).toHaveText('-')
+    await expect(page.getByTestId('compare-row-status')).toContainText('הזינו מסלולים')
+    // A term now exists, so the payments row names it instead of the generic.
+    await expect(page.getByTestId('compare-row-totalPayment').locator('th')).toHaveText(
+      'סך התשלומים ל-15 שנים',
+    )
   })
 
   test('tweaking one scenario highlights the best value per row', async ({ page }) => {
     await gotoSeeded()
+    // Scenario 2 opens blank, so give it something to compare against by
+    // duplicating the mix the calculator seeded into scenario 1 (the copy
+    // lands in the middle: [mix, copy, blank]).
+    await page.getByTestId('compare-duplicate-1').click()
+    await expect(page.getByTestId('compare-scenario-editor-3')).toBeVisible()
     // Scenario 1: shorten its first track's term to 10 years - cheaper total
     // interest, higher first payment.
     await page.getByTestId('compare-track-years-1-1').fill('10')
@@ -77,11 +100,34 @@ test.describe('mortgage comparison - /compare', () => {
     await copy.blur()
     await expect(original).toHaveValue('400,000')
 
-    // Remove the middle scenario (the edited copy) back down to two: what
-    // was scenario 3 (an untouched duplicate) becomes scenario 2.
+    // Remove the middle scenario (the edited copy) back down to two: the blank
+    // alternative that was scenario 2 moves up into its place.
     await page.getByTestId('compare-scenario-remove-2').click()
-    await expect(page.getByTestId('compare-track-amount-2-1')).toHaveValue('400,000')
+    await expect(page.getByTestId('compare-track-amount-2-1')).toHaveValue('')
     await expect(page.getByTestId('compare-scenario-remove-2')).toHaveCount(0)
+  })
+
+  test('mortgage sum input fills the tracks and presets re-allocate (calculator parity)', async ({
+    page,
+  }) => {
+    await page.goto('/compare')
+    // Scenario 1 opens with the calculator's ₪1,000,000 prefill in the sum
+    // field and the recommended preset highlighted.
+    await expect(page.getByTestId('compare-mortgage-sum-1')).toHaveValue('1,000,000')
+    await expect(page.getByTestId('compare-preset-1-basket4')).toHaveClass(/active/)
+    // Scenario 2: pick the recommended preset, then type a sum - the blank
+    // tracks fill at the preset's 40/34/26 split (hand-checked golden).
+    await page.getByTestId('compare-preset-2-basket4').click()
+    await page.getByTestId('compare-mortgage-sum-2').fill('1,000,000')
+    await expect(page.getByTestId('compare-track-amount-2-1')).toHaveValue('400,000')
+    await expect(page.getByTestId('compare-track-amount-2-2')).toHaveValue('340,000')
+    await expect(page.getByTestId('compare-track-amount-2-3')).toHaveValue('260,000')
+    // A property value re-derives the loan for every scenario: with capital
+    // 200k on a 1.2M property the sum field mirrors 1M (property - capital).
+    await page.getByTestId('compare-property-value').fill('1,200,000')
+    await page.getByTestId('compare-capital').fill('200,000')
+    await expect(page.getByTestId('compare-mortgage-sum-1')).toHaveValue('1,000,000')
+    await expect(page.getByTestId('compare-mortgage-sum-2')).toHaveValue('1,000,000')
   })
 
   test('shared inputs reprice every scenario; LTV status flips to a violation', async ({
@@ -98,6 +144,67 @@ test.describe('mortgage comparison - /compare', () => {
     // Upfront total row shows the recommended cash figure for the shared deal.
     const upfrontRow = page.getByTestId('compare-row-upfront')
     await expect(upfrontRow).toContainText(ils(335_400))
+  })
+
+  test('other expenses fold into PTI, the boundary, and the upfront cash', async ({ page }) => {
+    await page.goto('/compare')
+    // Income 24,000: the opening mix's 7,718.13 first payment is 32.2% of it,
+    // under the 33% ceiling - no PTI warning in the priced column.
+    await page.getByTestId('compare-income').fill('24,000')
+    const statusRow = page.getByTestId('compare-row-status')
+    await expect(statusRow).toContainText('החזר בתקרה המומלצת')
+
+    // The shared expenses block opens with one blank row (calculator parity);
+    // the row test ids carry the internal id suffix, so match the prefix.
+    const monthly = page.locator('[data-testid^="compare-expense-amount-"]')
+    await expect(monthly).toHaveCount(1)
+    // ₪1,000/month lifts the obligation to 8,718.13 = 36.3%: over the ceiling.
+    await monthly.fill('1,000')
+    await expect(statusRow).toContainText('מעל תקרת החזר')
+    // The warning clears exactly at the reported minimum income
+    // (8,718.13 / 26,500 = 32.9%): the boundary itself, not just past it.
+    await page.getByTestId('compare-income').fill('26,500')
+    await expect(statusRow).toContainText('החזר בתקרה המומלצת')
+
+    // The one-time amount joins the recommended upfront cash: 300,000
+    // suggested capital + 35,400 fees on the 1.2M deal, then +5,000.
+    await page.getByTestId('compare-property-value').fill('1,200,000')
+    await page.getByTestId('compare-capital').fill('200,000')
+    const upfrontRow = page.getByTestId('compare-row-upfront')
+    await expect(upfrontRow).toContainText(ils(335_400))
+    await page.locator('[data-testid^="compare-expense-onetime-"]').fill('5,000')
+    await expect(upfrontRow).toContainText(ils(340_400))
+
+    // Removing the row reprices both figures back down.
+    await page.locator('[data-testid^="compare-expense-remove-"]').click()
+    await expect(page.locator('[data-testid^="compare-expense-amount-"]')).toHaveCount(0)
+    await expect(upfrontRow).toContainText(ils(335_400))
+    await expect(statusRow).toContainText('החזר בתקרה המומלצת')
+  })
+
+  test('comparison table fits its card instead of scrolling sideways', async ({ page }) => {
+    await gotoSeeded()
+    // Figures in every column: the currency values, the mix line and the status
+    // chips are what used to widen the table past its card (the metric names
+    // and values were all nowrap, so nothing could give).
+    await page.getByTestId('compare-track-amount-2-1').fill('900,000')
+    await page.getByTestId('compare-track-amount-2-1').blur()
+    await page.getByTestId('compare-duplicate-1').click()
+    await expect(page.getByTestId('compare-scenario-editor-3')).toBeVisible()
+
+    const sideways = async () =>
+      (await page.evaluate(`(() => {
+        const wrap = document.querySelector('.compare-table-wrap')
+        return wrap.scrollWidth - wrap.clientWidth
+      })()`)) as number
+
+    for (const width of [768, 860, 900, 1024, 1100, 1280, 1600]) {
+      await page.setViewportSize({ width, height: 900 })
+      expect(
+        await sideways(),
+        `comparison table scrolls sideways at ${width}px`,
+      ).toBeLessThanOrEqual(1)
+    }
   })
 
   test('mobile: stacked card view with a scenario switcher (no table)', async ({ page }) => {
@@ -147,4 +254,232 @@ test.describe('mortgage comparison - /compare', () => {
     // Dark theme's --calc-paper is #16201f; the panel must not stay light.
     expect(colors.background).not.toBe('rgb(255, 253, 248)')
   })
+})
+
+/**
+ * Scenario-editor layout invariants, as a list of problems (empty = sound).
+ *
+ * Regression guard: the editors originally reused the calculator's 5-column
+ * track grid inside a ~315-610px column, where the fields' intrinsic widths
+ * widened the fieldset to ~960-1040px - it spilled hundreds of pixels outside
+ * its card (over the neighbouring scenario) and dragged the per-track remove
+ * button with it. Fields must now stay inside their own card at every width,
+ * every select must be able to show its text, and the comparison table must
+ * not scroll sideways.
+ */
+const LAYOUT_PROBLEMS = `(() => {
+  const problems = []
+  const doc = document.documentElement
+  const overflow = doc.scrollWidth - doc.clientWidth
+  if (overflow > 1) problems.push('page overflows by ' + overflow + 'px')
+  const within = (inner, outer, tolerance) =>
+    inner.left >= outer.left - tolerance && inner.right <= outer.right + tolerance
+
+  // Text a field cannot show is text the browser cuts in half, and a select
+  // never wraps: every option has to fit the room the field really has (its
+  // 36px of inline-end padding already reserves the chevron).
+  const textWidth = (element, text) => {
+    const probe = document.createElement('span')
+    probe.style.position = 'absolute'
+    probe.style.visibility = 'hidden'
+    probe.style.whiteSpace = 'pre'
+    probe.style.font = getComputedStyle(element).font
+    probe.textContent = text
+    document.body.appendChild(probe)
+    const width = probe.getBoundingClientRect().width
+    probe.remove()
+    return width
+  }
+  const fits = (select, texts, where) => {
+    const style = getComputedStyle(select)
+    const room =
+      select.clientWidth -
+      parseFloat(style.paddingInlineStart) -
+      parseFloat(style.paddingInlineEnd)
+    texts.forEach((text) => {
+      const needed = textWidth(select, text)
+      if (needed > room) {
+        problems.push(
+          where + ' needs ' + Math.round(needed) + 'px for "' + text + '" but has ' + Math.round(room) + 'px',
+        )
+      }
+    })
+  }
+  // The purchase purpose is a fixed three-way pick the page prices its LTV
+  // limits from, so all three options must stay readable...
+  const purpose = document.querySelector('[data-testid="compare-purpose"]')
+  if (purpose) {
+    fits(purpose, Array.from(purpose.options).map((option) => option.text), 'purpose select')
+  }
+  // ...while the track type list is the calculator's fixed regulatory
+  // vocabulary (longest entry wishes it had 400px), so only the chosen value
+  // has to be readable.
+  document.querySelectorAll('.compare-track select').forEach((select, index) => {
+    const chosen = select.options[select.selectedIndex]
+    fits(select, [chosen ? chosen.text : ''], 'track select ' + (index + 1))
+  })
+
+  // No sideways scrolling: the comparison table must fit its own card at every
+  // width the table layout is used (768px up).
+  const tableWrap = document.querySelector('.compare-table-wrap')
+  if (tableWrap && tableWrap.scrollWidth - tableWrap.clientWidth > 1) {
+    problems.push(
+      'comparison table scrolls sideways by ' + (tableWrap.scrollWidth - tableWrap.clientWidth) + 'px',
+    )
+  }
+
+  document.querySelectorAll('.compare-scenario-editor').forEach((card, cardIndex) => {
+    const cardBox = card.getBoundingClientRect()
+    card.querySelectorAll('.mortgage-track').forEach((track, trackIndex) => {
+      const where = 'card ' + (cardIndex + 1) + ' track ' + (trackIndex + 1)
+      const trackBox = track.getBoundingClientRect()
+      if (!within(trackBox, cardBox, 1)) {
+        problems.push(where + ' sits ' + Math.round(trackBox.width) + 'px wide in a ' + Math.round(cardBox.width) + 'px card')
+      }
+      track.querySelectorAll('.input-wrap, .select-wrap').forEach((wrap, wrapIndex) => {
+        const wrapBox = wrap.getBoundingClientRect()
+        if (!within(wrapBox, trackBox, 1)) {
+          problems.push(where + ' field ' + (wrapIndex + 1) + ' spills out of the track')
+        }
+        // Squeezed columns are the other half of the same failure: a field
+        // narrow enough to hide its own number is as broken as one that
+        // overlaps the next scenario.
+        if (wrapBox.width < 96) {
+          problems.push(where + ' field ' + (wrapIndex + 1) + ' is only ' + Math.round(wrapBox.width) + 'px wide')
+        }
+      })
+      const remove = track.querySelector('.remove-track')
+      const legend = track.querySelector('legend')
+      if (remove && legend) {
+        const a = remove.getBoundingClientRect()
+        const b = legend.getBoundingClientRect()
+        if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) {
+          problems.push(where + ' remove button overlaps its legend')
+        }
+      }
+      // The remove button belongs on the fieldset's chevron column (the same
+      // spot it keeps in the calculator), above the fields - not floating in
+      // the card's corner.
+      const chevron = track.querySelector('.select-chevron')
+      if (remove && chevron) {
+        const a = remove.getBoundingClientRect()
+        const b = chevron.getBoundingClientRect()
+        const delta = Math.abs(a.left + a.width / 2 - (b.left + b.width / 2))
+        if (delta > 8) {
+          problems.push(where + ' remove button is ' + Math.round(delta) + 'px off the chevron column')
+        }
+        if (a.bottom > b.top) {
+          problems.push(where + ' remove button is not above the field rows')
+        }
+      }
+      // The term slider's value bubble drops below its row; it must land in the
+      // reserved strip above the first track, not on top of the fieldset.
+      const bubble = card.querySelector('.compare-term-row .slider-current')
+      if (trackIndex === 0 && bubble && bubble.getBoundingClientRect().bottom > trackBox.top + 1) {
+        problems.push(where + ' slider value overlaps the first track')
+      }
+    })
+  })
+  return problems
+})()`
+
+/** Desktop widths, from the 768px table/card switch up to the 1240px shell. */
+const EDITOR_WIDTHS = [768, 900, 1024, 1280, 1600]
+
+for (const language of ['hebrew', 'english'] as const) {
+  test(`scenario editors stay inside their cards at every width - ${language}`, async ({
+    page,
+  }) => {
+    await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
+    await page.goto('/compare')
+    await expect(page.getByTestId('compare-shell')).toBeVisible()
+    // Scenario 1 opens with the calculator's 3-track mix, so its remove
+    // buttons render from the start - the anchoring is measured at every
+    // width without adding anything.
+    await expect(page.getByTestId('compare-track-remove-1-1')).toBeVisible()
+
+    for (const width of EDITOR_WIDTHS) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(page.locator('html')).toHaveAttribute(
+        'dir',
+        language === 'hebrew' ? 'rtl' : 'ltr',
+      )
+      expect(await page.evaluate(LAYOUT_PROBLEMS), `compare layout at ${width}px`).toEqual([])
+    }
+
+    // Three scenarios squeeze the editor columns to ~315px - the tightest the
+    // side-by-side layout gets - so re-check with one duplicated copy.
+    await page.setViewportSize({ width: 1024, height: 900 })
+    await page.getByTestId('compare-duplicate-1').click()
+    await expect(page.getByTestId('compare-scenario-editor-3')).toBeVisible()
+    expect(await page.evaluate(LAYOUT_PROBLEMS), 'compare layout with 3 scenarios').toEqual([])
+  })
+}
+
+test('phone and tablet widths hold the same invariants', async ({ page }) => {
+  // Below 768px the page swaps the table for the stacked card and the scenario
+  // switcher; the field/select invariants still have to hold there.
+  for (const language of ['hebrew', 'english'] as const) {
+    await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
+    for (const width of [360, 420, 650]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto('/compare')
+      await expect(page.getByTestId('compare-shell')).toBeVisible()
+      expect(
+        await page.evaluate(LAYOUT_PROBLEMS),
+        `compare layout at ${width}px (${language})`,
+      ).toEqual([])
+    }
+  }
+})
+
+test('back link returns to the calculator and flips with the reading direction', async ({
+  page,
+}) => {
+  await page.addInitScript(() => localStorage.setItem('site_language', 'hebrew'))
+  await page.goto('/compare')
+  const back = page.getByTestId('compare-back')
+  await expect(back).toBeVisible()
+  await expect(back).toHaveAttribute('href', '/calculators')
+  await expect(back).toContainText('חזרה למחשבון')
+
+  const arrow = async () =>
+    (await page.evaluate(`(() => {
+      const icon = document.querySelector('.compare-back-icon')
+      const link = document.querySelector('.compare-back')
+      const i = icon.getBoundingClientRect()
+      const l = link.getBoundingClientRect()
+      return {
+        transform: getComputedStyle(icon).transform,
+        fromStart: i.left - l.left,
+        fromEnd: l.right - i.right,
+      }
+    })()`)) as { transform: string; fromStart: number; fromEnd: number }
+
+  // The arrow trails the label in reading order in both directions: on the
+  // inline end in LTR (the right), mirrored to the inline end in RTL (the
+  // left) by the stylesheet, so "back" points the way the layout reads.
+  const rtl = await arrow()
+  expect(rtl.transform).toBe('matrix(-1, 0, 0, 1, 0, 0)')
+  expect(rtl.fromStart, 'RTL arrow sits at the inline end (the left)').toBeLessThan(2)
+
+  await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
+  await page.goto('/compare')
+  await expect(page.getByTestId('compare-back')).toContainText('Back to the mortgage calculator')
+  const ltr = await arrow()
+  expect(ltr.transform).toBe('none')
+  expect(ltr.fromEnd, 'LTR arrow sits at the inline end (the right)').toBeLessThan(2)
+})
+
+test('English compare heading fits a 360px viewport', async ({ page }) => {
+  // "Mortgage scenario comparison" is the longest hero title on the site and
+  // used to overhang the viewport (the hero h1 is nowrap by default).
+  await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
+  await page.setViewportSize({ width: 360, height: 800 })
+  await page.goto('/compare')
+  await expect(page.getByTestId('compare-shell')).toBeVisible()
+  const overflow = (await page.evaluate(
+    'document.documentElement.scrollWidth - document.documentElement.clientWidth',
+  )) as number
+  expect(overflow, 'horizontal overflow').toBeLessThanOrEqual(1)
 })

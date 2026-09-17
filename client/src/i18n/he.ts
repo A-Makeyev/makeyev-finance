@@ -519,9 +519,10 @@ export const he = {
       metaTitle: 'השוואת תמהילים | Makeyev Finance',
       heading: 'השוואת תרחישי משכנתא',
       subtitle: 'אותו נכס, אותו הון עצמי, אותה הכנסה - תמהילים שונים זה מול זה.',
-      openFromCalculator: 'השוו תמהילים',
+      backToCalculator: 'חזרה למחשבון משכנתא',
+      openFromCalculator: 'השוואת תמהילים',
       // Shared inputs (describing the buyer and the property, entered once).
-      sharedInputsHeading: 'נכס וקונה',
+      sharedInputsHeading: 'תמהילים',
       purposeLabel: 'תכלית הרכישה',
       propertyValueLabel: 'שווי הנכס',
       capitalLabel: 'הון עצמי',
@@ -542,11 +543,13 @@ export const he = {
       trackYearsSuffix: 'שנים',
       trackRateLabel: 'ריבית',
       trackTypeLabel: 'סוג מסלול',
-      trackMethodLabel: 'אמורטיזציה',
+      // Same wording as the calculator's track field (calculator.track.methodLabel).
+      trackMethodLabel: 'לוח סילוקין',
       // Comparison table: metric rows (vocabulary mirrors calculator.results).
       metricFirstPayment: 'החזר חודשי ראשון',
       metricRateUp: 'אם הריביות עולות ב-1%',
       metricTotalPayment: 'סך התשלומים ל-{{years}} שנים',
+      metricTotalPaymentGeneric: 'סך התשלומים',
       metricTotalInterest: 'סך הריבית',
       metricWeightedRate: 'ריבית ממוצעת משוקללת',
       metricOverpay: 'עלות אשראי כוללת',

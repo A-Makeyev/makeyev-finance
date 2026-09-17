@@ -4,7 +4,8 @@ import {
   sharedFeeProfileFromTexts,
   type SharedBuyerInputs,
 } from '@/features/compare/computeScenario'
-import { computeTrackResult } from '@/lib/amortization'
+import { DEFAULT_TERM_YEARS, computeTrackResult } from '@/lib/amortization'
+import { parseAmountText } from '@/lib/format'
 import { useComparisonStore, seedFromCalculator } from '@/stores/comparisonStore'
 import type { TrackState } from '@/stores/calculatorStore'
 
@@ -222,6 +223,25 @@ describe('computeScenario - shared inputs', () => {
     expect(typed.appraiserFee).toBe(2_500)
   })
 
+  it('folds other monthly and one-time expenses into PTI and upfront', () => {
+    // The shared buyer expenses describe the buyer, not the scenario: the
+    // monthly amount joins the payment-to-income obligation, the one-time
+    // amount joins the upfront cash. Golden values: first payment 7,649.9329
+    // + 1,000 monthly = 8,649.9329 → minIncome ceil(8649.93/0.33/500)·500 =
+    // 26,500. Upfront on the 1.2M property: 300,000 suggested capital +
+    // 28,320 realtor VAT + 7,080 lawyer VAT + 5,000 one-time.
+    const result = computeScenario([track()], {
+      ...baseInputs,
+      incomeText: '20,000',
+      otherMonthly: 1_000,
+      oneTimeExpenses: 5_000,
+    })
+    expect(result.pti).not.toBeNull()
+    expect(result.pti!.payment).toBeCloseTo(8_649.9329, 3)
+    expect(result.pti!.minIncome).toBe(26_500)
+    expect(result.upfrontTotal).toBe(300_000 + 28_320 + 7_080 + 5_000)
+  })
+
   it('upfront total = suggested capital + purchase tax + fees', () => {
     // Property 1.2M first home: purchase tax = 0 (under the exemption).
     // Suggested capital = 25% of 1.2M = 300,000.
@@ -237,21 +257,61 @@ describe('comparisonStore', () => {
     useComparisonStore.getState().reset()
   })
 
-  it('starts with two scenarios computed from the default mix', () => {
+  it('opens with the calculator default mix in scenario 1 and a blank scenario 2', () => {
     const state = useComparisonStore.getState()
     expect(state.scenarios).toHaveLength(2)
     expect(state.results).toHaveLength(2)
-    // Both scenarios are the same mix → identical totals.
-    expect(state.results[0].totals.firstPayment).toBe(state.results[1].totals.firstPayment)
-    expect(state.results[0].totals.firstPayment).toBeGreaterThan(0)
+    // Scenario 1 (תרחיש 1): the same ₪1,000,000 תמהיל מומלץ (basket4) the
+    // calculator opens with, via the same createInitialTracks. Golden values
+    // hand-checked: 400k prime @ 5.75 + 340k fixed @ 4.5 + 260k indexed @ 3.0,
+    // 15y annuity → first payment ₪7,718.13.
+    const mix = state.scenarios[0]
+    expect(mix.termYears).toBe(DEFAULT_TERM_YEARS)
+    // The sum field opens like the calculator's: ₪1,000,000, the mix total.
+    expect(mix.mortgageSumText).toBe('1,000,000')
+    expect(mix.activePreset).toBe('basket4')
+    expect(mix.tracks.map((t) => t.type)).toEqual(['prime', 'fixed', 'variableIndexed5y'])
+    expect(mix.tracks.map((t) => t.amountText)).toEqual(['400,000', '340,000', '260,000'])
+    expect(mix.tracks.map((t) => t.rateText)).toEqual(['5.75', '4.5', '3'])
+    expect(state.results[0].isEmpty).toBe(false)
+    expect(state.results[0].error).toBeNull()
+    expect(state.results[0].loanAmount).toBe(1_000_000)
+    expect(Math.round(state.results[0].totals.firstPayment)).toBe(7_718)
+    // Scenario 2 stays the blank alternative the user defines: a single track
+    // with no amount and the type's default rate, so a typed amount never
+    // prices a 0% loan (the blank-rate trap the blur guard closes too).
+    const alt = state.scenarios[1]
+    expect(alt.termYears).toBe(DEFAULT_TERM_YEARS)
+    expect(alt.tracks).toHaveLength(1)
+    expect(alt.tracks[0].amountText).toBe('')
+    expect(alt.tracks[0].rateText).toBe('4.5')
+    expect(alt.tracks[0].yearsText).toBe(String(DEFAULT_TERM_YEARS))
+    // The blank column reads as empty, not as a ₪0 mortgage.
+    expect(state.results[1].isEmpty).toBe(true)
+    expect(state.results[1].totals.firstPayment).toBe(0)
+    expect(state.results[1].loanAmount).toBe(0)
   })
 
   it('recomputes all scenarios when a shared input changes', () => {
     useComparisonStore.getState().reset()
-    // Seed a property first so the LTV context has a basis to compare.
+    // The opening mix borrows ₪1,000,000 in scenario 1. Setting a property
+    // (with no capital) re-derives the loan to the full price - the tracks
+    // scale up with it (calculator parity), so the LTV sits at 100%.
     useComparisonStore.getState().setPropertyValue('2,000,000', null)
-    const before = useComparisonStore.getState().results[0].ltv
-    expect(before).toBeNull() // loan 1M on 2M property = 50% → compliant
+    const scaled = useComparisonStore.getState()
+    expect(scaled.results[0].loanAmount).toBe(2_000_000)
+    expect(scaled.scenarios[0].mortgageSumText).toBe('2,000,000')
+    expect(scaled.results[0].ltv).not.toBeNull()
+    expect(scaled.results[0].ltv!.percentRounded).toBe(100)
+    // Capital 1M brings the loan back to 1M on the 2M property = 50%.
+    useComparisonStore.getState().setCapital('1,000,000', null)
+    const financed = useComparisonStore.getState()
+    expect(financed.results[0].loanAmount).toBe(1_000_000)
+    expect(financed.scenarios[0].mortgageSumText).toBe('1,000,000')
+    expect(financed.results[0].ltv).toBeNull()
+    // Drop the capital back to 200k: the loan jumps to 1M again (the tracks
+    // re-allocate with it), then the property drops to 1.2M.
+    useComparisonStore.getState().setCapital('200,000', null)
     useComparisonStore.getState().setPropertyValue('1,200,000', null)
     const after = useComparisonStore.getState().results[0].ltv
     // 1M on 1.2M = 83.3% → violation appears; the shared edit repriced it.
@@ -262,6 +322,7 @@ describe('comparisonStore', () => {
   it('duplicates a scenario with independent track ids', () => {
     const store = useComparisonStore.getState()
     const firstId = store.scenarios[0].id
+    // The opening mix already carries three tracks - a real deep-copy workout.
     store.duplicateScenario(firstId)
     const state = useComparisonStore.getState()
     expect(state.scenarios).toHaveLength(3)
@@ -273,9 +334,9 @@ describe('comparisonStore', () => {
       expect(copy.tracks[index].amountText).toBe(original.tracks[index].amountText)
     }
     // Editing the copy never touches the original.
-    useComparisonStore.getState().updateTrackAmount(copy.id, copy.tracks[0].id, '500,000', null)
+    useComparisonStore.getState().updateTrackAmount(copy.id, copy.tracks[0].id, '300,000', null)
     const after = useComparisonStore.getState()
-    expect(after.scenarios[1].tracks[0].amountText).toBe('500,000')
+    expect(after.scenarios[1].tracks[0].amountText).toBe('300,000')
     expect(after.scenarios[0].tracks[0].amountText).toBe('400,000')
   })
 
@@ -291,19 +352,32 @@ describe('comparisonStore', () => {
     store.removeScenario(useComparisonStore.getState().scenarios[0].id)
     expect(useComparisonStore.getState().scenarios).toHaveLength(2)
 
-    const scenario = useComparisonStore.getState().scenarios[0]
-    useComparisonStore.getState().removeTrack(scenario.id, scenario.tracks[0].id)
-    expect(useComparisonStore.getState().scenarios[0].tracks).toHaveLength(2)
+    // The track window is exercised on scenario 2 (opens with one track);
+    // scenario 1 already sits at the 3-track max with the default mix.
+    const blank = useComparisonStore.getState().scenarios[1]
+    useComparisonStore.getState().addTrack(blank.id)
+    useComparisonStore.getState().addTrack(blank.id)
+    expect(useComparisonStore.getState().scenarios[1].tracks).toHaveLength(3)
+    useComparisonStore.getState().addTrack(blank.id)
+    expect(useComparisonStore.getState().scenarios[1].tracks).toHaveLength(3)
+    useComparisonStore.getState().removeTrack(blank.id, blank.tracks[0].id)
+    expect(useComparisonStore.getState().scenarios[1].tracks).toHaveLength(2)
   })
 
   it('recomputes a scenario when its tracks change', () => {
     const store = useComparisonStore.getState()
-    const scenario = store.scenarios[0]
-    const before = useComparisonStore.getState().results[0].totals.firstPayment
+    // Scenario 2's single blank track: a clean one-track repricing (scenario 1
+    // is the opening mix, whose variable cap a big single edit would trip).
+    const scenario = store.scenarios[1]
+    useComparisonStore
+      .getState()
+      .updateTrackAmount(scenario.id, scenario.tracks[0].id, '1,000,000', null)
+    const before = useComparisonStore.getState().results[1].totals.firstPayment
+    expect(before).toBeGreaterThan(0)
     useComparisonStore
       .getState()
       .updateTrackAmount(scenario.id, scenario.tracks[0].id, '200,000', null)
-    const after = useComparisonStore.getState().results[0].totals.firstPayment
+    const after = useComparisonStore.getState().results[1].totals.firstPayment
     expect(after).toBeLessThan(before)
   })
 
@@ -345,7 +419,7 @@ describe('comparisonStore', () => {
     expect(after.results[0].maxTermYears).toBe(25)
   })
 
-  it('seedFromCalculator copies shared inputs and both scenario mixes', () => {
+  it('seedFromCalculator copies the shared inputs and the calculator mix into scenario 1', () => {
     seedFromCalculator({
       propertyValueText: '1,500,000',
       capitalText: '300,000',
@@ -355,9 +429,11 @@ describe('comparisonStore', () => {
       lawyerPercentText: '',
       appraiserFeeText: '',
       renovationAmountText: '',
-      otherExpenses: [{ amountText: '1,000', oneTimeAmountText: '5,000' }],
+      otherExpenses: [{ label: 'מס דירה', amountText: '1,000', oneTimeAmountText: '5,000' }],
       ptiThresholdPercent: 33,
       termYears: 20,
+      mortgageSumText: '800,000',
+      activePreset: null,
       // A realistic mix: a lone prime track would trip the 2/3 variable cap,
       // exactly as it does in the main calculator (parity below). In the real
       // calculator the slider keeps every track's years in sync with
@@ -367,16 +443,198 @@ describe('comparisonStore', () => {
     const state = useComparisonStore.getState()
     expect(state.shared.propertyValueText).toBe('1,500,000')
     expect(state.shared.purpose).toBe('upgrade')
-    expect(state.shared.otherMonthly).toBe(1_000)
-    expect(state.shared.oneTimeExpenses).toBe(5_000)
+    // The calculator's expense rows arrive as editable rows (fresh ids), not
+    // as pre-summed numbers - the sums derive at recompute time.
+    expect(state.shared.otherExpenses).toHaveLength(1)
+    expect(state.shared.otherExpenses[0].label).toBe('מס דירה')
+    expect(state.shared.otherExpenses[0].monthlyText).toBe('1,000')
+    expect(state.shared.otherExpenses[0].oneTimeText).toBe('5,000')
     expect(state.scenarios).toHaveLength(2)
     expect(state.scenarios[0].tracks[0].amountText).toBe('800,000')
     expect(state.scenarios[0].termYears).toBe(20)
-    // Scenario 2 is a duplicate with fresh ids.
+    // The calculator's sum field travels with the mix (parity).
+    expect(state.scenarios[0].mortgageSumText).toBe('800,000')
+    expect(state.scenarios[1].mortgageSumText).toBe('')
+    // Scenario 2 is a blank alternative with fresh ids: the mix the user arrived
+    // with is scenario 1, the comparison column is theirs to define.
+    expect(state.scenarios[1].tracks).toHaveLength(1)
     expect(state.scenarios[1].tracks[0].id).not.toBe(state.scenarios[0].tracks[0].id)
+    expect(state.scenarios[1].tracks[0].amountText).toBe('')
+    expect(state.scenarios[1].termYears).toBe(20)
+    expect(state.results[1].isEmpty).toBe(true)
     // Results were recomputed against the seeded inputs.
     expect(state.results[0].loanAmount).toBe(800_000)
     expect(state.results[0].maxTermYears).toBe(20)
+  })
+
+  it('typing a mortgage sum fills the blank preset tracks at the preset proportions', () => {
+    // Scenario 2 opens blank (one empty fixed track). Pick a preset, then type
+    // a sum: the tracks must re-allocate at the preset's own proportions.
+    const store = useComparisonStore.getState()
+    const scenario = store.scenarios[1]
+    useComparisonStore.getState().loadScenarioPreset(scenario.id, 'basket4')
+    useComparisonStore.getState().setScenarioMortgageSum(scenario.id, '1,000,000', null)
+    const after = useComparisonStore.getState()
+    const filled = after.scenarios[1].tracks
+    // Recommended mix 40/34/26 of 1,000,000, hand-checked golden split.
+    expect(filled.map((track) => track.amountText)).toEqual(['400,000', '340,000', '260,000'])
+    // Types and default rates land too (prime takes the fallback live rate).
+    expect(filled.map((track) => track.type)).toEqual(['prime', 'fixed', 'variableIndexed5y'])
+    expect(filled.map((track) => track.rateText)).toEqual(['5.75', '4.5', '3'])
+    expect(after.results[1].loanAmount).toBe(1_000_000)
+    expect(Math.round(after.results[1].totals.firstPayment)).toBe(7_718)
+  })
+
+  it('typing a mortgage sum scales an existing hand-built mix proportionally', () => {
+    const store = useComparisonStore.getState()
+    const scenario = store.scenarios[1]
+    // A hand-built two-track mix (no property set): typing 120k into the
+    // first track, then adding one - the calculator parity split funds the
+    // new track with half of the largest (120k → 60k + 60k).
+    useComparisonStore.getState().updateTrackAmount(scenario.id, scenario.tracks[0].id, '120,000', null)
+    useComparisonStore.getState().addTrack(scenario.id)
+    const state2 = useComparisonStore.getState()
+    const second = state2.scenarios[1].tracks[1]
+    useComparisonStore.getState().updateTrackAmount(state2.scenarios[1].id, second.id, '80,000', null)
+    // Tracks now hold 60k + 80k; the sum field mirrors their total.
+    expect(useComparisonStore.getState().scenarios[1].mortgageSumText).toBe('140,000')
+    // Scale the same 3:4 proportions up to a 1,000,000 loan via the sum input.
+    useComparisonStore.getState().setScenarioMortgageSum(state2.scenarios[1].id, '1,000,000', null)
+    const after = useComparisonStore.getState()
+    // 60/140 and 80/140 scale: 428,571 + 571,429 (last track absorbs rounding).
+    expect(after.scenarios[1].tracks.map((track) => track.amountText)).toEqual([
+      '428,571',
+      '571,429',
+    ])
+    // The sum field keeps the typed text.
+    expect(after.scenarios[1].mortgageSumText).toBe('1,000,000')
+  })
+
+  it('property value drives the sum field and locks the loan (calculator parity)', () => {
+    const store = useComparisonStore.getState()
+    const scenario = store.scenarios[1]
+    // Give scenario 2 the recommended preset, then set a property + capital.
+    useComparisonStore.getState().loadScenarioPreset(scenario.id, 'basket4')
+    useComparisonStore.getState().setPropertyValue('1,200,000', null)
+    useComparisonStore.getState().setCapital('200,000', null)
+    const after = useComparisonStore.getState()
+    // Loan = 1,200,000 - 200,000 = 1,000,000, mirrored into the sum field.
+    expect(after.scenarios[1].mortgageSumText).toBe('1,000,000')
+    expect(after.scenarios[1].tracks.map((track) => track.amountText)).toEqual([
+      '400,000',
+      '340,000',
+      '260,000',
+    ])
+    // Clearing the property restores loan + capital into the sum field.
+    useComparisonStore.getState().setPropertyValue('', null)
+    const cleared = useComparisonStore.getState()
+    expect(cleared.scenarios[1].mortgageSumText).toBe('1,200,000')
+    // Tracks keep their last allocation while the property is gone.
+    expect(cleared.scenarios[1].tracks.map((track) => track.amountText)).toEqual([
+      '400,000',
+      '340,000',
+      '260,000',
+    ])
+  })
+
+  it('editing one track with a property set rebalances the others live', () => {
+    // Property 1.2M, capital 200k pins scenario 1's loan at 1,000,000 (the
+    // opening preset mix 400/340/260). Editing track 1 to 500k must pull the
+    // others down proportionally (340:260 held) so the sum stays the loan.
+    useComparisonStore.getState().setPropertyValue('1,200,000', null)
+    useComparisonStore.getState().setCapital('200,000', null)
+    const store = useComparisonStore.getState()
+    const scenario = store.scenarios[0]
+    useComparisonStore
+      .getState()
+      .updateTrackAmount(scenario.id, scenario.tracks[0].id, '500,000', null)
+    const after = useComparisonStore.getState()
+    const amounts = after.scenarios[0].tracks.map((track) => parseAmountText(track.amountText))
+    const total = amounts.reduce((sum, amount) => sum + amount, 0)
+    // The tracks always sum to the pinned loan after live rebalancing.
+    expect(total).toBe(1_000_000)
+    expect(amounts[0]).toBe(500_000)
+    // Others keep their proportions of the remaining 500k: 340:260 → 212.5+...
+    expect(amounts[1]).toBe(Math.round((500_000 * 340_000) / 600_000))
+    expect(amounts[2]).toBe(1_000_000 - 500_000 - amounts[1])
+  })
+
+  it('track amount blur snaps the tracks back to the pinned loan', () => {
+    useComparisonStore.getState().setPropertyValue('1,200,000', null)
+    useComparisonStore.getState().setCapital('200,000', null)
+    const store = useComparisonStore.getState()
+    const scenario = store.scenarios[0]
+    // Overshoot the loan with one track edit (others may sit at 0 mid-edit).
+    useComparisonStore
+      .getState()
+      .updateTrackAmount(scenario.id, scenario.tracks[0].id, '2,000,000', null)
+    useComparisonStore.getState().commitTrackAmountBlur(scenario.id, scenario.tracks[0].id)
+    const after = useComparisonStore.getState()
+    const amounts = after.scenarios[0].tracks.map((track) => parseAmountText(track.amountText))
+    const total = amounts.reduce((sum, amount) => sum + amount, 0)
+    // The blur snap scales the (kept) proportions back to the 1,000,000 loan.
+    expect(total).toBe(1_000_000)
+  })
+
+  it('loadScenarioPreset on a priced scenario re-allocates at the current loan', () => {
+    const store = useComparisonStore.getState()
+    const scenario = store.scenarios[0]
+    // Scenario 1 opens with basket4 at 1,000,000; switching to basket2 gives
+    // the fixed/prime halves at the same total.
+    useComparisonStore.getState().loadScenarioPreset(scenario.id, 'basket2')
+    const after = useComparisonStore.getState()
+    expect(after.scenarios[0].tracks.map((track) => track.type)).toEqual(['fixed', 'prime'])
+    expect(after.scenarios[0].tracks.map((track) => track.amountText)).toEqual(['500,000', '500,000'])
+    expect(after.scenarios[0].activePreset).toBe('basket2')
+    expect(after.results[0].loanAmount).toBe(1_000_000)
+  })
+
+  it('shared expense rows reprice the PTI check and the upfront total', () => {
+    // Scenario 1's opening mix: first payment 7,718.13. Income 20,000 →
+    // over the 33% ceiling; minIncome ceil(7718.13/0.33/500)·500 = 23,500.
+    useComparisonStore.getState().setIncome('20,000', null)
+    let pti = useComparisonStore.getState().results[0].pti
+    expect(pti).not.toBeNull()
+    expect(pti!.minIncome).toBe(23_500)
+
+    // A ₪1,000/month expense lifts the obligation to 8,718.13 → 26,500.
+    useComparisonStore.getState().addSharedExpense()
+    const rows = useComparisonStore.getState().shared.otherExpenses
+    expect(rows).toHaveLength(2)
+    useComparisonStore.getState().updateSharedExpenseMonthly(rows[1].id, '1,000', null)
+    pti = useComparisonStore.getState().results[0].pti
+    expect(pti!.payment).toBeCloseTo(8_718.13, 2)
+    expect(pti!.minIncome).toBe(26_500)
+    // The boundary itself: at the reported minimum the warning clears.
+    useComparisonStore.getState().setIncome('26,500', null)
+    expect(useComparisonStore.getState().results[0].pti).toBeNull()
+
+    // The one-time amount joins the upfront cash: property 1.2M, capital
+    // 200k → suggested 300,000 + fees 35,400, +5,000 one-time.
+    useComparisonStore.getState().setIncome('', null)
+    useComparisonStore.getState().updateSharedExpenseLabel(rows[1].id, 'מס ביטוח לאומי')
+    useComparisonStore.getState().updateSharedExpenseOneTime(rows[1].id, '5,000', null)
+    useComparisonStore.getState().setPropertyValue('1,200,000', null)
+    useComparisonStore.getState().setCapital('200,000', null)
+    expect(useComparisonStore.getState().shared.otherExpenses[1].label).toBe('מס ביטוח לאומי')
+    expect(useComparisonStore.getState().results[0].upfrontTotal).toBe(300_000 + 28_320 + 7_080 + 5_000)
+
+    // Removing the row reprices everything back down.
+    useComparisonStore.getState().removeSharedExpense(rows[1].id)
+    const cleared = useComparisonStore.getState()
+    expect(cleared.shared.otherExpenses).toHaveLength(1)
+    expect(cleared.results[0].upfrontTotal).toBe(300_000 + 28_320 + 7_080)
+  })
+
+  it('caps shared expense rows at MAX_OTHER_EXPENSES (3)', () => {
+    // Opens with one blank row (calculator parity: the calculator opens with
+    // one as well).
+    expect(useComparisonStore.getState().shared.otherExpenses).toHaveLength(1)
+    useComparisonStore.getState().addSharedExpense()
+    useComparisonStore.getState().addSharedExpense()
+    expect(useComparisonStore.getState().shared.otherExpenses).toHaveLength(3)
+    useComparisonStore.getState().addSharedExpense()
+    expect(useComparisonStore.getState().shared.otherExpenses).toHaveLength(3)
   })
 
   it('seedFromCalculator surfaces the variable-cap error for a lone prime mix (parity)', () => {
@@ -392,6 +650,8 @@ describe('comparisonStore', () => {
       otherExpenses: [],
       ptiThresholdPercent: 33,
       termYears: 15,
+      mortgageSumText: '800,000',
+      activePreset: null,
       tracks: [track({ type: 'prime', amountText: '800,000', rateText: '5.75' })],
     })
     const state = useComparisonStore.getState()

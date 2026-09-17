@@ -866,7 +866,12 @@ function recalculate(s: CalculatorState): void {
   }
 }
 
-function createInitialTracks(primeRate: number | null): TrackState[] {
+/**
+ * The calculator's opening track mix (תמהיל מומלץ at ₪1,000,000). Exported so
+ * the comparison page's opening scenario starts from the very same data the
+ * calculator shows - one source of truth for the default mix.
+ */
+export function createInitialTracks(primeRate: number | null): TrackState[] {
   const allocated = allocatePreset('basket4', 1_000_000, primeRate)
   return allocated.map((entry) =>
     trackFromValues(

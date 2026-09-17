@@ -92,6 +92,8 @@ export function CalculatorPage() {
       otherExpenses: useCalculatorStore.getState().otherExpenses,
       ptiThresholdPercent: useCalculatorStore.getState().ptiThresholdPercent,
       termYears: useCalculatorStore.getState().termYears,
+      mortgageSumText: useCalculatorStore.getState().startingAmountText,
+      activePreset: useCalculatorStore.getState().activePreset,
       tracks: useCalculatorStore.getState().tracks,
     })
     navigate('/compare')
