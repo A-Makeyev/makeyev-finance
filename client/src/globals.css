@@ -2330,6 +2330,81 @@ nav#navbar.nav-scrolling-resize {
   }
 }
 
+/* Tablet chrome tier (1001-1200px): the hamburger nav takes over at 1200px
+   but keeps its phone-sized scale - a 100px bar, a 75px logo, 25px links and
+   raw 20px marketing paragraphs - which reads oversized on a 10" tablet,
+   especially vertically. This tier trims the chrome and the content sections
+   one notch WITHOUT touching any layout mechanics: the sheet stays pinned to
+   `top: 100px` (the bar keeps its legacy height, only its paddings shrink,
+   so the pin survives), the strips' offset contract is untouched, and the
+   650px phone tier below still overrides everything it does. */
+@media screen and (max-width: 1200px) {
+  nav#navbar {
+    /* Same 100px box; less dead padding above/below the row inside it. */
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  nav#navbar .logo img {
+    max-height: 56px;
+  }
+
+  nav#navbar #nav-list a {
+    font-size: 21px;
+  }
+
+  nav#navbar .menu-icon .line {
+    width: 26px;
+  }
+
+  .text-box h1 {
+    font-size: 3.2em;
+  }
+
+  .text-box p {
+    font-size: 1.6em;
+  }
+
+  .sub-header h1 {
+    font-size: 2.6em;
+  }
+
+  .sub-header {
+    height: 70vh;
+  }
+
+  .header {
+    min-height: 640px;
+  }
+
+  p {
+    font-size: 18px;
+  }
+
+  .hero-btn {
+    font-size: 1.2em;
+  }
+
+  .course h1,
+  .campus h1,
+  .fac h1,
+  .testi h1 {
+    font-size: 2em;
+  }
+
+  .services-col p {
+    font-size: 17px;
+  }
+
+  .action {
+    padding: 70px 0;
+  }
+
+  .layer h2 {
+    font-size: 1.6em;
+  }
+}
+
 /* Compact navbar on phones: shorter bar, smaller logo, and the slide-down
    menu panel re-pinned to the new bar height so it stays flush. Placed after
    the <=1200px block so these overrides win the cascade. The indexes bar is
@@ -5028,6 +5103,164 @@ tbody tr:hover {
 /* =========================
    RESPONSIVE
    ========================= */
+
+/* Tablet tier (1001-1200px): the panels are still at their full desktop
+   layout here, but on a tablet's shorter viewport everything reads a size
+   too large - the headings, values and paddings dominate the screen. This
+   tier steps the calculator and compare pages' density down one notch
+   WITHOUT changing any layout structure (column counts stay as desktop's).
+   It starts at 1200px, where the site chrome already switches to its tablet
+   behavior (hamburger nav), and the 1000px block below keeps its own
+   overrides; values here sit between the desktop base sizes and the
+   ≤1000px/≤800px scales so nothing pops as the viewport crosses a
+   boundary. */
+@media (max-width: 1200px) {
+  /* Panels: slimmer padding and margins reclaim vertical space around the
+     whole page without touching content width. */
+  .calculator-panel,
+  .schedule-section {
+    padding: 28px 32px 30px;
+  }
+
+  .panel-heading h2,
+  .section-heading h2 {
+    font-size: 1.55rem;
+    margin-bottom: 18px;
+  }
+
+  .panel-heading-actions {
+    margin-bottom: 38px;
+  }
+
+  .starting-point {
+    gap: 20px;
+    padding-bottom: 18px;
+    margin-bottom: 16px;
+  }
+
+  .limits-row {
+    gap: 14px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+
+  .costs-row {
+    gap: 14px;
+  }
+
+  /* Fields: one font step down, with control heights trimmed to match so
+     the rows do not just grow gaps instead. Selects are excluded from the
+     padding change on purpose: this block sits after `.select-wrap select`
+     in the file at equal specificity, so a blanket padding here would eat
+     the 36px chevron clearance (compare selects keep it via their own
+     higher-specificity rule). */
+  .calculator-panel input,
+  .compare-shell :where(input, select) {
+    font-size: 0.9rem;
+    padding: 10px;
+  }
+
+  .calculator-panel select {
+    font-size: 0.9rem;
+  }
+
+  .select-wrap {
+    height: 40px;
+  }
+
+  .starting-amount .input-wrap,
+  .term-slider-wrap,
+  .starting-calculate-button {
+    height: 45px;
+  }
+
+  .expense-remove-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .input-group,
+  .starting-amount,
+  .term-slider {
+    font-size: 0.9rem;
+  }
+
+  .preset-button {
+    font-size: 0.9rem;
+    padding: 7px 12px;
+  }
+
+  .summary-notes {
+    font-size: 0.9rem;
+  }
+
+  .calculate-button {
+    margin-top: 22px;
+    padding: 11px 20px;
+    font-size: 0.95rem;
+  }
+
+  /* Track cards: tighter cell padding; the values follow the smaller
+     field font via inheritance. */
+  .mortgage-track {
+    gap: 12px;
+    padding: 20px var(--track-pad-inline) 14px;
+  }
+
+  /* Results cards: the big numbers and the grid gaps are the largest
+     vertical consumers below the inputs. */
+  .results-layout {
+    gap: 10px;
+    margin: 18px 0;
+  }
+
+  .results-card {
+    min-height: 112px;
+    padding: 14px 14px 12px;
+  }
+
+  .results-card strong {
+    font-size: 1.5rem;
+  }
+
+  .results-card p {
+    font-size: 0.9rem;
+  }
+
+  /* Schedule: table cells and the aside's headline number step down to
+     match the rest of the tier. */
+  th {
+    font-size: 0.8rem;
+    padding: 10px 12px;
+  }
+
+  td {
+    font-size: 0.9rem;
+    padding: 12px;
+  }
+
+  .schedule-aside strong {
+    font-size: 1.5rem;
+  }
+
+  /* Compare page editors (same tier): the 300px-column cards keep their
+     grid, only density changes. */
+  .compare-shared {
+    padding: 22px 26px;
+  }
+
+  .compare-shared h2 {
+    font-size: 1.2rem;
+  }
+
+  .compare-editors-grid {
+    gap: 16px;
+  }
+
+  .compare-scenario-editor {
+    padding: 18px 18px;
+  }
+}
 
 @media (max-width: 1000px) {
   /* Track cards break out of the tight 5-column layout - the track type and
