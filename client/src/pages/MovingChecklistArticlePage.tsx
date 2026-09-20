@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { usePageMeta } from '@/hooks/usePageMeta'
+import { articleHeroBackground } from '@/lib/articles'
 
 /**
  * Moving-checklist article (רשימת דברים להעביר בהעברת דירה). General
@@ -25,7 +26,12 @@ export function MovingChecklistArticlePage() {
 
   return (
     <>
-      <section className="sub-header article-sub-header">
+      {/* The article's own picture is the hero banner here, not an image in the
+          body: same dark overlay as the shared sub-header, different image. */}
+      <section
+        className="sub-header article-sub-header"
+        style={articleHeroBackground('moving-checklist')}
+      >
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('articles.movingChecklist.title')}</h1>
         </div>

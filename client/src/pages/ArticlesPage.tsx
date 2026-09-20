@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { usePageMeta } from '@/hooks/usePageMeta'
+import { ARTICLE_IMAGES, ARTICLE_LIST } from '@/lib/articles'
 
 /**
  * Articles page - the legacy heading was a stub; it now lists the real
@@ -14,7 +15,7 @@ export function ArticlesPage() {
 
   return (
     <>
-      <section className="sub-header">
+      <section className="sub-header articles-sub-header">
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('articles.title')}</h1>
         </div>
@@ -26,20 +27,25 @@ export function ArticlesPage() {
       <section className="articles-list" dir={i18n.dir()} aria-label={t('articles.listHeading')}>
         <h2>{t('articles.listHeading')}</h2>
         <ul>
-          <li>
-            <Link className="article-card" to="/articles/prepayment-penalties">
-              <h3>{t('articles.prepayment.title')}</h3>
-              <p>{t('articles.prepayment.summary')}</p>
-              <span>{t('articles.prepayment.cta')}</span>
-            </Link>
-          </li>
-          <li>
-            <Link className="article-card" to="/articles/moving-checklist">
-              <h3>{t('articles.movingChecklist.title')}</h3>
-              <p>{t('articles.movingChecklist.summary')}</p>
-              <span>{t('articles.movingChecklist.cta')}</span>
-            </Link>
-          </li>
+          {ARTICLE_LIST.map(({ slug, key }) => (
+            <li key={slug}>
+              <Link className="article-card" to={`/articles/${slug}`}>
+                {/* Decorative: the card's own heading names the article, so an
+                    empty alt keeps screen readers from hearing it twice. */}
+                <img
+                  className="article-card-media"
+                  src={ARTICLE_IMAGES[slug]}
+                  alt=""
+                  loading="lazy"
+                />
+                <div className="article-card-body">
+                  <h3>{t(`articles.${key}.title`)}</h3>
+                  <p>{t(`articles.${key}.summary`)}</p>
+                  <span>{t(`articles.${key}.cta`)}</span>
+                </div>
+              </Link>
+            </li>
+          ))}
         </ul>
       </section>
     </>

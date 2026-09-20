@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { PRESET_IDS, type PresetId } from '@/lib/amortization'
 import { useCalculatorStore } from '@/stores/calculatorStore'
+import { HelpTooltip } from '@/components/ui/HelpTooltip'
 
 const PRESET_LABEL_KEYS: Record<PresetId, string> = {
   basket1: 'calculator.presetBasket1',
@@ -18,7 +19,19 @@ export function PresetSelector() {
   return (
     <>
       <div className="preset-heading">
-        <span>{t('calculator.presetHeading')}</span>
+        <span className="label-help-row">
+          <span className="label-help-text">{t('calculator.presetHeading')}</span>
+          {/* One tooltip on the heading explains what the mixes are and links
+              to the article explaining each one - instead of four tooltips
+              repeating every button's own label. */}
+          <HelpTooltip
+            label={t('calculator.help.presetAria')}
+            content={t('calculator.help.preset')}
+            linkTo="/articles/mortgage-decisions"
+            linkLabel={t('calculator.help.readMore')}
+            testId="help-preset"
+          />
+        </span>
       </div>
       <div className="preset-list" role="group" aria-label={t('calculator.presetHeading')}>
         {PRESET_IDS.map((presetId) => (

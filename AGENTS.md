@@ -29,11 +29,17 @@ Do not write the em dash character (`—`, U+2014) anywhere in this project: not
 - New calculation logic needs unit tests with concrete expected values, not just "it runs."
 - When fixing a bug: write the test that reproduces it, confirm it fails, then fix and confirm it passes.
 - Test boundaries explicitly - zero, negative, max values (`MAX_YEARS`, `MAX_TRACKS`), and exact regulatory limits (e.g. exactly 75% LTV) - since that's where this kind of bug actually lives.
+- E2e tests use the Page Object Model - selectors and interactions live in a page object, never inline `page.locator(...)` scattered through the test file. A UI change means fixing one page object, not every test that touches that element.
+- Use fixtures for setup a test needs but isn't testing (seeded calculator state, a logged-in session once auth exists) - don't repeat multi-step setup per test.
+- Keep unit tests and e2e tests in separate suites - a pure-function regression shouldn't need a browser to catch.
+- Assert on what a user would see, not on internal state or store contents.
+- A flaky test gets fixed or deleted, never left skipped.
 
 ## Responsive and accessibility
 
 - Check mobile (~360-420px), tablet, and desktop widths before calling a UI change done - not just whatever width the editor happens to be.
 - If you add a chart (amortization breakdown, track-mix donut - both already planned), make the same data available as a table or text summary too, not chart-only.
+- New interactive elements (tooltips, popovers, custom controls) must be keyboard-operable and work on touch, not hover-only - this app has real accessibility obligations, not just a nice-to-have.
 
 ## Internationalization
 
@@ -51,6 +57,20 @@ Do not write the em dash character (`—`, U+2014) anywhere in this project: not
 - The `soft-*` palette is brand hues (links, accents, error red) and stays the same in both themes, except `soft-grey` / `soft-dark-grey`, which are the divider and muted-text roles and do flip.
 - The chrome that is deliberately dark in both themes - hero image overlays, the Indexes/Markets strips, the footer, the calculator's gradient headline card - is not tokenized; leave it alone rather than "fixing" it.
 - Run `e2e/tests/ui/theme.spec.ts` and eyeball a new page in both themes (and at ~360px) before calling it done.
+
+## Security
+
+This matters more than usual here - auth and payments are coming, and mistakes in
+either are the kind that get exploited quietly rather than fail loudly.
+
+- Never hand-roll auth, sessions, or crypto (password hashing, token signing). Use an established, maintained library and say which one and why - this is a dependency decision like any other, flagged not defaulted.
+- Never touch payment card data directly. Use a PCI-compliant processor (Stripe or equivalent) and its hosted fields/redirect flow - card numbers should never reach this app's own servers or logs.
+- Every input from the client is untrusted, full stop - validate and authorize on the server, even if the UI already prevents it. A disabled button or hidden field is not access control.
+- Secrets (API keys, DB credentials, webhook signing secrets) live in environment variables, never in code, commits, or client-side bundles - this already applies per the CI/CD section, but payments and auth raise the cost of getting it wrong from "annoying" to "real breach."
+- Authorization checks are per-user, not per-role-in-the-UI: a logged-in user's data (profile, saved calculations, payment history) must be scoped to that user on every query - flag anywhere a fetch could leak another user's data by a guessable ID.
+- Log enough to debug, never log passwords, tokens, full card numbers, or other secrets - even at debug level, even temporarily while chasing a bug.
+- Rate-limit auth endpoints (login, password reset, signup) - this is cheap to add and closes an entire class of abuse.
+- Treat any change touching auth, sessions, payments, or personal data as needing a security-focused second look, not just a functional one - say so explicitly rather than reviewing it the same as a UI tweak.
 
 ## CI/CD and dependencies
 

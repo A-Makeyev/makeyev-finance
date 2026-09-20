@@ -8,6 +8,12 @@ export interface TermSliderProps {
   labelLow: string
   labelHigh: string
   ariaLabel: string
+  /**
+   * Id for the range input, so an external <label htmlFor> can bind to the
+   * slider instead of the first labelable descendant (which may be a help
+   * tooltip button) - see CalculatorPage.
+   */
+  inputId?: string
   testId?: string
 }
 
@@ -32,6 +38,7 @@ export function TermSlider({
   labelLow,
   labelHigh,
   ariaLabel,
+  inputId,
   testId,
 }: TermSliderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -102,7 +109,7 @@ export function TermSlider({
       <div className="term-slider-track">
         <input
           ref={inputRef}
-          id="term-years"
+          id={inputId ?? 'term-years'}
           type="range"
           min={min}
           max={max}

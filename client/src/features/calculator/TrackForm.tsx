@@ -9,6 +9,7 @@ import {
 import { useCalculatorStore, type TrackState } from '@/stores/calculatorStore'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { FlipSelect } from '@/components/ui/FlipSelect'
+import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { cn } from '@/lib/cn'
 
 /**
@@ -49,12 +50,28 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         ×
       </button>
 
-      <label className="input-group">
-        {t('calculator.track.typeLabel')}
+      <label className="input-group" htmlFor={`track-type-${track.id}`}>
+        {/* htmlFor must name the select, not rely on nesting: the first
+            labelable descendant is the tooltip's "?" button, so the implicit
+            association hijacks hover and clicks from the label onto that
+            button (phantom border recolor near the icon). Text + icon stay in
+            one atomic row: in the narrow fieldset columns the label text may
+            wrap, but the "?" never strands on its own line. */}
+        <span className="label-help-row">
+          <span className="label-help-text">{t('calculator.track.typeLabel')}</span>
+          <HelpTooltip
+            label={t('calculator.help.trackTypeAria')}
+            content={t('calculator.help.trackType')}
+            linkTo="/articles/mortgage-track-types"
+            linkLabel={t('calculator.help.readMore')}
+            testId={`help-track-type-${index + 1}`}
+          />
+        </span>
         <FlipSelect
           value={track.type}
           onChange={(value) => changeTrackType(track.id, value as TrackType)}
           className="track-type"
+          selectId={`track-type-${track.id}`}
           testId={`track-type-${index + 1}`}
         >
           {TRACK_TYPES.map((type) => (
@@ -116,12 +133,24 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         </div>
       </label>
 
-      <label className="input-group">
-        {t('calculator.track.methodLabel')}
+      <label className="input-group" htmlFor={`track-method-${track.id}`}>
+        {/* Same htmlFor binding as the type select above: the tooltip button
+            must not become the label's control. */}
+        <span className="label-help-row">
+          <span className="label-help-text">{t('calculator.track.methodLabel')}</span>
+          <HelpTooltip
+            label={t('calculator.help.methodAria')}
+            content={t('calculator.help.method')}
+            linkTo="/articles/mortgage-decisions"
+            linkLabel={t('calculator.help.readMore')}
+            testId={`help-method-${index + 1}`}
+          />
+        </span>
         <FlipSelect
           value={track.method}
           onChange={(value) => changeTrackMethod(track.id, value as AmortizationMethod)}
           className="track-method"
+          selectId={`track-method-${track.id}`}
           testId={`track-method-${index + 1}`}
         >
           <option value="spitzer">{t('calculator.track.methodSpitzer')}</option>

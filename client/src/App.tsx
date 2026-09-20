@@ -11,6 +11,8 @@ import { ComparePage } from '@/features/compare/ComparePage'
 import { ArticlesPage } from '@/pages/ArticlesPage'
 import { PrepaymentPenaltyArticlePage } from '@/pages/PrepaymentPenaltyArticlePage'
 import { MovingChecklistArticlePage } from '@/pages/MovingChecklistArticlePage'
+import { TrackTypesArticlePage } from '@/pages/TrackTypesArticlePage'
+import { MortgageDecisionsArticlePage } from '@/pages/MortgageDecisionsArticlePage'
 import { ContactPage } from '@/features/contact/ContactPage'
 
 const queryClient = new QueryClient({
@@ -41,6 +43,8 @@ export function App() {
               element={<PrepaymentPenaltyArticlePage />}
             />
             <Route path="/articles/moving-checklist" element={<MovingChecklistArticlePage />} />
+            <Route path="/articles/mortgage-track-types" element={<TrackTypesArticlePage />} />
+            <Route path="/articles/mortgage-decisions" element={<MortgageDecisionsArticlePage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="*" element={<HomePage />} />
           </Route>

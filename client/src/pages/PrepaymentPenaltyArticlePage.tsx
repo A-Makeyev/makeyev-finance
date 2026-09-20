@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenaltyFacts'
+import { articleHeroBackground } from '@/lib/articles'
 
 /**
  * Prepayment-penalty (עמלת פירעון מוקדם) article. General educational content -
@@ -21,7 +22,10 @@ export function PrepaymentPenaltyArticlePage() {
 
   return (
     <>
-      <section className="sub-header article-sub-header">
+      <section
+        className="sub-header article-sub-header"
+        style={articleHeroBackground('prepayment-penalties')}
+      >
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('articles.prepayment.title')}</h1>
         </div>

@@ -1,12 +1,13 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPrimeRatePercent } from '@/services/boi'
 import { useCalculatorStore } from '@/stores/calculatorStore'
 import { seedFromCalculator } from '@/stores/comparisonStore'
-import { MAX_OTHER_EXPENSES, MAX_TRACKS, MAX_YEARS, type PropertyPurpose } from '@/lib/amortization'
+import { MAX_OTHER_EXPENSES, MAX_TRACKS, MAX_YEARS, PRESET_IDS, type PresetId, type PropertyPurpose } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
+import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenaltyFacts'
 import { TermSlider } from '@/components/ui/TermSlider'
 import { FlipSelect } from '@/components/ui/FlipSelect'
@@ -27,6 +28,20 @@ export function CalculatorPage() {
   const navigate = useNavigate()
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  // Preset deep links from the articles (e.g. /calculators?preset=basket2):
+  // load the named mix once on mount so a reader lands on exactly the mix the
+  // article described. A missing or unknown param leaves the default state.
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    const preset = searchParams.get('preset')
+    if (preset && (PRESET_IDS as string[]).includes(preset)) {
+      useCalculatorStore.getState().loadPreset(preset as PresetId)
+    }
+    // Mount-only by design: the deep link expresses intent for the initial
+    // state, not a live sync - changing the mix afterwards is the user's own
+    // interaction and must not be fought by a stale URL param.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Expense rows playing their exit animation - the row is removed from the
   // store only after the animation ends, so the fade-out plays in full.
   const [removingExpenseIds, setRemovingExpenseIds] = useState<ReadonlySet<string>>(() => new Set())
@@ -235,8 +250,22 @@ export function CalculatorPage() {
                 />
               </label>
 
-              <label className="term-slider">
-                {t('calculator.termLabel')}
+              <label className="term-slider" htmlFor="term-years">
+                {/* htmlFor must name the slider, not rely on nesting: the
+                    first labelable descendant is the tooltip's "?" button, so
+                    the implicit association hijacks hover and clicks from the
+                    whole label onto that button (phantom border recolor, and
+                    the label text toggling the tip open). */}
+                <span className="label-help-row">
+                  <span className="label-help-text">{t('calculator.termLabel')}</span>
+                  <HelpTooltip
+                    label={t('calculator.help.termAria')}
+                    content={t('calculator.help.term')}
+                    linkTo="/articles/mortgage-track-types"
+                    linkLabel={t('calculator.help.readMore')}
+                    testId="help-term"
+                  />
+                </span>
                 <TermSlider
                   min={1}
                   max={MAX_YEARS}

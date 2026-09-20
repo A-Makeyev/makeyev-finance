@@ -20,6 +20,10 @@ export const en: { translation: Translation } = {
         'A moving checklist: electricity, water, arnona, gas and building committee accounts, photographing meters on moving day, the documents to gather, and returning deposits.',
       articlesPrepaymentDescription:
         'When the prepayment penalty applies: prime tracks are always exempt, rate-reset tracks have an exit point, fixed-rate tracks may be charged, and the discount grows after 3 and 5 years.',
+      articlesTrackTypesDescription:
+        'A guide to mortgage track types: prime, fixed non-indexed and variable, CPI indexation, Spitzer versus equal principal, and why a mix of tracks balances certainty against cost.',
+      articlesMortgageDecisionsDescription:
+        'Three practical mortgage questions: what each ready-made mix contains and what risk it carries, which track to prepay first, and Spitzer versus equal principal as a whole-loan decision.',
       contactTitle: 'Contact Us - Makeyev Finance',
     },
     nav: {
@@ -88,6 +92,18 @@ export const en: { translation: Translation } = {
         title: 'What to transfer when you move apartments',
         summary:
           'A moving checklist: electricity, water, arnona, gas and building committee accounts, photographing meters on moving day, the documents to gather, and returning deposits.',
+        cta: 'Read the article',
+      },
+      trackTypes: {
+        title: 'Mortgage track types',
+        summary:
+          'The difference between prime, fixed non-indexed and variable tracks, how CPI indexation works, what Spitzer versus equal principal changes, and why tracks get mixed.',
+        cta: 'Read the article',
+      },
+      mortgageDecisions: {
+        title: 'Practical decisions: the mix, prepayment order and amortization',
+        summary:
+          'What each ready-made mix contains and how to choose between them, which track to prepay first, and Spitzer versus equal principal as a whole-loan decision.',
         cta: 'Read the article',
       },
     },
@@ -177,6 +193,122 @@ export const en: { translation: Translation } = {
         disclaimer:
           'This information is general, does not depend on your calculation, and is not advice or an offer. The penalty is set by the loan agreement and by Bank of Israel rules.',
         articleLink: 'Read the full article',
+        backToArticles: 'Back to all articles',
+      },
+      trackTypes: {
+        intro:
+          'Banks offer several types of track, and each behaves differently over the years. The differences between them decide how much your monthly payment is likely to move, when you can leave a track without a fee, and what happens to the debt itself when inflation rises. This is the part that actually matters when choosing a mortgage, more than any single number.',
+        blocks: {
+          title: 'The three building blocks, and where indexation fits',
+          prime: {
+            title: 'Prime',
+            text: 'A variable rate made up of the Bank of Israel rate plus a fixed margin of about 1.5% that the banks add. When the Bank of Israel raises or lowers its rate (up to eight decisions a year), the payment on this track follows. Prime carries no prepayment penalty, so you can leave it at any time without a fee.',
+          },
+          fixed: {
+            title: 'Fixed non-indexed',
+            text: 'The rate is locked for the whole loan term, and the monthly payment does not change even when the market moves. The price of that certainty is a higher starting rate than the variable options. There is no penalty-free exit point here.',
+          },
+          variable: {
+            title: 'Variable (not prime)',
+            text: 'The rate resets at fixed intervals - every two, three or five years, depending on the track. Until the next reset it behaves like a fixed rate, and each reset is a real exit point: you can repay that part without the discounting penalty, refinance or close the mortgage. Its rate is based on a reference rate the bank sets, not on prime.',
+          },
+          indexed: {
+            title: 'CPI indexation',
+            text: 'Any of the tracks above can also be linked to the Consumer Price Index. Indexation does not only affect future payments - it grows the outstanding principal itself with inflation. For example: 3% annual indexation grows the remaining balance by roughly 3% that year, on top of the interest and the payments you make. That is a materially different risk from a non-indexed track at the same nominal rate.',
+          },
+        },
+        primePenaltyNote:
+          'We cover the penalty on the other track types, and when an exemption exit point exists, in a separate article:',
+        prepaymentLink: 'Mortgage prepayment penalties',
+        methods: {
+          title: 'Spitzer versus equal principal',
+          spitzer:
+            'Spitzer (the standard amortization schedule): the total monthly payment stays constant, but its make-up shifts - early payments are mostly interest, later ones mostly principal.',
+          equalPrincipal:
+            'Equal principal: the principal part of the payment is constant, so the total payment starts higher and declines over time, as interest is charged on a shrinking balance.',
+          note: 'This is a secondary distinction next to the choice of track type: it changes the pace of repayment over the years, not the nature of the risk. In the calculator you can pick the repayment method for each track separately.',
+          deeperNote:
+            'For the choice between the schedules as a borrower-level, whole-loan decision, plus two more practical decisions - which ready-made mix to start from and which track to prepay first - we wrote a follow-up article:',
+          deeperLink: 'Practical decisions: the mix, prepayment order and amortization',
+        },
+        mix: {
+          title: 'Why tracks are mixed (the mix)',
+          body: 'One mortgage can be split across several tracks, up to three in the calculator. Blending a fixed track with a variable one balances the certainty of a fixed payment against the lower cost of variable tracks, and so the exposure to rate changes.',
+          limit:
+            'The regulation is built on the same idea: under Bank of Israel rules, the variable-rate part of the loan may not exceed 66.66% of the total mortgage, which means at least a third (33.33%) must sit in a track whose rate is not variable. The calculator enforces that ceiling and warns when it is crossed.',
+        },
+        choosing: {
+          title: 'How to think about the choice',
+          body: 'There is no single right answer - the question is how much uncertainty you can take. A fixed track suits someone who wants a predictable payment for the whole term, even at a higher rate; a prime or variable track suits someone who prefers the lower cost and can absorb a higher payment.',
+          terms:
+            'Another question is how long you expect to stay in this loan. If you plan to refinance or sell in a few years, a variable reset that only lands after those years may affect you less.',
+          calculatorLead:
+            'Once you have a candidate mix, the way to test it is to build it and read the numbers. The calculator takes up to three tracks and shows the first and highest monthly payment and the total cost, and lets you check a scenario where rates rise:',
+          calculatorLink: 'Go to the mortgage calculator',
+        },
+        disclaimer:
+          'This information is general, does not depend on your calculation, and is not advice or an offer. Mortgage terms are set by the loan agreement and by Bank of Israel rules.',
+        backToArticles: 'Back to all articles',
+      },
+      mortgageDecisions: {
+        intro:
+          'Once the track types are clear, three questions are where the real decisions happen: which ready-made mix to start from, which track to send prepayment money to, and which amortization schedule to run the loan on. This article walks through all three, and each mix links straight into the calculator where you can try it.',
+        presets: {
+          title: 'The four ready-made mixes in the calculator',
+          lead: 'The calculator offers four ready-made mixes, and one button fills the tracks with each split. They are not a personal recommendation, they are starting points that demonstrate the risk scale: the larger the fixed share, the more predictable the payment and usually the higher the rate; the larger the prime and variable share, the lower the average historical cost, but the payment is exposed to rate moves and the indexed part of the debt grows with the index.',
+          blocks: {
+            basket1: {
+              title: 'Mix 1: all fixed',
+              text: 'A single fixed non-indexed track carrying 100% of the loan. Maximum predictability: the payment is known up front for the whole term and depends on neither the Bank of Israel rate nor inflation. The price: a higher opening rate than the variable tracks, and no prepayment-penalty exemption.',
+            },
+            basket2: {
+              title: 'Mix 2: half fixed, half prime',
+              text: 'Two tracks: 50% fixed non-indexed and 50% prime. Half the payment is locked for the whole term, and half moves with the Bank of Israel rate, up or down. Prime is exempt from the prepayment penalty, so there is always a flexible exit from half the loan.',
+            },
+            basket3: {
+              title: 'Mix 3: three equal thirds',
+              text: 'Three equal tracks: about 33% fixed non-indexed, about 33% prime, and about 33% variable indexed every 5 years. Adding the indexed track lowers the rate but introduces a new risk: that part of the debt grows with the Consumer Price Index, beyond the interest. Its rate reset date is also a penalty-free exit point.',
+            },
+            basket4: {
+              title: 'Recommended mix: 40% prime, 34% fixed, 26% variable indexed',
+              text: 'The blended composition of three tracks: 40% prime, 34% fixed non-indexed and 26% variable indexed every 5 years. The variable part (prime plus the indexed track) is larger than in mix 3, so the average cost is lower and the exposure to rate moves and inflation is higher. The calculator labels it the recommended mix, but here recommended means a common starting point, not a personal fit.',
+            },
+          },
+          tryLabel: 'Try this mix in the calculator',
+        },
+        prepay: {
+          title: 'Prepayment: which track to pay off first',
+          lead: 'When you divert money to an early repayment, its return is the rate of the track being shrunk, and it is guaranteed: there is no safer gain than not paying interest you would otherwise pay. That yields a simple rule of thumb, with one important exception.',
+          facts: {
+            rateFirst: {
+              title: 'The core rule: prepay the highest-rate track first',
+              text: 'Every shekel prepaid saves the interest that would have accrued on it until the end of the term, so one shekel sent to a 6% track saves more than a shekel sent to a 3% track. This is a guaranteed return, not an estimated one, which is why it beats comparing against investments whose future return is unknown.',
+            },
+            penalty: {
+              title: 'The exception: a prepayment penalty can tip the scales',
+              text: 'A fixed-rate track may carry a discounting penalty if market rates have fallen below the rate locked in the agreement, while prime is always exempt and a variable track is exempt at its rate reset date. If the highest-rate track carries a significant penalty and a lower-rate penalty-free track exists, the decision is no longer automatic: subtract the penalty from the expected saving and compare the tracks.',
+            },
+          },
+          ruleNote:
+            'This is a rule of thumb, not personalized advice: the penalty is set by the loan agreement, and before a large prepayment it is worth asking the bank for the figures in writing. The full mechanism and the discounts are covered in the article:',
+          prepaymentLink: 'Mortgage prepayment penalties',
+        },
+        methods: {
+          title: 'Spitzer versus equal principal: a borrower decision, not a track decision',
+          framing:
+            'A common mistake is to think of the amortization schedule as a choice that fits "a specific track". The schedule defines the repayment structure of the whole loan: how every payment splits between principal and interest over the years. The meaningful decision is therefore the borrower\'s cash-flow situation, not a strategy of one schedule here and another there.',
+          spitzer:
+            "Spitzer (the standard schedule): the monthly payment stays constant for the whole track term (as long as the track's own rate does not reset), which makes budgeting easy. The price: in the early years most of the payment is interest, and the total interest over the life of the loan is higher.",
+          equalPrincipal:
+            'Equal principal: the payment starts noticeably higher and declines over the years, because the principal shrinks faster. At the same rate and term the total interest is lower. It suits someone who can afford a high payment today and prefers to cut the total cost even at the price of a demanding budget in the first years.',
+          availability:
+            'A note most guides skip: most Israeli banks do not offer equal principal at all. It is mainly associated with Bank Leumi and Mizrahi-Tefahot, so before building a plan around it, confirm with the specific bank that it is even available.',
+          calculatorNote:
+            'The calculator lets you set the amortization schedule per track, which makes it easy to compare both methods on the same numbers, but when it comes to the real decision it is worth choosing one consistent schedule for the whole loan. For the basics of the track types themselves, we wrote here:',
+          trackTypesLink: 'Mortgage track types: prime, fixed and variable',
+        },
+        disclaimer:
+          'This information is general, does not depend on your calculation, and is not advice or an offer. Mortgage terms, rates and fees are set by the loan agreement and by Bank of Israel rules.',
         backToArticles: 'Back to all articles',
       },
     },
@@ -299,6 +431,20 @@ export const en: { translation: Translation } = {
         methodLabel: 'Amortization',
         methodSpitzer: 'Spitzer',
         methodEqualPrincipal: 'Equal principal',
+      },
+      help: {
+        readMore: 'Read more',
+        trackTypeAria: 'More about the track types',
+        trackType:
+          'The type determines how the rate behaves: prime and variable tracks move with the market, a fixed track locks the payment for the whole term, and CPI indexation grows the debt with inflation.',
+        methodAria: 'More about the amortization schedule',
+        method:
+          'Spitzer keeps the payment constant; equal principal starts higher, declines over time and saves on total interest. This is a whole-loan decision based on your cash flow, not a separate choice per track.',
+        termAria: 'More about the mortgage term',
+        term: 'The slider sets the term for all tracks at once, and each track can still be adjusted in its own years field. A longer term lowers the monthly payment but raises the total interest.',
+        presetAria: 'More about the ready-made mixes',
+        preset:
+          'A ready-made mix fills the tracks with a fixed split between fixed, prime and variable-indexed tracks, as a starting point to tweak. The article explains what each mix contains.',
       },
       trackTypes: {
         prime: 'Prime',

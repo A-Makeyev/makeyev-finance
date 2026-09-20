@@ -6,6 +6,12 @@ export interface FlipSelectProps {
   onChange: (value: string) => void
   children: ReactNode
   className?: string
+  /**
+   * Id for the select element, so an external <label htmlFor> can bind to the
+   * select instead of the first labelable descendant (which may be a help
+   * tooltip button) - see TrackForm.
+   */
+  selectId?: string
   testId?: string
   ariaLabel?: string
 }
@@ -20,6 +26,7 @@ export function FlipSelect({
   onChange,
   children,
   className,
+  selectId,
   testId,
   ariaLabel,
 }: FlipSelectProps) {
@@ -28,6 +35,7 @@ export function FlipSelect({
     <span className={cn('select-wrap', open && 'open')}>
       <select
         className={className}
+        id={selectId}
         value={value}
         aria-label={ariaLabel}
         data-testid={testId}
