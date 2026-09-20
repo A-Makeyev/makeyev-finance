@@ -843,72 +843,75 @@ img {
   margin: 0 50px 50px 0;
 }
 
-.contact-col form > .relative input,
-.contact-col form > .relative textarea {
+.contact-col form>.relative input,
+.contact-col form>.relative textarea {
   width: 110% !important;
   min-height: 0;
   border-color: var(--line-strong) !important;
   box-shadow: var(--black-shadow) !important;
 }
 
-.contact-col form > .relative input:focus,
-.contact-col form > .relative textarea:focus {
+.contact-col form>.relative input:focus,
+.contact-col form>.relative textarea:focus {
   border-color: var(--line-strong) !important;
   box-shadow: var(--black-shadow) !important;
 }
 
-.contact-col form > .relative {
+.contact-col form>.relative {
   margin-bottom: 5px;
 }
 
-.contact-col form > .relative label {
+.contact-col form>.relative label {
   position: static;
   transform: none;
 }
 
-.form-modal .contact-col form > .relative input,
-.form-modal .contact-col form > .relative textarea {
+.form-modal .contact-col form>.relative input,
+.form-modal .contact-col form>.relative textarea {
   width: 110% !important;
 }
 
 @media (max-width: 1600px) {
-  .contact-col form > .relative input,
-  .contact-col form > .relative textarea,
+
+  .contact-col form>.relative input,
+  .contact-col form>.relative textarea,
   #submit-form {
     /* Full width so the button never overhangs the form column / divider. */
     width: 100% !important;
   }
 
-  .form-modal .contact-col form > .relative input,
-  .form-modal .contact-col form > .relative textarea,
+  .form-modal .contact-col form>.relative input,
+  .form-modal .contact-col form>.relative textarea,
   .form-modal #submit-form {
     width: 110% !important;
   }
 }
 
 @media (max-width: 1100px) {
-  .contact-col form > .relative input,
-  .contact-col form > .relative textarea,
+
+  .contact-col form>.relative input,
+  .contact-col form>.relative textarea,
   #submit-form {
     /* Full width so the button never overhangs the form column / divider. */
     width: 100% !important;
     padding: 15px !important;
   }
 
-  .contact-col form > .relative label {
+  .contact-col form>.relative label {
     font-size: 15px;
   }
 }
 
 @media (max-width: 500px) {
-  .contact-col form > .relative input,
-  .contact-col form > .relative textarea,
+
+  .contact-col form>.relative input,
+  .contact-col form>.relative textarea,
   #submit-form {
     /* Full width so the button never overhangs the form column / divider. */
     width: 100% !important;
   }
 
-  .contact-col form > .relative label {
+  .contact-col form>.relative label {
     font-size: 15px;
   }
 }
@@ -1337,6 +1340,7 @@ img {
 .indexes .index-join {
   user-select: text;
 }
+
 .indexes .index-join::before {
   /* CSS hex escape (not \u) for a non-breaking space. */
   content: '\00a0';
@@ -1446,12 +1450,10 @@ img {
   height: 0.75em;
   border-radius: 3px;
   background-color: rgba(255, 255, 255, 0.14);
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 20%,
-    rgba(255, 255, 255, 0.22) 50%,
-    rgba(255, 255, 255, 0) 80%
-  );
+  background-image: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 20%,
+      rgba(255, 255, 255, 0.22) 50%,
+      rgba(255, 255, 255, 0) 80%);
   background-repeat: no-repeat;
   background-size: 200% 100%;
   animation: market-skeleton-shimmer 1400ms linear infinite;
@@ -1565,12 +1567,14 @@ img {
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   /* The static green/red already carries the direction; skip the fade. */
   .markets-tick {
     display: none;
@@ -1682,7 +1686,7 @@ nav#navbar .logo {
   gap: 20px;
 }
 
-.nav-content > li {
+.nav-content>li {
   list-style: none;
 }
 
@@ -1970,7 +1974,7 @@ nav#navbar.nav-scrolling-resize {
   gap: 20px;
 }
 
-.nav-content > li {
+.nav-content>li {
   list-style: none;
 }
 
@@ -2131,6 +2135,7 @@ nav#navbar.nav-scrolling-resize {
 }
 
 @media screen and (max-width: 1250px) {
+
   /* Deterministic wrap. A content-width row cannot guarantee a line count:
      when five rows fit and the sixth then drops, it sits alone on the last
      line (measured: 5+1 at 1000-1100px). Pinning each row to a third of the
@@ -2227,6 +2232,7 @@ nav#navbar.nav-scrolling-resize {
 }
 
 @media screen and (max-width: 420px) {
+
   /* Below this the phone tier above cannot hold three 10px rows side by side
      (they measure ~371px together at 360px wide, and the numbers only grow),
      so pairs are pinned instead: six rows settle as 2 + 2 + 2 rather than the
@@ -2305,7 +2311,7 @@ nav#navbar.nav-scrolling-resize {
     background: var(--soft-white);
   }
 
-  nav#navbar :checked ~ .nav-center #nav-list {
+  nav#navbar :checked~.nav-center #nav-list {
     bottom: 0;
     /* Opening overrides the closing leg above: 0.4s on a decelerating
        standard curve reads smoother than ease-in-out for a dropping sheet
@@ -2318,22 +2324,22 @@ nav#navbar.nav-scrolling-resize {
     transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.2s;
   }
 
-  nav#navbar :checked ~ .menu-icon .line:nth-child(1) {
+  nav#navbar :checked~.menu-icon .line:nth-child(1) {
     transform: translateY(10px) rotate(225deg);
   }
 
-  nav#navbar :checked ~ .menu-icon .line:nth-child(2) {
+  nav#navbar :checked~.menu-icon .line:nth-child(2) {
     opacity: 0;
   }
 
-  nav#navbar :checked ~ .menu-icon .line:nth-child(3) {
+  nav#navbar :checked~.menu-icon .line:nth-child(3) {
     transform: translateY(-10px) rotate(-225deg);
   }
 
   /* When the menu is open the three lines form an ✕. Hover spins the whole
      toggle smoothly (a 90° turn, like the modal close button) without
      breaking the ✕ glyph - the label transition is already 0.5s ease. */
-  nav#navbar :checked ~ .menu-icon:hover {
+  nav#navbar :checked~.menu-icon:hover {
     transform: translateY(-50%) rotate(90deg);
   }
 }
@@ -2445,16 +2451,17 @@ nav#navbar.nav-scrolling-resize {
     margin: 4px;
   }
 
-  nav#navbar :checked ~ .menu-icon .line:nth-child(1) {
+  nav#navbar :checked~.menu-icon .line:nth-child(1) {
     transform: translateY(7px) rotate(225deg);
   }
 
-  nav#navbar :checked ~ .menu-icon .line:nth-child(3) {
+  nav#navbar :checked~.menu-icon .line:nth-child(3) {
     transform: translateY(-7px) rotate(-225deg);
   }
 }
 
 @media screen and (max-width: 500px) {
+
   .logo-image,
   .logo-image-transparent {
     width: 18% !important;
@@ -2699,6 +2706,7 @@ textarea {
   padding-right: 10px !important;
   text-indent: 0 !important;
 }
+
 e #name,
 #message,
 .input-rtl,
@@ -2762,6 +2770,7 @@ e #name,
 }
 
 @media (max-width: 1600px) {
+
   .submit-form,
   .contact-col input,
   .contact-col textarea {
@@ -2783,6 +2792,7 @@ e #name,
 }
 
 @media (max-width: 1100px) {
+
   .submit-form,
   .contact-col input,
   .contact-col textarea {
@@ -2806,7 +2816,7 @@ e #name,
     font-size: 25px;
   }
 
-  .contact > p {
+  .contact>p {
     font-size: 15px;
   }
 
@@ -2867,6 +2877,7 @@ e #name,
 }
 
 @media (max-width: 500px) {
+
   .submit-form,
   .contact-col input,
   .contact-col textarea {
@@ -2892,7 +2903,7 @@ e #name,
 
   .contact-col i,
   .contact-col p,
-  .contact > p {
+  .contact>p {
     font-size: 12px;
   }
 }
@@ -2960,7 +2971,7 @@ e #name,
   border-bottom: 1px solid var(--calc-line);
 }
 
-.starting-point > label {
+.starting-point>label {
   display: flex;
   flex-direction: column;
 }
@@ -2972,10 +2983,8 @@ e #name,
      150px minimum keeps ~90px of text area after the ₪ suffix and padding,
      enough for "10,000,000". The purpose select only needs its option text
      (~220px), so its weight drops from 1.6fr to 1.3fr. */
-  grid-template-columns: minmax(220px, 1.3fr) minmax(150px, 1.05fr) minmax(150px, 1.05fr) minmax(
-      130px,
-      0.85fr
-    );
+  grid-template-columns: minmax(220px, 1.3fr) minmax(150px, 1.05fr) minmax(150px, 1.05fr) minmax(130px,
+      0.85fr);
   gap: 18px;
   padding-bottom: 20px;
   margin-bottom: 20px;
@@ -3007,7 +3016,7 @@ e #name,
   display: block;
 }
 
-.note-line + .note-line {
+.note-line+.note-line {
   margin-top: 4px;
 }
 
@@ -3057,7 +3066,7 @@ e #name,
   font-size: 0.95rem;
 }
 
-.tax-breakdown > summary {
+.tax-breakdown>summary {
   cursor: pointer;
   color: var(--calc-teal-dark);
   font-weight: 700;
@@ -3074,8 +3083,8 @@ e #name,
    both can be matched exactly - one --caret-size knob, and the same 1.2em cell
    centring the icons use, so the caret lands under them by construction.
    --------------------------------------------------------------------- */
-.tax-breakdown > summary,
-.prepayment-note > summary {
+.tax-breakdown>summary,
+.prepayment-note>summary {
   /* The caret replaces the UA marker entirely. */
   list-style: none;
   /* Caret box, roughly square like the ⚠️'s ink: one knob for the size, and it
@@ -3103,14 +3112,14 @@ e #name,
 /* Open: point down. The box stays exactly the same size (the inline borders
    take over the width the coloured one gave up), so toggling never shifts the
    label. Down is down in both directions, so no direction rule here either. */
-.tax-breakdown[open] > summary .collapse-caret,
-.prepayment-note[open] > summary .collapse-caret {
+.tax-breakdown[open]>summary .collapse-caret,
+.prepayment-note[open]>summary .collapse-caret {
   border-block: 0;
   border-inline: calc(var(--caret-size) / 2) solid transparent;
   border-block-start: var(--caret-size) solid currentColor;
 }
 
-.tax-breakdown[open] > summary {
+.tax-breakdown[open]>summary {
   margin-block-end: 8px;
 }
 
@@ -3371,6 +3380,7 @@ e #name,
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -3382,6 +3392,7 @@ e #name,
     opacity: 1;
     transform: translateY(0);
   }
+
   to {
     opacity: 0;
     transform: translateY(-8px);
@@ -3490,6 +3501,7 @@ e #name,
 /* Reduced motion: no slide/fade for rows, and the remove button removes
    instantly (the page checks the same media query before animating). */
 @media (prefers-reduced-motion: reduce) {
+
   .expense-row,
   .expense-row.removing {
     animation: none;
@@ -3502,6 +3514,7 @@ e #name,
 }
 
 @media (max-width: 1160px) {
+
   /* The costs row folds to two columns as soon as the shell starts shrinking
      (the shell is min(1120px, 100% - 40px), so 1160px is its full width plus
      the gutters). Four columns only hold while the panel is at its widest:
@@ -3592,34 +3605,30 @@ e #name,
 .term-slider-wrap input[type='range']::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
-  background: linear-gradient(
-    to left,
-    transparent 0%,
-    transparent var(--slider-start, 4.4%),
-    var(--calc-accent) var(--slider-start, 4.4%),
-    var(--calc-accent) var(--slider-fill, 50%),
-    var(--calc-line) var(--slider-fill, 50%),
-    var(--calc-line) var(--slider-end, 95.6%),
-    transparent var(--slider-end, 95.6%),
-    transparent 100%
-  );
+  background: linear-gradient(to left,
+      transparent 0%,
+      transparent var(--slider-start, 4.4%),
+      var(--calc-accent) var(--slider-start, 4.4%),
+      var(--calc-accent) var(--slider-fill, 50%),
+      var(--calc-line) var(--slider-fill, 50%),
+      var(--calc-line) var(--slider-end, 95.6%),
+      transparent var(--slider-end, 95.6%),
+      transparent 100%);
 }
 
 /* Legacy fill was hardcoded `to left` for the Hebrew RTL default (min on the
    right). English is LTR (min on the left), so flip the gradient direction to
    keep the teal fill growing from the min end toward the thumb. */
 :root[dir='ltr'] .term-slider-wrap input[type='range']::-webkit-slider-runnable-track {
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    transparent var(--slider-start, 4.4%),
-    var(--calc-accent) var(--slider-start, 4.4%),
-    var(--calc-accent) var(--slider-fill, 50%),
-    var(--calc-line) var(--slider-fill, 50%),
-    var(--calc-line) var(--slider-end, 95.6%),
-    transparent var(--slider-end, 95.6%),
-    transparent 100%
-  );
+  background: linear-gradient(to right,
+      transparent 0%,
+      transparent var(--slider-start, 4.4%),
+      var(--calc-accent) var(--slider-start, 4.4%),
+      var(--calc-accent) var(--slider-fill, 50%),
+      var(--calc-line) var(--slider-fill, 50%),
+      var(--calc-line) var(--slider-end, 95.6%),
+      transparent var(--slider-end, 95.6%),
+      transparent 100%);
 }
 
 .term-slider-wrap input[type='range']::-moz-range-progress {
@@ -3812,6 +3821,7 @@ e #name,
   0% {
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
@@ -3967,6 +3977,7 @@ e #name,
     opacity: 0;
     translate: 0 -3px;
   }
+
   to {
     opacity: 1;
     translate: 0 0;
@@ -3983,6 +3994,7 @@ e #name,
     opacity: 1;
     translate: 0 0;
   }
+
   to {
     opacity: 0;
     translate: 0 -3px;
@@ -4213,6 +4225,7 @@ e #name,
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -4232,6 +4245,7 @@ e #name,
     opacity: 1;
     transform: translateY(0);
   }
+
   to {
     opacity: 0;
     transform: translateY(10px);
@@ -4239,6 +4253,7 @@ e #name,
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .results-card,
   .results-card.results-extra-out {
     animation: none;
@@ -4312,7 +4327,8 @@ e #name,
 }
 
 .results-card p {
-  color: var(--calc-ink); /* dark ink, not muted - the bold label must read first */
+  color: var(--calc-ink);
+  /* dark ink, not muted - the bold label must read first */
   font-size: 0.95rem;
   font-weight: 700;
   margin: 10px 0 0;
@@ -4352,7 +4368,7 @@ e #name,
   margin: 0;
 }
 
-.results-card > span {
+.results-card>span {
   display: block;
   color: var(--calc-muted);
   font-size: 0.85rem;
@@ -4400,12 +4416,10 @@ e #name,
 }
 
 .primary-result {
-  background: linear-gradient(
-    115deg,
-    var(--calc-teal-deep),
-    var(--calc-teal) 65%,
-    var(--calc-accent)
-  );
+  background: linear-gradient(115deg,
+      var(--calc-teal-deep),
+      var(--calc-teal) 65%,
+      var(--calc-accent));
   /* Light hairline so the border reads against the dark gradient. */
   border-color: rgba(255, 255, 255, 0.55);
 }
@@ -4417,7 +4431,7 @@ e #name,
   font-weight: 700;
 }
 
-.primary-result > span {
+.primary-result>span {
   color: #d5ebe4;
   font-size: 0.85rem;
   line-height: 1.45;
@@ -5154,7 +5168,7 @@ e #name,
 }
 
 /* One yearly table per track (added Step 3). */
-.schedule-track + .schedule-track {
+.schedule-track+.schedule-track {
   margin-top: 28px;
 }
 
@@ -5295,6 +5309,7 @@ tbody tr:hover {
    ≤1000px/≤800px scales so nothing pops as the viewport crosses a
    boundary. */
 @media (max-width: 1200px) {
+
   /* Panels: slimmer padding and margins reclaim vertical space around the
      whole page without touching content width. */
   .calculator-panel,
@@ -5443,6 +5458,7 @@ tbody tr:hover {
 }
 
 @media (max-width: 1000px) {
+
   /* Track cards break out of the tight 5-column layout - the track type and
      amount share one row, and the remaining fields (years, rate, method)
      share the row below. Results cards step down to 3 columns at the same
@@ -5508,6 +5524,7 @@ tbody tr:hover {
 }
 
 @media (max-width: 900px) {
+
   /* Stack the limits row a bit earlier than the 800px panel collapse:
      between 800-900px the four-column grid squeezed שווי הנכס / הון עצמי to
      ~127px, which scrolled the leading digits of 7-digit amounts out of
@@ -5624,6 +5641,7 @@ tbody tr:hover {
 }
 
 @media (max-width: 650px) {
+
   /* Small phones: trim the calculator's type scale and control heights one
      notch (feedback request) so fields, notes and the schedule stay readable
      without crowding the narrow panel. */
@@ -5797,6 +5815,7 @@ tbody tr:hover {
    tighter charts and footer. Append-only so the 650px block stays intact.
 =========================================================================== */
 @media screen and (max-width: 400px) {
+
   /* Results: two cards per row - the featured (first) card still takes the
      full row via the ≤800px .primary-result rule. */
   .results-layout {
@@ -6058,14 +6077,14 @@ tbody tr:hover {
   }
 }
 
-.prepayment-note > summary {
+.prepayment-note>summary {
   cursor: pointer;
   color: var(--calc-teal-dark);
   font-weight: 700;
   inline-size: fit-content;
 }
 
-.prepayment-note[open] > summary {
+.prepayment-note[open]>summary {
   /* Same open-state gap as .tax-breakdown[open] > summary. */
   margin-block-end: 8px;
 }
@@ -6151,7 +6170,7 @@ tbody tr:hover {
    `lib/articles.ts` (`.sub-header` already covers sizing, position and the
    dark overlay), so only the swap lives here as a note. */
 
-.articles-list > h2 {
+.articles-list>h2 {
   margin-block: 0 16px;
   color: var(--ink);
   font-size: 1.5rem;
@@ -6310,6 +6329,7 @@ tbody tr:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .article-card,
   .article-card:hover {
     transform: none;
@@ -6398,6 +6418,7 @@ tbody tr:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .compare-back,
   .compare-back-icon {
     transition: none;
@@ -6578,7 +6599,7 @@ tbody tr:hover {
   flex-wrap: wrap;
 }
 
-.compare-term-row > span {
+.compare-term-row>span {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--calc-teal-dark);
@@ -6791,7 +6812,7 @@ tbody tr:hover {
   margin: 0 0 14px;
 }
 
-.compare-card-metrics > div {
+.compare-card-metrics>div {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -6800,7 +6821,7 @@ tbody tr:hover {
   border-bottom: 1px solid var(--calc-line);
 }
 
-.compare-card-metrics > div.best dd {
+.compare-card-metrics>div.best dd {
   color: var(--calc-teal-dark);
   font-weight: 700;
 }
@@ -6852,6 +6873,7 @@ tbody tr:hover {
 }
 
 @media (max-width: 500px) {
+
   /* The hero's h1 is nowrap by default; "Mortgage scenario comparison" is the
      longest title on the site and overhung a 360px viewport by 23px. This page
      only (see the compare-sub-header modifier on /compare). */
@@ -6861,6 +6883,7 @@ tbody tr:hover {
 }
 
 @media (max-width: 900px) {
+
   /* The desktop editors grid drops to two ~350px columns here: tighten the
      card padding and the gap so the compact track keeps its breathing room. */
   .compare-editors-grid {
@@ -6873,6 +6896,7 @@ tbody tr:hover {
 }
 
 @media (max-width: 800px) {
+
   /* Mirrors .calculator-shell: stop pulling up into the hero with the desktop
      offset and use the narrower phone gutter. */
   .compare-shell {
@@ -6902,7 +6926,7 @@ tbody tr:hover {
 
   /* The metric label ("Total payments over 25 years") and its value finally
      share a row instead of squeezing: wrap under the label when tight. */
-  .compare-card-metrics > div {
+  .compare-card-metrics>div {
     flex-wrap: wrap;
   }
 }
