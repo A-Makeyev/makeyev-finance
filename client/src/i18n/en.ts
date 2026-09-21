@@ -101,7 +101,7 @@ export const en: { translation: Translation } = {
         cta: 'Read the article',
       },
       mortgageDecisions: {
-        title: 'Practical decisions: the mix, prepayment order and amortization',
+        title: 'The mortgage mix, prepayment order and amortization',
         summary:
           'What each ready-made mix contains and how to choose between them, which track to prepay first, and Spitzer versus equal principal as a whole-loan decision.',
         cta: 'Read the article',
@@ -229,7 +229,7 @@ export const en: { translation: Translation } = {
           note: 'This is a secondary distinction next to the choice of track type: it changes the pace of repayment over the years, not the nature of the risk. In the calculator you can pick the repayment method for each track separately.',
           deeperNote:
             'For the choice between the schedules as a borrower-level, whole-loan decision, plus two more practical decisions - which ready-made mix to start from and which track to prepay first - we wrote a follow-up article:',
-          deeperLink: 'Practical decisions: the mix, prepayment order and amortization',
+          deeperLink: 'The mortgage mix, prepayment order and amortization',
         },
         mix: {
           title: 'Why tracks are mixed (the mix)',
@@ -305,7 +305,7 @@ export const en: { translation: Translation } = {
             'A note most guides skip: most Israeli banks do not offer equal principal at all. It is mainly associated with Bank Leumi and Mizrahi-Tefahot, so before building a plan around it, confirm with the specific bank that it is even available.',
           calculatorNote:
             'The calculator lets you set the amortization schedule per track, which makes it easy to compare both methods on the same numbers, but when it comes to the real decision it is worth choosing one consistent schedule for the whole loan. For the basics of the track types themselves, we wrote here:',
-          trackTypesLink: 'Mortgage track types: prime, fixed and variable',
+          trackTypesLink: 'Mortgage track types',
         },
         disclaimer:
           'This information is general, does not depend on your calculation, and is not advice or an offer. Mortgage terms, rates and fees are set by the loan agreement and by Bank of Israel rules.',
@@ -435,8 +435,25 @@ export const en: { translation: Translation } = {
       help: {
         readMore: 'Read more',
         trackTypeAria: 'More about the track types',
-        trackType:
-          'The type determines how the rate behaves: prime and variable tracks move with the market, a fixed track locks the payment for the whole term, and CPI indexation grows the debt with inflation.',
+        trackTypes: {
+          // Each body opens with the track's own select label (the test below
+          // guards it), so the tip reads "<name> is..." and never forces the
+          // reader to match the tip back to the select.
+          prime:
+            'Prime is the Bank of Israel rate plus a fixed margin. It moves with every rate decision, and you can leave the track at any time without a penalty.',
+          fixed:
+            'Fixed non-indexed locks the rate and payment for the whole term. That certainty starts at a higher rate, and there is no penalty-free exit.',
+          variable5y:
+            'Variable every 5 years non-indexed is a bank-set reference rate that updates every 5 years and acts like a fixed rate in between. Each update is a penalty-free exit point.',
+          variable:
+            'Variable yearly non-indexed is a bank-set reference rate that updates yearly and acts like a fixed rate in between. Each update is a penalty-free exit point.',
+          fixedIndexed:
+            'Fixed CPI-indexed locks the rate for the whole term and indexes the debt to CPI: inflation grows the principal itself, not just the payment.',
+          variableIndexed5y:
+            'Variable indexed every 5 years combines a rate that updates every 5 years with CPI indexation: inflation grows the principal while the rate updates every 5 years.',
+          variableIndexed:
+            'Variable indexed yearly combines a yearly-updated rate with CPI indexation: inflation grows the principal while the rate updates yearly.',
+        },
         methodAria: 'More about the amortization schedule',
         method:
           'Spitzer keeps the payment constant; equal principal starts higher, declines over time and saves on total interest. This is a whole-loan decision based on your cash flow, not a separate choice per track.',

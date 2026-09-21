@@ -97,14 +97,19 @@ export async function installExternalMocks(
     })
   })
 
-  const ids = ['120010', '200010', '800010']
-  for (const id of ids) {
+  // Each feed gets its real-world name: the name drives the client's
+  // displayOrder (צרכן -> 3, מגורים -> 2, otherwise 1) and the short-name
+  // key (מגורים = residential, otherwise commercial), so a shared name
+  // would mislabel the commercial index and scramble the visual order.
+  const feedNames: Record<string, string> = {
+    '120010': 'מדד המחירים לצרכן - כללי',
+    '200010': 'מחירי תשומה בבניין מגורים - כללי',
+    '800010': 'מחירי תשומה בבניין מסחר ומשרדים - כללי',
+  }
+  for (const [id, feedName] of Object.entries(feedNames)) {
     await page.route(new RegExp(`api\\.cbs\\.gov\\.il[^?]*\\?id=${id}`), (route) => {
       if (!cpi) return route.abort()
-      const xml =
-        id === '120010'
-          ? buildCbsXml(cpi)
-          : buildCbsXml(cpi).replace('מדד המחירים לצרכן - כללי', 'מחירי תשומה בבניין מגורים - כללי')
+      const xml = buildCbsXml(cpi).replace('מדד המחירים לצרכן - כללי', feedName)
       return fulfillCors(route, { status: 200, contentType: 'text/xml', bodyText: xml })
     })
   }

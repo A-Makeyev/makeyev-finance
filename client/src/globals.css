@@ -1323,6 +1323,15 @@ img {
   right: 0;
   left: 0;
   top: 0;
+  /* Pinned like the Markets strip below: a flex row places its first item
+     at the inline START, which flips with the document direction (only the
+     calculator route is RTL), so the anchors' visual order changed between
+     pages. Pinning the container makes the placement identical everywhere:
+     commercial leftmost, then residential, then CPI rightmost - the Hebrew
+     reading order צרכן -> מגורים -> בניין on every page. The anchors keep
+     their own dir (set in the component), so their text layout is untouched;
+     this only pins WHERE each anchor sits. */
+  direction: ltr;
 }
 
 .indexes a {
@@ -1768,7 +1777,12 @@ nav#navbar #nav-list li {
 nav#navbar #nav-list a {
   padding: 10px;
   display: block;
-  font-size: 20px;
+  /* 18px on the wide-screen row - one notch above the strips' 16px so the
+     navigation reads a touch stronger than the data tickers (user choice:
+     nav leads, strips stay). The 1201-1600px block below re-pins its own
+     16px; the compact 1201-1250px band overrides both; the hamburger sheet
+     below 1200px re-sizes its own links. */
+  font-size: 18px;
   margin-top: 10px;
   font-weight: bold;
   text-decoration: none;
@@ -1864,6 +1878,35 @@ nav#navbar #nav-list a[data-testid='theme-switch'] .nav-theme-icon.sun svg {
   color: #ff9a3c;
   -webkit-mask-image: linear-gradient(150deg, #000 30%, rgba(0, 0, 0, 0.4) 100%);
   mask-image: linear-gradient(150deg, #000 30%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+/* Larger icon row on medium/large screens (>=1201px, the range where the
+   icons share the navbar row with the links): socials, flag and theme glyph
+   each step up ~25% so the row carries its own visual weight next to the
+   16px links instead of receding. The socials are react-icons sized to 1em,
+   so one font-size scales them; the flag and theme glyph have explicit
+   slots. Scoped to >=1201px - below it the icons live in the drop-down
+   menu sheet, where the compact sizes stay (the 360px control row is sized
+   to fit exactly, and its e2e test measures it). */
+@media screen and (min-width: 1201px) {
+  nav#navbar #nav-list a.nav-link.icon {
+    font-size: 20px;
+  }
+
+  nav#navbar #nav-list a[data-testid='language-switch'] img {
+    width: 27px;
+    height: 18px;
+  }
+
+  nav#navbar #nav-list a[data-testid='theme-switch'] .nav-theme-icon {
+    width: 27px;
+    height: 22px;
+  }
+
+  nav#navbar #nav-list a[data-testid='theme-switch'] .nav-theme-icon svg {
+    width: 19px;
+    height: 19px;
+  }
 }
 
 /* Legacy hidden menu toggle: must stay in the DOM (the menu's :checked
@@ -2156,26 +2199,72 @@ nav#navbar.nav-scrolling-resize {
   }
 }
 
-@media screen and (max-width: 1150px) {
+/* Tablet strip tier (1001-1200px): the index/ticker strips shrink with the
+   chrome tier below - smaller text and shorter bars. Placed BEFORE the
+   <=1150px block so that block's taller stacked-bar overrides still win the
+   cascade at their widths (equal specificity, later in file). The navbar
+   offset contract is re-pinned here the same way every tier does it:
+   .adjust-nav margin = indexes height - 35px base top, and adjust-markets
+   adds the measured --markets-height on top. */
+@media screen and (max-width: 1200px) {
   .adjust-nav {
-    margin-top: 40px;
+    /* 35px fixed top + 11px margin = 46px - the navbar starts exactly
+       below the 46px Indexes bar. */
+    margin-top: 11px;
   }
 
   nav#navbar.adjust-markets {
-    /* 40px (.adjust-nav indexes extra) + the strip's real (wrapped) height. */
-    margin-top: calc(40px + var(--markets-height, 35px));
+    /* 11px (.adjust-nav indexes extra) + the strip's real (wrapped) height. */
+    margin-top: calc(11px + var(--markets-height, 35px));
   }
 
   .indexes {
-    height: 75px;
+    /* Two wrapped lines of 12px text (~17px line boxes) + 10px padding. */
+    height: 46px;
+  }
+
+  .markets {
+    top: 46px;
+    /* Slightly less breathing room so the shorter bars read as one
+       compact unit with the trimmed nav above. */
+    padding: 4px 10px 10px;
+  }
+
+  .indexes a {
+    /* Between the 16px desktop text and the 10px phone text. */
+    font-size: 12px;
+  }
+
+  .markets-row {
+    /* Matches the 12px Indexes text - the two strips read as one type
+       scale, like they do on phones. */
+    font-size: 12px;
+  }
+}
+
+@media screen and (max-width: 1150px) {
+  .adjust-nav {
+    /* 35px fixed top + 27px margin = 62px - the navbar still starts exactly
+       below the indexes bar. */
+    margin-top: 27px;
+  }
+
+  nav#navbar.adjust-markets {
+    /* 27px (.adjust-nav indexes extra) + the strip's real (wrapped) height. */
+    margin-top: calc(27px + var(--markets-height, 35px));
+  }
+
+  .indexes {
+    /* Three stacked 12px lines (~17px line boxes) + 10px padding. */
+    height: 62px;
     align-items: center;
     flex-direction: column;
   }
 
   .markets {
-    top: 75px;
+    top: 62px;
     /* Slightly tighter gaps than the 20px base so the wrapped rows stay
-       compact; font size matches the Indexes bar (16px) at every width. */
+       compact; font size matches the Indexes bar (12px at this tier). */
     column-gap: 16px;
   }
 
@@ -2325,7 +2414,11 @@ nav#navbar.nav-scrolling-resize {
   }
 
   nav#navbar :checked~.menu-icon .line:nth-child(1) {
-    transform: translateY(10px) rotate(225deg);
+    /* ±9px, not the base ±10px: with 3px lines the centers sit 9px apart
+       (3px line + 6px collapsed margin), so each arm must move exactly one
+       spacing to cross at the middle - any more and the ✕ reads tilted,
+       like the phone tier's comment below explains for its ±7px. */
+    transform: translateY(9px) rotate(225deg);
   }
 
   nav#navbar :checked~.menu-icon .line:nth-child(2) {
@@ -2333,7 +2426,7 @@ nav#navbar.nav-scrolling-resize {
   }
 
   nav#navbar :checked~.menu-icon .line:nth-child(3) {
-    transform: translateY(-10px) rotate(-225deg);
+    transform: translateY(-9px) rotate(-225deg);
   }
 
   /* When the menu is open the three lines form an ✕. Hover spins the whole
@@ -2368,7 +2461,15 @@ nav#navbar.nav-scrolling-resize {
   }
 
   nav#navbar .menu-icon .line {
-    width: 26px;
+    /* One notch under the 30px base, matching this tier's trimmed chrome
+       (56px logo, smaller strips), and 3px tall like the phone tier - the
+       user asked for a thinner glyph. The ✕-form transforms below cross at
+       the line centers, so with height 3px + 6px margins the centers sit
+       9px apart and the arms are retuned to ±9px (the base ±10px assumed
+       4px lines). The 650px phone tier slims the margins further (4px,
+       retuned ±7px arms). */
+    width: 22px;
+    height: 3px;
   }
 
   .text-box h1 {
@@ -2504,7 +2605,7 @@ nav#navbar.nav-scrolling-resize {
 
   nav#navbar #nav-list a {
     padding: 8px 4px;
-    font-size: 16px;
+    font-size: 18px;
     white-space: nowrap;
   }
 
@@ -2515,6 +2616,32 @@ nav#navbar.nav-scrolling-resize {
   .nav-icons-center {
     gap: 8px;
     margin-left: 10px;
+  }
+}
+
+/* Pre-tablet compact tier (1201-1250px): the band where every Indexes
+   anchor wraps to two stacked lines (each anchor is pinned 370px wide) and
+   the Markets rows sit in three 3-row columns. The strips drop to 14px so
+   the two-line blocks stay light, and the nav keeps ONE notch above them
+   (16px), mirroring the 18px-over-16px hierarchy of the wider bands -
+   user choice: navigation leads, tickers follow. The <=1200px tier (12px
+   strips) continues the step-down below it. Placed AFTER the 1201-1600px
+   block above, which pins the nav row with equal specificity - later in
+   the file wins, so this band must come last. The bars keep their desktop
+   heights: two 14px lines still fit 55px, so the .adjust-nav /
+   .adjust-markets offset contract is untouched. 16px nav links already fit
+   this band (the 1201-1600px block pinned exactly that until this override). */
+@media screen and (max-width: 1250px) and (min-width: 1201px) {
+  nav#navbar #nav-list a {
+    font-size: 16px;
+  }
+
+  .indexes a {
+    font-size: 14px;
+  }
+
+  .markets-row {
+    font-size: 14px;
   }
 }
 
@@ -6054,23 +6181,12 @@ tbody tr:hover {
    so both mirror automatically in RTL and LTR.
    --------------------------------------------------------------------- */
 .prepayment-note {
-  /* Same collapsing treatment and spacing as the purchase-tax breakdown
-     block (user request), so the panel's two collapsible blocks read as one
-     thing. Block level: identical top gap, size and inherited summary line
-     height; the body copy carries the table cells' 1.5 line height instead
-     (see the lead/facts/disclaimer rules below). Keep the two in step if
-     either changes - the e2e spec compares their live computed values. */
   margin-top: 20px;
   padding-inline-start: 11.5px;
   color: var(--calc-muted);
   font-size: 0.95rem;
 }
 
-/* The purchase-tax breakdown steps down to 0.85rem on narrow screens (its own
-   <=420px block, earlier in the file). This rule lands later, so the matching
-   step is repeated here to keep the two blocks at one size; the e2e spec
-   compares their computed sizes at 360px and 1280px, so a future divergence
-   fails a test instead of drifting quietly. */
 @media (max-width: 420px) {
   .prepayment-note {
     font-size: 0.85rem;
@@ -6147,13 +6263,23 @@ tbody tr:hover {
 
 /* The article surfaces are always LTR today (only the calculator goes RTL
    for Hebrew), but the layout is written with logical properties so a future
-   direction rule change mirrors them without a per-component override. */
+   direction rule change mirrors them without a per-component override.
+   The list is wider than the reading measure (.article-page keeps 820px for
+   prose): a card grid needs the room, four cards settle as a balanced 2x2
+   instead of one long column. */
 .articles-list,
 .article-page {
   inline-size: 90%;
-  max-inline-size: 820px;
   margin-block: 40px 60px;
   margin-inline: auto;
+}
+
+.articles-list {
+  max-inline-size: 1080px;
+}
+
+.article-page {
+  max-inline-size: 820px;
 }
 
 /* The shared sub-header keeps its h1 on one line (.sub-header h1 is
@@ -6179,19 +6305,44 @@ tbody tr:hover {
 
 .articles-list ul {
   display: grid;
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 20px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* Two balanced columns from 640px (Tailwind's sm, where the site's chrome
+   already switches), three from 1280px (xl): wide screens get a denser
+   3-up grid, tablets keep 2-up longer than the old 861px cutoff so the
+   cards stay a useful size. Below 640px, one column. Grid stretch gives
+   every card in a row the same height, and the flex body below pushes each
+   card's CTA to the bottom. */
+@media screen and (min-width: 640px) {
+  .articles-list ul {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (min-width: 1280px) {
+  .articles-list ul {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* A vertical card: image on top (flush to the card's edges - overflow
+   hidden clips it to the radius), padded body under it. This replaces the
+   old side-by-side thumbnail, which squeezed text into a ~500px column
+   beside a 200px image and left the page as one lonely 820px column. */
 .article-card {
   display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 20px 22px;
+  flex-direction: column;
+  align-items: stretch;
+  height: 100%;
+  padding: 0;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
+  overflow: hidden;
   background: var(--surface-card);
   color: var(--ink);
   text-decoration: none;
@@ -6200,21 +6351,23 @@ tbody tr:hover {
     transform 0.2s;
 }
 
-/* The card thumbnail: a fixed crop on every card so a list of cards lines up
-   regardless of each source image's own dimensions. `flex: 0 0` keeps the
-   width stable and lets the body take the rest; being the first child, it
-   lands at the inline start and therefore mirrors with direction. */
+/* The card thumbnail: full card width, a fixed crop so a grid of cards
+   lines up regardless of each source image's own dimensions. */
 .article-card-media {
-  flex: 0 0 200px;
-  inline-size: 200px;
-  block-size: 150px;
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
+  inline-size: 100%;
+  block-size: 200px;
+  border: none;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
   object-fit: cover;
 }
 
 .article-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   min-inline-size: 0;
+  padding: 18px 20px 20px;
 }
 
 .article-card:hover {
@@ -6229,11 +6382,14 @@ tbody tr:hover {
 }
 
 .article-card p {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   color: var(--ink-muted);
 }
 
 .article-card span {
+  /* The flex body + auto margin align every card's CTA on the row's
+     shared bottom edge, whatever each summary's length. */
+  margin-top: auto;
   color: var(--soft-blue);
   font-weight: 700;
 }
@@ -6345,17 +6501,17 @@ tbody tr:hover {
     padding: 12px 14px;
   }
 
-  /* A phone is too narrow for a side-by-side thumbnail; stack it above the
-     text and let it use the full card width. */
-  .article-card {
-    flex-direction: column;
-    align-items: stretch;
+  /* The card is already stacked (image above text at every width); on a
+     phone just trim the crop so the header band and the text stay visible
+     without a long scroll. The image stays flush to the card's edges, so
+     it fits the body block exactly (user complaint on the old inset
+     thumbnail). */
+  .article-card-media {
+    block-size: 150px;
   }
 
-  .article-card-media {
-    flex: none;
-    inline-size: 100%;
-    block-size: 160px;
+  .article-card-body {
+    padding: 14px 16px 16px;
   }
 }
 

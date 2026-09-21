@@ -59,9 +59,11 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
             wrap, but the "?" never strands on its own line. */}
         <span className="label-help-row">
           <span className="label-help-text">{t('calculator.track.typeLabel')}</span>
+          {/* Per-type body: the tip describes the track type selected in this
+              track's own select, so it switches as the select changes. */}
           <HelpTooltip
             label={t('calculator.help.trackTypeAria')}
-            content={t('calculator.help.trackType')}
+            content={t(`calculator.help.trackTypes.${track.type}`)}
             linkTo="/articles/mortgage-track-types"
             linkLabel={t('calculator.help.readMore')}
             testId={`help-track-type-${index + 1}`}

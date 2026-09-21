@@ -41,10 +41,12 @@ for (const language of ['hebrew', 'english'] as const) {
       await expect(page.getByTestId('prepayment-penalty-facts')).toBeHidden()
 
       // The note is indented under the ⚠️ warning (user request): never out
-      // past the ⚠️ marker, and flush beneath the warning box. The exact indent
-      // is a taste knob, so this guards the property, not the number. Read the
-      // live boxes so a padding or margin change fails here instead of drifting
-      // quietly. (String-form evaluate: the e2e tsconfig has no DOM lib.)
+      // past the ⚠️ marker, and a small fixed gap beneath the warning box
+      // (20px note margin over the warning's -10px bottom margin = a 10px
+      // gap, kept as a deliberate design choice - the bound allows ~2px of
+      // drift). Read the live boxes so a padding or margin change fails here
+      // instead of drifting quietly. (String-form evaluate: the e2e tsconfig
+      // has no DOM lib.)
       const alignment = (await page.evaluate(
         `(() => {
           const marker = document.querySelector('.regulatory-note strong')
@@ -70,7 +72,7 @@ for (const language of ['hebrew', 'english'] as const) {
         'note starts at or under the ⚠️ marker',
       ).toBeGreaterThanOrEqual(0)
       expect(alignment?.gapBelowWarning, 'note sits under the warning').toBeGreaterThanOrEqual(0)
-      expect(alignment?.gapBelowWarning, 'note sits under the warning').toBeLessThanOrEqual(8)
+      expect(alignment?.gapBelowWarning, 'note sits under the warning').toBeLessThanOrEqual(12)
 
       await note.locator('summary').click()
       const facts = page.getByTestId('prepayment-penalty-facts')
@@ -136,10 +138,16 @@ for (const language of ['hebrew', 'english'] as const) {
         noteBodyLineHeight: string
       }
 
-      // Same collapsing treatment and spacing: every block- and summary-level
-      // value matches the purchase-tax breakdown's.
+      // Same collapsing treatment and type scale: every block- and
+      // summary-level value matches the purchase-tax breakdown's, EXCEPT the
+      // top gap - the note deliberately sits 20px down from the ⚠️ warning
+      // (user choice; the breakdown keeps 10px), so compare the margins
+      // separately and only require the note's to stay pinned.
       expect(snapshot.breakdown).not.toBeNull()
-      expect(snapshot.note).toEqual(snapshot.breakdown)
+      const { marginTop: _noteMargin, ...noteRest } = snapshot.note!
+      const { marginTop: _breakdownMargin, ...breakdownRest } = snapshot.breakdown!
+      expect(noteRest).toEqual(breakdownRest)
+      expect(_noteMargin).toBe('20px')
       // The two blocks draw their own caret instead of the UA marker (user
       // requests: the marker's 10x18px glyph can neither match the ⚠️ glyph's
       // size nor sit under the 💡). Read the live boxes: the caret against the
