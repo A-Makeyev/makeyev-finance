@@ -96,6 +96,20 @@
     .report-content {
       flex: 1;
     }
+    .run-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .run-number {
+      font-size: 1.3em;
+      font-weight: 600;
+      color: #667eea;
+    }
+    /* Explicit HTML-report chip: the whole card is already clickable,
+       but a visible affordance beats a hidden hover arrow. */
     .report-chip {
       display: inline-flex;
       align-items: center;
@@ -113,18 +127,6 @@
     .report-chip:hover {
       background: #667eea;
       color: white;
-    }
-    .run-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-    .run-number {
-      font-size: 1.3em;
-      font-weight: 600;
-      color: #667eea;
     }
     .test-type {
       font-size: 0.85em;
@@ -213,6 +215,23 @@
     <div class="last-updated" id="lastUpdated"></div>
     <ul class="reports-list" id="reportsList">
         <li class="report-item">
+          <a href="Run-53/index.html" class="report-link">
+            <div class="report-content">
+              <div class="run-header">
+                <span class="run-number">Run #53 <span class="badge badge-success">✓ Passed</span></span>
+                <span class="test-type">Playwright Tests</span>
+                <a class="report-chip" href="Run-53/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
+              <div class="run-date">22-09-2026 10:19PM</div>
+              <div class="test-stats">
+                <span class="stat-item">Passed: <span class="stat-value">128</span></span>
+                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
+                <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+              </div>
+            </div>
+          </a>
+        </li>
+        <li class="report-item">
           <a href="Run-52/index.html" class="report-link">
             <div class="report-content">
               <div class="run-header">
@@ -246,7 +265,7 @@
             </div>
           </a>
         </li>
-      </ul>
+    </ul>
   </div>
   <script>
     // Update last updated timestamp
@@ -277,7 +296,7 @@
     updateTimestamp();
 
     // Auto-refresh logic
-    const currentRun = "52";
+    const currentRun = "53";
     let checkCount = 0;
 
     async function checkForUpdates() {

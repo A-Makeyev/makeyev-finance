@@ -1,0 +1,5414 @@
+{
+  "config": {
+    "argv": [
+      "/opt/hostedtoolcache/node/22.23.2/x64/bin/node",
+      "/home/runner/work/makeyev-finance/makeyev-finance/node_modules/.bin/playwright",
+      "test"
+    ],
+    "configFile": "/home/runner/work/makeyev-finance/makeyev-finance/playwright.config.ts",
+    "rootDir": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/A-Makeyev/makeyev-finance/commit/605e792e4095695274db8e40f2d39baa454701d8",
+        "commitHash": "605e792e4095695274db8e40f2d39baa454701d8",
+        "buildHref": "https://github.com/A-Makeyev/makeyev-finance/actions/runs/35791431474"
+      },
+      "gitCommit": {
+        "shortHash": "605e792",
+        "hash": "605e792e4095695274db8e40f2d39baa454701d8",
+        "subject": "Link each report-page run card to its Playwright HTML report explicitly",
+        "body": "Link each report-page run card to its Playwright HTML report explicitly\n\nEvery card already navigated to the report on click, but the only visual\naffordance was a hover-only arrow. Add a visible \"HTML report\" chip per\ncard (emitted only when the report was actually published), and drop the\nhover arrow.\n\n🤖 Generated with Codebuff\nCo-Authored-By: Codebuff <noreply@codebuff.com>\n",
+        "author": {
+          "name": "Anatoly Makeyev",
+          "email": "anatoly.makeyev@gmail.com",
+          "time": 1790115360000
+        },
+        "committer": {
+          "name": "Anatoly Makeyev",
+          "email": "anatoly.makeyev@gmail.com",
+          "time": 1790115360000
+        },
+        "branch": "main"
+      },
+      "actualWorkers": 4
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/makeyev-finance/makeyev-finance/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/A-Makeyev/makeyev-finance/commit/605e792e4095695274db8e40f2d39baa454701d8",
+            "commitHash": "605e792e4095695274db8e40f2d39baa454701d8",
+            "buildHref": "https://github.com/A-Makeyev/makeyev-finance/actions/runs/35791431474"
+          },
+          "gitCommit": {
+            "shortHash": "605e792",
+            "hash": "605e792e4095695274db8e40f2d39baa454701d8",
+            "subject": "Link each report-page run card to its Playwright HTML report explicitly",
+            "body": "Link each report-page run card to its Playwright HTML report explicitly\n\nEvery card already navigated to the report on click, but the only visual\naffordance was a hover-only arrow. Add a visible \"HTML report\" chip per\ncard (emitted only when the report was actually published), and drop the\nhover arrow.\n\n🤖 Generated with Codebuff\nCo-Authored-By: Codebuff <noreply@codebuff.com>\n",
+            "author": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1790115360000
+            },
+            "committer": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1790115360000
+            },
+            "branch": "main"
+          },
+          "actualWorkers": 4
+        },
+        "id": "ui-chromium",
+        "name": "ui-chromium",
+        "testDir": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/tests\\/ui\\/.*\\.spec\\.ts/"
+        ],
+        "timeout": 45000
+      },
+      {
+        "outputDir": "/home/runner/work/makeyev-finance/makeyev-finance/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/A-Makeyev/makeyev-finance/commit/605e792e4095695274db8e40f2d39baa454701d8",
+            "commitHash": "605e792e4095695274db8e40f2d39baa454701d8",
+            "buildHref": "https://github.com/A-Makeyev/makeyev-finance/actions/runs/35791431474"
+          },
+          "gitCommit": {
+            "shortHash": "605e792",
+            "hash": "605e792e4095695274db8e40f2d39baa454701d8",
+            "subject": "Link each report-page run card to its Playwright HTML report explicitly",
+            "body": "Link each report-page run card to its Playwright HTML report explicitly\n\nEvery card already navigated to the report on click, but the only visual\naffordance was a hover-only arrow. Add a visible \"HTML report\" chip per\ncard (emitted only when the report was actually published), and drop the\nhover arrow.\n\n🤖 Generated with Codebuff\nCo-Authored-By: Codebuff <noreply@codebuff.com>\n",
+            "author": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1790115360000
+            },
+            "committer": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1790115360000
+            },
+            "branch": "main"
+          },
+          "actualWorkers": 4
+        },
+        "id": "api-chromium",
+        "name": "api-chromium",
+        "testDir": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/tests\\/api\\/.*\\.spec\\.ts/"
+        ],
+        "timeout": 45000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-report/results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 4,
+    "webServer": {
+      "command": "npx vite preview --port 5173 --strictPort",
+      "url": "http://localhost:5173",
+      "reuseExistingServer": false,
+      "stdout": "ignore",
+      "stderr": "pipe"
+    }
+  },
+  "suites": [
+    {
+      "title": "ui/calculator/core.spec.ts",
+      "file": "ui/calculator/core.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "mortgage calculator - core UI flows",
+          "file": "ui/calculator/core.spec.ts",
+          "line": 5,
+          "column": 6,
+          "specs": [
+            {
+              "title": "renders the recommended mix (תמהיל מומלץ) by default",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2221,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:34.004Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a8ac599a788819c5314d-5be03be36e09e87a0536",
+              "file": "ui/calculator/core.spec.ts",
+              "line": 10,
+              "column": 3
+            },
+            {
+              "title": "preset baskets populate tracks and highlight selection",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2895,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:34.111Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a8ac599a788819c5314d-27bfca41aa36fafc6838",
+              "file": "ui/calculator/core.spec.ts",
+              "line": 27,
+              "column": 3
+            },
+            {
+              "title": "home-price input caps at ₪100M",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 1891,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:34.048Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a8ac599a788819c5314d-5a00b47e675dc5ca455e",
+              "file": "ui/calculator/core.spec.ts",
+              "line": 52,
+              "column": 3
+            },
+            {
+              "title": "track years field edits as a number input clamped to 30",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2696,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:34.043Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a8ac599a788819c5314d-7274a1b2ba3652f605dd",
+              "file": "ui/calculator/core.spec.ts",
+              "line": 63,
+              "column": 3
+            },
+            {
+              "title": "term slider drives track years both ways",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 1858,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:36.570Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a8ac599a788819c5314d-a2eb170635c05d1468d2",
+              "file": "ui/calculator/core.spec.ts",
+              "line": 91,
+              "column": 3
+            },
+            {
+              "title": "reset asks for confirmation then restores the default mix",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4089,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:36.889Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a8ac599a788819c5314d-b8141f721dea369dba44",
+              "file": "ui/calculator/core.spec.ts",
+              "line": 116,
+              "column": 3
+            },
+            {
+              "title": "income below the required payment flags the allowance and suggests a minimum",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2181,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:37.365Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a8ac599a788819c5314d-fa24de0d75070a00ea87",
+              "file": "ui/calculator/core.spec.ts",
+              "line": 149,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ui/calculator/schedule.spec.ts",
+      "file": "ui/calculator/schedule.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "mortgage calculator - amortization schedule",
+          "file": "ui/calculator/schedule.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "schedule always shows the full horizon, with no expand button",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1616,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:37.562Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "638e2c603cd9c1b627c8-268d4b3ec617284c047c",
+              "file": "ui/calculator/schedule.spec.ts",
+              "line": 8,
+              "column": 3
+            },
+            {
+              "title": "monthly schedule tab relabels the payment axis and matches yearly label density",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 2072,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:38.519Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "638e2c603cd9c1b627c8-8e2b6d90fdfefe8ff75d",
+              "file": "ui/calculator/schedule.spec.ts",
+              "line": 18,
+              "column": 3
+            },
+            {
+              "title": "per-track chart follows the monthly tab like the total view does",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2945,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:39.251Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "638e2c603cd9c1b627c8-eac19a6f973beac1389b",
+              "file": "ui/calculator/schedule.spec.ts",
+              "line": 70,
+              "column": 3
+            },
+            {
+              "title": "no schedule table is shown while no loan is entered",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 1680,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:39.589Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "638e2c603cd9c1b627c8-4a492eb8640eeed08ace",
+              "file": "ui/calculator/schedule.spec.ts",
+              "line": 115,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ui/calculator/summary.spec.ts",
+      "file": "ui/calculator/summary.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "mortgage calculator - summary notes",
+          "file": "ui/calculator/summary.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "fee amounts keep the room to show a full ₪ figure at every width",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 4330,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:40.660Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5e245cda8b68e73105ad-fee92e2eef2c75aa0602",
+              "file": "ui/calculator/summary.spec.ts",
+              "line": 9,
+              "column": 3
+            },
+            {
+              "title": "LTV warning triggers above the BoI purpose limit",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1885,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:41.044Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5e245cda8b68e73105ad-1529b1d9e9228444803c",
+              "file": "ui/calculator/summary.spec.ts",
+              "line": 52,
+              "column": 3
+            },
+            {
+              "title": "compliant equity and financing ratio merge into one line",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 1937,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:41.304Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5e245cda8b68e73105ad-721ffc723ecbf69a6ea8",
+              "file": "ui/calculator/summary.spec.ts",
+              "line": 64,
+              "column": 3
+            },
+            {
+              "title": "one recommended upfront total replaces the bank-requirement line",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1668,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:42.260Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5e245cda8b68e73105ad-a6c92c79ba9f18dd226d",
+              "file": "ui/calculator/summary.spec.ts",
+              "line": 76,
+              "column": 3
+            },
+            {
+              "title": "purchase-tax info line leads the 💡 group",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2211,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:42.988Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5e245cda8b68e73105ad-2271ee84e916eadf4a66",
+              "file": "ui/calculator/summary.spec.ts",
+              "line": 92,
+              "column": 3
+            },
+            {
+              "title": "purchase-tax breakdown shows the full ladder",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3940,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:43.290Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5e245cda8b68e73105ad-de6f68a972c7b4cada34",
+              "file": "ui/calculator/summary.spec.ts",
+              "line": 108,
+              "column": 3
+            },
+            {
+              "title": "green allowance line names both the payment and the ceiling",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2167,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:43.981Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5e245cda8b68e73105ad-30b37b8498d02efe05b8",
+              "file": "ui/calculator/summary.spec.ts",
+              "line": 189,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ui/calculator/tracks.spec.ts",
+      "file": "ui/calculator/tracks.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "mortgage calculator - tracks and allocation",
+          "file": "ui/calculator/tracks.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "default mix has three tracks; removal keeps at least one",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 2357,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:45.055Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-9d1fc01f71acc03376ab",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 9,
+              "column": 3
+            },
+            {
+              "title": "remove-track stays centered on the select chevron column",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2949,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:45.248Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-0636821efe0ab10adbf4",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 22,
+              "column": 3
+            },
+            {
+              "title": "manual rate override is respected (autoRate cleared)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1928,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:46.212Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-f6ba53dcb59a0f14bd37",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 47,
+              "column": 3
+            },
+            {
+              "title": "property/capital bidirectional sync derives and restores the loan",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2497,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:47.305Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-a74e5d867db8c6efcb4d",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 62,
+              "column": 3
+            },
+            {
+              "title": "zero loan shows the no-need state",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 2136,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:47.466Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-0d107c04435cdb4e17e8",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 77,
+              "column": 3
+            },
+            {
+              "title": "variable-rate cap blocks calculation and auto-fix trims variable tracks only",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2462,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:48.201Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-b2ee635820b10ca241d8",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 84,
+              "column": 3
+            },
+            {
+              "title": "auto-fix without a pinned property shrinks the loan total",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2659,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:48.247Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-cf05c237883785618dfe",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 109,
+              "column": 3
+            },
+            {
+              "title": "typing a home amount fills empty tracks with the recommended mix",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 1979,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:49.680Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-341c6c8aa9ffdcc8d0c2",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 124,
+              "column": 3
+            },
+            {
+              "title": "clearing a track under a pinned loan splits it evenly across survivors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 1851,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:49.876Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-4aeea3eb7471017f3fed",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 141,
+              "column": 3
+            },
+            {
+              "title": "typing the home price keeps the mix and shows the tax ladder",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 3195,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:50.717Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-8eaaccc32e67b95ba348",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 157,
+              "column": 3
+            },
+            {
+              "title": "typing the loan amount keeps the mix and shows the tax ladder",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2509,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:17:50.993Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "086025e64b6852fc9697-c55559776635e9cd7c70",
+              "file": "ui/calculator/tracks.spec.ts",
+              "line": 180,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ui/calculatorHelpTooltips.spec.ts",
+      "file": "ui/calculatorHelpTooltips.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "calculator help tooltips - hebrew @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 9778,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:17:51.733Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3d36547b7b8b9e6181d-2a38973a78a9b55f830f",
+          "file": "ui/calculatorHelpTooltips.spec.ts",
+          "line": 45,
+          "column": 5
+        },
+        {
+          "title": "calculator help tooltips - hebrew @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 11614,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:17:51.810Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3d36547b7b8b9e6181d-87a2c2f12616924a5e34",
+          "file": "ui/calculatorHelpTooltips.spec.ts",
+          "line": 45,
+          "column": 5
+        },
+        {
+          "title": "calculator help tooltips - english @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 10839,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:17:53.581Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3d36547b7b8b9e6181d-c5bb65a04417d3f349f6",
+          "file": "ui/calculatorHelpTooltips.spec.ts",
+          "line": 45,
+          "column": 5
+        },
+        {
+          "title": "calculator help tooltips - english @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 10984,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:17:53.977Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3d36547b7b8b9e6181d-4e1938a62cfddd78f54d",
+          "file": "ui/calculatorHelpTooltips.spec.ts",
+          "line": 45,
+          "column": 5
+        },
+        {
+          "title": "calculator help tooltip - hover opens, grace close, click pins",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 1499,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:01.531Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3d36547b7b8b9e6181d-0524c259fd10dc5f504a",
+          "file": "ui/calculatorHelpTooltips.spec.ts",
+          "line": 96,
+          "column": 1
+        },
+        {
+          "title": "calculator help tooltip - the \"?\" stays on the label line",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 775,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:03.045Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3d36547b7b8b9e6181d-3b3b6aa650c104512e64",
+          "file": "ui/calculatorHelpTooltips.spec.ts",
+          "line": 170,
+          "column": 1
+        },
+        {
+          "title": "calculator help tooltip - near does nothing, over the icon opens and recolors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 1761,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:03.465Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3d36547b7b8b9e6181d-be36e29ea101f394e8b1",
+          "file": "ui/calculatorHelpTooltips.spec.ts",
+          "line": 197,
+          "column": 1
+        },
+        {
+          "title": "calculator help tooltip - the label never forwards hover/click to the \"?\" icon",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 2586,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:03.835Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3d36547b7b8b9e6181d-494fab5fef8061369a0d",
+          "file": "ui/calculatorHelpTooltips.spec.ts",
+          "line": 234,
+          "column": 1
+        },
+        {
+          "title": "calculator help tooltip - the panel uses the theme tokens in dark mode",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2208,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:04.462Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d3d36547b7b8b9e6181d-15eacd354cf7a59cee4e",
+          "file": "ui/calculatorHelpTooltips.spec.ts",
+          "line": 311,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "ui/compare.spec.ts",
+      "file": "ui/compare.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "scenario editors stay inside their cards at every width - hebrew",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 2403,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:11.304Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "23b7e76c67ab0dfb1f65-2547a641f44481dde78a",
+          "file": "ui/compare.spec.ts",
+          "line": 383,
+          "column": 3
+        },
+        {
+          "title": "scenario editors stay inside their cards at every width - english",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2442,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:11.453Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "23b7e76c67ab0dfb1f65-ea22da5f22d9a590e6a2",
+          "file": "ui/compare.spec.ts",
+          "line": 383,
+          "column": 3
+        },
+        {
+          "title": "phone and tablet widths hold the same invariants",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 2836,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:11.969Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "23b7e76c67ab0dfb1f65-9657be52904f8deef8b9",
+          "file": "ui/compare.spec.ts",
+          "line": 412,
+          "column": 1
+        },
+        {
+          "title": "back link returns to the calculator and flips with the reading direction",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1459,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:13.588Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "23b7e76c67ab0dfb1f65-022e9231faf0a3cc0377",
+          "file": "ui/compare.spec.ts",
+          "line": 429,
+          "column": 1
+        },
+        {
+          "title": "English compare heading fits a 360px viewport",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 887,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:13.735Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "23b7e76c67ab0dfb1f65-c4c3ae056cda85d80a75",
+          "file": "ui/compare.spec.ts",
+          "line": 467,
+          "column": 1
+        }
+      ],
+      "suites": [
+        {
+          "title": "mortgage comparison - /compare",
+          "file": "ui/compare.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "seeds from the calculator: same mix, same monthly payment",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2635,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:05.014Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-a7c32161d78a67f5b266",
+              "file": "ui/compare.spec.ts",
+              "line": 20,
+              "column": 3
+            },
+            {
+              "title": "default (direct) visit opens scenario 1 with the calculator default mix",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 774,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:05.273Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-3e81a57a160914f975f2",
+              "file": "ui/compare.spec.ts",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "tweaking one scenario highlights the best value per row",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2294,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:06.082Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-66e6b6994028a69c8bc8",
+              "file": "ui/compare.spec.ts",
+              "line": 61,
+              "column": 3
+            },
+            {
+              "title": "duplicate scenario, edit the copy, then remove it",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 2915,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:06.447Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-8f5624925309525a2819",
+              "file": "ui/compare.spec.ts",
+              "line": 81,
+              "column": 3
+            },
+            {
+              "title": "mortgage sum input fills the tracks and presets re-allocate (calculator parity)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2114,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:06.708Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-68e4f9c9bb0be7b1e28d",
+              "file": "ui/compare.spec.ts",
+              "line": 102,
+              "column": 3
+            },
+            {
+              "title": "shared inputs reprice every scenario; LTV status flips to a violation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2546,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:07.687Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-cfc423b37e931aa8292e",
+              "file": "ui/compare.spec.ts",
+              "line": 125,
+              "column": 3
+            },
+            {
+              "title": "other expenses fold into PTI, the boundary, and the upfront cash",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2887,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:08.397Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-663b9c2a0995f20fd501",
+              "file": "ui/compare.spec.ts",
+              "line": 142,
+              "column": 3
+            },
+            {
+              "title": "comparison table fits its card instead of scrolling sideways",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4683,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:08.846Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-736cc11d52da19c7f9fe",
+              "file": "ui/compare.spec.ts",
+              "line": 178,
+              "column": 3
+            },
+            {
+              "title": "mobile: stacked card view with a scenario switcher (no table)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 1742,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:09.400Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-4ccd3c2e15997aecaf58",
+              "file": "ui/compare.spec.ts",
+              "line": 203,
+              "column": 3
+            },
+            {
+              "title": "English page renders LTR with translated labels",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 481,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:10.255Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-ab1584d6f5d5a1086f80",
+              "file": "ui/compare.spec.ts",
+              "line": 219,
+              "column": 3
+            },
+            {
+              "title": "Hebrew page renders RTL",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 674,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:10.749Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-c309def053965b17c207",
+              "file": "ui/compare.spec.ts",
+              "line": 228,
+              "column": 3
+            },
+            {
+              "title": "dark theme: compare surfaces flip with the tokens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 766,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:11.175Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "23b7e76c67ab0dfb1f65-f2c9fd71bfc26bcf77db",
+              "file": "ui/compare.spec.ts",
+              "line": 236,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ui/contact.spec.ts",
+      "file": "ui/contact.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "contact form - validation states",
+          "file": "ui/contact.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "submit starts disabled and stays disabled while invalid",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2265,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:13.949Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-fc1fa5ed3c85291d41ef",
+              "file": "ui/contact.spec.ts",
+              "line": 5,
+              "column": 3
+            },
+            {
+              "title": "invalid fields show red feedback, valid ones blue",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2536,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:14.684Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-32275d133a5f00f7cf2c",
+              "file": "ui/contact.spec.ts",
+              "line": 15,
+              "column": 3
+            },
+            {
+              "title": "the send button border turns blue only once every field is valid",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 2162,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:14.829Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-ea5fd0b0db2459c6757b",
+              "file": "ui/contact.spec.ts",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "valid submission opens the success modal with first-name greeting",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3825,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:15.080Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-fd95508cc48eb74d13a3",
+              "file": "ui/contact.spec.ts",
+              "line": 41,
+              "column": 3
+            },
+            {
+              "title": "Escape closes the modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 4295,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:16.279Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-807f24d54c6797051304",
+              "file": "ui/contact.spec.ts",
+              "line": 53,
+              "column": 3
+            },
+            {
+              "title": "EmailJS failure surfaces the failure modal with the API text",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 3954,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:17.039Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-be47a0e96fe6d951a2cf",
+              "file": "ui/contact.spec.ts",
+              "line": 62,
+              "column": 3
+            },
+            {
+              "title": "deadlock-victim responses are retried transparently",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3665,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:17.281Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-16162ecdf2f2085b97d0",
+              "file": "ui/contact.spec.ts",
+              "line": 72,
+              "column": 3
+            },
+            {
+              "title": "offline submission shows the failure modal without network calls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4164,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:18.956Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-d312ad04431ffda5ec91",
+              "file": "ui/contact.spec.ts",
+              "line": 85,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "action form modal (home CTAs)",
+          "file": "ui/contact.spec.ts",
+          "line": 102,
+          "column": 6,
+          "specs": [
+            {
+              "title": "the form modal wears the blue accent border",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2540,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:20.642Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-3700ec738e3d7cd78b1b",
+              "file": "ui/contact.spec.ts",
+              "line": 103,
+              "column": 3
+            },
+            {
+              "title": "opens from the hero CTA and omits the email field",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2829,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:21.020Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-6a2789c6219432668c15",
+              "file": "ui/contact.spec.ts",
+              "line": 108,
+              "column": 3
+            },
+            {
+              "title": "ported legacy flow: fill → submit → success modal (ההודעה נשלחה)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 3623,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:21.023Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f5f26e90458c7e4baec-1bccb9ddde8868809a76",
+              "file": "ui/contact.spec.ts",
+              "line": 115,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ui/education.spec.ts",
+      "file": "ui/education.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "prepayment-penalty note and article - hebrew @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5897,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:23.190Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d42b4e78da0d1c4f59e9-35ad14963e7bf6a0c513",
+          "file": "ui/education.spec.ts",
+          "line": 23,
+          "column": 5
+        },
+        {
+          "title": "prepayment-penalty note and article - hebrew @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 4997,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:23.235Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d42b4e78da0d1c4f59e9-9d1e6e41428ef02338f0",
+          "file": "ui/education.spec.ts",
+          "line": 23,
+          "column": 5
+        },
+        {
+          "title": "prepayment-penalty note and article - english @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 5230,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:23.902Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d42b4e78da0d1c4f59e9-df34b765f1aa998a52e8",
+          "file": "ui/education.spec.ts",
+          "line": 23,
+          "column": 5
+        },
+        {
+          "title": "prepayment-penalty note and article - english @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 3808,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:24.695Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d42b4e78da0d1c4f59e9-ba4be29e8f6fbf9ced23",
+          "file": "ui/education.spec.ts",
+          "line": 23,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "ui/heroScrollCue.spec.ts",
+      "file": "ui/heroScrollCue.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "hero scroll cue",
+          "file": "ui/heroScrollCue.spec.ts",
+          "line": 37,
+          "column": 6,
+          "specs": [
+            {
+              "title": "home: the cue is centered under the hero text and scrolls past the hero",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 3120,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:28.261Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "908b8e4b2c42f66d3731-673ad56175805f78c597",
+              "file": "ui/heroScrollCue.spec.ts",
+              "line": 38,
+              "column": 3
+            },
+            {
+              "title": "articles: the cue is present on inner-page banners and scrolls to the list",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 2904,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:28.528Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "908b8e4b2c42f66d3731-9102d7ec53f7e1411ba5",
+              "file": "ui/heroScrollCue.spec.ts",
+              "line": 50,
+              "column": 3
+            },
+            {
+              "title": "calculator: ArrowDown scrolls past the hero like the cue",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2084,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:29.142Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "908b8e4b2c42f66d3731-9abc8b75a456f7470da4",
+              "file": "ui/heroScrollCue.spec.ts",
+              "line": 62,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ui/marketTracker.spec.ts",
+      "file": "ui/marketTracker.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Markets strip",
+          "file": "ui/marketTracker.spec.ts",
+          "line": 101,
+          "column": 6,
+          "specs": [
+            {
+              "title": "renders all six assets with formatted prices, arrows and signed changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 973,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:29.180Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-a132787912d74c098a46",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 102,
+              "column": 3
+            },
+            {
+              "title": "no row discloses an ETF proxy any more, and gold names its contract",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 686,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:30.182Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-5868037e767be0fb620d",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 132,
+              "column": 3
+            },
+            {
+              "title": "wraps into balanced lines that never leave one ticker alone",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 4518,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:30.881Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-7bc758de44daaa54b5fd",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 155,
+              "column": 3
+            },
+            {
+              "title": "strip text is not user-selectable",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 946,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:31.260Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-92f4e05c265c2185a16c",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 194,
+              "column": 3
+            },
+            {
+              "title": "positive and negative changes get their semantic tone classes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1272,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:31.436Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-a250d6e556011c11c090",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 209,
+              "column": 3
+            },
+            {
+              "title": "shows skeleton bars while loading and never blocks the nav",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 1981,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:31.479Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-4090abd7eefe108b3da7",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 225,
+              "column": 3
+            },
+            {
+              "title": "drops rows after an API failure and self-heals without a retry control",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2392,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:32.245Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-316e40475e87bcb2b1f1",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 249,
+              "column": 3
+            },
+            {
+              "title": "drops only the row whose instrument has no price",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1713,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:32.740Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-a917bfbd0427106e10dd",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 283,
+              "column": 3
+            },
+            {
+              "title": "holds the same rows and the same wrap from skeleton to numbers",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 6705,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:33.494Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-c623fb92d00cf5434e1c",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 313,
+              "column": 3
+            },
+            {
+              "title": "reduced motion keeps the skeleton bars and the rows still",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1403,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:34.483Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-04f02eaeaf1c636097e9",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 374,
+              "column": 3
+            },
+            {
+              "title": "marks stale snapshots so cached numbers are never shown as current",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1241,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:34.704Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-227ea3c24712bc1e8d28",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 403,
+              "column": 3
+            },
+            {
+              "title": "refreshes on the server-provided interval without hard-coding it",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3845,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:35.435Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-68f7392ac04fce1fd200",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 417,
+              "column": 3
+            },
+            {
+              "title": "flashes green on an up tick and red on a down tick, never when the price is unchanged",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 4715,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:35.919Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-d9253282fdbd921e0890",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 439,
+              "column": 3
+            },
+            {
+              "title": "a sub-precision move repaints the row but never flashes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4462,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:35.978Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-a30e6cc00eed3edbc900",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 516,
+              "column": 3
+            },
+            {
+              "title": "reduced motion renders the flash out of sight",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2385,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:39.336Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-31ab2ae808cc6c969ab0",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 552,
+              "column": 3
+            },
+            {
+              "title": "renders the BTC label in both locales (user-requested)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 807,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:40.235Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-44f9a6f6b99aef7747be",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 598,
+              "column": 3
+            },
+            {
+              "title": "FX shows the shekel sign and the index names its points instead (hebrew)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 839,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:40.467Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-f5f28620f0eff12de7f6",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 609,
+              "column": 5
+            },
+            {
+              "title": "FX shows the shekel sign and the index names its points instead (english)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 979,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:40.668Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-bf7faf7b740503f20405",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 609,
+              "column": 5
+            },
+            {
+              "title": "strip stays visible above the navbar when the Indexes bar is absent",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 902,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:41.080Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-fd96ca81b3c11017546f",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 658,
+              "column": 3
+            },
+            {
+              "title": "indexes bar shows short English names when the language is English",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1884,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:41.342Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-7141f7e1362ccf47c0b3",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 677,
+              "column": 3
+            },
+            {
+              "title": "sign always renders left of the digits (hebrew)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1784,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:41.685Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-dcf8db084b251401c0b2",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 702,
+              "column": 5
+            },
+            {
+              "title": "change value follows its label in reading order (hebrew)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 1344,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:41.746Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-a7f45d0555b429021fa1",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 757,
+              "column": 5
+            },
+            {
+              "title": "sign always renders left of the digits (english)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 1832,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:42.011Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-d5a64b1e4dc69fcc1cf7",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 702,
+              "column": 5
+            },
+            {
+              "title": "change value follows its label in reading order (english)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 1106,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:43.150Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "be9f4d567ada077a83ea-856b7daabb01d985f25c",
+              "file": "ui/marketTracker.spec.ts",
+              "line": 757,
+              "column": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ui/mortgageDecisionsArticle.spec.ts",
+      "file": "ui/mortgageDecisionsArticle.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "mortgage-decisions article - hebrew @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6509,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:43.256Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9e84bd1ad9814eacfec5-433824deea293ae22ebe",
+          "file": "ui/mortgageDecisionsArticle.spec.ts",
+          "line": 38,
+          "column": 5
+        },
+        {
+          "title": "mortgage-decisions article - hebrew @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2583,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:43.522Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9e84bd1ad9814eacfec5-78c4cd8805f264cb17f8",
+          "file": "ui/mortgageDecisionsArticle.spec.ts",
+          "line": 38,
+          "column": 5
+        },
+        {
+          "title": "mortgage-decisions article - english @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 4353,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:43.897Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9e84bd1ad9814eacfec5-50a4e389441f79ba7553",
+          "file": "ui/mortgageDecisionsArticle.spec.ts",
+          "line": 38,
+          "column": 5
+        },
+        {
+          "title": "mortgage-decisions article - english @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 5867,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:44.293Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9e84bd1ad9814eacfec5-5483d7d988f4e3209453",
+          "file": "ui/mortgageDecisionsArticle.spec.ts",
+          "line": 38,
+          "column": 5
+        },
+        {
+          "title": "mortgage-decisions article - a preset deep link loads that mix in the calculator",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1133,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:46.124Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9e84bd1ad9814eacfec5-4b08ec66c2fac2f1e065",
+          "file": "ui/mortgageDecisionsArticle.spec.ts",
+          "line": 116,
+          "column": 1
+        },
+        {
+          "title": "mortgage-decisions article - the new surfaces use the theme tokens",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 350,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:47.273Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9e84bd1ad9814eacfec5-f89004c948e888946215",
+          "file": "ui/mortgageDecisionsArticle.spec.ts",
+          "line": 149,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "ui/movingChecklistArticle.spec.ts",
+      "file": "ui/movingChecklistArticle.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "moving-checklist article - hebrew @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2453,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:47.641Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e67e0466ec9591ce7def-28e4a72ea4867f0ae9a5",
+          "file": "ui/movingChecklistArticle.spec.ts",
+          "line": 28,
+          "column": 5
+        },
+        {
+          "title": "moving-checklist article - hebrew @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 3742,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:48.277Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e67e0466ec9591ce7def-9fa561e11c2d37dfd543",
+          "file": "ui/movingChecklistArticle.spec.ts",
+          "line": 28,
+          "column": 5
+        },
+        {
+          "title": "moving-checklist article - english @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2099,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:49.788Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e67e0466ec9591ce7def-1d3ba8e29a0aadd07628",
+          "file": "ui/movingChecklistArticle.spec.ts",
+          "line": 28,
+          "column": 5
+        },
+        {
+          "title": "moving-checklist article - english @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2977,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.113Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e67e0466ec9591ce7def-9bee8691df42938a39be",
+          "file": "ui/movingChecklistArticle.spec.ts",
+          "line": 28,
+          "column": 5
+        },
+        {
+          "title": "moving-checklist article - the new surfaces use the theme tokens",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 603,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.183Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e67e0466ec9591ce7def-a2f2a2d289c76d6b36a6",
+          "file": "ui/movingChecklistArticle.spec.ts",
+          "line": 95,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "ui/qa-visual.spec.ts",
+      "file": "ui/qa-visual.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "visual qa: floor note + balance grid - hebrew @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.822Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-2418ee8421535a58cb33",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 31,
+          "column": 5
+        },
+        {
+          "title": "visual qa: floor note + balance grid - hebrew @ 1024px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.822Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-8e306a5a9f44fb25d356",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 31,
+          "column": 5
+        },
+        {
+          "title": "visual qa: floor note + balance grid - hebrew @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.822Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-8861f0d450421524e34a",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 31,
+          "column": 5
+        },
+        {
+          "title": "visual qa: floor note + balance grid - english @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.822Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-ae510371928e87f28711",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 31,
+          "column": 5
+        },
+        {
+          "title": "visual qa: floor note + balance grid - english @ 1024px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.823Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-d90a199e0eaa89d41d56",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 31,
+          "column": 5
+        },
+        {
+          "title": "visual qa: floor note + balance grid - english @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.823Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-42f9f0aa25437f847206",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 31,
+          "column": 5
+        },
+        {
+          "title": "visual qa: purchase-tax breakdown - hebrew @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.823Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-c37c154a059f983ed141",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 97,
+          "column": 5
+        },
+        {
+          "title": "visual qa: purchase-tax breakdown - hebrew @ 1024px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.823Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-2db9e0f285b5fe449f52",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 97,
+          "column": 5
+        },
+        {
+          "title": "visual qa: purchase-tax breakdown - hebrew @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.823Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-c40c26e8f5bce3624ce0",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 97,
+          "column": 5
+        },
+        {
+          "title": "visual qa: purchase-tax breakdown - english @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.823Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-9a7a26b3a4cfd0e451b2",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 97,
+          "column": 5
+        },
+        {
+          "title": "visual qa: purchase-tax breakdown - english @ 1024px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.823Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-9c055673185d373e15ff",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 97,
+          "column": 5
+        },
+        {
+          "title": "visual qa: purchase-tax breakdown - english @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "Set VISUAL_QA=1 to run visual QA checks",
+                  "location": {
+                    "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                    "line": 16,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": -1,
+                  "parallelIndex": -1,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:50.823Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set VISUAL_QA=1 to run visual QA checks",
+                      "location": {
+                        "file": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests/ui/qa-visual.spec.ts",
+                        "line": 16,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "bdc61927adf5de1a9a4b-ac7571cae545b8b9e121",
+          "file": "ui/qa-visual.spec.ts",
+          "line": 97,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "title": "ui/theme.spec.ts",
+      "file": "ui/theme.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "theme toggle",
+          "file": "ui/theme.spec.ts",
+          "line": 33,
+          "column": 6,
+          "specs": [
+            {
+              "title": "first visit follows the OS (light here), and the toggle persists",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3581,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:50.827Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "66650949046c4a9c83c8-b5abf7f45166a1d53c8a",
+              "file": "ui/theme.spec.ts",
+              "line": 34,
+              "column": 3
+            },
+            {
+              "title": "applies to the calculator surfaces, not only the chrome",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2431,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:51.918Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "66650949046c4a9c83c8-4c5c3c5540011110f196",
+              "file": "ui/theme.spec.ts",
+              "line": 69,
+              "column": 3
+            },
+            {
+              "title": "fields dim down in dark mode, with light text inside",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 2173,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:52.047Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "66650949046c4a9c83c8-081dae4775a7ca5278fe",
+              "file": "ui/theme.spec.ts",
+              "line": 79,
+              "column": 3
+            },
+            {
+              "title": "the scrolled bar is solid aliceblue in light and frosted glass in dark",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2514,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:53.131Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "66650949046c4a9c83c8-bad36230fe12957add1f",
+              "file": "ui/theme.spec.ts",
+              "line": 109,
+              "column": 3
+            },
+            {
+              "title": "dark text stays legible on the dark surfaces (contrast)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 2372,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:54.239Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "66650949046c4a9c83c8-f134a34171440b750042",
+              "file": "ui/theme.spec.ts",
+              "line": 138,
+              "column": 3
+            },
+            {
+              "title": "closes the mobile menu, like the language flag does",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3713,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:54.394Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "66650949046c4a9c83c8-cf9b283cb55eb739f9cf",
+              "file": "ui/theme.spec.ts",
+              "line": 181,
+              "column": 3
+            },
+            {
+              "title": "the extra icon still fits the 360px control row",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2436,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:54.429Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "66650949046c4a9c83c8-5014e10dc606111d3f7e",
+              "file": "ui/theme.spec.ts",
+              "line": 194,
+              "column": 3
+            },
+            {
+              "title": "a dark-preferring visitor lands dark without touching the toggle",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-chromium",
+                  "projectName": "ui-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 502,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:18:55.670Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "66650949046c4a9c83c8-ec8a97052b5bde145e98",
+              "file": "ui/theme.spec.ts",
+              "line": 209,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ui/trackTypesArticle.spec.ts",
+      "file": "ui/trackTypesArticle.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "track-types article - hebrew @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 3761,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:56.195Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0ed82b9e5570fa58bed3-fac136ca5987ca6e3029",
+          "file": "ui/trackTypesArticle.spec.ts",
+          "line": 28,
+          "column": 5
+        },
+        {
+          "title": "track-types article - hebrew @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 3930,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:56.646Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0ed82b9e5570fa58bed3-c43da2ab8e58aba58660",
+          "file": "ui/trackTypesArticle.spec.ts",
+          "line": 28,
+          "column": 5
+        },
+        {
+          "title": "track-types article - english @ 360px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 6220,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:56.900Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0ed82b9e5570fa58bed3-58198d857c61bbced3af",
+          "file": "ui/trackTypesArticle.spec.ts",
+          "line": 28,
+          "column": 5
+        },
+        {
+          "title": "track-types article - english @ 1280px",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4728,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:58.131Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0ed82b9e5570fa58bed3-1796af863185eb47589e",
+          "file": "ui/trackTypesArticle.spec.ts",
+          "line": 28,
+          "column": 5
+        },
+        {
+          "title": "track-types article - the new surfaces use the theme tokens",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui-chromium",
+              "projectName": "ui-chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 395,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-22T22:18:59.975Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0ed82b9e5570fa58bed3-b19e61b63a4f83014b8c",
+          "file": "ui/trackTypesArticle.spec.ts",
+          "line": 113,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "api/live-data.spec.ts",
+      "file": "api/live-data.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Bank of Israel prime rate",
+          "file": "api/live-data.spec.ts",
+          "line": 35,
+          "column": 6,
+          "specs": [
+            {
+              "title": "prime tracks adopt live key rate + 1.5 margin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "api-chromium",
+                  "projectName": "api-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2375,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:19:01.076Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f9eb4835ca6068cb5ad2-6aafb5ebc29aa576c2b0",
+              "file": "api/live-data.spec.ts",
+              "line": 36,
+              "column": 3
+            },
+            {
+              "title": "falls back to 5.75 seeding when BOI is unreachable",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "api-chromium",
+                  "projectName": "api-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 2209,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:19:01.382Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f9eb4835ca6068cb5ad2-c14aa6bdb6a062b29e71",
+              "file": "api/live-data.spec.ts",
+              "line": 46,
+              "column": 3
+            },
+            {
+              "title": "manual user-entered rates are never overridden by re-seeding or the live feed",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "api-chromium",
+                  "projectName": "api-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2309,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:19:03.545Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f9eb4835ca6068cb5ad2-ae5de51f32725b84f55a",
+              "file": "api/live-data.spec.ts",
+              "line": 55,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "CBS CPI index",
+          "file": "api/live-data.spec.ts",
+          "line": 78,
+          "column": 6,
+          "specs": [
+            {
+              "title": "indexed tracks use real annual inflation from the CPI feed",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "api-chromium",
+                  "projectName": "api-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2662,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:19:04.018Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f9eb4835ca6068cb5ad2-39db2214816427656db7",
+              "file": "api/live-data.spec.ts",
+              "line": 79,
+              "column": 3
+            },
+            {
+              "title": "indexed tracks fall back to 2% inflation when CBS is down",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "api-chromium",
+                  "projectName": "api-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 3650,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:19:03.658Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f9eb4835ca6068cb5ad2-464867c31092c53298fc",
+              "file": "api/live-data.spec.ts",
+              "line": 94,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "CBS index bar",
+          "file": "api/live-data.spec.ts",
+          "line": 123,
+          "column": 6,
+          "specs": [
+            {
+              "title": "renders three feeds with trend arrows once fetches succeed",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "api-chromium",
+                  "projectName": "api-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 1479,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:19:03.842Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f9eb4835ca6068cb5ad2-6569927dd84bea6447ec",
+              "file": "api/live-data.spec.ts",
+              "line": 124,
+              "column": 3
+            },
+            {
+              "title": "bar remains hidden while all CBS feeds fail",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "api-chromium",
+                  "projectName": "api-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 962,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-22T22:19:05.437Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f9eb4835ca6068cb5ad2-840a73d6fde8b84173b8",
+              "file": "api/live-data.spec.ts",
+              "line": 133,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-22T22:17:31.265Z",
+    "duration": 96114.18,
+    "expected": 128,
+    "skipped": 12,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
