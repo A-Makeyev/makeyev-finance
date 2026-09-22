@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { PRESET_IDS } from '@/lib/amortization'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { articleHeroBackground } from '@/lib/articles'
+import { ScrollCue } from '@/components/layout/ScrollCue'
 
 /**
  * Practical mortgage decisions article: the ready-made mixes (explaining each
@@ -35,6 +36,7 @@ export function MortgageDecisionsArticlePage() {
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('articles.mortgageDecisions.title')}</h1>
         </div>
+        <ScrollCue />
       </section>
 
       <article className="article-page" dir={i18n.dir()} data-testid="mortgage-decisions-article">

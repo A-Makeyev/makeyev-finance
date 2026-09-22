@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { articleHeroBackground } from '@/lib/articles'
+import { ScrollCue } from '@/components/layout/ScrollCue'
 
 /**
  * Moving-checklist article (רשימת דברים להעביר בהעברת דירה). General
@@ -35,6 +36,7 @@ export function MovingChecklistArticlePage() {
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('articles.movingChecklist.title')}</h1>
         </div>
+        <ScrollCue />
       </section>
 
       <article className="article-page" dir={i18n.dir()} data-testid="moving-checklist-article">

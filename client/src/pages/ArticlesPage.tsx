@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { usePageMeta } from '@/hooks/usePageMeta'
+import { ScrollCue } from '@/components/layout/ScrollCue'
 import { ARTICLE_IMAGES, ARTICLE_LIST } from '@/lib/articles'
 
 /**
@@ -19,6 +20,7 @@ export function ArticlesPage() {
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('articles.title')}</h1>
         </div>
+        <ScrollCue />
       </section>
 
       {/* The list follows the document language's direction, like the article

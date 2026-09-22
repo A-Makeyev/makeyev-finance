@@ -10,6 +10,7 @@ import { MoneyInput } from '@/components/ui/MoneyInput'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenaltyFacts'
 import { TermSlider } from '@/components/ui/TermSlider'
+import { ScrollCue } from '@/components/layout/ScrollCue'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { AppModal } from '@/components/ui/AppModal'
 import { PresetSelector } from './PresetSelector'
@@ -205,6 +206,7 @@ export function CalculatorPage() {
         <div className="text-box main-heading">
           <h1 className="gradient-text-no-hover">{t('nav.calculators')}</h1>
         </div>
+        <ScrollCue />
       </section>
 
       <main className="calculator-shell">

@@ -385,7 +385,7 @@ img {
 
 .sub-header {
   width: 100%;
-  height: 85vh;
+  min-height: 100vh;
   transition: all 1s;
   position: relative;
   text-align: center;
@@ -559,6 +559,88 @@ img {
   color: var(--soft-white);
   background: var(--soft-orange);
   box-shadow: var(--white-shadow);
+}
+
+/* SCROLL-DOWN CUE
+
+   A small round chevron button pinned near the bottom edge of a hero banner
+   (.header / .sub-header), centered under the hero text. Clicking it
+   smooth-scrolls the first content section into view (the click handler
+   lives in ScrollCue.tsx). The chevron gently bounces on hover.
+
+   Like the hero buttons, it only ever renders over the dark hero banners,
+   so its literals are not theme tokens (see the hero button note above).
+   Centering is horizontal only; vertically it is translateY-offset from the
+   banner's bottom edge, which is direction-neutral, so nothing here flips
+   under RTL. */
+.scroll-cue {
+  left: 50%;
+  bottom: 26px;
+  z-index: 5;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  font-size: 20px;
+  color: var(--soft-white);
+  cursor: pointer;
+  background: rgba(15, 15, 15, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  /* left: 50% pins the box's left edge at the hero's center; this shift
+     re-centers the box itself. Both axes are kept in every transform state
+     below, so the button never jumps horizontally on hover. */
+  transform: translate(-50%, 0);
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    transform 0.3s ease;
+}
+
+.scroll-cue:hover {
+  background: rgba(15, 15, 15, 0.7);
+  transform: translate(-50%, 4px);
+}
+
+/* The chevron bounces on hover, over the button's own settle. */
+.scroll-cue:hover svg {
+  animation: scroll-cue-bounce 1.1s ease-in-out infinite;
+}
+
+@keyframes scroll-cue-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+/* Keyboard parity with the hero buttons: a bright ring in the site's blue,
+   never the UA default outline (which is invisible over the dark image). */
+.scroll-cue:focus-visible {
+  outline: 2px solid var(--soft-blue);
+  outline-offset: 2px;
+}
+
+/* The button's own hover transform is decorative; the chevron bounce too.
+   The smooth scrolling itself respects the OS preference separately in
+   ScrollCue.tsx. */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue,
+  .scroll-cue:hover svg {
+    animation: none;
+    transition: none;
+  }
+
+  .scroll-cue,
+  .scroll-cue:hover {
+    transform: translate(-50%, 0);
+  }
 }
 
 /* courses */
@@ -2484,13 +2566,10 @@ nav#navbar.nav-scrolling-resize {
     font-size: 2.6em;
   }
 
-  .sub-header {
-    height: 70vh;
-  }
-
-  .header {
-    min-height: 640px;
-  }
+  /* Both heroes (.header and .sub-header) keep their base min-height: 100vh
+     here - capping them left a hard split between the hero image and the next
+     section on tablets (user request: the hero should cover the full viewport
+     at every width). */
 
   p {
     font-size: 18px;
@@ -3047,7 +3126,10 @@ e #name,
 
 .calculator-shell {
   width: min(1120px, calc(100% - 40px));
-  margin: -76px auto 80px;
+  /* No pull-up into the hero: the hero covers the full viewport (like the
+     home page), so an overlap would paint the calculator panel on top of
+     the banner image. */
+  margin: 0 auto 80px;
   position: relative;
   z-index: 2;
 }
@@ -5669,7 +5751,8 @@ tbody tr:hover {
 @media (max-width: 800px) {
   .calculator-shell {
     width: calc(100% - 24px);
-    margin-top: -42px;
+    /* Keeps the no-pull-up rule from the base width tier. */
+    margin-top: 0;
   }
 
   .calculator-panel,
@@ -6524,7 +6607,8 @@ tbody tr:hover {
 =========================================================================== */
 .compare-shell {
   width: min(1240px, calc(100% - 40px));
-  margin: -76px auto 80px;
+  /* Mirrors .calculator-shell: no pull-up into the full-viewport hero. */
+  margin: 0 auto 80px;
   position: relative;
   z-index: 2;
 }
@@ -6586,12 +6670,6 @@ tbody tr:hover {
   :root[dir='rtl'] .compare-back:hover .compare-back-icon {
     translate: none;
   }
-}
-
-.compare-subtitle {
-  color: var(--calc-muted);
-  margin: 0 0 18px;
-  font-size: 1.05rem;
 }
 
 .compare-shared {
@@ -7053,11 +7131,11 @@ tbody tr:hover {
 
 @media (max-width: 800px) {
 
-  /* Mirrors .calculator-shell: stop pulling up into the hero with the desktop
-     offset and use the narrower phone gutter. */
+  /* Mirrors .calculator-shell: the narrower phone gutter only; the shell
+     still starts below the hero instead of overlapping it. */
   .compare-shell {
     width: calc(100% - 24px);
-    margin-top: -42px;
+    margin-top: 0;
   }
 }
 

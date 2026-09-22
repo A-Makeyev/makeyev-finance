@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { articleHeroBackground } from '@/lib/articles'
+import { ScrollCue } from '@/components/layout/ScrollCue'
 
 /**
  * Mortgage track types (מסלולי משכנתא) article. General educational content,
@@ -35,6 +36,7 @@ export function TrackTypesArticlePage() {
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('articles.trackTypes.title')}</h1>
         </div>
+        <ScrollCue />
       </section>
 
       <article className="article-page" dir={i18n.dir()} data-testid="track-types-article">

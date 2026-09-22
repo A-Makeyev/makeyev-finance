@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FaRegStar, FaStar, FaStarHalfAlt } from 'react-icons/fa'
 import { Reveal } from '@/components/layout/Reveal'
+import { ScrollCue } from '@/components/layout/ScrollCue'
 import { ActionFormModal } from '@/features/contact/ActionFormModal'
 
 /**
@@ -31,6 +32,7 @@ export function HomePage() {
             {t('home.heroCta')}
           </button>
         </div>
+        <ScrollCue />
       </section>
 
       {/* courses */}

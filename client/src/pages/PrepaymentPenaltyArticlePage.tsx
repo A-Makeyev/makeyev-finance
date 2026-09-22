@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenaltyFacts'
 import { articleHeroBackground } from '@/lib/articles'
+import { ScrollCue } from '@/components/layout/ScrollCue'
 
 /**
  * Prepayment-penalty (עמלת פירעון מוקדם) article. General educational content -
@@ -29,6 +30,7 @@ export function PrepaymentPenaltyArticlePage() {
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('articles.prepayment.title')}</h1>
         </div>
+        <ScrollCue />
       </section>
 
       {/* The site's global rule keeps non-calculator pages LTR (legacy page

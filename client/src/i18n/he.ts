@@ -38,6 +38,9 @@ export const he = {
     footer: {
       trademark: 'makeyev finance © {{year}}',
     },
+    heroScrollCue: {
+      aria: 'גלישה אל התוכן שמתחת לבאנר',
+    },
     home: {
       // The heading follows the site language; the subtitle stays the
       // *opposite* language (Hebrew page shows an English tagline, English
@@ -681,7 +684,6 @@ export const he = {
     compare: {
       metaTitle: 'השוואת תמהילים | Makeyev Finance',
       heading: 'השוואת תרחישי משכנתא',
-      subtitle: 'אותו נכס, אותו הון עצמי, אותה הכנסה - תמהילים שונים זה מול זה.',
       backToCalculator: 'חזרה למחשבון משכנתא',
       openFromCalculator: 'השוואת תמהילים',
       // Shared inputs (describing the buyer and the property, entered once).

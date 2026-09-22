@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
+import { ScrollCue } from '@/components/layout/ScrollCue'
 import {
   MAX_OTHER_EXPENSES,
   MAX_TRACKS,
@@ -483,11 +484,10 @@ export function ComparePage() {
         <div className="text-box main-heading">
           <h1 className="gradient-text-no-hover">{t('compare.heading')}</h1>
         </div>
+        <ScrollCue />
       </section>
 
       <main className="compare-shell" data-testid="compare-shell">
-        <p className="compare-subtitle">{t('compare.subtitle')}</p>
-
         {/* Shared inputs: property and buyer, entered once for all scenarios.
             The way back to the calculator the comparison was seeded from sits
             on the heading row, at the opposite side; the arrow is mirrored by

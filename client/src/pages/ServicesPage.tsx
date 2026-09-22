@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ScrollCue } from '@/components/layout/ScrollCue'
 
 /** Services page - legacy services.html content carried over verbatim. */
 export function ServicesPage() {
@@ -15,6 +16,7 @@ export function ServicesPage() {
         <div className="text-box">
           <h1 className="gradient-text-no-hover">{t('services.title')}</h1>
         </div>
+        <ScrollCue />
       </section>
 
       <section className="services">

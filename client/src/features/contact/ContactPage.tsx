@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FaMapMarkerAlt, FaRegEnvelope, FaWhatsapp } from 'react-icons/fa'
 import { GOOGLE_MAPS_EMBED, MAIL_LINK, SITE, WAZE_LINK } from '@/config/siteConfig'
+import { ScrollCue } from '@/components/layout/ScrollCue'
 import {
   ContactForm,
   type ContactSubmitOutcome,
@@ -49,6 +50,7 @@ export function ContactPage() {
         <div className="text-box">
           <h1 className="gradient-text-no-hover whitespace-nowrap">{t('contact.headerTitle')}</h1>
         </div>
+        <ScrollCue />
       </section>
 
       <section className="w-[80%] mx-auto pt-12 pb-14">

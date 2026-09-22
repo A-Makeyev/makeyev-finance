@@ -42,6 +42,9 @@ export const en: { translation: Translation } = {
     footer: {
       trademark: 'makeyev finance © {{year}}',
     },
+    heroScrollCue: {
+      aria: 'Scroll to the content below the banner',
+    },
     home: {
       heroTitleLine1: 'Mortgage &',
       heroTitleLine2: 'Financial Advice',
@@ -694,7 +697,6 @@ export const en: { translation: Translation } = {
     compare: {
       metaTitle: 'Mortgage comparison | Makeyev Finance',
       heading: 'Mortgage scenario comparison',
-      subtitle: 'Same property, same capital, same income - different mortgage mixes side by side.',
       backToCalculator: 'Back to the mortgage calculator',
       openFromCalculator: 'Compare mixes',
       // Shared inputs (describing the buyer and the property, entered once).
