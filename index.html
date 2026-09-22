@@ -205,6 +205,23 @@
     <div class="last-updated" id="lastUpdated"></div>
     <ul class="reports-list" id="reportsList">
         <li class="report-item">
+          <a href="Run-51/index.html" class="report-link">
+            <div class="report-content">
+              <div class="run-header">
+                <span class="run-number">Run #51 <span class="badge badge-failed">✗ Failed</span></span>
+                <span class="test-type">Playwright Tests</span>
+              </div>
+              <div class="run-date">22-09-2026 09:10PM</div>
+              <div class="test-stats">
+                <span class="stat-item">Passed: <span class="stat-value">126</span></span>
+                <span class="stat-item">Failed: <span class="stat-value">2</span></span>
+                <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+              </div>
+            </div>
+            <div class="link-icon">→</div>
+          </a>
+        </li>
+        <li class="report-item">
           <a href="Run-50/index.html" class="report-link">
             <div class="report-content">
               <div class="run-header">
@@ -357,23 +374,6 @@
             <div class="link-icon">→</div>
           </a>
         </li>
-        <li class="report-item">
-          <a href="Run-41/index.html" class="report-link">
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #41 <span class="badge badge-failed">✗ Failed</span></span>
-                <span class="test-type">Playwright Tests</span>
-              </div>
-              <div class="run-date">15-09-2026 12:48PM</div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
-              </div>
-            </div>
-            <div class="link-icon">→</div>
-          </a>
-        </li>
     </ul>
   </div>
   <script>
@@ -405,7 +405,7 @@
     updateTimestamp();
 
     // Auto-refresh logic
-    const currentRun = "50";
+    const currentRun = "51";
     let checkCount = 0;
 
     async function checkForUpdates() {
