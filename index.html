@@ -96,15 +96,23 @@
     .report-content {
       flex: 1;
     }
-    .link-icon {
-      color: #999;
-      font-size: 2em;
-      font-weight: bolder;
-      opacity: 0;
-      transition: opacity 0.2s;
+    .report-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 10px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+      font-size: 0.8em;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.2s, color 0.2s;
     }
-    .report-item:hover .link-icon {
-      opacity: 1;
+    .report-chip:hover {
+      background: #667eea;
+      color: white;
     }
     .run-header {
       display: flex;
@@ -210,6 +218,7 @@
               <div class="run-header">
                 <span class="run-number">Run #52 <span class="badge badge-success">✓ Passed</span></span>
                 <span class="test-type">Playwright Tests</span>
+                <a class="report-chip" href="Run-52/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">22-09-2026 09:55PM</div>
               <div class="test-stats">
@@ -218,7 +227,6 @@
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
               </div>
             </div>
-            <div class="link-icon">→</div>
           </a>
         </li>
         <li class="report-item">
@@ -227,6 +235,7 @@
               <div class="run-header">
                 <span class="run-number">Run #51 <span class="badge badge-failed">✗ Failed</span></span>
                 <span class="test-type">Playwright Tests</span>
+                <a class="report-chip" href="Run-51/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">22-09-2026 09:10PM</div>
               <div class="test-stats">
@@ -235,146 +244,9 @@
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
               </div>
             </div>
-            <div class="link-icon">→</div>
           </a>
         </li>
-        <li class="report-item">
-          <a href="Run-50/index.html" class="report-link">
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #50 <span class="badge badge-failed">✗ Failed</span></span>
-                <span class="test-type">Playwright Tests</span>
-              </div>
-              <div class="run-date">22-09-2026 07:18PM</div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
-              </div>
-            </div>
-            <div class="link-icon">→</div>
-          </a>
-        </li>
-        <li class="report-item">
-          <a href="Run-49/index.html" class="report-link">
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #49 <span class="badge badge-failed">✗ Failed</span></span>
-                <span class="test-type">Playwright Tests</span>
-              </div>
-              <div class="run-date">22-09-2026 02:55PM</div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
-              </div>
-            </div>
-            <div class="link-icon">→</div>
-          </a>
-        </li>
-        <li class="report-item">
-          <a href="Run-48/index.html" class="report-link">
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #48 <span class="badge badge-failed">✗ Failed</span></span>
-                <span class="test-type">Playwright Tests</span>
-              </div>
-              <div class="run-date">22-09-2026 02:39PM</div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
-              </div>
-            </div>
-            <div class="link-icon">→</div>
-          </a>
-        </li>
-        <li class="report-item">
-          <a href="Run-47/index.html" class="report-link">
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #47 <span class="badge badge-failed">✗ Failed</span></span>
-                <span class="test-type">Playwright Tests</span>
-              </div>
-              <div class="run-date">21-09-2026 10:58PM</div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
-              </div>
-            </div>
-            <div class="link-icon">→</div>
-          </a>
-        </li>
-        <li class="report-item">
-          <a href="Run-46/index.html" class="report-link">
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #46 <span class="badge badge-failed">✗ Failed</span></span>
-                <span class="test-type">Playwright Tests</span>
-              </div>
-              <div class="run-date">20-09-2026 05:43PM</div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
-              </div>
-            </div>
-            <div class="link-icon">→</div>
-          </a>
-        </li>
-        <li class="report-item">
-          <a href="Run-45/index.html" class="report-link">
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #45 <span class="badge badge-failed">✗ Failed</span></span>
-                <span class="test-type">Playwright Tests</span>
-              </div>
-              <div class="run-date">18-09-2026 10:48AM</div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
-              </div>
-            </div>
-            <div class="link-icon">→</div>
-          </a>
-        </li>
-        <li class="report-item">
-          <a href="Run-44/index.html" class="report-link">
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #44 <span class="badge badge-failed">✗ Failed</span></span>
-                <span class="test-type">Playwright Tests</span>
-              </div>
-              <div class="run-date">17-09-2026 03:06PM</div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
-              </div>
-            </div>
-            <div class="link-icon">→</div>
-          </a>
-        </li>
-        <li class="report-item">
-          <a href="Run-43/index.html" class="report-link">
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #43 <span class="badge badge-failed">✗ Failed</span></span>
-                <span class="test-type">Playwright Tests</span>
-              </div>
-              <div class="run-date">15-09-2026 08:06PM</div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">0</span></span>
-              </div>
-            </div>
-            <div class="link-icon">→</div>
-          </a>
-        </li>
-    </ul>
+      </ul>
   </div>
   <script>
     // Update last updated timestamp
