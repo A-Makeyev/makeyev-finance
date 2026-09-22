@@ -226,16 +226,6 @@ jobs:
               .report-content {
                 flex: 1;
               }
-              .link-icon {
-                color: #999;
-                font-size: 2em;
-                font-weight: bolder;
-                opacity: 0;
-                transition: opacity 0.2s;
-              }
-              .report-item:hover .link-icon {
-                opacity: 1;
-              }
               .run-header {
                 display: flex;
                 align-items: center;
@@ -247,6 +237,26 @@ jobs:
                 font-size: 1.3em;
                 font-weight: 600;
                 color: #667eea;
+              }
+              /* Explicit HTML-report chip: the whole card is already clickable,
+                 but a visible affordance beats a hidden hover arrow. */
+              .report-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin-left: 10px;
+                padding: 5px 12px;
+                border-radius: 999px;
+                background: rgba(102, 126, 234, 0.1);
+                color: #667eea;
+                font-size: 0.8em;
+                font-weight: 600;
+                text-decoration: none;
+                transition: background 0.2s, color 0.2s;
+              }
+              .report-chip:hover {
+                background: #667eea;
+                color: white;
               }
               .test-type {
                 font-size: 0.85em;
@@ -379,6 +389,11 @@ jobs:
             if [ -n "$test_type" ]; then
               echo "                <span class=\"test-type\">$test_type</span>" >> index.html
             fi
+            # The Playwright HTML report lives at $dir/index.html inside this
+            # same gh-pages tree; only offer the chip when it was published.
+            if [ -f "$dir/index.html" ]; then
+              echo "                <a class=\"report-chip\" href=\"$dir/index.html\" target=\"_blank\" rel=\"noopener\">📊 HTML report</a>" >> index.html
+            fi
             echo "              </div>" >> index.html
             if [ -n "$timestamp" ]; then
               echo "              <div class=\"run-date\">$timestamp</div>" >> index.html
@@ -392,7 +407,6 @@ jobs:
             fi
             echo "              </div>" >> index.html
             echo "            </div>" >> index.html
-            echo "            <div class=\"link-icon\">→</div>" >> index.html
             echo "          </a>" >> index.html
             echo "        </li>" >> index.html
           done
