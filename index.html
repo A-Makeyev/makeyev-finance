@@ -138,6 +138,26 @@
       color: #666;
       margin-top: 4px;
     }
+    .run-source {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+      font-size: 0.85em;
+    }
+    .run-branch {
+      color: #888;
+      font-weight: 500;
+    }
+    .run-sha {
+      color: #667eea;
+      font-family: 'Fira Code', ui-monospace, monospace;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .run-sha:hover {
+      text-decoration: underline;
+    }
     .test-stats {
       display: flex;
       gap: 16px;
@@ -223,6 +243,10 @@
                 <a class="report-chip" href="Run-53/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">22-09-2026 10:19PM</div>
+              <div class="run-source">
+                <span class="run-branch">⎇ main</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/605e792e4095695274db8e40f2d39baa454701d8" target="_blank" rel="noopener">605e792</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
@@ -240,6 +264,10 @@
                 <a class="report-chip" href="Run-52/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">22-09-2026 09:55PM</div>
+              <div class="run-source">
+                <span class="run-branch">⎇ main</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/8e8cdad33981d75fd8dfb57028b388c9966cd43a" target="_blank" rel="noopener">8e8cdad</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
@@ -257,6 +285,10 @@
                 <a class="report-chip" href="Run-51/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">22-09-2026 09:10PM</div>
+              <div class="run-source">
+                <span class="run-branch">⎇ main</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/574544a72a825e9c81a75f665ceaa1bf4584c405" target="_blank" rel="noopener">574544a</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">126</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">2</span></span>
@@ -265,7 +297,7 @@
             </div>
           </a>
         </li>
-    </ul>
+      </ul>
   </div>
   <script>
     // Update last updated timestamp
