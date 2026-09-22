@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { cn } from '@/lib/cn'
+import { HOVER_CLOSE_DELAY_MS, PANEL_EXIT_DURATION_MS } from '@/lib/timings'
 
 export interface HelpTooltipProps {
   /** Screen-reader name for the icon button (e.g. "מידע נוסף על סוג המסלול"). */
@@ -45,8 +46,6 @@ export interface HelpTooltipProps {
  * aria-expanded and an aria-label; the panel is linked via aria-describedby
  * so screen readers announce its content while it is open.
  */
-const HOVER_CLOSE_DELAY_MS = 300
-const PANEL_EXIT_DURATION_MS = 150
 
 export function HelpTooltip({
   label,

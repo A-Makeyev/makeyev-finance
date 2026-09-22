@@ -9,7 +9,16 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 4 : 1,
-  reporter: process.env.CI ? [['html', { open: 'never' }], ['list']] : [['list']],
+  reporter: process.env.CI
+    ? [
+        ['html', { open: 'never' }],
+        // The CI report page (Results/Run-*/results.json on gh-pages) parses
+        // this JSON for passed/failed/skipped counts. The output path itself
+        // comes from PLAYWRIGHT_JSON_OUTPUT_NAME, set in .github/workflows/ci.yml.
+        ['json', { outputFile: process.env.PLAYWRIGHT_JSON_OUTPUT_NAME ?? 'results.json' }],
+        ['list'],
+      ]
+    : [['list']],
   timeout: 45_000,
   expect: { timeout: 12_000 },
   use: {

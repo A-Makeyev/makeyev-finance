@@ -24,7 +24,7 @@ for (const language of ['hebrew', 'english'] as const) {
       page,
     }) => {
       const rtl = language === 'hebrew'
-      seedLanguage(page, language)
+      await seedLanguage(page, language)
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await page.goto('/calculators')
 
@@ -262,7 +262,7 @@ for (const language of ['hebrew', 'english'] as const) {
           path: `${SHOT_DIR}/article-${language}-${viewport.tag}.png`,
           fullPage: true,
         })
-        seedTheme(page, 'dark')
+        await seedTheme(page, 'dark')
         await page.reload()
         await page.screenshot({
           path: `${SHOT_DIR}/article-dark-${language}-${viewport.tag}.png`,

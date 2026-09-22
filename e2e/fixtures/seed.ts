@@ -26,8 +26,13 @@ export async function seedSiteState(
   page: Page,
   state: { language?: SiteLanguage; theme?: 'light' | 'dark' },
 ): Promise<void> {
-  await page.addInitScript((seeds) => {
-    if (seeds.language) localStorage.setItem(STORAGE_KEYS.language, seeds.language)
-    if (seeds.theme) localStorage.setItem(STORAGE_KEYS.theme, seeds.theme)
-  }, state)
+  // The browser callback must only touch its arguments: Playwright runs it
+  // by serializing its source, so Node-scope imports (STORAGE_KEYS) would be
+  // a ReferenceError in the page. Resolve the keys here, pass plain strings.
+  const entries: string[] = []
+  if (state.language) entries.push(STORAGE_KEYS.language, state.language)
+  if (state.theme) entries.push(STORAGE_KEYS.theme, state.theme)
+  await page.addInitScript((pairs) => {
+    for (let i = 0; i < pairs.length; i += 2) localStorage.setItem(pairs[i], pairs[i + 1])
+  }, entries)
 }

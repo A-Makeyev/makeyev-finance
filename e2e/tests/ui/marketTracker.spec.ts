@@ -656,8 +656,13 @@ test.describe('Markets strip', () => {
   }
 
   test('strip stays visible above the navbar when the Indexes bar is absent', async ({ page }) => {
-    // No CBS mocks: the Indexes bar stays hidden (feeds fail), so the
-    // Markets strip must move to the top slot, not float mid-air under it.
+    // The Indexes bar must stay hidden (CBS feeds fail), so the Markets
+    // strip moves to the top slot, not float mid-air under it. The failure
+    // is enforced with aborted CBS routes rather than assumed: this suite
+    // installs no data mocks, but letting the real api.cbs.gov.il answer
+    // (it does, sometimes, from a connected machine) would flip the bar
+    // visible and break the premise nondeterministically.
+    await page.route(/api\.cbs\.gov\.il/, (route) => route.abort())
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
     await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')

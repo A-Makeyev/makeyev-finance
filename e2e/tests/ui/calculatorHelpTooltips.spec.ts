@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect, seedLanguage, seedSiteState } from '../../fixtures'
+import { HOVER_CLOSE_DELAY_MS, PANEL_EXIT_DURATION_MS } from '../../../client/src/lib/timings'
 
 /**
  * The calculator's inline "?" help tooltips: a toggle tip per tooltip must
@@ -42,7 +43,7 @@ async function assertPanelInsideViewport(page: Page): Promise<void> {
 for (const language of ['hebrew', 'english'] as const) {
   for (const viewport of VIEWPORTS) {
     test(`calculator help tooltips - ${language} @ ${viewport.tag}px`, async ({ page }) => {
-      seedLanguage(page, language)
+      await seedLanguage(page, language)
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await page.goto('/calculators')
 
@@ -93,7 +94,13 @@ for (const language of ['hebrew', 'english'] as const) {
 }
 
 test('calculator help tooltip - hover opens, grace close, click pins', async ({ page }) => {
-  seedLanguage(page, 'hebrew')
+  // The grace close is a 300ms setTimeout in the component; racing it with
+  // wall-clock waits was flaky under CI load (the assert-after-120ms could
+  // land after the timer fired). Installing the clock before navigation puts
+  // the component's timers on the virtual clock: 0ms have elapsed while we
+  // assert "still open", and fastForward fires the close deterministically.
+  await page.clock.install()
+  await seedLanguage(page, 'hebrew')
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/calculators')
 
@@ -133,13 +140,15 @@ test('calculator help tooltip - hover opens, grace close, click pins', async ({ 
   panel = page.getByTestId('help-method-1-panel')
   await expect(panel).toBeVisible()
   await page.mouse.move(20, 20)
-  await page.waitForTimeout(120)
+  // No virtual time has passed since the pointer left, so the 300ms grace
+  // timer has not fired: the panel must still be open and the trigger styled.
   await expect(panel, 'still open within the grace window').toBeVisible()
   const graceBorder = (await page.evaluate(
     `getComputedStyle(document.querySelector('[data-testid="help-method-1"]')).borderColor`,
   )) as string
   expect(graceBorder, 'trigger stays styled while the panel is closing').not.toBe(closedBorder)
-  await page.waitForTimeout(400)
+  // Fire the grace timer: the panel closes (150ms exit animation follows).
+  await page.clock.fastForward(HOVER_CLOSE_DELAY_MS + PANEL_EXIT_DURATION_MS)
   await expect(trigger).toHaveAttribute('aria-expanded', 'false')
   await expect(panel).toHaveCount(0)
 
@@ -149,7 +158,9 @@ test('calculator help tooltip - hover opens, grace close, click pins', async ({ 
   panel = page.getByTestId('help-method-1-panel')
   await expect(panel).toBeVisible()
   await page.mouse.move(20, 20)
-  await page.waitForTimeout(450)
+  // Pinned ignores hover-out entirely, real or virtual time - the pointer
+  // moving away must not close it at any point.
+  await page.clock.fastForward(HOVER_CLOSE_DELAY_MS + PANEL_EXIT_DURATION_MS)
   await expect(panel, 'pinned panel survives hover-out').toBeVisible()
   await trigger.click()
   await expect(trigger).toHaveAttribute('aria-expanded', 'false')
@@ -158,7 +169,7 @@ test('calculator help tooltip - hover opens, grace close, click pins', async ({ 
 
 test('calculator help tooltip - the "?" stays on the label line', async ({ page }) => {
   for (const viewport of [360, 1280] as const) {
-    seedLanguage(page, 'hebrew')
+    await seedLanguage(page, 'hebrew')
     await page.setViewportSize({ width: viewport, height: 800 })
     await page.goto('/calculators')
 
@@ -186,7 +197,7 @@ test('calculator help tooltip - the "?" stays on the label line', async ({ page 
 test('calculator help tooltip - near does nothing, over the icon opens and recolors', async ({
   page,
 }) => {
-  seedLanguage(page, 'hebrew')
+  await seedLanguage(page, 'hebrew')
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/calculators')
 
@@ -229,7 +240,7 @@ test('calculator help tooltip - the label never forwards hover/click to the "?" 
   // label text - the icon's border recolored teal with the cursor far from
   // it, and clicking the label text toggled the panel. Labels now bind to
   // their real control via htmlFor, so the phantom zone is gone.
-  seedLanguage(page, 'hebrew')
+  await seedLanguage(page, 'hebrew')
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/calculators')
   // Wait for the app to mount before probing the DOM (a raw evaluate does
@@ -298,7 +309,7 @@ test('calculator help tooltip - the label never forwards hover/click to the "?" 
 })
 
 test('calculator help tooltip - the panel uses the theme tokens in dark mode', async ({ page }) => {
-  seedSiteState(page, { language: 'hebrew', theme: 'dark' })
+  await seedSiteState(page, { language: 'hebrew', theme: 'dark' })
   await page.setViewportSize({ width: 360, height: 800 })
   await page.goto('/calculators')
 

@@ -76,7 +76,14 @@ export const test = base.extend<AppFixtures>({
     await use(page)
   },
 
-  emailjsRequests: [],
+  // A function fixture, NOT a bare value: a literal [] is evaluated once per
+  // worker and shared by every test in it, so submissions from earlier tests
+  // leak into later count assertions (the contact-count flakes). The wrapper
+  // function gives each test its own fresh array.
+  // eslint-disable-next-line no-empty-pattern -- Playwright requires a destructured first arg even when the fixture reads nothing
+  emailjsRequests: async ({}, use) => {
+    await use([])
+  },
 
   calc: async ({ mockedPage }, use) => {
     await use(new CalculatorPage(mockedPage))
