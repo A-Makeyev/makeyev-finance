@@ -188,25 +188,28 @@ for (const language of ['hebrew', 'english'] as const) {
       } | null
       expect(caret, 'warning, icon and both carets rendered').not.toBeNull()
 
-      // In the ⚠️ glyph's ballpark, and square rather than the UA marker's tall
-      // thin 10x18 shape. A loose band on purpose: the ⚠️'s ink depends on the
-      // installed colour-emoji font, the caret's size is a dialable knob, and
-      // Chrome's border snapping moves the rendered figure a pixel either way
-      // depending on where the block lands on the sub-pixel grid. The
-      // squareness check below is the one that catches a marker fallback.
+      // A drawn caret, not the UA marker's tall thin 10x18 shape: the caret is
+      // square (within border snapping), the marker never is. Sizing is also
+      // checked against the block's own font (0.75em per --caret-size), a
+      // platform-stable reference. The old ink-width band against the ⚠️ emoji
+      // measured on canvas could not be made stable: canvas emoji metrics are
+      // font- and platform-dependent (Segoe UI Emoji on Windows ~1.0em vs Noto
+      // Color Emoji on Linux ~1.3em, and Chromium's canvas measures emoji wider
+      // than the DOM renders them), so the same 11px caret legitimately read
+      // as "in band" locally and "too thin" on CI.
+      const summaryFontSize = (await page.evaluate(
+        `getComputedStyle(document.querySelector('.tax-breakdown')).fontSize`,
+      )) as string
+      const expectedCaret = parseFloat(summaryFontSize) * 0.75
       for (const [name, box] of Object.entries({ tax: caret?.taxCaret, note: caret?.noteCaret })) {
-        expect(box?.width, `${name} caret ~ ⚠️ width`).toBeGreaterThan(
-          (caret?.warnInk.width ?? 0) * 0.6,
+        expect(box?.width, `${name} caret ~ 0.75em of its block`).toBeGreaterThan(
+          expectedCaret * 0.7,
         )
-        expect(box?.width, `${name} caret ~ ⚠️ width`).toBeLessThan(
-          (caret?.warnInk.width ?? 0) * 1.5,
+        expect(box?.width, `${name} caret ~ 0.75em of its block`).toBeLessThan(expectedCaret * 1.3)
+        expect(box?.height, `${name} caret ~ 0.75em of its block`).toBeGreaterThan(
+          expectedCaret * 0.7,
         )
-        expect(box?.height, `${name} caret ~ ⚠️ height`).toBeGreaterThan(
-          (caret?.warnInk.height ?? 0) * 0.6,
-        )
-        expect(box?.height, `${name} caret ~ ⚠️ height`).toBeLessThan(
-          (caret?.warnInk.height ?? 0) * 1.5,
-        )
+        expect(box?.height, `${name} caret ~ 0.75em of its block`).toBeLessThan(expectedCaret * 1.3)
         // Within a pixel rather than exactly square: border widths snap to whole
         // pixels, so a notch off square is normal. The UA marker's 10x18 shape
         // is what this rules out.
