@@ -95,6 +95,9 @@ jobs:
           cp -r playwright-report/* "$RUN_DIR/" || true
 
           date '+%d-%m-%Y %I:%M%p' > "$RUN_DIR/timestamp.txt"
+          # Shown on the report page's run cards; short SHA links to the commit.
+          echo "${{ github.ref_name }}" > "$RUN_DIR/branch.txt"
+          echo "${{ github.sha }}" > "$RUN_DIR/commit.txt"
           if [ "${{ steps.test-step.outcome }}" == "success" ]; then
             echo "passed" > "$RUN_DIR/status.txt"
           else
@@ -268,6 +271,26 @@ jobs:
                 color: #666;
                 margin-top: 4px;
               }
+              .run-source {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 4px;
+                font-size: 0.85em;
+              }
+              .run-branch {
+                color: #888;
+                font-weight: 500;
+              }
+              .run-sha {
+                color: #667eea;
+                font-family: 'Fira Code', ui-monospace, monospace;
+                font-weight: 600;
+                text-decoration: none;
+              }
+              .run-sha:hover {
+                text-decoration: underline;
+              }
               .test-stats {
                 display: flex;
                 gap: 16px;
@@ -363,6 +386,14 @@ jobs:
             if [ -f "$dir/status.txt" ]; then
               status=$(cat "$dir/status.txt")
             fi
+            branch=""
+            if [ -f "$dir/branch.txt" ]; then
+              branch=$(cat "$dir/branch.txt")
+            fi
+            commit_sha=""
+            if [ -f "$dir/commit.txt" ]; then
+              commit_sha=$(cat "$dir/commit.txt")
+            fi
 
             # Parse test data from the JSON report
             if [ -f "$dir/results.json" ]; then
@@ -397,6 +428,19 @@ jobs:
             echo "              </div>" >> index.html
             if [ -n "$timestamp" ]; then
               echo "              <div class=\"run-date\">$timestamp</div>" >> index.html
+            fi
+            # Branch + short SHA under the date; the SHA links to the commit on
+            # GitHub (github.sha is the full 40-char SHA). Only rendered when
+            # the metadata exists, so pre-existing runs keep rendering.
+            if [ -n "$branch" ] || [ -n "$commit_sha" ]; then
+              echo "              <div class=\"run-source\">" >> index.html
+              if [ -n "$branch" ]; then
+                echo "                <span class=\"run-branch\">⎇ $branch</span>" >> index.html
+              fi
+              if [ -n "$commit_sha" ]; then
+                echo "                <a class=\"run-sha\" href=\"https://github.com/${{ github.repository }}/commit/$commit_sha\" target=\"_blank\" rel=\"noopener\">$(echo "$commit_sha" | cut -c1-7)</a>" >> index.html
+              fi
+              echo "              </div>" >> index.html
             fi
             echo "              <div class=\"test-stats\">" >> index.html
             echo "                <span class=\"stat-item\">Passed: <span class=\"stat-value\">$passed</span></span>" >> index.html
