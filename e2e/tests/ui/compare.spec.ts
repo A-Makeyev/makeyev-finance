@@ -1,6 +1,5 @@
-import { test, expect } from '@playwright/test'
-import { installExternalMocks } from '../../support/mocks'
-import { CalculatorPage } from '../../pom/CalculatorPage'
+import { test, expect } from '../../fixtures'
+import type { CalculatorPage } from '../../pages/CalculatorPage'
 import { ils } from '../../support/ils'
 
 /**
@@ -11,21 +10,14 @@ import { ils } from '../../support/ils'
  */
 
 test.describe('mortgage comparison - /compare', () => {
-  let calc: CalculatorPage
-
-  test.beforeEach(async ({ page }) => {
-    await installExternalMocks(page, { boiKeyRate: 4.5 })
-    calc = new CalculatorPage(page)
-  })
-
   /** Navigate via the calculator CTA so the comparison is seeded from it. */
-  async function gotoSeeded(): Promise<void> {
+  async function gotoSeeded(calc: CalculatorPage): Promise<void> {
     await calc.goto()
     await calc.page.getByTestId('open-comparison').click()
     await expect(calc.page.getByTestId('compare-shell')).toBeVisible()
   }
 
-  test('seeds from the calculator: same mix, same monthly payment', async ({ page }) => {
+  test('seeds from the calculator: same mix, same monthly payment', async ({ calc, page }) => {
     // The calculator's ₪1,000,000 recommended mix at 15y shows ₪7,772 -
     // read the figure BEFORE navigating away, then find it again in the
     // comparison's first data column.
@@ -66,8 +58,8 @@ test.describe('mortgage comparison - /compare', () => {
     )
   })
 
-  test('tweaking one scenario highlights the best value per row', async ({ page }) => {
-    await gotoSeeded()
+  test('tweaking one scenario highlights the best value per row', async ({ calc, page }) => {
+    await gotoSeeded(calc)
     // Scenario 2 opens blank, so give it something to compare against by
     // duplicating the mix the calculator seeded into scenario 1 (the copy
     // lands in the middle: [mix, copy, blank]).
@@ -86,8 +78,8 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(paymentRow.locator('td').nth(1)).toHaveClass(/best/)
   })
 
-  test('duplicate scenario, edit the copy, then remove it', async ({ page }) => {
-    await gotoSeeded()
+  test('duplicate scenario, edit the copy, then remove it', async ({ calc, page }) => {
+    await gotoSeeded(calc)
     await page.getByTestId('compare-duplicate-1').click()
     // Three scenarios now; the copy sits next to the original with equal amounts.
     await expect(page.getByTestId('compare-track-2-1')).toBeVisible()
@@ -131,9 +123,10 @@ test.describe('mortgage comparison - /compare', () => {
   })
 
   test('shared inputs reprice every scenario; LTV status flips to a violation', async ({
+    calc,
     page,
   }) => {
-    await gotoSeeded()
+    await gotoSeeded(calc)
     // Property 1.2M, capital 200k → loan context 1M = 83.3% > 75% first-home
     // limit: both scenario columns show the LTV violation.
     await page.getByTestId('compare-property-value').fill('1,200,000')
@@ -182,8 +175,8 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(statusRow).toContainText('החזר בתקרה המומלצת')
   })
 
-  test('comparison table fits its card instead of scrolling sideways', async ({ page }) => {
-    await gotoSeeded()
+  test('comparison table fits its card instead of scrolling sideways', async ({ calc, page }) => {
+    await gotoSeeded(calc)
     // Figures in every column: the currency values, the mix line and the status
     // chips are what used to widen the table past its card (the metric names
     // and values were all nowrap, so nothing could give).

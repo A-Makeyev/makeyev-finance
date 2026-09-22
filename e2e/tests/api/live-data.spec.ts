@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installExternalMocks, type CbsFixtureOptions } from '../../support/mocks'
-import { CalculatorPage } from '../../pom/CalculatorPage'
+import { CalculatorPage } from '../../pages/CalculatorPage'
 import { computeTrackResult } from '@/lib/amortization'
 import { formatCurrency } from '@/lib/format'
 

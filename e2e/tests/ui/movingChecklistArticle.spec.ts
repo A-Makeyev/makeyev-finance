@@ -1,5 +1,4 @@
-import { expect, test } from '@playwright/test'
-import { installExternalMocks } from '../../support/mocks'
+import { test, expect, seedLanguage, seedSiteState } from '../../fixtures'
 
 /**
  * The moving-checklist article: reachable from the articles list, reads in
@@ -28,8 +27,7 @@ for (const language of ['hebrew', 'english'] as const) {
   for (const viewport of VIEWPORTS) {
     test(`moving-checklist article - ${language} @ ${viewport.tag}px`, async ({ page }) => {
       const rtl = language === 'hebrew'
-      await installExternalMocks(page)
-      await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
+      seedLanguage(page, language)
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await page.goto('/articles')
 
@@ -95,11 +93,7 @@ for (const language of ['hebrew', 'english'] as const) {
 }
 
 test('moving-checklist article - the new surfaces use the theme tokens', async ({ page }) => {
-  await installExternalMocks(page)
-  await page.addInitScript(() => {
-    localStorage.setItem('site_language', 'hebrew')
-    localStorage.setItem('site_theme', 'dark')
-  })
+  seedSiteState(page, { language: 'hebrew', theme: 'dark' })
   await page.setViewportSize({ width: 360, height: 800 })
   await page.goto('/articles/moving-checklist')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')

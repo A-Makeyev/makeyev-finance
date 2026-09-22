@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
-import { installExternalMocks } from '../../support/mocks'
+import type { Page } from '@playwright/test'
+import { test, expect, seedLanguage, seedSiteState } from '../../fixtures'
 
 /**
  * The calculator's inline "?" help tooltips: a toggle tip per tooltip must
@@ -42,8 +42,7 @@ async function assertPanelInsideViewport(page: Page): Promise<void> {
 for (const language of ['hebrew', 'english'] as const) {
   for (const viewport of VIEWPORTS) {
     test(`calculator help tooltips - ${language} @ ${viewport.tag}px`, async ({ page }) => {
-      await installExternalMocks(page)
-      await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
+      seedLanguage(page, language)
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await page.goto('/calculators')
 
@@ -94,8 +93,7 @@ for (const language of ['hebrew', 'english'] as const) {
 }
 
 test('calculator help tooltip - hover opens, grace close, click pins', async ({ page }) => {
-  await installExternalMocks(page)
-  await page.addInitScript((lang) => localStorage.setItem('site_language', lang), 'hebrew')
+  seedLanguage(page, 'hebrew')
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/calculators')
 
@@ -140,9 +138,7 @@ test('calculator help tooltip - hover opens, grace close, click pins', async ({ 
   const graceBorder = (await page.evaluate(
     `getComputedStyle(document.querySelector('[data-testid="help-method-1"]')).borderColor`,
   )) as string
-  expect(graceBorder, 'trigger stays styled while the panel is closing').not.toBe(
-    closedBorder,
-  )
+  expect(graceBorder, 'trigger stays styled while the panel is closing').not.toBe(closedBorder)
   await page.waitForTimeout(400)
   await expect(trigger).toHaveAttribute('aria-expanded', 'false')
   await expect(panel).toHaveCount(0)
@@ -162,8 +158,7 @@ test('calculator help tooltip - hover opens, grace close, click pins', async ({ 
 
 test('calculator help tooltip - the "?" stays on the label line', async ({ page }) => {
   for (const viewport of [360, 1280] as const) {
-    await installExternalMocks(page)
-    await page.addInitScript((lang) => localStorage.setItem('site_language', lang), 'hebrew')
+    seedLanguage(page, 'hebrew')
     await page.setViewportSize({ width: viewport, height: 800 })
     await page.goto('/calculators')
 
@@ -191,8 +186,7 @@ test('calculator help tooltip - the "?" stays on the label line', async ({ page 
 test('calculator help tooltip - near does nothing, over the icon opens and recolors', async ({
   page,
 }) => {
-  await installExternalMocks(page)
-  await page.addInitScript((lang) => localStorage.setItem('site_language', lang), 'hebrew')
+  seedLanguage(page, 'hebrew')
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/calculators')
 
@@ -235,8 +229,7 @@ test('calculator help tooltip - the label never forwards hover/click to the "?" 
   // label text - the icon's border recolored teal with the cursor far from
   // it, and clicking the label text toggled the panel. Labels now bind to
   // their real control via htmlFor, so the phantom zone is gone.
-  await installExternalMocks(page)
-  await page.addInitScript((lang) => localStorage.setItem('site_language', lang), 'hebrew')
+  seedLanguage(page, 'hebrew')
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/calculators')
   // Wait for the app to mount before probing the DOM (a raw evaluate does
@@ -263,9 +256,7 @@ test('calculator help tooltip - the label never forwards hover/click to the "?" 
   // Behavioral check on the term tooltip (the reported one): sweep the whole
   // label text - the icon must never :hover or recolor from a distance, and
   // clicking the text must not open the panel.
-  const termText = page
-    .locator('label.term-slider .label-help-row .label-help-text')
-    .first()
+  const termText = page.locator('label.term-slider .label-help-row .label-help-text').first()
   await termText.scrollIntoViewIfNeeded()
   const box = await termText.boundingBox()
   expect(box, 'term label text is visible').not.toBeNull()
@@ -280,8 +271,13 @@ test('calculator help tooltip - the label never forwards hover/click to the "?" 
         const btn = document.querySelector('[data-testid="help-term"]');
         return { hover: btn.matches(':hover'), open: !!document.querySelector('[data-testid="help-term-panel"]') };
       })()`)) as { hover: boolean; open: boolean }
-      expect(state.hover, `icon not :hover at ${Math.round((step / 8) * 100)}% of label width`).toBe(false)
-      expect(state.open, `panel closed at ${Math.round((step / 8) * 100)}% of label width`).toBe(false)
+      expect(
+        state.hover,
+        `icon not :hover at ${Math.round((step / 8) * 100)}% of label width`,
+      ).toBe(false)
+      expect(state.open, `panel closed at ${Math.round((step / 8) * 100)}% of label width`).toBe(
+        false,
+      )
     }
   }
   await sweep(0)
@@ -302,11 +298,7 @@ test('calculator help tooltip - the label never forwards hover/click to the "?" 
 })
 
 test('calculator help tooltip - the panel uses the theme tokens in dark mode', async ({ page }) => {
-  await installExternalMocks(page)
-  await page.addInitScript(() => {
-    localStorage.setItem('site_language', 'hebrew')
-    localStorage.setItem('site_theme', 'dark')
-  })
+  seedSiteState(page, { language: 'hebrew', theme: 'dark' })
   await page.setViewportSize({ width: 360, height: 800 })
   await page.goto('/calculators')
 

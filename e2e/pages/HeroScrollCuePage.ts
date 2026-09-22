@@ -100,8 +100,7 @@ export class HeroScrollCuePage {
       .poll(
         async () => {
           const top = (await this.page.evaluate(CONTENT_TOP_EXPR)) as number | null
-          const settled =
-            previousTop !== null && top !== null && Math.abs(top - previousTop) < 0.5
+          const settled = previousTop !== null && top !== null && Math.abs(top - previousTop) < 0.5
           previousTop = top
           return settled
         },

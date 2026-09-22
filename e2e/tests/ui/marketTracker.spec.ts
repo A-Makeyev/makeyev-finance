@@ -1,4 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
+import { MIXED_QUOTES, quoteOf, snapshotBody } from '../../data/marketQuotes'
+import { mockMarketQuotes } from '../../support/marketMocks'
 import { installExternalMocks } from '../../support/mocks'
 
 /**
@@ -8,66 +10,6 @@ import { installExternalMocks } from '../../support/mocks'
  * The strip sits below the CBS Indexes bar; CBS/BOI/EmailJS are left unmocked
  * here (they fail silently offline, exactly like production CI).
  */
-
-interface FixtureQuote {
-  assetId: string
-  name: string
-  price: number | null
-  change: number | null
-  changePercent: number | null
-  currency: 'USD' | 'ILS'
-  timestamp: string
-  marketStatus?: 'open' | 'closed'
-  stale?: boolean
-}
-
-const ASSETS_META = [
-  { id: 'sp500', name: 'SPY', symbol: 'SPY', type: 'etf', decimals: 2 },
-  { id: 'nasdaq', name: 'QQQ', symbol: 'QQQ', type: 'etf', decimals: 2 },
-  { id: 'ta35', name: 'TA-35', symbol: 'TA35.TA', type: 'index', decimals: 2 },
-  { id: 'gold', name: 'GOLD', symbol: 'GC=F', type: 'commodity', decimals: 2, futures: true },
-  { id: 'bitcoin', name: 'BTC', symbol: 'BINANCE:BTCUSDT', type: 'crypto', decimals: 0 },
-  { id: 'usdils', name: 'USD/ILS', symbol: 'USDILS', type: 'currency', decimals: 4 },
-]
-
-function quoteOf(
-  partial: Partial<FixtureQuote> & Pick<FixtureQuote, 'assetId' | 'price' | 'changePercent'>,
-): FixtureQuote {
-  return {
-    name: partial.assetId,
-    change: partial.changePercent === null ? null : 1,
-    currency: 'USD',
-    timestamp: '2026-09-09T00:00:00.000Z',
-    marketStatus: 'closed',
-    ...partial,
-  }
-}
-
-const MIXED_QUOTES: FixtureQuote[] = [
-  quoteOf({ assetId: 'sp500', price: 765.96, changePercent: 0 }),
-  quoteOf({ assetId: 'nasdaq', price: 521.4, changePercent: -0.3255 }),
-  // TA-35 is the real TASE index level, quoted in ILS: no $ prefix.
-  quoteOf({ assetId: 'ta35', price: 125.32, changePercent: -0.781, currency: 'ILS' }),
-  // Gold is the COMEX front-month contract: dollars per ounce of the metal,
-  // not the ~$400 GLD share price it used to show.
-  quoteOf({ assetId: 'gold', price: 4408.9, changePercent: 0.9081 }),
-  quoteOf({ assetId: 'bitcoin', price: 79551.34, changePercent: 1.24, marketStatus: 'open' }),
-  quoteOf({ assetId: 'usdils', price: 3.0192, changePercent: 0.386 }),
-]
-
-async function mockQuotes(
-  page: Page,
-  responder: () => { status: number; body: unknown },
-): Promise<void> {
-  await page.route('**/api/market/quotes**', (route) => {
-    const { status, body } = responder()
-    return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
-  })
-}
-
-function snapshotBody(quotes: FixtureQuote[]) {
-  return { quotes, refreshIntervalMs: 900000, assets: ASSETS_META }
-}
 
 /**
  * Records every movement-flash pill the strip renders, with the paint data
@@ -161,7 +103,7 @@ test.describe('Markets strip', () => {
     page,
   }) => {
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
-    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')
 
     const tracker = page.getByTestId('market-tracker')
@@ -189,7 +131,7 @@ test.describe('Markets strip', () => {
 
   test('no row discloses an ETF proxy any more, and gold names its contract', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
-    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')
 
     // No "Tracks ..." suffix on the TA-35 row: the server now serves the real
@@ -211,7 +153,7 @@ test.describe('Markets strip', () => {
   })
 
   test('wraps into balanced lines that never leave one ticker alone', async ({ page }) => {
-    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
 
     // 360 is the narrowest target, 650 and 1000 sit inside the three-across
     // tier, 1200 inside it too and 1300 above it (all six on one line).
@@ -250,7 +192,7 @@ test.describe('Markets strip', () => {
   })
 
   test('strip text is not user-selectable', async ({ page }) => {
-    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')
 
     // Same evaluate-string pattern as qa-visual.spec.ts (the e2e tsconfig
@@ -265,7 +207,7 @@ test.describe('Markets strip', () => {
   })
 
   test('positive and negative changes get their semantic tone classes', async ({ page }) => {
-    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')
 
     // Fixtures: nasdaq -0.33% (down), sp500 0.00% (flat), bitcoin +1.24% (up).
@@ -309,7 +251,7 @@ test.describe('Markets strip', () => {
   }) => {
     let fail = true
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
-    await mockQuotes(page, () =>
+    await mockMarketQuotes(page, () =>
       fail
         ? { status: 503, body: { error: 'market data unavailable', code: 'rate-limit' } }
         : { status: 200, body: snapshotBody(MIXED_QUOTES) },
@@ -346,7 +288,7 @@ test.describe('Markets strip', () => {
         ? { ...quote, price: null, change: null, changePercent: null }
         : quote,
     )
-    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(partial) }))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(partial) }))
     await page.goto('/')
 
     const tracker = page.getByTestId('market-tracker')
@@ -414,7 +356,7 @@ test.describe('Markets strip', () => {
       const skeleton = await measure()
 
       await page.unroute('**/api/market/quotes**')
-      await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+      await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
       await page.reload()
       await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
       await page.evaluate(`document.fonts.ready`)
@@ -445,7 +387,7 @@ test.describe('Markets strip', () => {
 
     // With data: rows appear in place, without the entry fade.
     await page.unroute('**/api/market/quotes**')
-    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.reload()
     await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
     const rowAnimation = (await page.evaluate(
@@ -461,7 +403,7 @@ test.describe('Markets strip', () => {
   test('marks stale snapshots so cached numbers are never shown as current', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
     const staleQuotes = MIXED_QUOTES.map((quote) => ({ ...quote, stale: true }))
-    await mockQuotes(page, () => ({
+    await mockMarketQuotes(page, () => ({
       status: 200,
       body: { ...snapshotBody(staleQuotes), stale: true },
     }))
@@ -655,7 +597,7 @@ test.describe('Markets strip', () => {
 
   test('renders the BTC label in both locales (user-requested)', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('site_language', 'hebrew'))
-    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')
 
     // BTC label is the user-requested name in every locale; the direction
@@ -675,7 +617,7 @@ test.describe('Markets strip', () => {
       // visible "pts" suffix was rejected: the strip has no room for it at
       // 360px, where six rows already wrap onto two lines.
       await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
-      await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+      await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
       await page.goto('/')
 
       const usdils = page.getByTestId('market-row-usdils')
@@ -717,7 +659,7 @@ test.describe('Markets strip', () => {
     // No CBS mocks: the Indexes bar stays hidden (feeds fail), so the
     // Markets strip must move to the top slot, not float mid-air under it.
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
-    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')
 
     const tracker = page.getByTestId('market-tracker')
@@ -733,7 +675,7 @@ test.describe('Markets strip', () => {
     // replaced by the short localized label; Hebrew keeps the feed name.
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
     await installExternalMocks(page)
-    await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')
 
     const bar = page.getByTestId('indexes-bar')
@@ -761,7 +703,7 @@ test.describe('Markets strip', () => {
       // home route is LTR even in Hebrew).
       await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
       await installExternalMocks(page)
-      await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+      await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
       await page.goto('/')
 
       const bar = page.getByTestId('indexes-bar')
@@ -815,7 +757,7 @@ test.describe('Markets strip', () => {
       // the English layout.
       await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
       await installExternalMocks(page)
-      await mockQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+      await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
       await page.goto('/')
 
       const bar = page.getByTestId('indexes-bar')

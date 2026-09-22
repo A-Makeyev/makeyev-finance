@@ -1,5 +1,4 @@
-import { expect, test } from '@playwright/test'
-import { installExternalMocks } from '../../support/mocks'
+import { test, expect, seedLanguage, seedSiteState } from '../../fixtures'
 
 /**
  * The mortgage-decisions article: reachable from the articles list, reads in
@@ -38,8 +37,7 @@ for (const language of ['hebrew', 'english'] as const) {
   for (const viewport of VIEWPORTS) {
     test(`mortgage-decisions article - ${language} @ ${viewport.tag}px`, async ({ page }) => {
       const rtl = language === 'hebrew'
-      await installExternalMocks(page)
-      await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
+      seedLanguage(page, language)
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await page.goto('/articles')
 
@@ -118,8 +116,7 @@ for (const language of ['hebrew', 'english'] as const) {
 test('mortgage-decisions article - a preset deep link loads that mix in the calculator', async ({
   page,
 }) => {
-  await installExternalMocks(page)
-  await page.addInitScript((lang) => localStorage.setItem('site_language', lang), 'hebrew')
+  seedLanguage(page, 'hebrew')
   await page.setViewportSize({ width: 1280, height: 900 })
 
   // Mix 3: three equal tracks (fixed / prime / variable indexed 5y), per
@@ -150,11 +147,7 @@ test('mortgage-decisions article - a preset deep link loads that mix in the calc
 })
 
 test('mortgage-decisions article - the new surfaces use the theme tokens', async ({ page }) => {
-  await installExternalMocks(page)
-  await page.addInitScript(() => {
-    localStorage.setItem('site_language', 'hebrew')
-    localStorage.setItem('site_theme', 'dark')
-  })
+  seedSiteState(page, { language: 'hebrew', theme: 'dark' })
   await page.setViewportSize({ width: 360, height: 800 })
   await page.goto('/articles/mortgage-decisions')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')

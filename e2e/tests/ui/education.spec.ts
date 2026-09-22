@@ -1,5 +1,4 @@
-import { expect, test } from '@playwright/test'
-import { installExternalMocks } from '../../support/mocks'
+import { test, expect, seedLanguage, seedTheme } from '../../fixtures'
 
 /**
  * Prepayment-penalty education: the collapsible note inside the calculator
@@ -25,8 +24,7 @@ for (const language of ['hebrew', 'english'] as const) {
       page,
     }) => {
       const rtl = language === 'hebrew'
-      await installExternalMocks(page, { boiKeyRate: 4.5 })
-      await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
+      seedLanguage(page, language)
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await page.goto('/calculators')
 
@@ -264,7 +262,7 @@ for (const language of ['hebrew', 'english'] as const) {
           path: `${SHOT_DIR}/article-${language}-${viewport.tag}.png`,
           fullPage: true,
         })
-        await page.addInitScript(() => localStorage.setItem('site_theme', 'dark'))
+        seedTheme(page, 'dark')
         await page.reload()
         await page.screenshot({
           path: `${SHOT_DIR}/article-dark-${language}-${viewport.tag}.png`,

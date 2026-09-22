@@ -34,4 +34,13 @@ export default tseslint.config(
       globals: globals.node,
     },
   },
+  {
+    // Playwright's test.extend fixture callbacks take a `use` parameter;
+    // it is not a React hook, so the rules-of-hooks pattern match is a
+    // false positive here.
+    files: ['e2e/fixtures/**/*.ts'],
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+    },
+  },
 )

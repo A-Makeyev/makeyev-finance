@@ -1,5 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
-import { installExternalMocks } from '../../support/mocks'
+import { test, expect } from '../../fixtures'
+import type { Page } from '@playwright/test'
 
 /**
  * UI contract for the site theme (sun / crescent toggle beside the language
@@ -31,10 +31,6 @@ function channelsOf(rgb: string): number[] {
 }
 
 test.describe('theme toggle', () => {
-  test.beforeEach(async ({ page }) => {
-    await installExternalMocks(page, { boiKeyRate: 4.5 })
-  })
-
   test('first visit follows the OS (light here), and the toggle persists', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByTestId('theme-switch')).toBeVisible()
