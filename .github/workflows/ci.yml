@@ -287,6 +287,9 @@ jobs:
                 background: #667eea;
                 color: white;
               }
+              .report-chip .chip-ext-icon {
+                flex-shrink: 0;
+              }
               .test-type {
                 font-size: 0.85em;
                 color: #888;
@@ -311,7 +314,7 @@ jobs:
                 color: #888;
                 font-style: italic;
                 font-size: 0.85em;
-                margin-top: 2px;
+                margin-top: 20px;
               }
               .commit-subject .subject-text {
                 min-width: 0;
@@ -570,9 +573,11 @@ jobs:
               fi
               # The Playwright HTML report lives at $dir/index.html inside
               # this same gh-pages tree. The chip is a real link, pushed to
-              # the right edge of the source line via margin-left: auto.
+              # the right edge of the source line via margin-left: auto, and
+              # carries an external-link icon (stroke=currentColor so it
+              # follows the chip color in normal and hover state).
               if [ -f "$dir/index.html" ]; then
-                echo "                <a class=\"report-chip\" href=\"$dir/index.html\" target=\"_blank\" rel=\"noopener\">📊 HTML report</a>" >> index.html
+                echo "                <a class=\"report-chip\" href=\"$dir/index.html\" target=\"_blank\" rel=\"noopener\">📊 HTML report<svg class=\"chip-ext-icon\" viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6\"/><polyline points=\"15 3 21 3 21 9\"/><line x1=\"10\" y1=\"14\" x2=\"21\" y2=\"3\"/></svg></a>" >> index.html
               fi
               echo "              </div>" >> index.html
             fi
