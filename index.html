@@ -176,7 +176,9 @@
        the space between the source line and the report chip. */
     .commit-subject {
       display: flex;
-      align-items: center;
+      /* flex-start pins the chevron to the first line: with center
+         it slid down the right edge as the expanded text wrapped. */
+      align-items: flex-start;
       gap: 6px;
       color: #888;
       font-style: italic;
@@ -211,9 +213,12 @@
       background: none;
       padding: 0 2px;
       color: #667eea;
+      /* font: inherit brings the text's line-height too, so the
+         chevron's line box matches the first text line exactly
+         (line-height: 1 shrank it and left it floating high);
+         font-style: normal keeps it upright (parent is italic). */
       font: inherit;
       font-style: normal;
-      line-height: 1;
       cursor: pointer;
       transition: transform 0.15s;
     }
@@ -266,6 +271,80 @@
     .stat-value {
       font-weight: 600;
       color: #555;
+    }
+    /* Per-project test counts (e.g. UI / API), pushed to the right
+       edge of the stats row; wraps under it on narrow cards. */
+    .stat-breakdown {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin-left: auto;
+      white-space: nowrap;
+      align-items: center;
+    }
+    /* Per-project status chips (UI/API): red for failed tests,
+       amber for flaky, shown next to that project's count in the
+       stats row only when the count is non-zero. A link into the
+       HTML report: one affected test opens its own view
+       (#?testId), several open the report filtered to that
+       project's status (#?q=s:failed / s:flaky + p:...).
+       z-index 2 keeps the chips clickable above the
+       stretched-link overlay. */
+    .fail-chip,
+    .flaky-chip {
+      position: relative;
+      z-index: 2;
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.92em;
+      text-decoration: none;
+    }
+    .fail-chip {
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+    }
+    .flaky-chip {
+      /* amber-700 text: keeps >= 4.5:1 on the light amber wash,
+         unlike the lighter ambers the report uses elsewhere. */
+      background: rgba(245, 158, 11, 0.15);
+      color: #b45309;
+    }
+    a.fail-chip:hover,
+    a.flaky-chip:hover {
+      text-decoration: underline;
+    }
+    /* JS tooltip for the status chips: a dark popover listing the
+       affected test names, shown on hover, keyboard focus, or a
+       touch tap. Appended to <body> and positioned fixed, so the
+       cards' overflow: hidden cannot clip it. white-space:
+       pre-line renders the &#10; newlines one name per line. The
+       script fills it via textContent only, so the (already
+       jq-escaped) names stay inert, and removes the native title
+       attributes when it takes over to avoid double tooltips. */
+    .status-tip {
+      position: fixed;
+      z-index: 60;
+      max-width: min(320px, 80vw);
+      max-height: 50vh;
+      overflow-y: auto;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #1f2937;
+      color: #f9fafb;
+      font-size: 0.8em;
+      line-height: 1.45;
+      white-space: pre-line;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.12s;
+      pointer-events: none;
+    }
+    .status-tip.is-visible {
+      opacity: 1;
+      visibility: visible;
     }
     .badge {
       display: inline-block;
@@ -335,6 +414,37 @@
     <div class="last-updated" id="lastUpdated"></div>
     <ul class="reports-list" id="reportsList">
         <li class="report-item">
+          <a href="Run-69/index.html" class="report-link" aria-label="Open report for Run 69"></a>
+            <div class="report-content">
+              <div class="run-header">
+                <span class="run-number">Run #69 <span class="badge badge-success">✓ Passed</span></span>
+                <span class="test-type">Playwright Tests</span>
+                <span class="run-duration">⏱ 1m 39s</span>
+              </div>
+              <div class="run-date">23-09-2026 03:07PM</div>
+              <div class="run-source">
+                <span class="run-branch">⎇ main</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/e29752ecdcda6834d510d17635fd8006b95e0431" target="_blank" rel="noopener" title="e29752ecdcda6834d510d17635fd8006b95e0431">e29752e</a>
+                <a class="report-chip" href="Run-69/index.html" target="_blank" rel="noopener">📊 HTML report<svg class="chip-ext-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
+              </div>
+              <div class="commit-subject" title="CI: extract the gh-pages report page generator into a script">
+                <span class="subject-text">CI: extract the gh-pages report page generator into a script</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="test-stats">
+                <span class="stat-item">Passed: <span class="stat-value">128</span></span>
+                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
+                <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">133</span></span>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
+              </div>
+            </div>
+          </a>
+        </li>
+        <li class="report-item">
           <a href="Run-62/index.html" class="report-link" aria-label="Open report for Run 62"></a>
             <div class="report-content">
               <div class="run-header">
@@ -357,6 +467,10 @@
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">133</span></span>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
               </div>
             </div>
           </a>
@@ -384,6 +498,10 @@
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">133</span></span>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
               </div>
             </div>
           </a>
@@ -411,6 +529,10 @@
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">133</span></span>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
               </div>
             </div>
           </a>
@@ -438,6 +560,10 @@
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">133</span></span>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
               </div>
             </div>
           </a>
@@ -465,6 +591,10 @@
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">133</span></span>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
               </div>
             </div>
           </a>
@@ -492,6 +622,10 @@
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">133</span></span>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
               </div>
             </div>
           </a>
@@ -519,6 +653,10 @@
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">133</span></span>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
               </div>
             </div>
           </a>
@@ -547,6 +685,10 @@
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
                 <span class="stat-item">Flaky: <span class="stat-value">1</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">133</span></span> <a class="flaky-chip" href="Run-54/index.html#?testId=908b8e4b2c42f66d3731-9abc8b75a456f7470da4" target="_blank" rel="noopener" title="ui/heroScrollCue.spec.ts:62 - calculator: ArrowDown scrolls past the hero like the cue">1 flaky</a>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
               </div>
             </div>
           </a>
@@ -574,33 +716,10 @@
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
                 <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
-              </div>
-            </div>
-          </a>
-        </li>
-        <li class="report-item">
-          <a href="Run-52/index.html" class="report-link" aria-label="Open report for Run 52"></a>
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #52 <span class="badge badge-success">✓ Passed</span></span>
-                <span class="test-type">Playwright Tests</span>
-                <span class="run-duration">⏱ 1m 26s</span>
-              </div>
-              <div class="run-date">22-09-2026 09:55PM</div>
-              <div class="run-source">
-                <span class="run-branch">⎇ main</span>
-                <span class="run-sha-label">commit</span>
-                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/8e8cdad33981d75fd8dfb57028b388c9966cd43a" target="_blank" rel="noopener" title="8e8cdad33981d75fd8dfb57028b388c9966cd43a">8e8cdad</a>
-                <a class="report-chip" href="Run-52/index.html" target="_blank" rel="noopener">📊 HTML report<svg class="chip-ext-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
-              </div>
-              <div class="commit-subject" title="Stabilize the caret sizing check against the block font, not emoji ink">
-                <span class="subject-text">Stabilize the caret sizing check against the block font, not emoji ink</span>
-                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
-              </div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">128</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">133</span></span>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
               </div>
             </div>
           </a>
@@ -650,8 +769,99 @@
       });
     });
 
+    // Status chips (failed/flaky): a JS tooltip so the affected
+    // test names are reachable on touch too - the first tap shows
+    // the names, a second tap on the chip opens the report.
+    // Desktop keeps one-tap navigation; hover and keyboard focus
+    // show the tooltip; Escape, an outside tap, scrolling, or
+    // resizing dismiss it. The chip markup's title attribute
+    // (jq-escaped names, &#10; line breaks) is adopted into
+    // data-tip and the title removed, so the native tooltip never
+    // duplicates this one and no-JS visitors keep the fallback.
+    (function () {
+      var tip = null;
+      var activeChip = null;
+      var lastPointerType = 'mouse';
+
+      function ensureTip() {
+        if (tip) return tip;
+        tip = document.createElement('div');
+        tip.className = 'status-tip';
+        tip.id = 'status-tip';
+        tip.setAttribute('role', 'tooltip');
+        document.body.appendChild(tip);
+        return tip;
+      }
+
+      function showTip(chip) {
+        var text = chip.dataset.tip || '';
+        if (!text) return;
+        var el = ensureTip();
+        el.textContent = text; // text node: no HTML injection
+        activeChip = chip;
+        chip.setAttribute('aria-describedby', 'status-tip');
+        // Position after layout so the tooltip size is measurable.
+        requestAnimationFrame(function () {
+          if (activeChip !== chip) return;
+          var r = chip.getBoundingClientRect();
+          var tr = el.getBoundingClientRect();
+          var margin = 8;
+          var left = r.left + r.width / 2 - tr.width / 2;
+          left = Math.min(Math.max(margin, left), window.innerWidth - tr.width - margin);
+          var top = r.top - tr.height - 8;
+          if (top < margin) top = r.bottom + 8;
+          el.style.left = Math.round(left) + 'px';
+          el.style.top = Math.round(top) + 'px';
+          el.classList.add('is-visible');
+        });
+      }
+
+      function hideTip() {
+        if (!tip) return;
+        tip.classList.remove('is-visible');
+        if (activeChip) activeChip.removeAttribute('aria-describedby');
+        activeChip = null;
+      }
+
+      var chips = document.querySelectorAll('.fail-chip, .flaky-chip');
+      chips.forEach(function (chip) {
+        chip.dataset.tip = chip.getAttribute('title') || '';
+        chip.removeAttribute('title');
+      });
+
+      document.addEventListener('pointerdown', function (e) {
+        lastPointerType = e.pointerType || 'mouse';
+      }, true);
+
+      chips.forEach(function (chip) {
+        chip.addEventListener('click', function (e) {
+          if (lastPointerType !== 'touch') return; // desktop: just navigate
+          if (activeChip === chip) return;         // second tap: navigate
+          e.preventDefault();                      // first tap: show names
+          showTip(chip);
+        });
+        chip.addEventListener('mouseenter', function () { showTip(chip); });
+        chip.addEventListener('mouseleave', hideTip);
+        chip.addEventListener('focus', function () { showTip(chip); });
+        chip.addEventListener('blur', hideTip);
+        chip.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') hideTip();
+        });
+      });
+
+      // Outside pointerdown dismisses (chip taps are handled above).
+      document.addEventListener('pointerdown', function (e) {
+        if (!activeChip) return;
+        if (activeChip.contains(e.target)) return;
+        hideTip();
+      }, true);
+
+      window.addEventListener('scroll', hideTip, true);
+      window.addEventListener('resize', hideTip);
+    })();
+
     // Auto-refresh logic
-    const currentRun = "62";
+    const currentRun = "69";
     let checkCount = 0;
 
     async function checkForUpdates() {
