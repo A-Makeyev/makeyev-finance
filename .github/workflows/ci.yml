@@ -297,10 +297,6 @@ jobs:
                 color: #667eea;
                 font-family: 'Fira Code', ui-monospace, monospace;
                 font-weight: 600;
-                text-decoration: none;
-              }
-              .run-sha:hover {
-                text-decoration: underline;
               }
               .test-stats {
                 display: flex;
@@ -438,24 +434,27 @@ jobs:
               echo "                <span class=\"test-type\">$test_type</span>" >> index.html
             fi
             # The Playwright HTML report lives at $dir/index.html inside this
-            # same gh-pages tree; only offer the chip when it was published.
+            # same gh-pages tree; the card's own link already points there, so
+            # the chip is a span, not an anchor: a nested <a> is invalid HTML
+            # and the parser splits the card, clipping its content invisible.
             if [ -f "$dir/index.html" ]; then
-              echo "                <a class=\"report-chip\" href=\"$dir/index.html\" target=\"_blank\" rel=\"noopener\">📊 HTML report</a>" >> index.html
+              echo "                <span class=\"report-chip\">📊 HTML report</span>" >> index.html
             fi
             echo "              </div>" >> index.html
             if [ -n "$timestamp" ]; then
               echo "              <div class=\"run-date\">$timestamp</div>" >> index.html
             fi
-            # Branch + short SHA under the date; the SHA links to the commit on
-            # GitHub (github.sha is the full 40-char SHA). Only rendered when
-            # the metadata exists, so pre-existing runs keep rendering.
+            # Branch + short SHA under the date. The SHA is a span, not a
+            # link (it would nest inside the card's anchor), with the full
+            # 40-char SHA in its tooltip. Only rendered when the metadata
+            # exists, so pre-existing runs keep rendering.
             if [ -n "$branch" ] || [ -n "$commit_sha" ]; then
               echo "              <div class=\"run-source\">" >> index.html
               if [ -n "$branch" ]; then
                 echo "                <span class=\"run-branch\">⎇ $branch</span>" >> index.html
               fi
               if [ -n "$commit_sha" ]; then
-                echo "                <a class=\"run-sha\" href=\"https://github.com/${{ github.repository }}/commit/$commit_sha\" target=\"_blank\" rel=\"noopener\">$(echo "$commit_sha" | cut -c1-7)</a>" >> index.html
+                echo "                <span class=\"run-sha\" title=\"$commit_sha\">$(echo "$commit_sha" | cut -c1-7)</span>" >> index.html
               fi
               echo "              </div>" >> index.html
             fi
