@@ -309,7 +309,9 @@ jobs:
                  the space between the source line and the report chip. */
               .commit-subject {
                 display: flex;
-                align-items: center;
+                /* flex-start pins the chevron to the first line: with center
+                   it slid down the right edge as the expanded text wrapped. */
+                align-items: flex-start;
                 gap: 6px;
                 color: #888;
                 font-style: italic;
@@ -344,9 +346,12 @@ jobs:
                 background: none;
                 padding: 0 2px;
                 color: #667eea;
+                /* font: inherit brings the text's line-height too, so the
+                   chevron's line box matches the first text line exactly
+                   (line-height: 1 shrank it and left it floating high);
+                   font-style: normal keeps it upright (parent is italic). */
                 font: inherit;
                 font-style: normal;
-                line-height: 1;
                 cursor: pointer;
                 transition: transform 0.15s;
               }
@@ -399,6 +404,27 @@ jobs:
               .stat-value {
                 font-weight: 600;
                 color: #555;
+              }
+              /* Per-project test counts (e.g. UI / API), pushed to the right
+                 edge of the stats row; wraps under it on narrow cards. */
+              .stat-breakdown {
+                display: inline-flex;
+                flex-wrap: wrap;
+                gap: 6px 16px;
+                margin-left: auto;
+                white-space: nowrap;
+                align-items: center;
+              }
+              /* Failed-test chip per project (UI/API), shown next to that
+                 project's count in the stats row only when it has failures. */
+              .fail-chip {
+                display: inline-block;
+                padding: 1px 8px;
+                border-radius: 999px;
+                background: rgba(239, 68, 68, 0.12);
+                color: #ef4444;
+                font-weight: 600;
+                font-size: 0.92em;
               }
               .badge {
                 display: inline-block;
@@ -507,6 +533,19 @@ jobs:
               others=$(jq -r '.stats.flaky // 0' "$dir/results.json" 2>/dev/null)
               duration_ms=$(jq -r '.stats.duration // empty' "$dir/results.json" 2>/dev/null)
               commit_subject=$(jq -r '.config.metadata.gitCommit.subject // empty' "$dir/results.json" 2>/dev/null)
+              # Per-project test counts (e.g. UI / API) for the stats row,
+              # counted from each test's projectName so projects can be added
+              # or renamed without touching this script. Rendered as
+              # "name=total/failed" pairs, UI first (reverse alphabetical);
+              # failed counts tests with outcome "unexpected", the same
+              # outcome stats.unexpected is tallied from.
+              project_stats=$(jq -r '
+                [.. | objects | select(has("projectName")) | { p: .projectName, f: (.outcome == "unexpected") }]
+                | group_by(.p)
+                | reverse
+                | map("\(.[0].p)=\(length)/\(map(select(.f)) | length)")
+                | join(" ")
+              ' "$dir/results.json" 2>/dev/null)
             fi
 
             # Human-readable duration for the card header (e.g. "1m 34s").
@@ -595,6 +634,27 @@ jobs:
             echo "                <span class=\"stat-item\">Skipped: <span class=\"stat-value\">$skipped</span></span>" >> index.html
             if [ "$others" -gt 0 ]; then
               echo "                <span class=\"stat-item\">Flaky: <span class=\"stat-value\">$others</span></span>" >> index.html
+            fi
+            # UI/API test counts on the same stats row, pushed to the right
+            # edge via margin-left: auto on .stat-breakdown. A project with
+            # failures gets a red failed-count chip beside its count.
+            if [ -n "$project_stats" ]; then
+              echo "                <span class=\"stat-breakdown\">" >> index.html
+              for pair in $project_stats; do
+                proj="${pair%%=*}"
+                counts="${pair##*=}"
+                failed="${counts##*/}"
+                # Friendly label: the project prefix before the first dash
+                # ("ui-chromium" -> "UI"); fallback to the full name.
+                label=$(printf '%s' "$proj" | cut -d- -f1 | tr '[:lower:]' '[:upper:]')
+                echo -n "                  <span class=\"stat-item\">$label: <span class=\"stat-value\">${counts%%/*}</span></span> " >> index.html
+                if [ "${failed:-0}" -gt 0 ] 2>/dev/null; then
+                  echo "<span class=\"fail-chip\">$failed failed</span>" >> index.html
+                else
+                  echo "" >> index.html
+                fi
+              done
+              echo "                </span>" >> index.html
             fi
             echo "              </div>" >> index.html
             echo "            </div>" >> index.html
