@@ -1,0 +1,837 @@
+#!/usr/bin/env bash
+# Generates the gh-pages index page from the Results/Run-* folders for
+# the CI report site. Invoked by the "Prepare results with history" step
+# in .github/workflows/ci.yml with cwd = repo root; it cds into Results/
+# itself and back out. Env: GITHUB_RUN_NUMBER, GITHUB_REPOSITORY (the
+# runner provides both). Lives as a file because GitHub caps run blocks
+# at ~21000 chars; keep this script lean when editing it.
+
+# Copy previous reports if they exist
+if [ -d "old-reports" ]; then
+  cp -r old-reports/Run-* Results/ 2>/dev/null || true
+fi
+
+cd Results
+
+# Keep only last 10 runs (sort numerically by run number)
+ls -d Run-* 2>/dev/null | sed 's/Run-//' | sort -n | head -n -10 | while read num; do
+  rm -rf "Run-$num"
+done
+
+# Create metadata for auto-refresh
+echo "$GITHUB_RUN_NUMBER" > latest.txt
+
+# Create index page
+cat > index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
+  <title>Test Reports</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      margin: 0;
+      padding: 40px 20px;
+      /* Gradient doubles as the background for small white text
+         (h1, .last-updated): both stops must keep >= 4.5:1 against
+         white. The old light stop #667eea measured 3.66:1. */
+      background: linear-gradient(135deg, #4f46e5 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      flex-direction: row;
+      align-items: center;
+      margin-bottom: 30px;
+      padding: 0 10px;
+    }
+    h1 {
+      color: white;
+      font-size: 2.5em;
+      margin: 0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .refresh-btn {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.4em;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .refresh-btn:hover {
+      background: rgba(255,255,255,0.25);
+      transform: rotate(180deg);
+    }
+    .refresh-btn:active {
+      transform: rotate(180deg) scale(0.9);
+    }
+    .refresh-btn.loading {
+      opacity: 0.6;
+      cursor: wait;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .last-updated {
+      text-align: right;
+      color: rgba(255,255,255,0.9);
+      font-size: 0.85em;
+      margin-bottom: 25px;
+      font-weight: 500;
+    }
+    .reports-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .report-item {
+      position: relative;
+      margin: 0;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      overflow: hidden;
+    }
+    .report-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+    }
+    /* Stretched-link overlay: the anchor covers the whole card so
+       the entire card is clickable, while the chip and commit
+       links stay real anchors layered above it (z-index 2).
+       Nesting those <a> tags inside this anchor instead made the
+       HTML invalid, the parser split every card and its content
+       was clipped invisible. */
+    .report-link {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      border-radius: 12px;
+    }
+    .report-link:focus-visible {
+      outline: 2px solid #667eea;
+      outline-offset: 2px;
+    }
+    .report-content {
+      position: relative;
+      height: 100%;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 20px;
+    }
+    .run-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .run-number {
+      font-size: 1.3em;
+      font-weight: 600;
+      color: #667eea;
+    }
+    /* Explicit HTML-report chip: the whole card is already clickable,
+       but a visible affordance beats a hidden hover arrow. Pushed
+       to the right edge of the source line, under the run
+       duration. */
+    .report-chip {
+      position: relative;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+      font-size: 0.8em;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.2s, color 0.2s;
+    }
+    .report-chip:hover {
+      background: #667eea;
+      color: white;
+    }
+    .report-chip .chip-ext-icon {
+      flex-shrink: 0;
+    }
+    .test-type {
+      font-size: 0.85em;
+      color: #888;
+      font-weight: 500;
+    }
+    /* Run duration, pushed to the right edge of the header row. */
+    .run-duration {
+      margin-left: auto;
+      color: #888;
+      font-size: 0.85em;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    /* Commit message subject; single line with ellipsis when
+       collapsed, full text in the tooltip. Clicking the message
+       (or the chevron) expands it when it is too long. Sits in
+       the space between the source line and the report chip. */
+    .commit-subject {
+      display: flex;
+      /* flex-start pins the chevron to the first line: with center
+         it slid down the right edge as the expanded text wrapped. */
+      align-items: flex-start;
+      gap: 6px;
+      color: #888;
+      font-style: italic;
+      font-size: 0.85em;
+      margin-top: 20px;
+    }
+    .commit-subject .subject-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* Only when the text overflows does the message become an
+       interactive control, so short messages keep the normal
+       whole-card click-through to the report. */
+    .commit-subject.is-clamped {
+      position: relative;
+      z-index: 2;
+      cursor: pointer;
+      user-select: none;
+    }
+    .commit-subject.expanded {
+      user-select: text;
+    }
+    .commit-subject.expanded .subject-text {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .commit-subject .subject-toggle {
+      flex-shrink: 0;
+      border: none;
+      background: none;
+      padding: 0 2px;
+      color: #667eea;
+      /* font: inherit brings the text's line-height too, so the
+         chevron's line box matches the first text line exactly
+         (line-height: 1 shrank it and left it floating high);
+         font-style: normal keeps it upright (parent is italic). */
+      font: inherit;
+      font-style: normal;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .commit-subject.expanded .subject-toggle {
+      transform: rotate(180deg);
+    }
+    .run-date {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 4px;
+    }
+    .run-source {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+      font-size: 0.85em;
+      flex-wrap: wrap;
+    }
+    .run-branch {
+      color: #888;
+      font-weight: 500;
+    }
+    .run-sha-label {
+      color: #888;
+      font-weight: 500;
+    }
+    .run-sha {
+      position: relative;
+      z-index: 2;
+      color: #667eea;
+      font-family: 'Fira Code', ui-monospace, monospace;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .run-sha:hover {
+      text-decoration: underline;
+    }
+    .test-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin-top: auto;
+      padding-top: 8px;
+      font-size: 0.85em;
+    }
+    .stat-item {
+      color: #888;
+    }
+    .stat-value {
+      font-weight: 600;
+      color: #555;
+    }
+    /* Per-project test counts (e.g. UI / API), pushed to the right
+       edge of the stats row; wraps under it on narrow cards. */
+    .stat-breakdown {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin-left: auto;
+      white-space: nowrap;
+      align-items: center;
+    }
+    /* Per-project status chips (UI/API): red for failed tests,
+       amber for flaky, shown next to that project's count in the
+       stats row only when the count is non-zero. A link into the
+       HTML report: one affected test opens its own view
+       (#?testId), several open the report filtered to that
+       project's status (#?q=s:failed / s:flaky + p:...).
+       z-index 2 keeps the chips clickable above the
+       stretched-link overlay. */
+    .fail-chip,
+    .flaky-chip {
+      position: relative;
+      z-index: 2;
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.92em;
+      text-decoration: none;
+    }
+    .fail-chip {
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+    }
+    .flaky-chip {
+      /* amber-700 text: keeps >= 4.5:1 on the light amber wash,
+         unlike the lighter ambers the report uses elsewhere. */
+      background: rgba(245, 158, 11, 0.15);
+      color: #b45309;
+    }
+    a.fail-chip:hover,
+    a.flaky-chip:hover {
+      text-decoration: underline;
+    }
+    /* JS tooltip for the status chips: a dark popover listing the
+       affected test names, shown on hover, keyboard focus, or a
+       touch tap. Appended to <body> and positioned fixed, so the
+       cards' overflow: hidden cannot clip it. white-space:
+       pre-line renders the &#10; newlines one name per line. The
+       script fills it via textContent only, so the (already
+       jq-escaped) names stay inert, and removes the native title
+       attributes when it takes over to avoid double tooltips. */
+    .status-tip {
+      position: fixed;
+      z-index: 60;
+      max-width: min(320px, 80vw);
+      max-height: 50vh;
+      overflow-y: auto;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #1f2937;
+      color: #f9fafb;
+      font-size: 0.8em;
+      line-height: 1.45;
+      white-space: pre-line;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.12s;
+      pointer-events: none;
+    }
+    .status-tip.is-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      color: white;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: 500;
+    }
+    .badge-success {
+      background: #10b981;
+    }
+    .badge-failed {
+      background: #ef4444;
+    }
+    @media (max-width: 680px) {
+      .reports-list {
+        grid-template-columns: 1fr;
+      }
+    }
+    .update-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #10b981;
+      color: white;
+      padding: 12px;
+      text-align: center;
+      font-weight: 600;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-100%); }
+      to { transform: translateY(0); }
+    }
+    .update-banner button {
+      background: white;
+      color: #10b981;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 6px;
+      margin-left: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .update-banner button:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div id="updateBanner" class="update-banner">
+    ✨ New test results are available!
+    <button onclick="refreshReports()">See Results</button>
+  </div>
+  <div class="container">
+    <div class="header">
+      <h1>🧪 Test Reports</h1>
+      <button class="refresh-btn" onclick="refreshReports()">↻</button>
+    </div>
+    <div class="last-updated" id="lastUpdated"></div>
+    <ul class="reports-list" id="reportsList">
+EOF
+
+# Add links to all Run-* folders (newest first)
+ls -d Run-* 2>/dev/null | sed 's/Run-//' | sort -rn | while read num; do
+  dir="Run-$num"
+  timestamp=""
+  status=""
+  test_type="Playwright Tests"
+  passed=0
+  failed=0
+  skipped=0
+  others=0
+  duration_ms=""
+  commit_subject=""
+  duration_label=""
+  subject_escaped=""
+
+  if [ -f "$dir/timestamp.txt" ]; then
+    timestamp=$(cat "$dir/timestamp.txt")
+  fi
+  if [ -f "$dir/status.txt" ]; then
+    status=$(cat "$dir/status.txt")
+  fi
+  branch=""
+  if [ -f "$dir/branch.txt" ]; then
+    branch=$(cat "$dir/branch.txt")
+  fi
+  commit_sha=""
+  if [ -f "$dir/commit.txt" ]; then
+    commit_sha=$(cat "$dir/commit.txt")
+  fi
+
+  # Parse test data from the JSON report
+  if [ -f "$dir/results.json" ]; then
+    passed=$(jq -r '.stats.expected // 0' "$dir/results.json" 2>/dev/null)
+    failed=$(jq -r '.stats.unexpected // 0' "$dir/results.json" 2>/dev/null)
+    skipped=$(jq -r '.stats.skipped // 0' "$dir/results.json" 2>/dev/null)
+    others=$(jq -r '.stats.flaky // 0' "$dir/results.json" 2>/dev/null)
+    duration_ms=$(jq -r '.stats.duration // empty' "$dir/results.json" 2>/dev/null)
+    commit_subject=$(jq -r '.config.metadata.gitCommit.subject // empty' "$dir/results.json" 2>/dev/null)
+    # Per-project test counts (e.g. UI / API) for the stats row,
+    # counted from each test's projectName so projects can be added
+    # or renamed without touching this script. One line per
+    # project, pipe-separated fields (project, total, failed,
+    # flaky, failed ids, flaky ids, failed titles, flaky titles),
+    # newline between projects, UI first (reverse alphabetical).
+    # Pipe, not tab: read collapses runs of IFS-whitespace
+    # separators, which would shift empty fields. failed/flaky
+    # count tests with status "unexpected"/"flaky" (test.status
+    # mirrors test.outcome(), the same outcome stats.unexpected
+    # and stats.flaky are tallied from); ids list those tests'
+    # ids for the chip deep links - the spec id equals the test's
+    # id here because each spec file runs in one project only
+    # (UI/API testMatch are disjoint), so specs never merge.
+    # Tooltips list "file:line - title" per affected test (the
+    # spec's location, the same relative path the HTML report
+    # shows): @html-escaped by jq (the bash side must not escape
+    # them again, that would double the entities), pipe/newline
+    # stripped to protect the field format, joined by the &#10;
+    # entity so browsers render one test per tooltip line,
+    # capped at 10.
+    project_stats=$(jq -r '
+      def tip:
+        (if length > 10 then .[0:10] + ["+ \(length - 10) more"] else . end)
+        | join("&#10;");
+      [ .. | objects | select(has("specs")) as $suite
+        | $suite.specs[]
+        | select(has("tests")) as $spec
+        | $spec.tests[]
+        | { p: .projectName, f: (.status == "unexpected"), k: (.status == "flaky"), id: $spec.id,
+            tip: (($spec.file // "?") + ":" + (($spec.line // 0) | tostring) + " - " + $spec.title) } ]
+      | group_by(.p)
+      | reverse
+      | map(
+          (map(select(.f) | .tip | @html | gsub("[\\n\\r\\t|]"; " "))) as $ft
+          | (map(select(.k) | .tip | @html | gsub("[\\n\\r\\t|]"; " "))) as $kt
+          | "\(.[0].p)|\(length)|\(map(select(.f)) | length)|\(map(select(.k)) | length)|\(map(select(.f) | .id) | join(","))|\(map(select(.k) | .id) | join(","))|\($ft | tip)|\($kt | tip)"
+        )
+      | join("\n")
+    ' "$dir/results.json" 2>/dev/null | tr -d '\r')
+    # tr -d '\r': keeps the last field (flaky tooltip) clean if
+    # the jq output ever arrives with CRLF line endings.
+  fi
+
+  # Human-readable duration for the card header (e.g. "1m 34s").
+  duration_label=""
+  if [ -n "$duration_ms" ]; then
+    duration_ms=${duration_ms%%.*}
+    total_secs=$(( (duration_ms + 500) / 1000 ))
+    if [ "$total_secs" -lt 1 ]; then
+      duration_label="<1s"
+    elif [ "$total_secs" -lt 60 ]; then
+      duration_label="${total_secs}s"
+    else
+      duration_label="$(( total_secs / 60 ))m $(( total_secs % 60 ))s"
+    fi
+  fi
+
+  # Commit subject needs HTML escaping before it goes into the card
+  # (it is free-form text from the commit message).
+  subject_escaped=""
+  if [ -n "$commit_subject" ]; then
+    subject_escaped=$(printf '%s' "$commit_subject" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/"/\&quot;/g')
+  fi
+
+  display_num=$num
+
+  echo "        <li class=\"report-item\">" >> index.html
+  # Overlay anchor: covers the whole card (stretched link). The chip
+  # and commit links below are separate <a> tags layered above it;
+  # they must not be nested inside this anchor.
+  echo "          <a href=\"$dir/index.html\" class=\"report-link\" aria-label=\"Open report for Run $display_num\"></a>" >> index.html
+  echo "            <div class=\"report-content\">" >> index.html
+  echo "              <div class=\"run-header\">" >> index.html
+  echo -n "                <span class=\"run-number\">Run #$display_num" >> index.html
+  if [ "$status" == "passed" ]; then
+    echo " <span class=\"badge badge-success\">✓ Passed</span></span>" >> index.html
+  elif [ "$status" == "failed" ]; then
+    echo " <span class=\"badge badge-failed\">✗ Failed</span></span>" >> index.html
+  else
+    echo "</span>" >> index.html
+  fi
+  if [ -n "$test_type" ]; then
+    echo "                <span class=\"test-type\">$test_type</span>" >> index.html
+  fi
+  if [ -n "$duration_label" ]; then
+    echo "                <span class=\"run-duration\">⏱ $duration_label</span>" >> index.html
+  fi
+  echo "              </div>" >> index.html
+  if [ -n "$timestamp" ]; then
+    echo "              <div class=\"run-date\">$timestamp</div>" >> index.html
+  fi
+  # Source line under the date: branch, commit link and, at the
+  # right edge, the HTML-report chip. The commit anchor and the
+  # chip sit above the overlay anchor (z-index 2), not nested
+  # inside it. Only rendered when any of the three exist, so
+  # pre-existing runs keep rendering.
+  if [ -n "$branch" ] || [ -n "$commit_sha" ] || [ -f "$dir/index.html" ]; then
+    echo "              <div class=\"run-source\">" >> index.html
+    if [ -n "$branch" ]; then
+      echo "                <span class=\"run-branch\">⎇ $branch</span>" >> index.html
+    fi
+    if [ -n "$commit_sha" ]; then
+      echo "                <span class=\"run-sha-label\">commit</span>" >> index.html
+      echo "                <a class=\"run-sha\" href=\"https://github.com/$GITHUB_REPOSITORY/commit/$commit_sha\" target=\"_blank\" rel=\"noopener\" title=\"$commit_sha\">$(echo "$commit_sha" | cut -c1-7)</a>" >> index.html
+    fi
+    # The Playwright HTML report lives at $dir/index.html inside
+    # this same gh-pages tree. The chip is a real link, pushed to
+    # the right edge of the source line via margin-left: auto, and
+    # carries an external-link icon (stroke=currentColor so it
+    # follows the chip color in normal and hover state).
+    if [ -f "$dir/index.html" ]; then
+      echo "                <a class=\"report-chip\" href=\"$dir/index.html\" target=\"_blank\" rel=\"noopener\">📊 HTML report<svg class=\"chip-ext-icon\" viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6\"/><polyline points=\"15 3 21 3 21 9\"/><line x1=\"10\" y1=\"14\" x2=\"21\" y2=\"3\"/></svg></a>" >> index.html
+    fi
+    echo "              </div>" >> index.html
+  fi
+  # Commit message sits under the source line; truncated to one
+  # line with the full text in the tooltip.
+  if [ -n "$subject_escaped" ]; then
+    echo "              <div class=\"commit-subject\" title=\"$subject_escaped\">" >> index.html
+    echo "                <span class=\"subject-text\">$subject_escaped</span>" >> index.html
+    echo "                <button type=\"button\" class=\"subject-toggle\" aria-expanded=\"false\" aria-label=\"Toggle full commit message\" hidden>▾</button>" >> index.html
+    echo "              </div>" >> index.html
+  fi
+  echo "              <div class=\"test-stats\">" >> index.html
+  echo "                <span class=\"stat-item\">Passed: <span class=\"stat-value\">$passed</span></span>" >> index.html
+  echo "                <span class=\"stat-item\">Failed: <span class=\"stat-value\">$failed</span></span>" >> index.html
+  echo "                <span class=\"stat-item\">Skipped: <span class=\"stat-value\">$skipped</span></span>" >> index.html
+  if [ "$others" -gt 0 ]; then
+    echo "                <span class=\"stat-item\">Flaky: <span class=\"stat-value\">$others</span></span>" >> index.html
+  fi
+  # UI/API test counts on the same stats row, pushed to the right
+  # edge via margin-left: auto on .stat-breakdown. A project with
+  # failures or flaky tests gets a red/amber chip beside its
+  # count, linked into the HTML report: a single affected test
+  # opens its own view (#?testId), several open the report
+  # filtered to that project's status (#?q). Without the HTML
+  # report the chip stays a plain (unlinked) span.
+  # Emits one chip (no trailing newline, for inline use):
+  #   $1 css class, $2 label, $3 count, $4 comma-joined ids,
+  #   $5 status token for the multi-test filter link, $6 tooltip
+  #   text, already HTML-escaped by jq (test names joined by the
+  #   &#10; entity); empty falls back to a generic hint.
+  emit_status_chip() {
+    local css="$1" label="$2" count="$3" ids="$4" token="$5" tip="$6"
+    local chip_href
+    if [ "$count" -eq 1 ] && [ -n "$ids" ]; then
+      chip_href="$dir/index.html#?testId=${ids%%,*}"
+    else
+      # The report's own filter links use this form: URLSearchParams
+      # decodes "+" as the token separator inside the q param.
+      chip_href="$dir/index.html#?q=$token+p:$proj"
+    fi
+    chip_href=$(printf '%s' "$chip_href" | sed -e 's/&/\&amp;/g' -e 's/"/\&quot;/g' -e 's/</\&lt;/g')
+    [ -z "$tip" ] && tip="Open in HTML report"
+    if [ -f "$dir/index.html" ]; then
+      printf '<a class="%s" href="%s" target="_blank" rel="noopener" title="%s">%s</a>' "$css" "$chip_href" "$tip" "$label"
+    else
+      printf '<span class="%s" title="%s">%s</span>' "$css" "$tip" "$label"
+    fi
+  }
+  if [ -n "$project_stats" ]; then
+    echo "                <span class=\"stat-breakdown\">" >> index.html
+    while IFS='|' read -r proj total failed flaky failed_ids flaky_ids failed_tips flaky_tips; do
+      # Friendly label: the project prefix before the first dash
+      # ("ui-chromium" -> "UI"); fallback to the full name.
+      label=$(printf '%s' "$proj" | cut -d- -f1 | tr '[:lower:]' '[:upper:]')
+      row="                  <span class=\"stat-item\">$label: <span class=\"stat-value\">$total</span></span>"
+      if [ "${failed:-0}" -gt 0 ] 2>/dev/null; then
+        row="$row $(emit_status_chip fail-chip "$failed failed" "$failed" "$failed_ids" s:failed "$failed_tips")"
+      fi
+      if [ "${flaky:-0}" -gt 0 ] 2>/dev/null; then
+        row="$row $(emit_status_chip flaky-chip "$flaky flaky" "$flaky" "$flaky_ids" s:flaky "$flaky_tips")"
+      fi
+      echo "$row" >> index.html
+    done <<< "$project_stats"
+    echo "                </span>" >> index.html
+  fi
+  echo "              </div>" >> index.html
+  echo "            </div>" >> index.html
+  echo "          </a>" >> index.html
+  echo "        </li>" >> index.html
+done
+
+# Close HTML
+cat >> index.html << 'EOF'
+    </ul>
+  </div>
+  <script>
+    // Update last updated timestamp
+    function updateTimestamp() {
+      const now = new Date();
+      const formatted = now.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      document.getElementById('lastUpdated').textContent = 'Last updated: ' + formatted;
+    }
+
+    // Refresh with cache busting
+    function refreshReports() {
+      const btn = document.querySelector('.refresh-btn');
+      btn.classList.add('loading');
+
+      // Use cache-busting query parameter
+      const timestamp = new Date().getTime();
+      window.location.href = window.location.pathname + '?v=' + timestamp;
+    }
+
+    // Set initial timestamp
+    updateTimestamp();
+
+    // Commit messages: show the chevron only when the subject is
+    // actually truncated; clicking the message or the chevron
+    // toggles between one clamped line and the full text.
+    document.querySelectorAll('.commit-subject').forEach(function (msg) {
+      var text = msg.querySelector('.subject-text');
+      var toggle = msg.querySelector('.subject-toggle');
+      if (!text || !toggle || text.scrollWidth <= text.clientWidth) return;
+      msg.classList.add('is-clamped');
+      toggle.hidden = false;
+      msg.addEventListener('click', function () {
+        var expanded = msg.classList.toggle('expanded');
+        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      });
+    });
+
+    // Status chips (failed/flaky): a JS tooltip so the affected
+    // test names are reachable on touch too - the first tap shows
+    // the names, a second tap on the chip opens the report.
+    // Desktop keeps one-tap navigation; hover and keyboard focus
+    // show the tooltip; Escape, an outside tap, scrolling, or
+    // resizing dismiss it. The chip markup's title attribute
+    // (jq-escaped names, &#10; line breaks) is adopted into
+    // data-tip and the title removed, so the native tooltip never
+    // duplicates this one and no-JS visitors keep the fallback.
+    (function () {
+      var tip = null;
+      var activeChip = null;
+      var lastPointerType = 'mouse';
+
+      function ensureTip() {
+        if (tip) return tip;
+        tip = document.createElement('div');
+        tip.className = 'status-tip';
+        tip.id = 'status-tip';
+        tip.setAttribute('role', 'tooltip');
+        document.body.appendChild(tip);
+        return tip;
+      }
+
+      function showTip(chip) {
+        var text = chip.dataset.tip || '';
+        if (!text) return;
+        var el = ensureTip();
+        el.textContent = text; // text node: no HTML injection
+        activeChip = chip;
+        chip.setAttribute('aria-describedby', 'status-tip');
+        // Position after layout so the tooltip size is measurable.
+        requestAnimationFrame(function () {
+          if (activeChip !== chip) return;
+          var r = chip.getBoundingClientRect();
+          var tr = el.getBoundingClientRect();
+          var margin = 8;
+          var left = r.left + r.width / 2 - tr.width / 2;
+          left = Math.min(Math.max(margin, left), window.innerWidth - tr.width - margin);
+          var top = r.top - tr.height - 8;
+          if (top < margin) top = r.bottom + 8;
+          el.style.left = Math.round(left) + 'px';
+          el.style.top = Math.round(top) + 'px';
+          el.classList.add('is-visible');
+        });
+      }
+
+      function hideTip() {
+        if (!tip) return;
+        tip.classList.remove('is-visible');
+        if (activeChip) activeChip.removeAttribute('aria-describedby');
+        activeChip = null;
+      }
+
+      var chips = document.querySelectorAll('.fail-chip, .flaky-chip');
+      chips.forEach(function (chip) {
+        chip.dataset.tip = chip.getAttribute('title') || '';
+        chip.removeAttribute('title');
+      });
+
+      document.addEventListener('pointerdown', function (e) {
+        lastPointerType = e.pointerType || 'mouse';
+      }, true);
+
+      chips.forEach(function (chip) {
+        chip.addEventListener('click', function (e) {
+          if (lastPointerType !== 'touch') return; // desktop: just navigate
+          if (activeChip === chip) return;         // second tap: navigate
+          e.preventDefault();                      // first tap: show names
+          showTip(chip);
+        });
+        chip.addEventListener('mouseenter', function () { showTip(chip); });
+        chip.addEventListener('mouseleave', hideTip);
+        chip.addEventListener('focus', function () { showTip(chip); });
+        chip.addEventListener('blur', hideTip);
+        chip.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') hideTip();
+        });
+      });
+
+      // Outside pointerdown dismisses (chip taps are handled above).
+      document.addEventListener('pointerdown', function (e) {
+        if (!activeChip) return;
+        if (activeChip.contains(e.target)) return;
+        hideTip();
+      }, true);
+
+      window.addEventListener('scroll', hideTip, true);
+      window.addEventListener('resize', hideTip);
+    })();
+
+    // Auto-refresh logic
+    const currentRun = "@@RUN_NUMBER@@";
+    let checkCount = 0;
+
+    async function checkForUpdates() {
+      try {
+        // Cache busting for the metadata file
+        const response = await fetch('latest.txt?t=' + Date.now());
+        if (response.ok) {
+          const latestRun = (await response.text()).trim();
+          if (latestRun && latestRun !== currentRun) {
+            document.getElementById('updateBanner').style.display = 'block';
+            // Also update the refresh button to glow
+            document.querySelector('.refresh-btn').style.background = '#10b981';
+          }
+        }
+      } catch (e) {
+        console.log('Update check failed', e);
+      }
+    }
+
+    setInterval(checkForUpdates, 30000);
+    setTimeout(checkForUpdates, 10000);
+  </script>
+</body>
+</html>
+EOF
+
+# The closing heredocs are quoted ('EOF'), so bash does not expand env vars
+# inside them. The workflow used to get the run number via GitHub's textual
+# substitution; here the placeholder above is replaced with the runner
+# provided value, outside any heredoc.
+sed -i "s|@@RUN_NUMBER@@|$GITHUB_RUN_NUMBER|g" index.html
+
+cd ..
