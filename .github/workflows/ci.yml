@@ -289,8 +289,28 @@ jobs:
                 color: #888;
                 font-weight: 500;
               }
+              /* Run duration, pushed to the right edge of the header row. */
+              .run-duration {
+                margin-left: auto;
+                color: #888;
+                font-size: 0.85em;
+                font-weight: 500;
+                white-space: nowrap;
+              }
               .chip-row {
                 margin-bottom: 10px;
+              }
+              /* Commit message subject; single line with ellipsis, full text
+                 in the tooltip. Sits in the space between the source line
+                 and the stats. */
+              .commit-subject {
+                color: #888;
+                font-style: italic;
+                font-size: 0.85em;
+                margin-top: 2px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
               }
               .run-date {
                 font-size: 0.9em;
@@ -417,6 +437,10 @@ jobs:
             failed=0
             skipped=0
             others=0
+            duration_ms=""
+            commit_subject=""
+            duration_label=""
+            subject_escaped=""
 
             if [ -f "$dir/timestamp.txt" ]; then
               timestamp=$(cat "$dir/timestamp.txt")
@@ -439,6 +463,29 @@ jobs:
               failed=$(jq -r '.stats.unexpected // 0' "$dir/results.json" 2>/dev/null)
               skipped=$(jq -r '.stats.skipped // 0' "$dir/results.json" 2>/dev/null)
               others=$(jq -r '.stats.flaky // 0' "$dir/results.json" 2>/dev/null)
+              duration_ms=$(jq -r '.stats.duration // empty' "$dir/results.json" 2>/dev/null)
+              commit_subject=$(jq -r '.config.metadata.gitCommit.subject // empty' "$dir/results.json" 2>/dev/null)
+            fi
+
+            # Human-readable duration for the card header (e.g. "1m 34s").
+            duration_label=""
+            if [ -n "$duration_ms" ]; then
+              duration_ms=${duration_ms%%.*}
+              total_secs=$(( (duration_ms + 500) / 1000 ))
+              if [ "$total_secs" -lt 1 ]; then
+                duration_label="<1s"
+              elif [ "$total_secs" -lt 60 ]; then
+                duration_label="${total_secs}s"
+              else
+                duration_label="$(( total_secs / 60 ))m $(( total_secs % 60 ))s"
+              fi
+            fi
+
+            # Commit subject needs HTML escaping before it goes into the card
+            # (it is free-form text from the commit message).
+            subject_escaped=""
+            if [ -n "$commit_subject" ]; then
+              subject_escaped=$(printf '%s' "$commit_subject" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/"/\&quot;/g')
             fi
 
             display_num=$num
@@ -460,6 +507,9 @@ jobs:
             fi
             if [ -n "$test_type" ]; then
               echo "                <span class=\"test-type\">$test_type</span>" >> index.html
+            fi
+            if [ -n "$duration_label" ]; then
+              echo "                <span class=\"run-duration\">⏱ $duration_label</span>" >> index.html
             fi
             echo "              </div>" >> index.html
             # The Playwright HTML report lives at $dir/index.html inside this
@@ -487,6 +537,11 @@ jobs:
                 echo "                <a class=\"run-sha\" href=\"https://github.com/${{ github.repository }}/commit/$commit_sha\" target=\"_blank\" rel=\"noopener\" title=\"$commit_sha\">$(echo "$commit_sha" | cut -c1-7)</a>" >> index.html
               fi
               echo "              </div>" >> index.html
+            fi
+            # Commit subject fills the space between the source line and the
+            # stats; truncated to one line with the full text in the tooltip.
+            if [ -n "$subject_escaped" ]; then
+              echo "              <div class=\"commit-subject\" title=\"$subject_escaped\">$subject_escaped</div>" >> index.html
             fi
             echo "              <div class=\"test-stats\">" >> index.html
             echo "                <span class=\"stat-item\">Passed: <span class=\"stat-value\">$passed</span></span>" >> index.html
