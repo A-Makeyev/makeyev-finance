@@ -215,6 +215,7 @@ jobs:
                 gap: 18px;
               }
               .report-item {
+                position: relative;
                 margin: 0;
                 background: white;
                 border-radius: 12px;
@@ -226,20 +227,29 @@ jobs:
                 transform: translateY(-2px);
                 box-shadow: 0 8px 12px rgba(0,0,0,0.15);
               }
+              /* Stretched-link overlay: the anchor covers the whole card so
+                 the entire card is clickable, while the chip and commit
+                 links stay real anchors layered above it (z-index 2).
+                 Nesting those <a> tags inside this anchor instead made the
+                 HTML invalid, the parser split every card and its content
+                 was clipped invisible. */
               .report-link {
-                display: flex;
-                flex-direction: column;
-                align-items: stretch;
-                height: 100%;
-                box-sizing: border-box;
-                padding: 16px 20px;
-                text-decoration: none;
-                color: #333;
+                position: absolute;
+                inset: 0;
+                z-index: 1;
+                border-radius: 12px;
+              }
+              .report-link:focus-visible {
+                outline: 2px solid #667eea;
+                outline-offset: 2px;
               }
               .report-content {
-                flex: 1;
+                position: relative;
+                height: 100%;
+                box-sizing: border-box;
                 display: flex;
                 flex-direction: column;
+                padding: 16px 20px;
               }
               .run-header {
                 display: flex;
@@ -256,6 +266,8 @@ jobs:
               /* Explicit HTML-report chip: the whole card is already clickable,
                  but a visible affordance beats a hidden hover arrow. */
               .report-chip {
+                position: relative;
+                z-index: 2;
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
@@ -277,6 +289,9 @@ jobs:
                 color: #888;
                 font-weight: 500;
               }
+              .chip-row {
+                margin-bottom: 10px;
+              }
               .run-date {
                 font-size: 0.9em;
                 color: #666;
@@ -293,10 +308,20 @@ jobs:
                 color: #888;
                 font-weight: 500;
               }
+              .run-sha-label {
+                color: #888;
+                font-weight: 500;
+              }
               .run-sha {
+                position: relative;
+                z-index: 2;
                 color: #667eea;
                 font-family: 'Fira Code', ui-monospace, monospace;
                 font-weight: 600;
+                text-decoration: none;
+              }
+              .run-sha:hover {
+                text-decoration: underline;
               }
               .test-stats {
                 display: flex;
@@ -419,7 +444,10 @@ jobs:
             display_num=$num
 
             echo "        <li class=\"report-item\">" >> index.html
-            echo "          <a href=\"$dir/index.html\" class=\"report-link\">" >> index.html
+            # Overlay anchor: covers the whole card (stretched link). The chip
+            # and commit links below are separate <a> tags layered above it;
+            # they must not be nested inside this anchor.
+            echo "          <a href=\"$dir/index.html\" class=\"report-link\" aria-label=\"Open report for Run $display_num\"></a>" >> index.html
             echo "            <div class=\"report-content\">" >> index.html
             echo "              <div class=\"run-header\">" >> index.html
             echo -n "                <span class=\"run-number\">Run #$display_num" >> index.html
@@ -433,28 +461,30 @@ jobs:
             if [ -n "$test_type" ]; then
               echo "                <span class=\"test-type\">$test_type</span>" >> index.html
             fi
-            # The Playwright HTML report lives at $dir/index.html inside this
-            # same gh-pages tree; the card's own link already points there, so
-            # the chip is a span, not an anchor: a nested <a> is invalid HTML
-            # and the parser splits the card, clipping its content invisible.
-            if [ -f "$dir/index.html" ]; then
-              echo "                <span class=\"report-chip\">📊 HTML report</span>" >> index.html
-            fi
             echo "              </div>" >> index.html
+            # The Playwright HTML report lives at $dir/index.html inside this
+            # same gh-pages tree. The chip is a real link (above the overlay
+            # anchor) on its own row, so every card wraps identically.
+            if [ -f "$dir/index.html" ]; then
+              echo "              <div class=\"chip-row\">" >> index.html
+              echo "                <a class=\"report-chip\" href=\"$dir/index.html\" target=\"_blank\" rel=\"noopener\">📊 HTML report</a>" >> index.html
+              echo "              </div>" >> index.html
+            fi
             if [ -n "$timestamp" ]; then
               echo "              <div class=\"run-date\">$timestamp</div>" >> index.html
             fi
-            # Branch + short SHA under the date. The SHA is a span, not a
-            # link (it would nest inside the card's anchor), with the full
-            # 40-char SHA in its tooltip. Only rendered when the metadata
-            # exists, so pre-existing runs keep rendering.
+            # Branch + commit link under the date. The commit anchor sits
+            # above the overlay anchor (z-index 2), not nested inside it.
+            # Only rendered when the metadata exists, so pre-existing runs
+            # keep rendering.
             if [ -n "$branch" ] || [ -n "$commit_sha" ]; then
               echo "              <div class=\"run-source\">" >> index.html
               if [ -n "$branch" ]; then
                 echo "                <span class=\"run-branch\">⎇ $branch</span>" >> index.html
               fi
               if [ -n "$commit_sha" ]; then
-                echo "                <span class=\"run-sha\" title=\"$commit_sha\">$(echo "$commit_sha" | cut -c1-7)</span>" >> index.html
+                echo "                <span class=\"run-sha-label\">commit</span>" >> index.html
+                echo "                <a class=\"run-sha\" href=\"https://github.com/${{ github.repository }}/commit/$commit_sha\" target=\"_blank\" rel=\"noopener\" title=\"$commit_sha\">$(echo "$commit_sha" | cut -c1-7)</a>" >> index.html
               fi
               echo "              </div>" >> index.html
             fi
