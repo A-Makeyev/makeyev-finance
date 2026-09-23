@@ -559,27 +559,41 @@ jobs:
               # counted from each test's projectName so projects can be added
               # or renamed without touching this script. One line per
               # project, pipe-separated fields (project, total, failed,
-              # flaky, failed ids, flaky ids), newline between projects, UI
-              # first (reverse alphabetical). Pipe, not tab: read collapses
-              # runs of IFS-whitespace separators, which would shift empty
-              # fields. failed/flaky count tests with status
-              # "unexpected"/"flaky" (test.status mirrors test.outcome(),
-              # the same outcome stats.unexpected and stats.flaky are
-              # tallied from); ids list those tests' ids for the chip deep
-              # links - the spec id equals the test's id here because each
-              # spec file runs in one project only (UI/API testMatch are
-              # disjoint), so specs never merge.
+              # flaky, failed ids, flaky ids, failed titles, flaky titles),
+              # newline between projects, UI first (reverse alphabetical).
+              # Pipe, not tab: read collapses runs of IFS-whitespace
+              # separators, which would shift empty fields. failed/flaky
+              # count tests with status "unexpected"/"flaky" (test.status
+              # mirrors test.outcome(), the same outcome stats.unexpected
+              # and stats.flaky are tallied from); ids list those tests'
+              # ids for the chip deep links - the spec id equals the test's
+              # id here because each spec file runs in one project only
+              # (UI/API testMatch are disjoint), so specs never merge.
+              # Titles feed the chips' tooltips: @html-escaped by jq (the
+              # bash side must not escape them again, that would double the
+              # entities), pipe/newline stripped to protect the field
+              # format, joined by the &#10; entity so browsers render one
+              # name per tooltip line, capped at 10 names.
               project_stats=$(jq -r '
+                def tip:
+                  (if length > 10 then .[0:10] + ["+ \(length - 10) more"] else . end)
+                  | join("&#10;");
                 [ .. | objects | select(has("specs")) as $suite
                   | $suite.specs[]
                   | select(has("tests")) as $spec
                   | $spec.tests[]
-                  | { p: .projectName, f: (.status == "unexpected"), k: (.status == "flaky"), id: $spec.id } ]
+                  | { p: .projectName, f: (.status == "unexpected"), k: (.status == "flaky"), id: $spec.id, title: $spec.title } ]
                 | group_by(.p)
                 | reverse
-                | map("\(.[0].p)|\(length)|\(map(select(.f)) | length)|\(map(select(.k)) | length)|\(map(select(.f) | .id) | join(","))|\(map(select(.k) | .id) | join(","))")
+                | map(
+                    (map(select(.f) | .title | @html | gsub("[\\n\\r\\t|]"; " "))) as $ft
+                    | (map(select(.k) | .title | @html | gsub("[\\n\\r\\t|]"; " "))) as $kt
+                    | "\(.[0].p)|\(length)|\(map(select(.f)) | length)|\(map(select(.k)) | length)|\(map(select(.f) | .id) | join(","))|\(map(select(.k) | .id) | join(","))|\($ft | tip)|\($kt | tip)"
+                  )
                 | join("\n")
-              ' "$dir/results.json" 2>/dev/null)
+              ' "$dir/results.json" 2>/dev/null | tr -d '\r')
+              # tr -d '\r': keeps the last field (flaky tooltip) clean if
+              # the jq output ever arrives with CRLF line endings.
             fi
 
             # Human-readable duration for the card header (e.g. "1m 34s").
@@ -678,9 +692,11 @@ jobs:
             # report the chip stays a plain (unlinked) span.
             # Emits one chip (no trailing newline, for inline use):
             #   $1 css class, $2 label, $3 count, $4 comma-joined ids,
-            #   $5 status token for the multi-test filter link.
+            #   $5 status token for the multi-test filter link, $6 tooltip
+            #   text, already HTML-escaped by jq (test names joined by the
+            #   &#10; entity); empty falls back to a generic hint.
             emit_status_chip() {
-              local css="$1" label="$2" count="$3" ids="$4" token="$5"
+              local css="$1" label="$2" count="$3" ids="$4" token="$5" tip="$6"
               local chip_href
               if [ "$count" -eq 1 ] && [ -n "$ids" ]; then
                 chip_href="$dir/index.html#?testId=${ids%%,*}"
@@ -690,24 +706,25 @@ jobs:
                 chip_href="$dir/index.html#?q=$token+p:$proj"
               fi
               chip_href=$(printf '%s' "$chip_href" | sed -e 's/&/\&amp;/g' -e 's/"/\&quot;/g' -e 's/</\&lt;/g')
+              [ -z "$tip" ] && tip="Open in HTML report"
               if [ -f "$dir/index.html" ]; then
-                printf '<a class="%s" href="%s" target="_blank" rel="noopener" title="Open in HTML report">%s</a>' "$css" "$chip_href" "$label"
+                printf '<a class="%s" href="%s" target="_blank" rel="noopener" title="%s">%s</a>' "$css" "$chip_href" "$tip" "$label"
               else
-                printf '<span class="%s">%s</span>' "$css" "$label"
+                printf '<span class="%s" title="%s">%s</span>' "$css" "$tip" "$label"
               fi
             }
             if [ -n "$project_stats" ]; then
               echo "                <span class=\"stat-breakdown\">" >> index.html
-              while IFS='|' read -r proj total failed flaky failed_ids flaky_ids; do
+              while IFS='|' read -r proj total failed flaky failed_ids flaky_ids failed_tips flaky_tips; do
                 # Friendly label: the project prefix before the first dash
                 # ("ui-chromium" -> "UI"); fallback to the full name.
                 label=$(printf '%s' "$proj" | cut -d- -f1 | tr '[:lower:]' '[:upper:]')
                 row="                  <span class=\"stat-item\">$label: <span class=\"stat-value\">$total</span></span>"
                 if [ "${failed:-0}" -gt 0 ] 2>/dev/null; then
-                  row="$row $(emit_status_chip fail-chip "$failed failed" "$failed" "$failed_ids" s:failed)"
+                  row="$row $(emit_status_chip fail-chip "$failed failed" "$failed" "$failed_ids" s:failed "$failed_tips")"
                 fi
                 if [ "${flaky:-0}" -gt 0 ] 2>/dev/null; then
-                  row="$row $(emit_status_chip flaky-chip "$flaky flaky" "$flaky" "$flaky_ids" s:flaky)"
+                  row="$row $(emit_status_chip flaky-chip "$flaky flaky" "$flaky" "$flaky_ids" s:flaky "$flaky_tips")"
                 fi
                 echo "$row" >> index.html
               done <<< "$project_stats"
