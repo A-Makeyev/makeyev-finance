@@ -264,13 +264,16 @@ jobs:
                 color: #667eea;
               }
               /* Explicit HTML-report chip: the whole card is already clickable,
-                 but a visible affordance beats a hidden hover arrow. */
+                 but a visible affordance beats a hidden hover arrow. Pushed
+                 to the right edge of the source line, under the run
+                 duration. */
               .report-chip {
                 position: relative;
                 z-index: 2;
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
+                margin-left: auto;
                 padding: 5px 12px;
                 border-radius: 999px;
                 background: rgba(102, 126, 234, 0.1);
@@ -296,13 +299,6 @@ jobs:
                 font-size: 0.85em;
                 font-weight: 500;
                 white-space: nowrap;
-              }
-              /* HTML-report chip row: sits in the middle of the card, below
-                 the commit message and above the stats, centered. */
-              .chip-row {
-                margin-top: 10px;
-                display: flex;
-                justify-content: center;
               }
               /* Commit message subject; single line with ellipsis when
                  collapsed, full text in the tooltip. Clicking the message
@@ -351,9 +347,6 @@ jobs:
                 cursor: pointer;
                 transition: transform 0.15s;
               }
-              .commit-subject .subject-toggle:hover {
-                text-decoration: underline;
-              }
               .commit-subject.expanded .subject-toggle {
                 transform: rotate(180deg);
               }
@@ -368,6 +361,7 @@ jobs:
                 gap: 10px;
                 margin-top: 4px;
                 font-size: 0.85em;
+                flex-wrap: wrap;
               }
               .run-branch {
                 color: #888;
@@ -560,11 +554,12 @@ jobs:
             if [ -n "$timestamp" ]; then
               echo "              <div class=\"run-date\">$timestamp</div>" >> index.html
             fi
-            # Branch + commit link under the date. The commit anchor sits
-            # above the overlay anchor (z-index 2), not nested inside it.
-            # Only rendered when the metadata exists, so pre-existing runs
-            # keep rendering.
-            if [ -n "$branch" ] || [ -n "$commit_sha" ]; then
+            # Source line under the date: branch, commit link and, at the
+            # right edge, the HTML-report chip. The commit anchor and the
+            # chip sit above the overlay anchor (z-index 2), not nested
+            # inside it. Only rendered when any of the three exist, so
+            # pre-existing runs keep rendering.
+            if [ -n "$branch" ] || [ -n "$commit_sha" ] || [ -f "$dir/index.html" ]; then
               echo "              <div class=\"run-source\">" >> index.html
               if [ -n "$branch" ]; then
                 echo "                <span class=\"run-branch\">⎇ $branch</span>" >> index.html
@@ -573,22 +568,20 @@ jobs:
                 echo "                <span class=\"run-sha-label\">commit</span>" >> index.html
                 echo "                <a class=\"run-sha\" href=\"https://github.com/${{ github.repository }}/commit/$commit_sha\" target=\"_blank\" rel=\"noopener\" title=\"$commit_sha\">$(echo "$commit_sha" | cut -c1-7)</a>" >> index.html
               fi
+              # The Playwright HTML report lives at $dir/index.html inside
+              # this same gh-pages tree. The chip is a real link, pushed to
+              # the right edge of the source line via margin-left: auto.
+              if [ -f "$dir/index.html" ]; then
+                echo "                <a class=\"report-chip\" href=\"$dir/index.html\" target=\"_blank\" rel=\"noopener\">📊 HTML report</a>" >> index.html
+              fi
               echo "              </div>" >> index.html
             fi
-            # Commit message sits between the source line and the report
-            # chip; truncated to one line with the full text in the tooltip.
+            # Commit message sits under the source line; truncated to one
+            # line with the full text in the tooltip.
             if [ -n "$subject_escaped" ]; then
               echo "              <div class=\"commit-subject\" title=\"$subject_escaped\">" >> index.html
               echo "                <span class=\"subject-text\">$subject_escaped</span>" >> index.html
               echo "                <button type=\"button\" class=\"subject-toggle\" aria-expanded=\"false\" aria-label=\"Toggle full commit message\" hidden>▾</button>" >> index.html
-              echo "              </div>" >> index.html
-            fi
-            # The Playwright HTML report lives at $dir/index.html inside this
-            # same gh-pages tree. The chip is a real link (above the overlay
-            # anchor), centered in the middle of the card below the message.
-            if [ -f "$dir/index.html" ]; then
-              echo "              <div class=\"chip-row\">" >> index.html
-              echo "                <a class=\"report-chip\" href=\"$dir/index.html\" target=\"_blank\" rel=\"noopener\">📊 HTML report</a>" >> index.html
               echo "              </div>" >> index.html
             fi
             echo "              <div class=\"test-stats\">" >> index.html
