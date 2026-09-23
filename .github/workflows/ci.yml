@@ -297,20 +297,65 @@ jobs:
                 font-weight: 500;
                 white-space: nowrap;
               }
+              /* HTML-report chip row: sits in the middle of the card, below
+                 the commit message and above the stats, centered. */
               .chip-row {
-                margin-bottom: 10px;
+                margin-top: 10px;
+                display: flex;
+                justify-content: center;
               }
-              /* Commit message subject; single line with ellipsis, full text
-                 in the tooltip. Sits in the space between the source line
-                 and the stats. */
+              /* Commit message subject; single line with ellipsis when
+                 collapsed, full text in the tooltip. Clicking the message
+                 (or the chevron) expands it when it is too long. Sits in
+                 the space between the source line and the report chip. */
               .commit-subject {
+                display: flex;
+                align-items: center;
+                gap: 6px;
                 color: #888;
                 font-style: italic;
                 font-size: 0.85em;
                 margin-top: 2px;
+              }
+              .commit-subject .subject-text {
+                min-width: 0;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
+              }
+              /* Only when the text overflows does the message become an
+                 interactive control, so short messages keep the normal
+                 whole-card click-through to the report. */
+              .commit-subject.is-clamped {
+                position: relative;
+                z-index: 2;
+                cursor: pointer;
+                user-select: none;
+              }
+              .commit-subject.expanded {
+                user-select: text;
+              }
+              .commit-subject.expanded .subject-text {
+                white-space: normal;
+                overflow-wrap: anywhere;
+              }
+              .commit-subject .subject-toggle {
+                flex-shrink: 0;
+                border: none;
+                background: none;
+                padding: 0 2px;
+                color: #667eea;
+                font: inherit;
+                font-style: normal;
+                line-height: 1;
+                cursor: pointer;
+                transition: transform 0.15s;
+              }
+              .commit-subject .subject-toggle:hover {
+                text-decoration: underline;
+              }
+              .commit-subject.expanded .subject-toggle {
+                transform: rotate(180deg);
               }
               .run-date {
                 font-size: 0.9em;
@@ -512,14 +557,6 @@ jobs:
               echo "                <span class=\"run-duration\">⏱ $duration_label</span>" >> index.html
             fi
             echo "              </div>" >> index.html
-            # The Playwright HTML report lives at $dir/index.html inside this
-            # same gh-pages tree. The chip is a real link (above the overlay
-            # anchor) on its own row, so every card wraps identically.
-            if [ -f "$dir/index.html" ]; then
-              echo "              <div class=\"chip-row\">" >> index.html
-              echo "                <a class=\"report-chip\" href=\"$dir/index.html\" target=\"_blank\" rel=\"noopener\">📊 HTML report</a>" >> index.html
-              echo "              </div>" >> index.html
-            fi
             if [ -n "$timestamp" ]; then
               echo "              <div class=\"run-date\">$timestamp</div>" >> index.html
             fi
@@ -538,10 +575,21 @@ jobs:
               fi
               echo "              </div>" >> index.html
             fi
-            # Commit subject fills the space between the source line and the
-            # stats; truncated to one line with the full text in the tooltip.
+            # Commit message sits between the source line and the report
+            # chip; truncated to one line with the full text in the tooltip.
             if [ -n "$subject_escaped" ]; then
-              echo "              <div class=\"commit-subject\" title=\"$subject_escaped\">$subject_escaped</div>" >> index.html
+              echo "              <div class=\"commit-subject\" title=\"$subject_escaped\">" >> index.html
+              echo "                <span class=\"subject-text\">$subject_escaped</span>" >> index.html
+              echo "                <button type=\"button\" class=\"subject-toggle\" aria-expanded=\"false\" aria-label=\"Toggle full commit message\" hidden>▾</button>" >> index.html
+              echo "              </div>" >> index.html
+            fi
+            # The Playwright HTML report lives at $dir/index.html inside this
+            # same gh-pages tree. The chip is a real link (above the overlay
+            # anchor), centered in the middle of the card below the message.
+            if [ -f "$dir/index.html" ]; then
+              echo "              <div class=\"chip-row\">" >> index.html
+              echo "                <a class=\"report-chip\" href=\"$dir/index.html\" target=\"_blank\" rel=\"noopener\">📊 HTML report</a>" >> index.html
+              echo "              </div>" >> index.html
             fi
             echo "              <div class=\"test-stats\">" >> index.html
             echo "                <span class=\"stat-item\">Passed: <span class=\"stat-value\">$passed</span></span>" >> index.html
@@ -587,6 +635,21 @@ jobs:
 
               // Set initial timestamp
               updateTimestamp();
+
+              // Commit messages: show the chevron only when the subject is
+              // actually truncated; clicking the message or the chevron
+              // toggles between one clamped line and the full text.
+              document.querySelectorAll('.commit-subject').forEach(function (msg) {
+                var text = msg.querySelector('.subject-text');
+                var toggle = msg.querySelector('.subject-toggle');
+                if (!text || !toggle || text.scrollWidth <= text.clientWidth) return;
+                msg.classList.add('is-clamped');
+                toggle.hidden = false;
+                msg.addEventListener('click', function () {
+                  var expanded = msg.classList.toggle('expanded');
+                  toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                });
+              });
 
               // Auto-refresh logic
               const currentRun = "${{ github.run_number }}";
