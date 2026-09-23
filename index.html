@@ -164,20 +164,65 @@
       font-weight: 500;
       white-space: nowrap;
     }
+    /* HTML-report chip row: sits in the middle of the card, below
+       the commit message and above the stats, centered. */
     .chip-row {
-      margin-bottom: 10px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
     }
-    /* Commit message subject; single line with ellipsis, full text
-       in the tooltip. Sits in the space between the source line
-       and the stats. */
+    /* Commit message subject; single line with ellipsis when
+       collapsed, full text in the tooltip. Clicking the message
+       (or the chevron) expands it when it is too long. Sits in
+       the space between the source line and the report chip. */
     .commit-subject {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       color: #888;
       font-style: italic;
       font-size: 0.85em;
       margin-top: 2px;
+    }
+    .commit-subject .subject-text {
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+    /* Only when the text overflows does the message become an
+       interactive control, so short messages keep the normal
+       whole-card click-through to the report. */
+    .commit-subject.is-clamped {
+      position: relative;
+      z-index: 2;
+      cursor: pointer;
+      user-select: none;
+    }
+    .commit-subject.expanded {
+      user-select: text;
+    }
+    .commit-subject.expanded .subject-text {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .commit-subject .subject-toggle {
+      flex-shrink: 0;
+      border: none;
+      background: none;
+      padding: 0 2px;
+      color: #667eea;
+      font: inherit;
+      font-style: normal;
+      line-height: 1;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .commit-subject .subject-toggle:hover {
+      text-decoration: underline;
+    }
+    .commit-subject.expanded .subject-toggle {
+      transform: rotate(180deg);
     }
     .run-date {
       font-size: 0.9em;
@@ -293,6 +338,35 @@
     <div class="last-updated" id="lastUpdated"></div>
     <ul class="reports-list" id="reportsList">
         <li class="report-item">
+          <a href="Run-60/index.html" class="report-link" aria-label="Open report for Run 60"></a>
+            <div class="report-content">
+              <div class="run-header">
+                <span class="run-number">Run #60 <span class="badge badge-success">✓ Passed</span></span>
+                <span class="test-type">Playwright Tests</span>
+                <span class="run-duration">⏱ 1m 36s</span>
+              </div>
+              <div class="run-date">23-09-2026 12:09PM</div>
+              <div class="run-source">
+                <span class="run-branch">⎇ main</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/c5a3d76c0a59159f025e8fe7c22538ad25c41fc8" target="_blank" rel="noopener" title="c5a3d76c0a59159f025e8fe7c22538ad25c41fc8">c5a3d76</a>
+              </div>
+              <div class="commit-subject" title="Rework report cards: date/branch/commit up top, message below, centered report chip, expandable commit message">
+                <span class="subject-text">Rework report cards: date/branch/commit up top, message below, centered report chip, expandable commit message</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-60/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
+              <div class="test-stats">
+                <span class="stat-item">Passed: <span class="stat-value">128</span></span>
+                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
+                <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+              </div>
+            </div>
+          </a>
+        </li>
+        <li class="report-item">
           <a href="Run-58/index.html" class="report-link" aria-label="Open report for Run 58"></a>
             <div class="report-content">
               <div class="run-header">
@@ -300,16 +374,19 @@
                 <span class="test-type">Playwright Tests</span>
                 <span class="run-duration">⏱ 1m 37s</span>
               </div>
-              <div class="chip-row">
-                <a class="report-chip" href="Run-58/index.html" target="_blank" rel="noopener">📊 HTML report</a>
-              </div>
               <div class="run-date">23-09-2026 10:27AM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
                 <span class="run-sha-label">commit</span>
                 <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/2b117678236b0c83a84102027ffe77f7673ff0f0" target="_blank" rel="noopener" title="2b117678236b0c83a84102027ffe77f7673ff0f0">2b11767</a>
               </div>
-              <div class="commit-subject" title="Fix report cards rendering empty (invalid nested anchors) and enrich them: stretched-link overlay, per-card chip row, commit link, run duration, and commit subject">Fix report cards rendering empty (invalid nested anchors) and enrich them: stretched-link overlay, per-card chip row, commit link, run duration, and commit subject</div>
+              <div class="commit-subject" title="Fix report cards rendering empty (invalid nested anchors) and enrich them: stretched-link overlay, per-card chip row, commit link, run duration, and commit subject">
+                <span class="subject-text">Fix report cards rendering empty (invalid nested anchors) and enrich them: stretched-link overlay, per-card chip row, commit link, run duration, and commit subject</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-58/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
@@ -326,16 +403,19 @@
                 <span class="test-type">Playwright Tests</span>
                 <span class="run-duration">⏱ 1m 16s</span>
               </div>
-              <div class="chip-row">
-                <a class="report-chip" href="Run-57/index.html" target="_blank" rel="noopener">📊 HTML report</a>
-              </div>
               <div class="run-date">23-09-2026 09:55AM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
                 <span class="run-sha-label">commit</span>
                 <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/1396f751f4110bc8085535f6af36637ad642698c" target="_blank" rel="noopener" title="1396f751f4110bc8085535f6af36637ad642698c">1396f75</a>
               </div>
-              <div class="commit-subject" title="UP">UP</div>
+              <div class="commit-subject" title="UP">
+                <span class="subject-text">UP</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-57/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
@@ -352,16 +432,19 @@
                 <span class="test-type">Playwright Tests</span>
                 <span class="run-duration">⏱ 1m 26s</span>
               </div>
-              <div class="chip-row">
-                <a class="report-chip" href="Run-56/index.html" target="_blank" rel="noopener">📊 HTML report</a>
-              </div>
               <div class="run-date">23-09-2026 09:09AM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
                 <span class="run-sha-label">commit</span>
                 <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/01ddb33725926e2d9cefcc9abe1e26f32e2a7621" target="_blank" rel="noopener" title="01ddb33725926e2d9cefcc9abe1e26f32e2a7621">01ddb33</a>
               </div>
-              <div class="commit-subject" title="Updated CI">Updated CI</div>
+              <div class="commit-subject" title="Updated CI">
+                <span class="subject-text">Updated CI</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-56/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
@@ -378,16 +461,19 @@
                 <span class="test-type">Playwright Tests</span>
                 <span class="run-duration">⏱ 1m 35s</span>
               </div>
-              <div class="chip-row">
-                <a class="report-chip" href="Run-55/index.html" target="_blank" rel="noopener">📊 HTML report</a>
-              </div>
               <div class="run-date">23-09-2026 08:23AM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
                 <span class="run-sha-label">commit</span>
                 <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/31271fdf298aa923d9b7450801da34c6a00ebd14" target="_blank" rel="noopener" title="31271fdf298aa923d9b7450801da34c6a00ebd14">31271fd</a>
               </div>
-              <div class="commit-subject" title="Updated CI">Updated CI</div>
+              <div class="commit-subject" title="Updated CI">
+                <span class="subject-text">Updated CI</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-55/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
@@ -404,16 +490,19 @@
                 <span class="test-type">Playwright Tests</span>
                 <span class="run-duration">⏱ 1m 35s</span>
               </div>
-              <div class="chip-row">
-                <a class="report-chip" href="Run-54/index.html" target="_blank" rel="noopener">📊 HTML report</a>
-              </div>
               <div class="run-date">22-09-2026 10:34PM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
                 <span class="run-sha-label">commit</span>
                 <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/71c0f50c2fcbb944baf2ffc9e7c0716b9b0858e3" target="_blank" rel="noopener" title="71c0f50c2fcbb944baf2ffc9e7c0716b9b0858e3">71c0f50</a>
               </div>
-              <div class="commit-subject" title="Record branch and commit SHA with each test run and show them on run cards">Record branch and commit SHA with each test run and show them on run cards</div>
+              <div class="commit-subject" title="Record branch and commit SHA with each test run and show them on run cards">
+                <span class="subject-text">Record branch and commit SHA with each test run and show them on run cards</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-54/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">127</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
@@ -431,16 +520,19 @@
                 <span class="test-type">Playwright Tests</span>
                 <span class="run-duration">⏱ 1m 36s</span>
               </div>
-              <div class="chip-row">
-                <a class="report-chip" href="Run-53/index.html" target="_blank" rel="noopener">📊 HTML report</a>
-              </div>
               <div class="run-date">22-09-2026 10:19PM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
                 <span class="run-sha-label">commit</span>
                 <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/605e792e4095695274db8e40f2d39baa454701d8" target="_blank" rel="noopener" title="605e792e4095695274db8e40f2d39baa454701d8">605e792</a>
               </div>
-              <div class="commit-subject" title="Link each report-page run card to its Playwright HTML report explicitly">Link each report-page run card to its Playwright HTML report explicitly</div>
+              <div class="commit-subject" title="Link each report-page run card to its Playwright HTML report explicitly">
+                <span class="subject-text">Link each report-page run card to its Playwright HTML report explicitly</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-53/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
@@ -457,16 +549,19 @@
                 <span class="test-type">Playwright Tests</span>
                 <span class="run-duration">⏱ 1m 26s</span>
               </div>
-              <div class="chip-row">
-                <a class="report-chip" href="Run-52/index.html" target="_blank" rel="noopener">📊 HTML report</a>
-              </div>
               <div class="run-date">22-09-2026 09:55PM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
                 <span class="run-sha-label">commit</span>
                 <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/8e8cdad33981d75fd8dfb57028b388c9966cd43a" target="_blank" rel="noopener" title="8e8cdad33981d75fd8dfb57028b388c9966cd43a">8e8cdad</a>
               </div>
-              <div class="commit-subject" title="Stabilize the caret sizing check against the block font, not emoji ink">Stabilize the caret sizing check against the block font, not emoji ink</div>
+              <div class="commit-subject" title="Stabilize the caret sizing check against the block font, not emoji ink">
+                <span class="subject-text">Stabilize the caret sizing check against the block font, not emoji ink</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-52/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">0</span></span>
@@ -483,16 +578,19 @@
                 <span class="test-type">Playwright Tests</span>
                 <span class="run-duration">⏱ 1m 43s</span>
               </div>
-              <div class="chip-row">
-                <a class="report-chip" href="Run-51/index.html" target="_blank" rel="noopener">📊 HTML report</a>
-              </div>
               <div class="run-date">22-09-2026 09:10PM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
                 <span class="run-sha-label">commit</span>
                 <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/574544a72a825e9c81a75f665ceaa1bf4584c405" target="_blank" rel="noopener" title="574544a72a825e9c81a75f665ceaa1bf4584c405">574544a</a>
               </div>
-              <div class="commit-subject" title="Fix the CI test report: enable the JSON reporter and stop the e2e flakes">Fix the CI test report: enable the JSON reporter and stop the e2e flakes</div>
+              <div class="commit-subject" title="Fix the CI test report: enable the JSON reporter and stop the e2e flakes">
+                <span class="subject-text">Fix the CI test report: enable the JSON reporter and stop the e2e flakes</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-51/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">126</span></span>
                 <span class="stat-item">Failed: <span class="stat-value">2</span></span>
@@ -531,8 +629,23 @@
     // Set initial timestamp
     updateTimestamp();
 
+    // Commit messages: show the chevron only when the subject is
+    // actually truncated; clicking the message or the chevron
+    // toggles between one clamped line and the full text.
+    document.querySelectorAll('.commit-subject').forEach(function (msg) {
+      var text = msg.querySelector('.subject-text');
+      var toggle = msg.querySelector('.subject-toggle');
+      if (!text || !toggle || text.scrollWidth <= text.clientWidth) return;
+      msg.classList.add('is-clamped');
+      toggle.hidden = false;
+      msg.addEventListener('click', function () {
+        var expanded = msg.classList.toggle('expanded');
+        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      });
+    });
+
     // Auto-refresh logic
-    const currentRun = "58";
+    const currentRun = "60";
     let checkCount = 0;
 
     async function checkForUpdates() {
