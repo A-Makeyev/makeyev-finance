@@ -82,6 +82,7 @@
       gap: 18px;
     }
     .report-item {
+      position: relative;
       margin: 0;
       background: white;
       border-radius: 12px;
@@ -93,20 +94,29 @@
       transform: translateY(-2px);
       box-shadow: 0 8px 12px rgba(0,0,0,0.15);
     }
+    /* Stretched-link overlay: the anchor covers the whole card so
+       the entire card is clickable, while the chip and commit
+       links stay real anchors layered above it (z-index 2).
+       Nesting those <a> tags inside this anchor instead made the
+       HTML invalid, the parser split every card and its content
+       was clipped invisible. */
     .report-link {
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      height: 100%;
-      box-sizing: border-box;
-      padding: 16px 20px;
-      text-decoration: none;
-      color: #333;
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      border-radius: 12px;
+    }
+    .report-link:focus-visible {
+      outline: 2px solid #667eea;
+      outline-offset: 2px;
     }
     .report-content {
-      flex: 1;
+      position: relative;
+      height: 100%;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
+      padding: 16px 20px;
     }
     .run-header {
       display: flex;
@@ -123,6 +133,8 @@
     /* Explicit HTML-report chip: the whole card is already clickable,
        but a visible affordance beats a hidden hover arrow. */
     .report-chip {
+      position: relative;
+      z-index: 2;
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -144,6 +156,9 @@
       color: #888;
       font-weight: 500;
     }
+    .chip-row {
+      margin-bottom: 10px;
+    }
     .run-date {
       font-size: 0.9em;
       color: #666;
@@ -160,10 +175,20 @@
       color: #888;
       font-weight: 500;
     }
+    .run-sha-label {
+      color: #888;
+      font-weight: 500;
+    }
     .run-sha {
+      position: relative;
+      z-index: 2;
       color: #667eea;
       font-family: 'Fira Code', ui-monospace, monospace;
       font-weight: 600;
+      text-decoration: none;
+    }
+    .run-sha:hover {
+      text-decoration: underline;
     }
     .test-stats {
       display: flex;
@@ -248,17 +273,44 @@
     <div class="last-updated" id="lastUpdated"></div>
     <ul class="reports-list" id="reportsList">
         <li class="report-item">
-          <a href="Run-56/index.html" class="report-link">
+          <a href="Run-57/index.html" class="report-link" aria-label="Open report for Run 57"></a>
+            <div class="report-content">
+              <div class="run-header">
+                <span class="run-number">Run #57 <span class="badge badge-success">✓ Passed</span></span>
+                <span class="test-type">Playwright Tests</span>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-57/index.html" target="_blank" rel="noopener">📊 HTML report</a>
+              </div>
+              <div class="run-date">23-09-2026 09:55AM</div>
+              <div class="run-source">
+                <span class="run-branch">⎇ main</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/1396f751f4110bc8085535f6af36637ad642698c" target="_blank" rel="noopener" title="1396f751f4110bc8085535f6af36637ad642698c">1396f75</a>
+              </div>
+              <div class="test-stats">
+                <span class="stat-item">Passed: <span class="stat-value">128</span></span>
+                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
+                <span class="stat-item">Skipped: <span class="stat-value">12</span></span>
+              </div>
+            </div>
+          </a>
+        </li>
+        <li class="report-item">
+          <a href="Run-56/index.html" class="report-link" aria-label="Open report for Run 56"></a>
             <div class="report-content">
               <div class="run-header">
                 <span class="run-number">Run #56 <span class="badge badge-success">✓ Passed</span></span>
                 <span class="test-type">Playwright Tests</span>
-                <span class="report-chip">📊 HTML report</span>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-56/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">23-09-2026 09:09AM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
-                <span class="run-sha" title="01ddb33725926e2d9cefcc9abe1e26f32e2a7621">01ddb33</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/01ddb33725926e2d9cefcc9abe1e26f32e2a7621" target="_blank" rel="noopener" title="01ddb33725926e2d9cefcc9abe1e26f32e2a7621">01ddb33</a>
               </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
@@ -269,17 +321,20 @@
           </a>
         </li>
         <li class="report-item">
-          <a href="Run-55/index.html" class="report-link">
+          <a href="Run-55/index.html" class="report-link" aria-label="Open report for Run 55"></a>
             <div class="report-content">
               <div class="run-header">
                 <span class="run-number">Run #55 <span class="badge badge-success">✓ Passed</span></span>
                 <span class="test-type">Playwright Tests</span>
-                <span class="report-chip">📊 HTML report</span>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-55/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">23-09-2026 08:23AM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
-                <span class="run-sha" title="31271fdf298aa923d9b7450801da34c6a00ebd14">31271fd</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/31271fdf298aa923d9b7450801da34c6a00ebd14" target="_blank" rel="noopener" title="31271fdf298aa923d9b7450801da34c6a00ebd14">31271fd</a>
               </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
@@ -290,17 +345,20 @@
           </a>
         </li>
         <li class="report-item">
-          <a href="Run-54/index.html" class="report-link">
+          <a href="Run-54/index.html" class="report-link" aria-label="Open report for Run 54"></a>
             <div class="report-content">
               <div class="run-header">
                 <span class="run-number">Run #54 <span class="badge badge-success">✓ Passed</span></span>
                 <span class="test-type">Playwright Tests</span>
-                <span class="report-chip">📊 HTML report</span>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-54/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">22-09-2026 10:34PM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
-                <span class="run-sha" title="71c0f50c2fcbb944baf2ffc9e7c0716b9b0858e3">71c0f50</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/71c0f50c2fcbb944baf2ffc9e7c0716b9b0858e3" target="_blank" rel="noopener" title="71c0f50c2fcbb944baf2ffc9e7c0716b9b0858e3">71c0f50</a>
               </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">127</span></span>
@@ -312,17 +370,20 @@
           </a>
         </li>
         <li class="report-item">
-          <a href="Run-53/index.html" class="report-link">
+          <a href="Run-53/index.html" class="report-link" aria-label="Open report for Run 53"></a>
             <div class="report-content">
               <div class="run-header">
                 <span class="run-number">Run #53 <span class="badge badge-success">✓ Passed</span></span>
                 <span class="test-type">Playwright Tests</span>
-                <span class="report-chip">📊 HTML report</span>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-53/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">22-09-2026 10:19PM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
-                <span class="run-sha" title="605e792e4095695274db8e40f2d39baa454701d8">605e792</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/605e792e4095695274db8e40f2d39baa454701d8" target="_blank" rel="noopener" title="605e792e4095695274db8e40f2d39baa454701d8">605e792</a>
               </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
@@ -333,17 +394,20 @@
           </a>
         </li>
         <li class="report-item">
-          <a href="Run-52/index.html" class="report-link">
+          <a href="Run-52/index.html" class="report-link" aria-label="Open report for Run 52"></a>
             <div class="report-content">
               <div class="run-header">
                 <span class="run-number">Run #52 <span class="badge badge-success">✓ Passed</span></span>
                 <span class="test-type">Playwright Tests</span>
-                <span class="report-chip">📊 HTML report</span>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-52/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">22-09-2026 09:55PM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
-                <span class="run-sha" title="8e8cdad33981d75fd8dfb57028b388c9966cd43a">8e8cdad</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/8e8cdad33981d75fd8dfb57028b388c9966cd43a" target="_blank" rel="noopener" title="8e8cdad33981d75fd8dfb57028b388c9966cd43a">8e8cdad</a>
               </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">128</span></span>
@@ -354,17 +418,20 @@
           </a>
         </li>
         <li class="report-item">
-          <a href="Run-51/index.html" class="report-link">
+          <a href="Run-51/index.html" class="report-link" aria-label="Open report for Run 51"></a>
             <div class="report-content">
               <div class="run-header">
                 <span class="run-number">Run #51 <span class="badge badge-failed">✗ Failed</span></span>
                 <span class="test-type">Playwright Tests</span>
-                <span class="report-chip">📊 HTML report</span>
+              </div>
+              <div class="chip-row">
+                <a class="report-chip" href="Run-51/index.html" target="_blank" rel="noopener">📊 HTML report</a>
               </div>
               <div class="run-date">22-09-2026 09:10PM</div>
               <div class="run-source">
                 <span class="run-branch">⎇ main</span>
-                <span class="run-sha" title="574544a72a825e9c81a75f665ceaa1bf4584c405">574544a</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/574544a72a825e9c81a75f665ceaa1bf4584c405" target="_blank" rel="noopener" title="574544a72a825e9c81a75f665ceaa1bf4584c405">574544a</a>
               </div>
               <div class="test-stats">
                 <span class="stat-item">Passed: <span class="stat-value">126</span></span>
@@ -405,7 +472,7 @@
     updateTimestamp();
 
     // Auto-refresh logic
-    const currentRun = "56";
+    const currentRun = "57";
     let checkCount = 0;
 
     async function checkForUpdates() {
