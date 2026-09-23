@@ -600,11 +600,13 @@ jobs:
               # ids for the chip deep links - the spec id equals the test's
               # id here because each spec file runs in one project only
               # (UI/API testMatch are disjoint), so specs never merge.
-              # Titles feed the chips' tooltips: @html-escaped by jq (the
-              # bash side must not escape them again, that would double the
-              # entities), pipe/newline stripped to protect the field
-              # format, joined by the &#10; entity so browsers render one
-              # name per tooltip line, capped at 10 names.
+              # Tooltips list "file:line - title" per affected test (the
+              # spec's location, the same relative path the HTML report
+              # shows): @html-escaped by jq (the bash side must not escape
+              # them again, that would double the entities), pipe/newline
+              # stripped to protect the field format, joined by the &#10;
+              # entity so browsers render one test per tooltip line,
+              # capped at 10.
               project_stats=$(jq -r '
                 def tip:
                   (if length > 10 then .[0:10] + ["+ \(length - 10) more"] else . end)
@@ -613,12 +615,13 @@ jobs:
                   | $suite.specs[]
                   | select(has("tests")) as $spec
                   | $spec.tests[]
-                  | { p: .projectName, f: (.status == "unexpected"), k: (.status == "flaky"), id: $spec.id, title: $spec.title } ]
+                  | { p: .projectName, f: (.status == "unexpected"), k: (.status == "flaky"), id: $spec.id,
+                      tip: (($spec.file // "?") + ":" + (($spec.line // 0) | tostring) + " - " + $spec.title) } ]
                 | group_by(.p)
                 | reverse
                 | map(
-                    (map(select(.f) | .title | @html | gsub("[\\n\\r\\t|]"; " "))) as $ft
-                    | (map(select(.k) | .title | @html | gsub("[\\n\\r\\t|]"; " "))) as $kt
+                    (map(select(.f) | .tip | @html | gsub("[\\n\\r\\t|]"; " "))) as $ft
+                    | (map(select(.k) | .tip | @html | gsub("[\\n\\r\\t|]"; " "))) as $kt
                     | "\(.[0].p)|\(length)|\(map(select(.f)) | length)|\(map(select(.k)) | length)|\(map(select(.f) | .id) | join(","))|\(map(select(.k) | .id) | join(","))|\($ft | tip)|\($kt | tip)"
                   )
                 | join("\n")
