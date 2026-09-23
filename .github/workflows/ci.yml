@@ -146,11 +146,14 @@ jobs:
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
                 margin: 0;
                 padding: 40px 20px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                /* Gradient doubles as the background for small white text
+                   (h1, .last-updated): both stops must keep >= 4.5:1 against
+                   white. The old light stop #667eea measured 3.66:1. */
+                background: linear-gradient(135deg, #4f46e5 0%, #764ba2 100%);
                 min-height: 100vh;
               }
               .container {
-                max-width: 900px;
+                max-width: 1100px;
                 margin: 0 auto;
               }
               .header {
@@ -206,13 +209,18 @@ jobs:
               .reports-list {
                 list-style: none;
                 padding: 0;
+                margin: 0;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 18px;
               }
               .report-item {
-                margin: 15px 0;
+                margin: 0;
                 background: white;
                 border-radius: 12px;
                 box-shadow: 0 4px 6px rgba(0,0,0,0.1);
                 transition: transform 0.2s, box-shadow 0.2s;
+                overflow: hidden;
               }
               .report-item:hover {
                 transform: translateY(-2px);
@@ -220,19 +228,23 @@ jobs:
               }
               .report-link {
                 display: flex;
-                justify-content: space-between;
-                align-items: center;
+                flex-direction: column;
+                align-items: stretch;
+                height: 100%;
+                box-sizing: border-box;
                 padding: 16px 20px;
                 text-decoration: none;
                 color: #333;
               }
               .report-content {
                 flex: 1;
+                display: flex;
+                flex-direction: column;
               }
               .run-header {
                 display: flex;
                 align-items: center;
-                gap: 12px;
+                gap: 8px;
                 margin-bottom: 8px;
                 flex-wrap: wrap;
               }
@@ -247,7 +259,6 @@ jobs:
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
-                margin-left: 10px;
                 padding: 5px 12px;
                 border-radius: 999px;
                 background: rgba(102, 126, 234, 0.1);
@@ -293,8 +304,10 @@ jobs:
               }
               .test-stats {
                 display: flex;
-                gap: 16px;
-                margin-top: 8px;
+                flex-wrap: wrap;
+                gap: 6px 16px;
+                margin-top: auto;
+                padding-top: 8px;
                 font-size: 0.85em;
               }
               .stat-item {
@@ -310,7 +323,6 @@ jobs:
                 color: white;
                 border-radius: 12px;
                 font-size: 0.8em;
-                margin-left: 10px;
                 font-weight: 500;
               }
               .badge-success {
@@ -318,6 +330,11 @@ jobs:
               }
               .badge-failed {
                 background: #ef4444;
+              }
+              @media (max-width: 680px) {
+                .reports-list {
+                  grid-template-columns: 1fr;
+                }
               }
               .update-banner {
                 position: fixed;
