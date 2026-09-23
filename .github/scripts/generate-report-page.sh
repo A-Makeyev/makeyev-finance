@@ -286,7 +286,7 @@ cat > index.html << 'EOF'
       display: flex;
       flex-wrap: wrap;
       gap: 6px 16px;
-      margin-top: auto;
+      margin-top: 10px;
       padding-top: 8px;
       font-size: 0.85em;
     }
