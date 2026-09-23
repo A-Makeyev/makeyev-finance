@@ -416,8 +416,14 @@ jobs:
                 align-items: center;
               }
               /* Failed-test chip per project (UI/API), shown next to that
-                 project's count in the stats row only when it has failures. */
+                 project's count in the stats row only when it has failures.
+                 A link into the HTML report: one failure opens that test's
+                 own view (#?testId), several open the report filtered to
+                 the project's failed tests (#?q=s:failed+p:...). z-index 2
+                 keeps it clickable above the stretched-link overlay. */
               .fail-chip {
+                position: relative;
+                z-index: 2;
                 display: inline-block;
                 padding: 1px 8px;
                 border-radius: 999px;
@@ -425,6 +431,10 @@ jobs:
                 color: #ef4444;
                 font-weight: 600;
                 font-size: 0.92em;
+                text-decoration: none;
+              }
+              a.fail-chip:hover {
+                text-decoration: underline;
               }
               .badge {
                 display: inline-block;
@@ -536,14 +546,22 @@ jobs:
               # Per-project test counts (e.g. UI / API) for the stats row,
               # counted from each test's projectName so projects can be added
               # or renamed without touching this script. Rendered as
-              # "name=total/failed" pairs, UI first (reverse alphabetical);
-              # failed counts tests with outcome "unexpected", the same
-              # outcome stats.unexpected is tallied from.
+              # "name=total/failed/ids" triples, UI first (reverse
+              # alphabetical). failed counts tests with status "unexpected"
+              # (test.status mirrors test.outcome(), the same outcome
+              # stats.unexpected is tallied from); ids lists the failed
+              # tests' ids for the chip deep links - the spec id equals the
+              # test's id here because each spec file runs in one project
+              # only (UI/API testMatch are disjoint), so specs never merge.
               project_stats=$(jq -r '
-                [.. | objects | select(has("projectName")) | { p: .projectName, f: (.outcome == "unexpected") }]
+                [ .. | objects | select(has("specs")) as $suite
+                  | $suite.specs[]
+                  | select(has("tests")) as $spec
+                  | $spec.tests[]
+                  | { p: .projectName, f: (.status == "unexpected"), id: $spec.id } ]
                 | group_by(.p)
                 | reverse
-                | map("\(.[0].p)=\(length)/\(map(select(.f)) | length)")
+                | map("\(.[0].p)=\(length)/\(map(select(.f)) | length)/\(map(select(.f) | .id) | join(","))")
                 | join(" ")
               ' "$dir/results.json" 2>/dev/null)
             fi
@@ -637,19 +655,38 @@ jobs:
             fi
             # UI/API test counts on the same stats row, pushed to the right
             # edge via margin-left: auto on .stat-breakdown. A project with
-            # failures gets a red failed-count chip beside its count.
+            # failures gets a red failed-count chip beside its count, linked
+            # into the HTML report: a single failure opens that test's own
+            # view (#?testId), several failures open the report filtered to
+            # the project's failed tests (#?q). Without the HTML report the
+            # chip stays a plain (unlinked) span.
             if [ -n "$project_stats" ]; then
               echo "                <span class=\"stat-breakdown\">" >> index.html
               for pair in $project_stats; do
                 proj="${pair%%=*}"
-                counts="${pair##*=}"
-                failed="${counts##*/}"
+                rest="${pair#*=}"
+                total="${rest%%/*}"
+                rest="${rest#*/}"
+                failed="${rest%%/*}"
+                failed_ids="${rest#*/}"
                 # Friendly label: the project prefix before the first dash
                 # ("ui-chromium" -> "UI"); fallback to the full name.
                 label=$(printf '%s' "$proj" | cut -d- -f1 | tr '[:lower:]' '[:upper:]')
-                echo -n "                  <span class=\"stat-item\">$label: <span class=\"stat-value\">${counts%%/*}</span></span> " >> index.html
+                echo -n "                  <span class=\"stat-item\">$label: <span class=\"stat-value\">$total</span></span> " >> index.html
                 if [ "${failed:-0}" -gt 0 ] 2>/dev/null; then
-                  echo "<span class=\"fail-chip\">$failed failed</span>" >> index.html
+                  if [ "$failed" -eq 1 ] && [ -n "$failed_ids" ]; then
+                    chip_href="$dir/index.html#?testId=${failed_ids%%,*}"
+                  else
+                    # The report's own filter links use this form: URLSearchParams
+                    # decodes "+" as the token separator inside the q param.
+                    chip_href="$dir/index.html#?q=s:failed+p:$proj"
+                  fi
+                  chip_href_escaped=$(printf '%s' "$chip_href" | sed -e 's/&/\&amp;/g' -e 's/"/\&quot;/g' -e 's/</\&lt;/g')
+                  if [ -f "$dir/index.html" ]; then
+                    echo "<a class=\"fail-chip\" href=\"$chip_href_escaped\" target=\"_blank\" rel=\"noopener\" title=\"Open in HTML report\">$failed failed</a>" >> index.html
+                  else
+                    echo "<span class=\"fail-chip\">$failed failed</span>" >> index.html
+                  fi
                 else
                   echo "" >> index.html
                 fi
