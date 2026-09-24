@@ -704,15 +704,13 @@ export const he = {
       trackLegend: 'מסלול {{index}}',
       trackRemoveAria: 'הסר מסלול',
       trackAmountLabel: 'סכום',
-      trackYearsLabel: 'תקופה',
-      trackYearsSuffix: 'שנים',
       trackRateLabel: 'ריבית',
       trackTypeLabel: 'סוג מסלול',
       // Same wording as the calculator's track field (calculator.track.methodLabel).
       trackMethodLabel: 'לוח סילוקין',
       // Comparison table: metric rows (vocabulary mirrors calculator.results).
-      metricFirstPayment: 'החזר חודשי ראשון',
-      metricRateUp: 'אם הריביות עולות ב-1%',
+      metricAvgPayment: 'החזר חודשי ממוצע',
+      metricRecommendedIncome: 'הכנסה נטו מומלצת',
       metricTotalPayment: 'סך התשלומים ל-{{years}} שנים',
       metricTotalPaymentGeneric: 'סך התשלומים',
       metricTotalInterest: 'סך הריבית',

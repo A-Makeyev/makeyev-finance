@@ -10,14 +10,20 @@ import {
   type AmortizationMethod,
   type PropertyPurpose,
 } from '@/lib/amortization'
-import { formatCurrency, formatRatePercent, formatRatio } from '@/lib/format'
+import {
+  formatCurrency,
+  formatGroupedNumber,
+  formatRatePercent,
+  formatRatio,
+  parseAmountText,
+} from '@/lib/format'
 import { PRESET_IDS } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { TermSlider } from '@/components/ui/TermSlider'
 import { useMediaQuery } from '@/hooks/useScrolled'
 import { useComparisonStore } from '@/stores/comparisonStore'
-import type { ScenarioResult } from './computeScenario'
+import { sharedInputSuggestions, type ScenarioResult } from './computeScenario'
 
 /**
  * Side-by-side mortgage scenario comparison (/compare).
@@ -62,6 +68,9 @@ export function ComparePage() {
     setPropertyValue: useComparisonStore((s) => s.setPropertyValue),
     setCapital: useComparisonStore((s) => s.setCapital),
     setIncome: useComparisonStore((s) => s.setIncome),
+    commitPropertyValueBlur: useComparisonStore((s) => s.commitPropertyValueBlur),
+    commitCapitalBlur: useComparisonStore((s) => s.commitCapitalBlur),
+    commitIncomeBlur: useComparisonStore((s) => s.commitIncomeBlur),
     setPurpose: useComparisonStore((s) => s.setPurpose),
     addSharedExpense: useComparisonStore((s) => s.addSharedExpense),
     updateSharedExpenseLabel: useComparisonStore((s) => s.updateSharedExpenseLabel),
@@ -75,14 +84,12 @@ export function ComparePage() {
     removeTrack: useComparisonStore((s) => s.removeTrack),
     updateTrackAmount: useComparisonStore((s) => s.updateTrackAmount),
     commitTrackAmountBlur: useComparisonStore((s) => s.commitTrackAmountBlur),
-    updateTrackYears: useComparisonStore((s) => s.updateTrackYears),
-    commitTrackYearsBlur: useComparisonStore((s) => s.commitTrackYearsBlur),
     updateTrackRate: useComparisonStore((s) => s.updateTrackRate),
     commitTrackRateBlur: useComparisonStore((s) => s.commitTrackRateBlur),
     changeTrackType: useComparisonStore((s) => s.changeTrackType),
     changeTrackMethod: useComparisonStore((s) => s.changeTrackMethod),
     setScenarioTermYears: useComparisonStore((s) => s.setScenarioTermYears),
-    setScenarioMortgageSum: useComparisonStore((s) => s.setScenarioMortgageSum),
+    setMortgageSum: useComparisonStore((s) => s.setMortgageSum),
     loadScenarioPreset: useComparisonStore((s) => s.loadScenarioPreset),
   }
 
@@ -99,6 +106,40 @@ export function ComparePage() {
     [results],
   )
 
+  /** Shared monthly expense total - the liability basis of the income hint. */
+  const otherMonthly = useMemo(
+    () =>
+      shared.otherExpenses.reduce((sum, expense) => sum + parseAmountText(expense.monthlyText), 0),
+    [shared.otherExpenses],
+  )
+
+  /**
+   * Hints for the blank shared buyer inputs (calculator parity: the calculator
+   * shows the same advice as placeholders). The values come from the scenarios
+   * actually being compared - the binding (largest) priced one - so the hinted
+   * property value finances every column, its required equity follows תכלית
+   * הרכישה, and the hinted income is the one whose ceiling allowance carries
+   * that column's payment. A typed field loses its hint.
+   */
+  const suggestions = useMemo(
+    () =>
+      sharedInputSuggestions(results, {
+        propertyValueText: shared.propertyValueText,
+        capitalText: shared.capitalText,
+        incomeText: shared.incomeText,
+        purpose: shared.purpose,
+        renovations: shared.renovations,
+        otherMonthly,
+        ptiThresholdPercent: shared.ptiThresholdPercent,
+      }),
+    [results, shared, otherMonthly],
+  )
+
+  /** Hint text for a blank field: grouped digits, no currency symbol (the
+      MoneyInput renders its own suffix). */
+  const hintText = (value: number | null) =>
+    value !== null ? formatGroupedNumber(value) : undefined
+
   /**
    * A blank scenario has no figures to report - it shows a dash rather than a
    * ₪0 that would read as a real (free) mortgage.
@@ -107,18 +148,10 @@ export function ComparePage() {
 
   const metrics: MetricDef[] = [
     {
-      key: 'firstPayment',
-      label: () => t('compare.metricFirstPayment'),
-      value: (result) => dashIfEmpty(result, formatCurrency(result.totals.firstPayment)),
-      best: (result) => (result.error || result.isEmpty ? null : result.totals.firstPayment),
-      isCurrency: true,
-    },
-    {
-      key: 'rateUp',
-      label: () => t('compare.metricRateUp'),
-      value: (result) =>
-        result.error || result.isEmpty ? '-' : formatCurrency(result.firstPaymentRateUp1),
-      best: (result) => (result.error || result.isEmpty ? null : result.firstPaymentRateUp1),
+      key: 'avgPayment',
+      label: () => t('compare.metricAvgPayment'),
+      value: (result) => dashIfEmpty(result, formatCurrency(result.avgMonthlyPayment)),
+      best: (result) => (result.error || result.isEmpty ? null : result.avgMonthlyPayment),
       isCurrency: true,
     },
     {
@@ -180,6 +213,19 @@ export function ComparePage() {
       label: () => t('compare.metricLoan'),
       value: (result) => dashIfEmpty(result, formatCurrency(result.loanAmount)),
       best: () => null,
+    },
+    {
+      key: 'recommendedIncome',
+      label: () => t('compare.metricRecommendedIncome'),
+      value: (result) =>
+        !result.isEmpty && result.recommendedIncome !== null
+          ? formatCurrency(result.recommendedIncome)
+          : '-',
+      best: (result) =>
+        result.error || result.isEmpty || result.recommendedIncome === null
+          ? null
+          : result.recommendedIncome,
+      isCurrency: true,
     },
     {
       key: 'upfront',
@@ -291,25 +337,33 @@ export function ComparePage() {
             </button>
           )}
         </div>{' '}
-        {/* סכום המשכנתא: the loan-defining input, calculator parity. With a
-            property value set it mirrors property - capital and locks (the
-            loan derives from the property); without one it defines the loan
-            and fills/scales the tracks as it is typed. */}
-        <label className="compare-sum-row">
-          {t('calculator.startingAmountLabel')}
-          <MoneyInput
-            value={scenario.mortgageSumText}
-            onChange={(raw, caret) => actions.setScenarioMortgageSum(scenario.id, raw, caret)}
-            suffix="₪"
-            ariaLabel={t('calculator.startingAmountLabel')}
-            testId={`compare-mortgage-sum-${scenarioIndex + 1}`}
+        {/* תקופה: the scenario's single term control. It drives every track in
+            the scenario (there is no per-track term here - the calculator's
+            four per-track fields plus a scenario slider read as two תקופה
+            inputs in one column). It sits above the mixes because it defines
+            the term every mix below is priced at. */}
+        <label className="compare-term-row">
+          {t('compare.scenarioTermLabel')}
+          <TermSlider
+            min={1}
+            max={MAX_YEARS}
+            value={scenario.termYears}
+            onValueChange={(value) => actions.setScenarioTermYears(scenario.id, value)}
+            labelLow="1"
+            labelHigh={String(MAX_YEARS)}
+            ariaLabel={t('compare.scenarioTermLabel')}
+            testId={`compare-term-${scenarioIndex + 1}`}
           />
+          <span>
+            {scenario.termYears} {t('compare.scenarioTermSuffix')}
+          </span>
         </label>
         {/* Preset mixes (תמהיל 1-4), calculator parity: clicking one replaces
-            the scenario's tracks with the preset's allocation at the current
-            loan (or the tracks' total). The active preset stays highlighted.
-            A blank scenario keeps the mix shape at zero amounts; typing a sum
-            allocates it. */}
+            the scenario's tracks with the preset's allocation at the shared
+            loan (or at the tracks' own total when no loan is derivable yet).
+            The active preset stays highlighted. Picking a mix on a blank
+            scenario therefore prices it right away - the loan was already
+            entered once, above. */}
         <div
           className="compare-preset-list"
           role="group"
@@ -332,22 +386,6 @@ export function ComparePage() {
             </button>
           ))}
         </div>
-        <label className="compare-term-row">
-          {t('compare.scenarioTermLabel')}
-          <TermSlider
-            min={1}
-            max={MAX_YEARS}
-            value={scenario.termYears}
-            onValueChange={(value) => actions.setScenarioTermYears(scenario.id, value)}
-            labelLow="1"
-            labelHigh={String(MAX_YEARS)}
-            ariaLabel={t('compare.scenarioTermLabel')}
-            testId={`compare-term-${scenarioIndex + 1}`}
-          />
-          <span>
-            {scenario.termYears} {t('compare.scenarioTermSuffix')}
-          </span>
-        </label>
         {scenario.tracks.map((track, trackIndex) => (
           <fieldset
             key={track.id}
@@ -394,28 +432,6 @@ export function ComparePage() {
                 ariaLabel={t('compare.trackAmountLabel')}
                 testId={`compare-track-amount-${scenarioIndex + 1}-${trackIndex + 1}`}
               />
-            </label>
-
-            <label className="input-group">
-              {t('compare.trackYearsLabel')}
-              <div className="input-wrap">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={MAX_YEARS}
-                  step={1}
-                  value={track.yearsText}
-                  onInput={(event) =>
-                    actions.updateTrackYears(scenario.id, track.id, event.currentTarget.value)
-                  }
-                  onBlur={() => actions.commitTrackYearsBlur(scenario.id, track.id)}
-                  required
-                  aria-label={t('compare.trackYearsLabel')}
-                  data-testid={`compare-track-years-${scenarioIndex + 1}-${trackIndex + 1}`}
-                />
-                <span>{t('compare.trackYearsSuffix')}</span>
-              </div>
             </label>
 
             <label className="input-group">
@@ -488,10 +504,12 @@ export function ComparePage() {
       </section>
 
       <main className="compare-shell" data-testid="compare-shell">
-        {/* Shared inputs: property and buyer, entered once for all scenarios.
-            The way back to the calculator the comparison was seeded from sits
-            on the heading row, at the opposite side; the arrow is mirrored by
-            the stylesheet under RTL, so "back" points the way it reads. */}
+        {/* Shared inputs: purpose, the ONE loan, property and buyer, entered
+            once and priced into every scenario (the columns vary the mix, not
+            the amount borrowed). The way back to the calculator the comparison
+            was seeded from sits on the heading row, at the opposite side; the
+            arrow is mirrored by the stylesheet under RTL, so "back" points the
+            way it reads. */}
         <section
           className="compare-shared"
           data-testid="compare-shared"
@@ -521,12 +539,33 @@ export function ComparePage() {
                 <option value="investment">{t('calculator.purposeInvestment')}</option>
               </FlipSelect>
             </label>
+            {/* סכום המשכנתא: the ONE loan every scenario is priced at, entered
+                with the rest of the buyer profile. It used to sit in each
+                scenario, which let the columns compare different amounts and
+                made the per-row "best" highlighting meaningless; the page now
+                varies the mix, not the loan. */}
+            <label className="input-group">
+              {t('calculator.startingAmountLabel')}
+              <MoneyInput
+                value={shared.mortgageSumText}
+                onChange={(raw, caret) => actions.setMortgageSum(raw, caret)}
+                suffix="₪"
+                ariaLabel={t('calculator.startingAmountLabel')}
+                testId="compare-mortgage-sum"
+              />
+            </label>
+            {/* The property value drives the two hints below it: typing it
+                fills in the equity the bank requires for it and the income
+                whose ceiling allowance carries the priced scenarios (calculator
+                parity - the same advice shows as grey placeholders there). */}
             <label className="input-group">
               {t('compare.propertyValueLabel')}
               <MoneyInput
                 value={shared.propertyValueText}
                 onChange={(raw, caret) => actions.setPropertyValue(raw, caret)}
+                onBlur={() => actions.commitPropertyValueBlur()}
                 suffix="₪"
+                placeholder={hintText(suggestions.propertyValue)}
                 ariaLabel={t('compare.propertyValueLabel')}
                 testId="compare-property-value"
               />
@@ -536,7 +575,9 @@ export function ComparePage() {
               <MoneyInput
                 value={shared.capitalText}
                 onChange={(raw, caret) => actions.setCapital(raw, caret)}
+                onBlur={() => actions.commitCapitalBlur()}
                 suffix="₪"
+                placeholder={hintText(suggestions.capital)}
                 ariaLabel={t('compare.capitalLabel')}
                 testId="compare-capital"
               />
@@ -546,7 +587,9 @@ export function ComparePage() {
               <MoneyInput
                 value={shared.incomeText}
                 onChange={(raw, caret) => actions.setIncome(raw, caret)}
+                onBlur={() => actions.commitIncomeBlur()}
                 suffix="₪"
+                placeholder={hintText(suggestions.income)}
                 ariaLabel={t('compare.incomeLabel')}
                 testId="compare-income"
               />

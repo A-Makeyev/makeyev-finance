@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useMediaQuery } from '@/hooks/useScrolled'
 import { useMarketQuotes } from '@/services/market'
 import type { MarketAssetMeta, MarketQuote } from '@/services/marketTypes'
 import {
@@ -68,6 +69,9 @@ export function MarketTracker({ hidden = false, atTop = false }: MarketTrackerPr
   const { t } = useTranslation()
   const { data, isError, isPending } = useMarketQuotes(TRACKER_ASSET_IDS)
   const stripRef = useRef<HTMLDivElement | null>(null)
+  // Below the hamburger breakpoint the strip slides on one line (see the
+  // compact marquee block in globals.css) instead of wrapping onto 2-3 lines.
+  const compact = useMediaQuery('(max-width: 1200px)')
 
   // The strip wraps on narrow screens, so its height is NOT the fixed 35px
   // the navbar offset math used to assume - at mid widths six rows flow onto
@@ -101,16 +105,15 @@ export function MarketTracker({ hidden = false, atTop = false }: MarketTrackerPr
   // no usable price drops out instead of standing in as a placeholder.
   const loading = isPending
 
-  return (
+  // Above 1200px the wrappers dissolve (display: contents) and the rows stay
+  // direct flex items of .markets, exactly as before. In the compact tier the
+  // same group is rendered twice so the marquee can loop seamlessly; the copy
+  // is hidden from assistive tech and carries no test ids.
+  const group = (clone: boolean) => (
     <div
-      ref={stripRef}
-      aria-label={t('marketTracker.ariaLabel')}
-      className={`markets${atTop ? ' markets-no-indexes' : ''}`}
-      data-testid="market-tracker"
-      data-hidden={hidden ? 'true' : 'false'}
-      data-state={loading ? 'loading' : isError ? 'error' : 'ready'}
-      aria-busy={loading}
-      aria-hidden={hidden}
+      className="markets-group"
+      data-marquee-clone={clone ? 'true' : undefined}
+      aria-hidden={clone || undefined}
     >
       {TRACKER_ASSET_IDS.map((id) => {
         const quote = quotesById.get(id)
@@ -126,15 +129,35 @@ export function MarketTracker({ hidden = false, atTop = false }: MarketTrackerPr
             // returning after its provider failed mounts the same way). Later
             // polls keep the same key and only patch the text; a price tick
             // still gets its own flash pill.
-            key={hasPrice ? id : `${id}-skeleton`}
+            key={(hasPrice ? id : `${id}-skeleton`) + (clone ? '-clone' : '')}
             assetId={id}
             name={t(`marketTracker.assets.${id}`)}
             quote={quote}
             meta={assetsMeta?.find((assetMeta) => assetMeta.id === id)}
             skeleton={!hasPrice}
+            clone={clone}
           />
         )
       })}
+    </div>
+  )
+
+  return (
+    <div
+      ref={stripRef}
+      aria-label={t('marketTracker.ariaLabel')}
+      className={`markets${atTop ? ' markets-no-indexes' : ''}`}
+      data-testid="market-tracker"
+      data-marquee={compact ? 'true' : 'false'}
+      data-hidden={hidden ? 'true' : 'false'}
+      data-state={loading ? 'loading' : isError ? 'error' : 'ready'}
+      aria-busy={loading}
+      aria-hidden={hidden}
+    >
+      <div className="markets-track">
+        {group(false)}
+        {compact && group(true)}
+      </div>
     </div>
   )
 }
@@ -160,12 +183,20 @@ const FLASH_MS = 1200
  * .markets-values wrapper (its positioning context), so it never shifts
  * the row.
  */
-function TickPill({ assetId, direction }: { assetId: string; direction: PriceTickDirection }) {
+function TickPill({
+  assetId,
+  direction,
+  clone = false,
+}: {
+  assetId: string
+  direction: PriceTickDirection
+  clone?: boolean
+}) {
   return (
     <span
       className={`markets-tick markets-tick-${direction}`}
       data-tick={direction}
-      data-testid={`market-tick-${assetId}`}
+      data-testid={clone ? undefined : `market-tick-${assetId}`}
       aria-hidden="true"
     />
   )
@@ -216,9 +247,11 @@ interface MarketRowProps {
   meta: MarketAssetMeta | undefined
   /** No usable price yet (first fetch): render shimmering bars, not values. */
   skeleton: boolean
+  /** The duplicated (aria-hidden) group that makes the marquee loop seamless. */
+  clone?: boolean
 }
 
-function MarketRow({ assetId, name, quote, meta, skeleton }: MarketRowProps) {
+function MarketRow({ assetId, name, quote, meta, skeleton, clone = false }: MarketRowProps) {
   const { t } = useTranslation()
   const trend = marketTrendOf(quote?.changePercent ?? null)
   // The server owns each instrument's display precision (registry decimals:
@@ -257,7 +290,7 @@ function MarketRow({ assetId, name, quote, meta, skeleton }: MarketRowProps) {
     <span
       className={rowClass}
       data-skeleton={skeleton ? 'true' : undefined}
-      data-testid={`market-row-${assetId}`}
+      data-testid={clone ? undefined : `market-row-${assetId}`}
       title={skeleton ? undefined : titleParts.join(' ~ ')}
     >
       <span className="markets-name">{name}</span>
@@ -279,7 +312,14 @@ function MarketRow({ assetId, name, quote, meta, skeleton }: MarketRowProps) {
           </>
         ) : (
           <>
-            {flash && <TickPill key={flash.seq} assetId={assetId} direction={flash.direction} />}
+            {flash && (
+              <TickPill
+                key={flash.seq}
+                assetId={assetId}
+                direction={flash.direction}
+                clone={clone}
+              />
+            )}
             <span className="markets-price">{priceText}</span>
             <span className={`markets-change ${TREND_CLASS[trend]}`}>
               {changeText}

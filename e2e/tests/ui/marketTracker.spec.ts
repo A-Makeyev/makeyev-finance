@@ -152,20 +152,26 @@ test.describe('Markets strip', () => {
     await expect(page.getByTestId('market-row-gold')).not.toContainText('Tracks')
   })
 
-  test('wraps into balanced lines that never leave one ticker alone', async ({ page }) => {
+  test('collapses to one sliding line below 1200px, with a hidden loop copy', async ({ page }) => {
     await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
 
-    // 360 is the narrowest target, 650 and 1000 sit inside the three-across
-    // tier, 1200 inside it too and 1300 above it (all six on one line).
+    // 360 / 420 / 650 / 1000 / 1200 are the compact marquee tier (one sliding
+    // line plus an aria-hidden duplicate group for the loop); 1300 sits above
+    // it, where all six rows still fit on one line but nothing is duplicated.
     for (const width of [360, 420, 650, 1000, 1200, 1300]) {
       await page.setViewportSize({ width, height: 900 })
       await page.goto('/')
-      await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
+      const tracker = page.getByTestId('market-tracker')
+      await expect(tracker).toHaveAttribute('data-state', 'ready')
+      await expect(tracker).toHaveAttribute('data-marquee', width <= 1200 ? 'true' : 'false')
 
-      const counts = (await page.evaluate(
+      const shape = (await page.evaluate(
         `(() => {
           const strip = document.querySelector('[data-testid="market-tracker"]')
-          const tops = [...strip.querySelectorAll('.markets-row')]
+          // Only the primary group: the clone is the same six rows again.
+          const primary = strip.querySelector('.markets-group:not([data-marquee-clone])')
+          const clone = strip.querySelector('.markets-group[data-marquee-clone]')
+          const tops = [...primary.querySelectorAll('.markets-row')]
             .map((row) => row.getBoundingClientRect().top)
             .sort((a, b) => a - b)
           // Cluster within 10px: baseline alignment leaves ~1px offsets on the
@@ -176,19 +182,128 @@ test.describe('Markets strip', () => {
             if (last && top - last.top < 10) last.count++
             else lines.push({ top, count: 1 })
           }
-          return lines.map((line) => line.count)
+          return {
+            rows: tops.length,
+            lines: lines.map((line) => line.count),
+            cloneHidden: clone ? clone.getAttribute('aria-hidden') : null,
+          }
         })()`,
-      )) as number[]
+      )) as { rows: number; lines: number[]; cloneHidden: string | null }
 
-      expect(
-        counts.reduce((sum, count) => sum + count, 0),
-        `six rows at ${width}px`,
-      ).toBe(6)
-      expect(
-        counts.every((count) => count >= 2),
-        `no lone ticker at ${width}px`,
-      ).toBe(true)
+      // Every row on the same visual line at every width. That is the point
+      // of the compact tier: at these widths the rows used to wrap onto two
+      // or three lines and the whole strip (and navbar) grew with them.
+      expect(shape.rows, `six rows at ${width}px`).toBe(6)
+      expect(shape.lines, `one line at ${width}px`).toEqual([6])
+      // Below 1200px the second group is the seamless-loop copy: present and
+      // hidden from assistive tech. Above it there is no copy.
+      expect(shape.cloneHidden, `loop copy at ${width}px`).toBe(width <= 1200 ? 'true' : null)
     }
+  })
+
+  test('compact strips slide on one line without shoving the navbar', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
+    await installExternalMocks(page)
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+
+    for (const width of [360, 768, 1200]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto('/')
+      await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
+      await expect(page.getByTestId('indexes-bar')).toBeVisible()
+      // The navbar transitions its top/margin-top (0.25s) as the strips
+      // appear, so let that settle before measuring where it sits.
+      await page.waitForTimeout(600)
+
+      const geometry = (await page.evaluate(
+        `(() => {
+          const box = (selector) => document.querySelector(selector).getBoundingClientRect()
+          const indexes = box('[data-testid="indexes-bar"]')
+          const markets = box('[data-testid="market-tracker"]')
+          const navbar = box('[data-testid="navbar"]')
+          return {
+            indexesTop: Math.round(indexes.top),
+            indexesBottom: Math.round(indexes.bottom),
+            marketsTop: Math.round(markets.top),
+            marketsBottom: Math.round(markets.bottom),
+            navbarTop: Math.round(navbar.top),
+          }
+        })()`,
+      )) as {
+        indexesTop: number
+        indexesBottom: number
+        marketsTop: number
+        marketsBottom: number
+        navbarTop: number
+      }
+
+      // One-line stack, edge to edge: Indexes at the very top, Markets
+      // directly under it, navbar below both and never overlapping.
+      expect(geometry.indexesTop, `indexes top at ${width}px`).toBe(0)
+      expect(geometry.marketsTop, `markets top at ${width}px`).toBe(geometry.indexesBottom)
+      expect(geometry.navbarTop, `navbar top at ${width}px`).toBeGreaterThanOrEqual(
+        geometry.marketsBottom,
+      )
+
+      // The track actually slides, and pointer contact holds it still.
+      const transform = () =>
+        page.evaluate(`getComputedStyle(document.querySelector('.markets-track')).transform`)
+      const before = await transform()
+      await page.waitForTimeout(300)
+      expect(await transform(), `track slides at ${width}px`).not.toBe(before)
+
+      await page.getByTestId('market-tracker').hover()
+      const paused = await page.evaluate(
+        `getComputedStyle(document.querySelector('.markets-track')).animationPlayState`,
+      )
+      expect(paused, `track pauses on hover at ${width}px`).toBe('paused')
+    }
+  })
+
+  test('compact indexes line keeps the full names and drops the yearly change', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
+    await installExternalMocks(page)
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await page.setViewportSize({ width: 900, height: 900 })
+    await page.goto('/')
+
+    const bar = page.getByTestId('indexes-bar')
+    await expect(bar).toHaveAttribute('data-marquee', 'true')
+    // Full name + the current value + the monthly change only: the yearly
+    // change is the first thing that had to go to keep one line. The names
+    // are not shortened in the slider tier.
+    await expect(bar).toContainText('CPI')
+    await expect(bar).toContainText('Monthly change')
+    await expect(bar).not.toContainText('Yearly change')
+    // The full official feed name is still available on hover.
+    await expect(bar.locator('span[title]').first()).toHaveAttribute('title', /.+/)
+
+    // The loop copy is hidden from assistive tech and kept out of the tab
+    // order, so the strip does not read or tab twice.
+    const clone = bar.locator('[data-marquee-clone="true"]')
+    await expect(clone).toHaveAttribute('aria-hidden', 'true')
+    await expect(clone.locator('a').first()).toHaveAttribute('tabindex', '-1')
+  })
+
+  test('compact strips never animate under reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await installExternalMocks(page)
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await page.setViewportSize({ width: 900, height: 900 })
+    await page.goto('/')
+    await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
+
+    // The one-line layout is kept, but it is static and scrollable by hand
+    // instead of sliding on its own.
+    const styles = (await page.evaluate(
+      `(() => {
+        const track = getComputedStyle(document.querySelector('.markets-track'))
+        const strip = getComputedStyle(document.querySelector('[data-testid="market-tracker"]'))
+        return { animation: track.animationName, overflowX: strip.overflowX }
+      })()`,
+    )) as { animation: string; overflowX: string }
+    expect(styles.animation).toBe('none')
+    expect(styles.overflowX).toBe('auto')
   })
 
   test('strip text is not user-selectable', async ({ page }) => {
@@ -313,21 +428,23 @@ test.describe('Markets strip', () => {
   test('holds the same rows and the same wrap from skeleton to numbers', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
 
-    // 360/420 (pairs, three lines), 650/1000/1200 (rows pinned to a third, two
-    // lines) and 1300/1440 (all six on one line) are the widths the strip
-    // changes shape at. A skeleton whose bars are the wrong width would reflow
-    // the wrap, and one that does not reserve the trend arrow's line box would
-    // grow when the numbers arrive - either way the whole navbar gets shoved
-    // down. So the row count, the line count and the height all have to match
-    // exactly.
+    // 360/420/650/1000/1200 are the compact marquee tier (one sliding line
+    // with a duplicated group) and 1300/1440 sit above it. A skeleton whose
+    // bars are the wrong width would reflow the strip, and one that does not
+    // reserve the trend arrow's line box would grow when the numbers arrive -
+    // either way the whole navbar gets shoved down. So the row count, the
+    // line count and the height all have to match exactly.
     const measure = () =>
       page.evaluate(
         `(() => {
           const strip = document.querySelector('[data-testid="market-tracker"]')
-          const tops = [...strip.querySelectorAll('.markets-row')]
+          // Primary group only: the compact tier repeats the rows once for
+          // the seamless marquee loop (see the test above).
+          const primary = strip.querySelector('.markets-group:not([data-marquee-clone])')
+          const tops = [...primary.querySelectorAll('.markets-row')]
             .map((row) => row.getBoundingClientRect().top)
             .sort((a, b) => a - b)
-          // Same 10px clustering as the wrap test above: baseline alignment
+          // Same 10px clustering as the marquee test above: baseline alignment
           // leaves ~1px offsets on a line, real wrapped lines are ~20px apart.
           const lines = []
           for (const top of tops) {

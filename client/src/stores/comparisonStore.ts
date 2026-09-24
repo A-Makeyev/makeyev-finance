@@ -8,7 +8,6 @@ import {
   MAX_HOME_VALUE,
   MAX_OTHER_EXPENSES,
   MAX_TRACKS,
-  MAX_YEARS,
   PRESETS,
   redistributeTrackAmounts,
   scaleTrackAmounts,
@@ -16,12 +15,7 @@ import {
   type PresetId,
   type PropertyPurpose,
 } from '@/lib/amortization'
-import {
-  constrainYearsText,
-  formatAmountWithCaret,
-  formatGroupedNumber,
-  parseAmountText,
-} from '@/lib/format'
+import { formatAmountWithCaret, formatGroupedNumber, parseAmountText } from '@/lib/format'
 import {
   computeScenario,
   type ScenarioResult,
@@ -40,19 +34,19 @@ import { createInitialTracks, type TrackState } from '@/stores/calculatorStore'
  * main calculator uses (via computeScenario.ts) - no duplicated math.
  */
 
-/** One comparison scenario: a labeled track mix evaluated against shared inputs. */
+/**
+ * One comparison scenario: a labeled track mix (and its term) evaluated against
+ * the shared borrower inputs. The loan itself is NOT per scenario - one shared
+ * סכום המשכנתא prices every column, so the comparison varies the MIX.
+ */
 export interface ComparisonScenario {
   id: string
   /** User-editable, e.g. "תמהיל שמרני". */
   label: string
   tracks: TrackState[]
   termYears: number
-  /** סכום המשכנתא display text - the loan-defining input (calculator parity). */
-  mortgageSumText: string
   /** Last chosen preset mix: highlights its button and keeps re-allocation exact. */
   activePreset: PresetId | null
-  /** Loan memory for the sum-field mirror when the property is cleared. */
-  derivedLoanMemory: number
 }
 
 /** One repeatable shared expense row: a recurring monthly amount plus an
@@ -70,6 +64,15 @@ export interface ComparisonSharedInputs {
   capitalText: string
   incomeText: string
   purpose: PropertyPurpose
+  /**
+   * סכום המשכנתא - the loan, entered once and priced into every scenario
+   * (calculator parity). With a property value set it mirrors property -
+   * capital and locks; without one it defines the loan every mix is filled
+   * and scaled from.
+   */
+  mortgageSumText: string
+  /** Loan memory for the sum-field mirror when the property is cleared. */
+  derivedLoanMemory: number
   /** Fee profile (seeded from the calculator; priced into every upfront total). */
   realtorPercent: number
   lawyerPercent: number
@@ -93,6 +96,10 @@ export interface ComparisonActions {
   setPropertyValue(raw: string, caret: number | null): { text: string; caret: number | null }
   setCapital(raw: string, caret: number | null): { text: string; caret: number | null }
   setIncome(raw: string, caret: number | null): { text: string; caret: number | null }
+  /** Blur commits - the calculator's setPropertyBlur/setCapitalBlur/setIncomeBlur. */
+  commitPropertyValueBlur(): void
+  commitCapitalBlur(): void
+  commitIncomeBlur(): void
   setPurpose(purpose: PropertyPurpose): void
   addSharedExpense(): void
   updateSharedExpenseLabel(id: string, label: string): void
@@ -119,18 +126,12 @@ export interface ComparisonActions {
     caret: number | null,
   ): { text: string; caret: number | null }
   commitTrackAmountBlur(scenarioId: string, trackId: string): void
-  updateTrackYears(scenarioId: string, trackId: string, raw: string): void
-  commitTrackYearsBlur(scenarioId: string, trackId: string): void
   updateTrackRate(scenarioId: string, trackId: string, raw: string): void
   commitTrackRateBlur(scenarioId: string, trackId: string): void
   changeTrackType(scenarioId: string, trackId: string, type: TrackState['type']): void
   changeTrackMethod(scenarioId: string, trackId: string, method: TrackState['method']): void
   setScenarioTermYears(scenarioId: string, years: number): void
-  setScenarioMortgageSum(
-    scenarioId: string,
-    raw: string,
-    caret: number | null,
-  ): { text: string; caret: number | null }
+  setMortgageSum(raw: string, caret: number | null): { text: string; caret: number | null }
   loadScenarioPreset(scenarioId: string, presetId: PresetId): void
   reset(): void
 }
@@ -194,20 +195,14 @@ function createInitialScenarios(): ComparisonScenario[] {
       label: '',
       tracks: createInitialTracks(null),
       termYears: DEFAULT_TERM_YEARS,
-      // The sum field starts exactly like the calculator's: ₪1,000,000, the
-      // opening mix's total (the calculator's startingAmountText prefill).
-      mortgageSumText: '1,000,000',
       activePreset: 'basket4',
-      derivedLoanMemory: 0,
     },
     {
       id: makeScenarioId(),
       label: '',
       tracks: [blankTrack(DEFAULT_TERM_YEARS)],
       termYears: DEFAULT_TERM_YEARS,
-      mortgageSumText: '',
       activePreset: null,
-      derivedLoanMemory: 0,
     },
   ]
 }
@@ -218,6 +213,10 @@ function defaultSharedInputs(): ComparisonSharedInputs {
     capitalText: '',
     incomeText: '',
     purpose: 'first',
+    // The sum starts exactly like the calculator's: ₪1,000,000, the opening
+    // mix's total (the calculator's startingAmountText prefill).
+    mortgageSumText: '1,000,000',
+    derivedLoanMemory: 0,
     realtorPercent: 2,
     lawyerPercent: 0.5,
     appraiserFee: 0,
@@ -299,29 +298,26 @@ function capitalForLoan(s: ComparisonState): number {
 }
 
 /**
- * The scenario's loan, exactly like the calculator's getLoanAmount: with a
- * property value the loan is property - capital (and the sum input follows
- * and locks); without one the typed mortgage sum defines the loan.
+ * The loan every scenario is priced from, exactly like the calculator's
+ * getLoanAmount: with a property value it is property - capital (and the sum
+ * input follows and locks); without one the typed shared sum defines it.
+ * Sharing it is the point of the page - the scenarios vary the MIX, not the
+ * amount borrowed - and it is why the sum never mirrors back from one
+ * scenario's tracks (whichever one would win is arbitrary).
  */
-function scenarioLoanAmount(s: ComparisonState, scenario: ComparisonScenario): number {
+function loanAmount(s: ComparisonState): number {
   return deriveLoanAmount(
     parseAmountText(s.shared.propertyValueText),
-    parseAmountText(scenario.mortgageSumText),
+    parseAmountText(s.shared.mortgageSumText),
     capitalForLoan(s),
   )
-}
-
-/** סכום המשכנתא always mirrors the tracks' sum (calculator parity). */
-function syncMortgageSumFromTracks(_s: ComparisonState, scenario: ComparisonScenario): void {
-  const total = scenario.tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
-  scenario.mortgageSumText = total > 0 ? formatGroupedNumber(Math.round(total)) : ''
 }
 
 /** Pure scaleTrackAmounts applied to one scenario's tracks. */
 function scaleScenarioTracks(s: ComparisonState, scenario: ComparisonScenario): void {
   const currentAmounts = scenario.tracks.map((track) => parseAmountText(track.amountText))
   const previousMemory = scenario.tracks.map((track) => track.loanShareMemory)
-  const result = scaleTrackAmounts(currentAmounts, previousMemory, scenarioLoanAmount(s, scenario))
+  const result = scaleTrackAmounts(currentAmounts, previousMemory, loanAmount(s))
   if (!result) return
   scenario.tracks.forEach((track, index) => {
     track.amountText = displayAmountText(result.amounts[index])
@@ -335,8 +331,7 @@ function snapScenarioTracksToLoan(s: ComparisonState, scenario: ComparisonScenar
   if (total) {
     scaleScenarioTracks(s, scenario)
   } else {
-    const loanAmount = scenarioLoanAmount(s, scenario)
-    const amounts = distributeEqually(loanAmount, scenario.tracks.length)
+    const amounts = distributeEqually(loanAmount(s), scenario.tracks.length)
     if (!amounts.length) return
     scenario.tracks.forEach((track, index) => {
       track.amountText = displayAmountText(amounts[index])
@@ -366,7 +361,7 @@ function amountsMirrorPreset(scenario: ComparisonScenario): boolean {
  * a hand-built mix scales proportionally, an all-zero mix splits equally.
  */
 function fillScenarioTracksFromLoanInput(s: ComparisonState, scenario: ComparisonScenario): void {
-  const loanAmount = scenarioLoanAmount(s, scenario)
+  const loan = loanAmount(s)
   const amounts = scenario.tracks.map((track) => parseAmountText(track.amountText))
   const preset = scenario.activePreset ? PRESETS[scenario.activePreset] : null
   const lineupMatches =
@@ -374,11 +369,11 @@ function fillScenarioTracksFromLoanInput(s: ComparisonState, scenario: Compariso
     preset.length === scenario.tracks.length &&
     preset.every((definition, index) => definition.type === scenario.tracks[index].type)
   if (
-    loanAmount > 0 &&
+    loan > 0 &&
     lineupMatches &&
     (amounts.some((amount) => amount === 0) || amountsMirrorPreset(scenario))
   ) {
-    const allocated = allocatePreset(scenario.activePreset!, loanAmount, null)
+    const allocated = allocatePreset(scenario.activePreset!, loan, null)
     scenario.tracks.forEach((track, index) => {
       track.amountText = displayAmountText(allocated[index].amount)
     })
@@ -388,21 +383,30 @@ function fillScenarioTracksFromLoanInput(s: ComparisonState, scenario: Compariso
 }
 
 /**
- * The sum field follows property - capital while a property is set, and
+ * The shared sum field follows property - capital while a property is set, and
  * restores the (loan + capital) figure when the property is cleared - the
- * calculator's syncStartingFromProperty, per scenario.
+ * calculator's syncStartingFromProperty, hoisted to the one shared loan.
  */
-function syncMortgageSumFromProperty(s: ComparisonState, scenario: ComparisonScenario): void {
+function syncMortgageSumFromProperty(s: ComparisonState): void {
   const property = parseAmountText(s.shared.propertyValueText)
   if (property > 0) {
-    const loan = scenarioLoanAmount(s, scenario)
-    scenario.derivedLoanMemory = loan
-    scenario.mortgageSumText = loan > 0 ? formatGroupedNumber(loan) : ''
-  } else if (scenario.derivedLoanMemory > 0) {
-    const gross = Math.round(scenario.derivedLoanMemory + capitalForLoan(s))
-    scenario.mortgageSumText = gross > 0 ? formatGroupedNumber(gross) : ''
-    scenario.derivedLoanMemory = 0
+    const loan = loanAmount(s)
+    s.shared.derivedLoanMemory = loan
+    s.shared.mortgageSumText = loan > 0 ? formatGroupedNumber(loan) : ''
+  } else if (s.shared.derivedLoanMemory > 0) {
+    const gross = Math.round(s.shared.derivedLoanMemory + capitalForLoan(s))
+    s.shared.mortgageSumText = gross > 0 ? formatGroupedNumber(gross) : ''
+    s.shared.derivedLoanMemory = 0
   }
+}
+
+/**
+ * A shared loan-input edit (sum / property / capital): re-derive the sum's
+ * mirror and re-fill every scenario's mix at the new loan.
+ */
+function applySharedLoanInput(s: ComparisonState): void {
+  syncMortgageSumFromProperty(s)
+  s.scenarios.forEach((scenario) => fillScenarioTracksFromLoanInput(s, scenario))
 }
 
 export const useComparisonStore = create<ComparisonStore>()(
@@ -429,12 +433,10 @@ export const useComparisonStore = create<ComparisonStore>()(
         formatted.caret === null ? null : Math.min(formatted.caret, cappedText.length)
       set((s) => {
         s.shared.propertyValueText = cappedText
-        // Calculator parity: the property re-derives every scenario's loan -
-        // the sum field follows (property - capital) and the tracks fill/scale.
-        s.scenarios.forEach((scenario) => {
-          syncMortgageSumFromProperty(s, scenario)
-          fillScenarioTracksFromLoanInput(s, scenario)
-        })
+        // Calculator parity: the property re-derives the loan - the shared sum
+        // field follows (property - capital) and every scenario's mix fills or
+        // scales with it.
+        applySharedLoanInput(s)
         recompute(s)
       })
       return { text: cappedText, caret: cappedCaret }
@@ -444,11 +446,8 @@ export const useComparisonStore = create<ComparisonStore>()(
       const formatted = formatAmountWithCaret(raw, caret)
       set((s) => {
         s.shared.capitalText = formatted.text
-        // Calculator parity: the capital re-derives every scenario's loan.
-        s.scenarios.forEach((scenario) => {
-          syncMortgageSumFromProperty(s, scenario)
-          fillScenarioTracksFromLoanInput(s, scenario)
-        })
+        // Calculator parity: the capital re-derives the shared loan.
+        applySharedLoanInput(s)
         recompute(s)
       })
       return formatted
@@ -461,6 +460,27 @@ export const useComparisonStore = create<ComparisonStore>()(
         recompute(s)
       })
       return formatted
+    },
+
+    // Blur commits format the typed text one last time (calculator parity:
+    // setPropertyBlur/setCapitalBlur/setIncomeBlur). No recompute - the
+    // parse value is unchanged, only the grouping is finalized.
+    commitPropertyValueBlur: () => {
+      set((s) => {
+        s.shared.propertyValueText = formatAmountWithCaret(s.shared.propertyValueText, null).text
+      })
+    },
+
+    commitCapitalBlur: () => {
+      set((s) => {
+        s.shared.capitalText = formatAmountWithCaret(s.shared.capitalText, null).text
+      })
+    },
+
+    commitIncomeBlur: () => {
+      set((s) => {
+        s.shared.incomeText = formatAmountWithCaret(s.shared.incomeText, null).text
+      })
     },
 
     setPurpose: (purpose) => {
@@ -522,9 +542,7 @@ export const useComparisonStore = create<ComparisonStore>()(
           // duplicates an existing scenario instead).
           tracks: [blankTrack(DEFAULT_TERM_YEARS)],
           termYears: DEFAULT_TERM_YEARS,
-          mortgageSumText: '',
           activePreset: null,
-          derivedLoanMemory: 0,
         })
         recompute(s)
       })
@@ -542,9 +560,7 @@ export const useComparisonStore = create<ComparisonStore>()(
           label: source.label,
           tracks: source.tracks.map((track) => ({ ...track, id: makeTrackId() })),
           termYears: source.termYears,
-          mortgageSumText: source.mortgageSumText,
           activePreset: source.activePreset,
-          derivedLoanMemory: source.derivedLoanMemory,
         })
         recompute(s)
       })
@@ -574,7 +590,6 @@ export const useComparisonStore = create<ComparisonStore>()(
             scenario.tracks.forEach((existing, index) => {
               existing.amountText = displayAmountText(amounts[index])
             })
-            syncMortgageSumFromTracks(s, scenario)
           }
         }
         recompute(s)
@@ -598,28 +613,26 @@ export const useComparisonStore = create<ComparisonStore>()(
         const index = scenario.tracks.findIndex((track) => track.id === trackId)
         if (index < 0) return
         const track = scenario.tracks[index]
-        // Calculator parity: only when a property value pins the loan can the
-        // other tracks be re-balanced live against it. Without a property the
-        // loan is derived FROM the tracks and balancing would fight the input.
-        if (parseAmountText(s.shared.propertyValueText) > 0) {
-          const updated = redistributeTrackAmounts(
-            parseAmountText(formatted.text),
-            scenario.tracks
-              .filter((_, i) => i !== index)
-              .map((other) => parseAmountText(other.amountText)),
-            scenarioLoanAmount(s, scenario),
-          )
-          if (updated) {
-            let otherIndex = 0
-            scenario.tracks.forEach((other, i) => {
-              if (i === index) return
-              other.amountText = displayAmountText(updated[otherIndex++])
-            })
-          }
+        // The shared loan pins the mix (one loan for all - the scenarios vary
+        // only the mix): editing one track rebalances its siblings in the SAME
+        // scenario so that scenario still totals the loan. A single-track
+        // scenario has nothing to rebalance against and keeps the typed amount.
+        const updated = redistributeTrackAmounts(
+          parseAmountText(formatted.text),
+          scenario.tracks
+            .filter((_, i) => i !== index)
+            .map((other) => parseAmountText(other.amountText)),
+          loanAmount(s),
+        )
+        if (updated) {
+          let otherIndex = 0
+          scenario.tracks.forEach((other, i) => {
+            if (i === index) return
+            other.amountText = displayAmountText(updated[otherIndex++])
+          })
         }
         track.amountText = formatted.text
         track.loanShareMemory = null
-        syncMortgageSumFromTracks(s, scenario)
         recompute(s)
       })
       return formatted
@@ -631,32 +644,15 @@ export const useComparisonStore = create<ComparisonStore>()(
         if (!scenario) return
         const track = findTrack(s, scenarioId, trackId)
         if (!track) return
+        const hadAmounts = scenario.tracks.some((entry) => parseAmountText(entry.amountText) > 0)
         track.amountText = formatAmountWithCaret(track.amountText, null).text
-        // Calculator parity: the blur snap reconciles the tracks to the loan
-        // (only meaningful while a property value pins it).
-        if (parseAmountText(s.shared.propertyValueText) > 0) {
+        // Calculator parity: the blur snap reconciles the mix to the shared
+        // loan. A scenario nobody has entered anything into is left blank -
+        // merely focusing and leaving an empty amount field must not conjure a
+        // mix out of the loan.
+        if (hadAmounts && loanAmount(s) > 0) {
           snapScenarioTracksToLoan(s, scenario)
         }
-        recompute(s)
-      })
-    },
-
-    updateTrackYears: (scenarioId, trackId, raw) => {
-      set((s) => {
-        const track = findTrack(s, scenarioId, trackId)
-        if (!track) return
-        // Same clamp contract as the main calculator (live digits-only + max).
-        track.yearsText = constrainYearsText(raw, MAX_YEARS)
-        recompute(s)
-      })
-    },
-
-    commitTrackYearsBlur: (scenarioId, trackId) => {
-      set((s) => {
-        const track = findTrack(s, scenarioId, trackId)
-        if (!track) return
-        track.yearsText = constrainYearsText(track.yearsText, MAX_YEARS)
-        if (!track.yearsText) track.yearsText = '1'
         recompute(s)
       })
     },
@@ -724,15 +720,14 @@ export const useComparisonStore = create<ComparisonStore>()(
       })
     },
 
-    setScenarioMortgageSum: (scenarioId, raw, caret) => {
+    setMortgageSum: (raw, caret) => {
       const formatted = formatAmountWithCaret(raw, caret)
       set((s) => {
-        const scenario = s.scenarios.find((entry) => entry.id === scenarioId)
-        if (!scenario) return
-        scenario.mortgageSumText = formatted.text
-        // Calculator parity: a typed loan fills/scales the tracks (preset
-        // lineups re-allocate exactly, hand-built mixes scale, zeros split).
-        fillScenarioTracksFromLoanInput(s, scenario)
+        s.shared.mortgageSumText = formatted.text
+        // One loan for all: a typed sum fills/scales EVERY scenario's mix
+        // (preset lineups re-allocate exactly, hand-built mixes scale, zeros
+        // split) so the columns stay directly comparable.
+        s.scenarios.forEach((scenario) => fillScenarioTracksFromLoanInput(s, scenario))
         recompute(s)
       })
       return formatted
@@ -742,15 +737,15 @@ export const useComparisonStore = create<ComparisonStore>()(
       set((s) => {
         const scenario = s.scenarios.find((entry) => entry.id === scenarioId)
         if (!scenario || !PRESETS[presetId]) return
-        // Calculator parity (loadPreset): allocate at the loan, or at the
-        // tracks' current total when no loan is derivable. A fully blank
-        // scenario gets the mix SHAPE (types + default rates, zero amounts)
-        // and the sum input allocates it once a loan is typed.
+        // Calculator parity (loadPreset): allocate at the shared loan, or at
+        // the tracks' current total when no loan is derivable. With the shared
+        // sum set, picking a mix on a blank scenario prices it right away -
+        // the loan is the one typed once for the whole page.
         const existingTotal = scenario.tracks.reduce(
           (sum, track) => sum + parseAmountText(track.amountText),
           0,
         )
-        const startingAmount = scenarioLoanAmount(s, scenario) || existingTotal
+        const startingAmount = loanAmount(s) || existingTotal
         const allocated = allocatePreset(presetId, startingAmount, null)
         scenario.tracks = allocated.map((entry) => ({
           id: makeTrackId(),
@@ -826,6 +821,11 @@ export function seedFromCalculator(calculator: {
         oneTimeText: expense.oneTimeAmountText,
       })),
       ptiThresholdPercent: calculator.ptiThresholdPercent,
+      // The calculator's sum travels as the ONE shared loan (parity): the mix
+      // the user arrived with is scenario 1, and scenario 2 is an alternative
+      // mix of the same loan, not an alternative loan.
+      mortgageSumText: calculator.mortgageSumText,
+      derivedLoanMemory: 0,
     }
     state.scenarios = [
       {
@@ -833,9 +833,7 @@ export function seedFromCalculator(calculator: {
         label: '',
         tracks: calculator.tracks.map((track) => ({ ...track, id: makeTrackId() })),
         termYears: calculator.termYears,
-        mortgageSumText: calculator.mortgageSumText,
         activePreset: calculator.activePreset,
-        derivedLoanMemory: 0,
       },
       {
         id: makeScenarioId(),
@@ -844,9 +842,7 @@ export function seedFromCalculator(calculator: {
         // arrived with, so the alternative column is theirs to build.
         tracks: [blankTrack(calculator.termYears)],
         termYears: calculator.termYears,
-        mortgageSumText: '',
         activePreset: null,
-        derivedLoanMemory: 0,
       },
     ]
     recompute(state)

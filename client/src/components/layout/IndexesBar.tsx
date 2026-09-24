@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { fetchCbsIndex, type CbsFeedKind } from '@/services/cbs'
 import { formatIndexPercent, type CbsIndexPayload, type TrendDirection } from '@/lib/xml'
 import { useCalculatorStore } from '@/stores/calculatorStore'
+import { useMediaQuery } from '@/hooks/useScrolled'
 
 /**
  * Live CBS index feeds (CPI + construction-input indexes).
@@ -70,7 +71,18 @@ export function useCbsFeeds(): CbsFeedsResult {
   }, [cpi, residential, commercial])
 }
 
-function FeedAnchor({ payload }: { payload: CbsIndexPayload }) {
+interface FeedAnchorProps {
+  payload: CbsIndexPayload
+  /**
+   * True below 1200px, where the strip slides on one line: the yearly change
+   * is dropped so a single line reads. The full name is kept.
+   */
+  compact: boolean
+  /** The duplicated (aria-hidden) group that makes the loop seamless. */
+  clone?: boolean
+}
+
+function FeedAnchor({ payload, compact, clone = false }: FeedAnchorProps) {
   const { t, i18n } = useTranslation()
   const month = payload.currentMonth
   if (!month) return null
@@ -101,9 +113,13 @@ function FeedAnchor({ payload }: { payload: CbsIndexPayload }) {
       dir={dir}
       style={{ order: Number(payload.displayOrder) }}
       className="remove-highlight"
+      // The clone repeats an already-focusable link; keep it out of the tab
+      // order (its group is aria-hidden, so screen readers skip it entirely).
+      tabIndex={clone ? -1 : undefined}
     >
       {/* Short localized name ("CPI" etc. in English); the raw Hebrew feed
-          name stays in the search deep link and the tooltip. */}
+          name stays in the search deep link and the tooltip. The compact
+          tier keeps this name too - only the yearly change is dropped. */}
       <span title={payload.indexName}>
         {t(`indexesBar.shortNames.${kindToShortNameKey(payload.searchQuery)}`)}
       </span>{' '}
@@ -111,15 +127,20 @@ function FeedAnchor({ payload }: { payload: CbsIndexPayload }) {
       {/* Non-breaking space: a plain collapsible space next to the empty
           .line-break span collapses to zero width (measured in the probe),
           gluing the number to the next label. */}
-      <span className="line-break" />
+      {!compact && <span className="line-break" />}
       <span className="index-join">{t('indexesBar.monthlyChange')} </span>
       <span dir={dir} style={{ color: TREND_COLORS[payload.monthDirection] }}>
         {change(month.percent, payload.monthDirection)}
       </span>
-      <span className="index-join">{t('indexesBar.yearlyChange')} </span>
-      <span dir={dir} style={{ color: TREND_COLORS[payload.yearDirection] }}>
-        {change(month.percentYear, payload.yearDirection)}
-      </span>
+      {/* The yearly change is the first thing to go on the compact line. */}
+      {!compact && (
+        <>
+          <span className="index-join">{t('indexesBar.yearlyChange')} </span>
+          <span dir={dir} style={{ color: TREND_COLORS[payload.yearDirection] }}>
+            {change(month.percentYear, payload.yearDirection)}
+          </span>
+        </>
+      )}
     </a>
   )
 }
@@ -133,22 +154,43 @@ interface IndexesBarProps {
 /** Fixed top strip; hidden until at least one CBS feed resolves (legacy parity). */
 export function IndexesBar({ feeds, hidden = false }: IndexesBarProps) {
   const { t } = useTranslation()
+  // Below the hamburger breakpoint the strip slides on one line (see the
+  // compact marquee block in globals.css) instead of wrapping onto 2-3 lines.
+  const compact = useMediaQuery('(max-width: 1200px)')
 
   // The bar stays rendered/static (legacy parity); when the menu opens the
   // white nav panel slides over and covers it, so it's simply kept in place.
   if (!feeds.anySuccess) return null
+
+  // Above 1200px the wrappers dissolve (display: contents) and the anchors
+  // are direct flex items of .indexes, exactly as before. In the compact tier
+  // the same group is rendered twice so the marquee can loop seamlessly; the
+  // copy is hidden from assistive tech and its links are not tabbable.
+  const group = (clone: boolean) => (
+    <div
+      className="indexes-group"
+      data-marquee-clone={clone ? 'true' : undefined}
+      aria-hidden={clone || undefined}
+    >
+      {feeds.payloads.map(({ kind, payload }) => (
+        <FeedAnchor key={kind} payload={payload} compact={compact} clone={clone} />
+      ))}
+    </div>
+  )
 
   return (
     <div
       aria-label={t('indexesBar.ariaLabel')}
       className="indexes visible"
       data-testid="indexes-bar"
+      data-marquee={compact ? 'true' : 'false'}
       data-hidden={hidden ? 'true' : 'false'}
       aria-hidden={hidden}
     >
-      {feeds.payloads.map(({ kind, payload }) => (
-        <FeedAnchor key={kind} payload={payload} />
-      ))}
+      <div className="indexes-track">
+        {group(false)}
+        {compact && group(true)}
+      </div>
     </div>
   )
 }

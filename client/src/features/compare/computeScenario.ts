@@ -26,6 +26,8 @@ import {
   estimateTransactionCosts,
   MAX_YEARS,
   suggestedCapital,
+  suggestedIncomeForAllowance,
+  suggestedPropertyValue,
   sumTotals,
   totalUpfrontCash,
   variableShareExceeded,
@@ -72,8 +74,15 @@ export interface ScenarioResult {
   transactionCosts: TransactionCostsEstimate | null
   /** Total loan principal across the entered tracks (0 when empty). */
   loanAmount: number
-  /** First payment if every variable rate rose by 1 point. */
-  firstPaymentRateUp1: number
+  /** Average monthly payment: total paid / full term in months (0 when empty). */
+  avgMonthlyPayment: number
+  /**
+   * הכנסה נטו מומלצת - the minimum net monthly income at which the scenario's
+   * average payment plus the shared monthly expenses sits at the adjustable
+   * PTI ceiling, rounded up to ₪500 (the same helper the PTI status uses).
+   * Null while there is nothing to advise on (empty scenario).
+   */
+  recommendedIncome: number | null
 }
 
 export interface SharedBuyerInputs {
@@ -167,7 +176,8 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
       inputs.oneTimeExpenses,
     ),
     loanAmount: 0,
-    firstPaymentRateUp1: 0,
+    avgMonthlyPayment: 0,
+    recommendedIncome: null,
   }
   if (enteredIndexes.length === 0) return emptyResult
 
@@ -216,6 +226,16 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     inputs.purpose,
   )
   const maxYears = Math.max(...validResults.map((result) => result.years))
+  // Average payment over the full term in months (the "typical" month between
+  // first and highest), then the recommended net income that carries it at
+  // the adjustable PTI ceiling - the same figures the main calculator's
+  // results cards show for the same mix.
+  const avgMonthlyPayment = maxYears > 0 ? totals.totalPaid / (maxYears * 12) : 0
+  const recommendedIncome = suggestedIncomeForAllowance(
+    avgMonthlyPayment,
+    inputs.otherMonthly,
+    inputs.ptiThresholdPercent,
+  )
 
   return {
     isEmpty: false,
@@ -242,26 +262,69 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
       inputs.oneTimeExpenses,
     ),
     loanAmount: totalPrincipal,
-    // Rate-bump stress test (same helper the main calculator uses).
-    firstPaymentRateUp1: (() => {
-      let sum = 0
-      for (const result of validResults) {
-        if (!result.isVariable) {
-          sum += result.firstPayment
-          continue
-        }
-        const stressed = computeTrackResult({
-          principal: result.principal,
-          years: result.years,
-          annualRatePercent: result.annualRatePercent + 1,
-          type: result.type,
-          method: result.method,
-          annualInflation: FALLBACK_INFLATION,
-        })
-        sum += stressed?.firstPayment ?? 0
-      }
-      return sum
-    })(),
+    avgMonthlyPayment,
+    recommendedIncome,
+  }
+}
+
+/** The shared buyer block the hints are derived from (the page's shared grid). */
+export interface SharedSuggestionInputs {
+  propertyValueText: string
+  capitalText: string
+  incomeText: string
+  purpose: PropertyPurpose
+  renovations: number
+  otherMonthly: number
+  ptiThresholdPercent: number
+}
+
+export interface SharedSuggestions {
+  propertyValue: number | null
+  capital: number | null
+  income: number | null
+}
+
+/**
+ * Placeholder hints for the shared buyer inputs - the compare mirror of the
+ * calculator's input hints, from the same pure amortization helpers:
+ * - שווי הנכס (while blank): the smallest value satisfying the purpose's
+ *   financing limit AND the ₪100k minimum equity, priced from the BINDING
+ *   (largest) priced scenario's loan - the suggested value must fit every
+ *   column being compared, not just one.
+ * - הון עצמי (while blank): the bank's required equity for that value basis
+ *   (the suggestedCapital the results cards quote).
+ * - הכנסה נטו (while blank): the income whose PTI-ceiling allowance covers
+ *   the binding scenario's first payment plus the shared monthly expenses.
+ * A typed field loses its hint (the user's figure wins over the advice), and
+ * error-gated scenarios contribute nothing - there is nothing to advise on.
+ */
+export function sharedInputSuggestions(
+  results: ScenarioResult[],
+  inputs: SharedSuggestionInputs,
+): SharedSuggestions {
+  const priced = results.filter((result) => !result.isEmpty && result.error === null)
+  const maxLoan = priced.reduce((max, result) => Math.max(max, result.loanAmount), 0)
+  const maxFirstPayment = priced.reduce(
+    (max, result) => Math.max(max, result.totals.firstPayment),
+    0,
+  )
+  const property = parseAmountText(inputs.propertyValueText)
+  const capital = parseAmountText(inputs.capitalText)
+  const capitalForLoan = Math.max(0, capital - inputs.renovations)
+  const income = parseAmountText(inputs.incomeText)
+
+  return {
+    propertyValue: property > 0 ? null : suggestedPropertyValue(maxLoan, inputs.purpose),
+    capital:
+      capital > 0 ? null : suggestedCapital(property, maxLoan, capitalForLoan, inputs.purpose),
+    income:
+      income > 0
+        ? null
+        : suggestedIncomeForAllowance(
+            maxFirstPayment,
+            inputs.otherMonthly,
+            inputs.ptiThresholdPercent,
+          ),
   }
 }
 

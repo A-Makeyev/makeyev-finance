@@ -17,16 +17,22 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(calc.page.getByTestId('compare-shell')).toBeVisible()
   }
 
-  test('seeds from the calculator: same mix, same monthly payment', async ({ calc, page }) => {
-    // The calculator's ₪1,000,000 recommended mix at 15y shows ₪7,772 -
-    // read the figure BEFORE navigating away, then find it again in the
-    // comparison's first data column.
+  test('seeds from the calculator: same mix priced by the comparison rows', async ({
+    calc,
+    page,
+  }) => {
+    // The calculator's ₪1,000,000 recommended mix at 15y shows ₪7,772 first
+    // payment; the comparison prices the same mix into its own rows: the
+    // average payment (golden: total 1,451,762.66 / 180 = 8,065.35) and the
+    // recommended net income at the 33% ceiling (ceil(8065.35/0.33/500)·500).
     await calc.goto()
     await expect(calc.monthlyPayment).toHaveText(ils(7_772))
     await calc.page.getByTestId('open-comparison').click()
     await expect(calc.page.getByTestId('compare-shell')).toBeVisible()
-    const firstPaymentCell = page.getByTestId('compare-row-firstPayment').locator('td').first()
-    await expect(firstPaymentCell).toContainText(ils(7_772))
+    const avgCell = page.getByTestId('compare-row-avgPayment').locator('td').first()
+    await expect(avgCell).toContainText(ils(8_065))
+    const incomeCell = page.getByTestId('compare-row-recommendedIncome').locator('td').first()
+    await expect(incomeCell).toContainText(ils(24_500))
   })
 
   test('default (direct) visit opens scenario 1 with the calculator default mix', async ({
@@ -43,14 +49,20 @@ test.describe('mortgage comparison - /compare', () => {
     // Scenario 2 stays blank: the alternative mix is the user's to define.
     await expect(page.getByTestId('compare-track-amount-2-1')).toHaveValue('')
     await expect(page.getByTestId('compare-track-rate-2-1')).toHaveValue('4.5')
-    const row = page.getByTestId('compare-row-firstPayment')
+    const row = page.getByTestId('compare-row-avgPayment')
     await expect(row.locator('td')).toHaveCount(2)
     // One priced column has nothing to beat yet: no best highlighting.
     await expect(row.locator('td.best')).toHaveCount(0)
-    // Scenario 1's mix prices at ₪7,718 (hand-checked golden: 15y annuity);
-    // the blank column reads as "no figures yet", not as a ₪0 mortgage.
-    await expect(row.locator('td').first()).toHaveText(ils(7_718))
+    // Scenario 1's mix averages ₪8,011.56/month (hand-checked golden:
+    // total 1,442,081 / 180 months); the blank column reads as "no figures
+    // yet", not as a ₪0 mortgage.
+    await expect(row.locator('td').first()).toHaveText(ils(8_012))
     await expect(row.locator('td').nth(1)).toHaveText('-')
+    // The recommended net income row: 33% ceiling on the average payment
+    // (ceil(8011.56/0.33/500)·500 = 24,500); dash for the blank scenario.
+    const incomeRow = page.getByTestId('compare-row-recommendedIncome')
+    await expect(incomeRow.locator('td').first()).toHaveText(ils(24_500))
+    await expect(incomeRow.locator('td').nth(1)).toHaveText('-')
     await expect(page.getByTestId('compare-row-status')).toContainText('הזינו מסלולים')
     // A term now exists, so the payments row names it instead of the generic.
     await expect(page.getByTestId('compare-row-totalPayment').locator('th')).toHaveText(
@@ -65,17 +77,45 @@ test.describe('mortgage comparison - /compare', () => {
     // lands in the middle: [mix, copy, blank]).
     await page.getByTestId('compare-duplicate-1').click()
     await expect(page.getByTestId('compare-scenario-editor-3')).toBeVisible()
-    // Scenario 1: shorten its first track's term to 10 years - cheaper total
-    // interest, higher first payment.
-    await page.getByTestId('compare-track-years-1-1').fill('10')
-    await page.getByTestId('compare-track-years-1-1').blur()
+    // Scenario 1: stretch the scenario term to 20 years - the same loan over
+    // 240 months instead of 180, so a lower average payment (6,784.52 vs
+    // 8,065.35, seeded at the mocked prime 6.0) and a higher total interest
+    // (563,258 vs 405,916). The scenario term slider drives every track.
+    await page.getByTestId('compare-term-1').fill('20')
 
-    // The shorter term must win the total-interest row (scenario 1 = first
-    // td) while losing the first-payment row (scenario 2 = second td wins).
+    // The longer term must win the average-payment row (scenario 1 = first td)
+    // while losing the total-interest row (scenario 2 = second td wins).
     const interestRow = page.getByTestId('compare-row-totalInterest')
-    await expect(interestRow.locator('td').first()).toHaveClass(/best/)
-    const paymentRow = page.getByTestId('compare-row-firstPayment')
-    await expect(paymentRow.locator('td').nth(1)).toHaveClass(/best/)
+    await expect(interestRow.locator('td').nth(1)).toHaveClass(/best/)
+    const avgRow = page.getByTestId('compare-row-avgPayment')
+    await expect(avgRow.locator('td').first()).toHaveClass(/best/)
+  })
+
+  test('blank shared inputs hint the values the priced scenarios need', async ({ page }) => {
+    await page.goto('/compare')
+    // Scenario 1 carries the calculator's ₪1,000,000 recommended mix and
+    // scenario 2 is blank, so the hints come from that one priced column:
+    // the value financing ₪1M at the 75% first-home limit, its required 25%
+    // equity, and the income whose 33% ceiling allowance carries the mix's
+    // 7,718.13 first payment.
+    await expect(page.getByTestId('compare-property-value')).toHaveAttribute(
+      'placeholder',
+      '1,333,500',
+    )
+    await expect(page.getByTestId('compare-capital')).toHaveAttribute('placeholder', '250,000')
+    await expect(page.getByTestId('compare-income')).toHaveAttribute('placeholder', '23,500')
+
+    // Typing the property value drops its own hint (advice only shows while
+    // the field is blank) and re-derives the equity hint from the typed value
+    // (25% of ₪1.2M), following תכלית הרכישה.
+    await page.getByTestId('compare-property-value').fill('1,200,000')
+    expect(await page.getByTestId('compare-property-value').getAttribute('placeholder')).toBeNull()
+    await expect(page.getByTestId('compare-capital')).toHaveAttribute('placeholder', '300,000')
+
+    // תכלית הרכישה re-prices the same hint: an investment property needs 50%
+    // of the ₪1.2M value in equity.
+    await page.getByTestId('compare-purpose').selectOption('investment')
+    await expect(page.getByTestId('compare-capital')).toHaveAttribute('placeholder', '600,000')
   })
 
   test('duplicate scenario, edit the copy, then remove it', async ({ calc, page }) => {
@@ -99,27 +139,29 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(page.getByTestId('compare-scenario-remove-2')).toHaveCount(0)
   })
 
-  test('mortgage sum input fills the tracks and presets re-allocate (calculator parity)', async ({
-    page,
-  }) => {
+  test('the one shared sum prices every mix (calculator parity)', async ({ page }) => {
     await page.goto('/compare')
-    // Scenario 1 opens with the calculator's ₪1,000,000 prefill in the sum
-    // field and the recommended preset highlighted.
-    await expect(page.getByTestId('compare-mortgage-sum-1')).toHaveValue('1,000,000')
+    // One loan for the whole page: it opens with the calculator's ₪1,000,000
+    // prefill, and scenario 1's recommended preset is highlighted.
+    await expect(page.getByTestId('compare-mortgage-sum')).toHaveValue('1,000,000')
     await expect(page.getByTestId('compare-preset-1-basket4')).toHaveClass(/active/)
-    // Scenario 2: pick the recommended preset, then type a sum - the blank
-    // tracks fill at the preset's 40/34/26 split (hand-checked golden).
+    // Scenario 2 opens blank. Picking the recommended preset prices it at the
+    // shared loan right away - the 40/34/26 split of ₪1,000,000 (golden) -
+    // with no per-scenario loan to type.
     await page.getByTestId('compare-preset-2-basket4').click()
-    await page.getByTestId('compare-mortgage-sum-2').fill('1,000,000')
     await expect(page.getByTestId('compare-track-amount-2-1')).toHaveValue('400,000')
     await expect(page.getByTestId('compare-track-amount-2-2')).toHaveValue('340,000')
     await expect(page.getByTestId('compare-track-amount-2-3')).toHaveValue('260,000')
-    // A property value re-derives the loan for every scenario: with capital
-    // 200k on a 1.2M property the sum field mirrors 1M (property - capital).
+    // Re-typing the sum re-allocates EVERY scenario's mix (both carry the
+    // basket4 lineup), so the columns stay directly comparable.
+    await page.getByTestId('compare-mortgage-sum').fill('2,000,000')
+    await expect(page.getByTestId('compare-track-amount-1-1')).toHaveValue('800,000')
+    await expect(page.getByTestId('compare-track-amount-2-3')).toHaveValue('520,000')
+    // A property value re-derives the one loan: capital 200k on a 1.2M
+    // property mirrors 1M into the sum field.
     await page.getByTestId('compare-property-value').fill('1,200,000')
     await page.getByTestId('compare-capital').fill('200,000')
-    await expect(page.getByTestId('compare-mortgage-sum-1')).toHaveValue('1,000,000')
-    await expect(page.getByTestId('compare-mortgage-sum-2')).toHaveValue('1,000,000')
+    await expect(page.getByTestId('compare-mortgage-sum')).toHaveValue('1,000,000')
   })
 
   test('shared inputs reprice every scenario; LTV status flips to a violation', async ({
@@ -146,6 +188,10 @@ test.describe('mortgage comparison - /compare', () => {
     await page.getByTestId('compare-income').fill('24,000')
     const statusRow = page.getByTestId('compare-row-status')
     await expect(statusRow).toContainText('החזר בתקרה המומלצת')
+    // The recommended-income row already reports the average-based advice:
+    // ceil(8011.56/0.33/500)·500 = 24,500 at the default inputs.
+    const incomeRow = page.getByTestId('compare-row-recommendedIncome')
+    await expect(incomeRow.locator('td').first()).toHaveText(ils(24_500))
 
     // The shared expenses block opens with one blank row (calculator parity);
     // the row test ids carry the internal id suffix, so match the prefix.
@@ -158,6 +204,9 @@ test.describe('mortgage comparison - /compare', () => {
     // (8,718.13 / 26,500 = 32.9%): the boundary itself, not just past it.
     await page.getByTestId('compare-income').fill('26,500')
     await expect(statusRow).toContainText('החזר בתקרה המומלצת')
+    // The recommended income folds the expense in too: 8011.56 + 1000 =
+    // 9011.56 → ceil(9011.56/0.33/500)·500 = 27,500.
+    await expect(incomeRow.locator('td').first()).toHaveText(ils(27_500))
 
     // The one-time amount joins the recommended upfront cash: 300,000
     // suggested capital + 35,400 fees on the 1.2M deal, then +5,000.
@@ -220,7 +269,8 @@ test.describe('mortgage comparison - /compare', () => {
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
     await page.goto('/compare')
     await expect(page.getByTestId('compare-shell')).toBeVisible()
-    await expect(page.getByTestId('compare-table')).toContainText('First monthly payment')
+    await expect(page.getByTestId('compare-table')).toContainText('Average monthly payment')
+    await expect(page.getByTestId('compare-table')).toContainText('Recommended net income')
     const dir = (await page.evaluate('document.documentElement.dir')) as string
     expect(dir).toBe('ltr')
   })
@@ -366,10 +416,18 @@ const LAYOUT_PROBLEMS = `(() => {
         }
       }
       // The term slider's value bubble drops below its row; it must land in the
-      // reserved strip above the first track, not on top of the fieldset.
-      const bubble = card.querySelector('.compare-term-row .slider-current')
-      if (trackIndex === 0 && bubble && bubble.getBoundingClientRect().bottom > trackBox.top + 1) {
-        problems.push(where + ' slider value overlaps the first track')
+      // reserved strip above the preset mixes, not on top of the buttons below
+      // it (the slider now sits directly above them).
+      if (trackIndex === 0) {
+        const bubble = card.querySelector('.compare-term-row .slider-current')
+        const presets = card.querySelector('.compare-preset-list')
+        if (
+          bubble &&
+          presets &&
+          bubble.getBoundingClientRect().bottom > presets.getBoundingClientRect().top + 1
+        ) {
+          problems.push(where + ' slider value overlaps the preset mixes')
+        }
       }
     })
   })

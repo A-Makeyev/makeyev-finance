@@ -1438,6 +1438,17 @@ img {
   user-select: none;
 }
 
+/* Marquee scaffolding for both top strips. Above 1200px the wrappers
+   dissolve, so the anchors/rows remain direct flex items of .indexes and
+   .markets exactly as before. The compact tier (see the marquee block far
+   below) turns them into a sliding one-line track with a duplicated group. */
+.indexes-track,
+.indexes-group,
+.markets-track,
+.markets-group {
+  display: contents;
+}
+
 /* ===========================================================================
    Markets tracker (new subsystem - market data via our own server API).
    Deliberately mirrors the .indexes strip: same fixed position, same type
@@ -2411,6 +2422,125 @@ nav#navbar.nav-scrolling-resize {
      is inherited from the tier above, so only the divisor changes here. */
   .markets-row {
     flex: 0 0 calc((100% - var(--markets-gap)) / 2);
+  }
+}
+
+/* ===========================================================================
+   Compact strip marquee (<=1200px): below the hamburger breakpoint the
+   Indexes and Markets strips stop wrapping onto 2-3 lines. Each renders one
+   sliding line instead, with its content duplicated into a second,
+   aria-hidden group so the loop is seamless (see the components). Because
+   both strips are a single line again, their heights collapse back to the
+   base 35px, which also collapses the whole offset ladder above into the
+   simple base contract: the navbar's own top: 35px clears the Indexes bar
+   with no extra margin, and the Markets strip sits at 35px and is cleared by
+   its measured --markets-height.
+
+   Placed AFTER the <=1150 / <=650 / <=420 blocks so these flex-direction,
+   height and top overrides win the cascade at those widths too (equal
+   specificity, later in the file). */
+@media screen and (max-width: 1200px) {
+  .adjust-nav {
+    margin-top: 0;
+  }
+
+  nav#navbar.adjust-markets {
+    margin-top: var(--markets-height, 35px);
+  }
+
+  .indexes {
+    /* One line, never wrapping: the track below slides instead. */
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+    height: 35px;
+    overflow: hidden;
+  }
+
+  .markets {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    top: 35px;
+    overflow: hidden;
+  }
+
+  .indexes a {
+    /* The fixed 370px / 100% widths belonged to the wrapping tiers. */
+    width: auto;
+    text-align: start;
+  }
+
+  /* No forced line breaks - the strip is a single line now. */
+  .line-break::before {
+    display: none;
+  }
+
+  .markets-row {
+    /* Undo the pinned thirds (<=1250px) and pairs (<=420px). */
+    flex: 0 0 auto;
+  }
+
+  .indexes-track,
+  .markets-track {
+    display: flex;
+    align-items: center;
+    width: max-content;
+    will-change: transform;
+    animation: strip-marquee 40s linear infinite;
+  }
+
+  .indexes-group {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 32px;
+    /* Matches the gap, so the seam between the two groups is even. */
+    padding-inline-end: 32px;
+  }
+
+  .markets-group {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 24px;
+    padding-inline-end: 24px;
+  }
+
+  /* A moving target is hard to read (and the index names are focusable
+     links), so pointer or keyboard contact holds the strip still. */
+  .indexes:hover .indexes-track,
+  .indexes:focus-within .indexes-track,
+  .markets:hover .markets-track,
+  .markets:focus-within .markets-track {
+    animation-play-state: paused;
+  }
+}
+
+/* One group's width: exactly half the two-group track, so the loop restarts
+   on an identical frame with no jump. */
+@keyframes strip-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Reduced motion: keep the one-line layout but never animate it, and let the
+   strip be scrolled by hand instead. */
+@media (prefers-reduced-motion: reduce) and (max-width: 1200px) {
+  .indexes,
+  .markets {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .indexes-track,
+  .markets-track {
+    animation: none;
   }
 }
 
@@ -6755,22 +6885,6 @@ tbody tr:hover {
   padding: 8px 12px;
 }
 
-/* סכום המשכנתא row inside the scenario editor: same label-over-input shape
-   as the calculator's .starting-amount, compacted for a 300-610px column. */
-.compare-sum-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0 0 12px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--calc-muted);
-}
-
-.compare-sum-row .input-wrap {
-  width: 100%;
-}
-
 /* Preset mixes (תמהיל 1-4): the calculator's .preset-list/.preset-button
    restyled for the scenario column with the same active treatment. */
 .compare-preset-list {
@@ -6820,7 +6934,8 @@ tbody tr:hover {
    "term" label / "N years" value pair (it was squeezed into 187px of the row
    and wrapped unpredictably at narrow column widths). The bottom padding
    mirrors .starting-point on the calculator page - it reserves the strip the
-   slider's value bubble drops into, so the bubble clears the first track. */
+   slider's value bubble drops into, so the bubble clears the preset buttons
+   that follow it. */
 .compare-term-row {
   display: flex;
   align-items: center;
@@ -6860,7 +6975,8 @@ tbody tr:hover {
    intrinsic width) pushed the whole fieldset - and its absolutely positioned
    remove button - hundreds of pixels outside its card. Compact it to two
    fluid columns with the intrinsic minimums switched off, and let the long
-   fields (track type, amount, amortization method) take the full width.
+   fields (track type, amount) take the full width while the rate sits beside
+   the amortization method it is priced on the other side of.
 
    Every layout rule below is prefixed with .compare-shell because the
    calculator's own track overrides (≤1000px six-column spans, ≤650px single
@@ -6876,11 +6992,11 @@ tbody tr:hover {
 }
 
 .compare-shell .compare-track .input-group:nth-of-type(1),
-.compare-shell .compare-track .input-group:nth-of-type(2),
-.compare-shell .compare-track .input-group:nth-of-type(5) {
+.compare-shell .compare-track .input-group:nth-of-type(2) {
   grid-column: 1 / -1;
 }
 
+/* 3 = ריבית, 4 = לוח סילוקין: the method reads directly after the rate. */
 .compare-shell .compare-track .input-group:nth-of-type(3) {
   grid-column: 1 / 2;
 }

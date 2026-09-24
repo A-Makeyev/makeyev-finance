@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   computeScenario,
   sharedFeeProfileFromTexts,
+  sharedInputSuggestions,
   type SharedBuyerInputs,
 } from '@/features/compare/computeScenario'
-import { DEFAULT_TERM_YEARS, computeTrackResult } from '@/lib/amortization'
+import { DEFAULT_TERM_YEARS, computeTrackResult, type PropertyPurpose } from '@/lib/amortization'
 import { parseAmountText } from '@/lib/format'
 import { useComparisonStore, seedFromCalculator } from '@/stores/comparisonStore'
 import type { TrackState } from '@/stores/calculatorStore'
@@ -103,32 +104,42 @@ describe('computeScenario - golden values', () => {
     )
   })
 
-  it('stresses the first payment +1 point on variable tracks only', () => {
+  it('prices the average payment and the recommended net income for a two-track mix', () => {
     const primeTrack = track({ type: 'prime', amountText: '400,000', rateText: '5.75' })
     const fixedTrack = track({ amountText: '600,000' })
     const result = computeScenario([primeTrack, fixedTrack], baseInputs)
-    // The stressed first payment equals: prime repriced at 6.75% plus the
-    // fixed track's unchanged payment (both from the raw pure functions).
-    const primeStressed = computeTrackResult({
-      principal: 400_000,
-      years: 15,
-      annualRatePercent: 6.75,
-      type: 'prime',
-      method: 'spitzer',
-    })!
-    const fixedPlain = computeTrackResult({
-      principal: 600_000,
-      years: 15,
-      annualRatePercent: 4.5,
-      type: 'fixed',
-      method: 'spitzer',
-    })!
-    expect(result.firstPaymentRateUp1).toBeCloseTo(
-      primeStressed.firstPayment + fixedPlain.firstPayment,
-      4,
+    // Total paid 1,424,088.01 over 180 months → average 7,911.60/month
+    // (golden hand-checked: sum of the two tracks' totalPaid / 180).
+    expect(result.avgMonthlyPayment).toBeCloseTo(7_911.6001, 3)
+    // Recommended net income at the 33% ceiling: ceil(7911.60/0.33/500)·500.
+    expect(result.recommendedIncome).toBe(24_000)
+  })
+
+  it('bases the recommended income on the average payment, not the first payment', () => {
+    // A mixed-term mix separates the two: 500k fixed 30y + 500k fixed 5y has
+    // a first payment of 11,854.94 but an average of 4,087.01 (golden).
+    const result = computeScenario(
+      [track({ amountText: '500,000', yearsText: '30' }), track({ amountText: '500,000', yearsText: '5' })],
+      baseInputs,
     )
-    // And the stressed first payment exceeds the unstressed one.
-    expect(result.firstPaymentRateUp1).toBeGreaterThan(result.totals.firstPayment)
+    expect(result.totals.firstPayment).toBeCloseTo(11_854.9362, 3)
+    expect(result.avgMonthlyPayment).toBeCloseTo(4_087.0115, 3)
+    // The advice follows the average: ceil(4087.01/0.33/500)·500 = 12,500 -
+    // a first-payment basis would have said 18,000.
+    expect(result.recommendedIncome).toBe(12_500)
+  })
+
+  it('folds the shared monthly expenses into the recommended income', () => {
+    // Single 15y fixed track: average = first = 7,649.9329. A ₪1,000/month
+    // shared expense lifts the obligation to 8,649.9329 → ceil/0.33/500·500.
+    const result = computeScenario([track()], {
+      ...baseInputs,
+      otherMonthly: 1_000,
+    })
+    expect(result.avgMonthlyPayment).toBeCloseTo(7_649.9329, 3)
+    expect(result.recommendedIncome).toBe(26_500)
+    // Without the expense: ceil(7649.93/0.33/500)·500 = 23,500.
+    expect(computeScenario([track()], baseInputs).recommendedIncome).toBe(23_500)
   })
 })
 
@@ -267,8 +278,9 @@ describe('comparisonStore', () => {
     // 15y annuity → first payment ₪7,718.13.
     const mix = state.scenarios[0]
     expect(mix.termYears).toBe(DEFAULT_TERM_YEARS)
-    // The sum field opens like the calculator's: ₪1,000,000, the mix total.
-    expect(mix.mortgageSumText).toBe('1,000,000')
+    // The shared sum opens like the calculator's: ₪1,000,000, the mix total -
+    // one loan every scenario is priced at.
+    expect(state.shared.mortgageSumText).toBe('1,000,000')
     expect(mix.activePreset).toBe('basket4')
     expect(mix.tracks.map((t) => t.type)).toEqual(['prime', 'fixed', 'variableIndexed5y'])
     expect(mix.tracks.map((t) => t.amountText)).toEqual(['400,000', '340,000', '260,000'])
@@ -300,14 +312,14 @@ describe('comparisonStore', () => {
     useComparisonStore.getState().setPropertyValue('2,000,000', null)
     const scaled = useComparisonStore.getState()
     expect(scaled.results[0].loanAmount).toBe(2_000_000)
-    expect(scaled.scenarios[0].mortgageSumText).toBe('2,000,000')
+    expect(scaled.shared.mortgageSumText).toBe('2,000,000')
     expect(scaled.results[0].ltv).not.toBeNull()
     expect(scaled.results[0].ltv!.percentRounded).toBe(100)
     // Capital 1M brings the loan back to 1M on the 2M property = 50%.
     useComparisonStore.getState().setCapital('1,000,000', null)
     const financed = useComparisonStore.getState()
     expect(financed.results[0].loanAmount).toBe(1_000_000)
-    expect(financed.scenarios[0].mortgageSumText).toBe('1,000,000')
+    expect(financed.shared.mortgageSumText).toBe('1,000,000')
     expect(financed.results[0].ltv).toBeNull()
     // Drop the capital back to 200k: the loan jumps to 1M again (the tracks
     // re-allocate with it), then the property drops to 1.2M.
@@ -381,20 +393,18 @@ describe('comparisonStore', () => {
     expect(after).toBeLessThan(before)
   })
 
-  it('clamps track years live and on blur', () => {
-    const store = useComparisonStore.getState()
-    const scenario = store.scenarios[0]
-    // Live typing clamps immediately (same contract as the main calculator:
-    // constrainYearsText clamps 99 → 30 while typing).
-    useComparisonStore.getState().updateTrackYears(scenario.id, scenario.tracks[0].id, '99')
-    expect(useComparisonStore.getState().scenarios[0].tracks[0].yearsText).toBe('30')
-    useComparisonStore.getState().commitTrackYearsBlur(scenario.id, scenario.tracks[0].id)
-    expect(useComparisonStore.getState().scenarios[0].tracks[0].yearsText).toBe('30')
-    // Clearing is allowed live; blur restores the 1-year minimum.
-    useComparisonStore.getState().updateTrackYears(scenario.id, scenario.tracks[0].id, '')
-    expect(useComparisonStore.getState().scenarios[0].tracks[0].yearsText).toBe('')
-    useComparisonStore.getState().commitTrackYearsBlur(scenario.id, scenario.tracks[0].id)
-    expect(useComparisonStore.getState().scenarios[0].tracks[0].yearsText).toBe('1')
+  it('formats shared inputs on blur (calculator parity)', () => {
+    useComparisonStore.getState().reset()
+    useComparisonStore.getState().setPropertyValue('1200000', null)
+    useComparisonStore.getState().commitPropertyValueBlur()
+    useComparisonStore.getState().setCapital('300000', null)
+    useComparisonStore.getState().commitCapitalBlur()
+    useComparisonStore.getState().setIncome('21500', null)
+    useComparisonStore.getState().commitIncomeBlur()
+    const shared = useComparisonStore.getState().shared
+    expect(shared.propertyValueText).toBe('1,200,000')
+    expect(shared.capitalText).toBe('300,000')
+    expect(shared.incomeText).toBe('21,500')
   })
 
   it('reseeds a cleared rate on blur to the type default (5.75 for prime)', () => {
@@ -452,9 +462,9 @@ describe('comparisonStore', () => {
     expect(state.scenarios).toHaveLength(2)
     expect(state.scenarios[0].tracks[0].amountText).toBe('800,000')
     expect(state.scenarios[0].termYears).toBe(20)
-    // The calculator's sum field travels with the mix (parity).
-    expect(state.scenarios[0].mortgageSumText).toBe('800,000')
-    expect(state.scenarios[1].mortgageSumText).toBe('')
+    // The calculator's sum travels as the one shared loan (parity) - both
+    // columns are this amount, so the comparison varies the mix, not the loan.
+    expect(state.shared.mortgageSumText).toBe('800,000')
     // Scenario 2 is a blank alternative with fresh ids: the mix the user arrived
     // with is scenario 1, the comparison column is theirs to define.
     expect(state.scenarios[1].tracks).toHaveLength(1)
@@ -467,47 +477,59 @@ describe('comparisonStore', () => {
     expect(state.results[0].maxTermYears).toBe(20)
   })
 
-  it('typing a mortgage sum fills the blank preset tracks at the preset proportions', () => {
-    // Scenario 2 opens blank (one empty fixed track). Pick a preset, then type
-    // a sum: the tracks must re-allocate at the preset's own proportions.
+  it('picking a mix on a blank scenario prices it at the shared loan', () => {
+    // Scenario 2 opens blank (one empty fixed track). Picking a preset prices
+    // it right away at the ONE shared sum - no per-scenario loan to type.
     const store = useComparisonStore.getState()
     const scenario = store.scenarios[1]
     useComparisonStore.getState().loadScenarioPreset(scenario.id, 'basket4')
-    useComparisonStore.getState().setScenarioMortgageSum(scenario.id, '1,000,000', null)
     const after = useComparisonStore.getState()
     const filled = after.scenarios[1].tracks
-    // Recommended mix 40/34/26 of 1,000,000, hand-checked golden split.
+    // Recommended mix 40/34/26 of the shared 1,000,000, hand-checked golden
+    // split (the same figures scenario 1 opens with).
     expect(filled.map((track) => track.amountText)).toEqual(['400,000', '340,000', '260,000'])
     // Types and default rates land too (prime takes the fallback live rate).
     expect(filled.map((track) => track.type)).toEqual(['prime', 'fixed', 'variableIndexed5y'])
     expect(filled.map((track) => track.rateText)).toEqual(['5.75', '4.5', '3'])
     expect(after.results[1].loanAmount).toBe(1_000_000)
     expect(Math.round(after.results[1].totals.firstPayment)).toBe(7_718)
+
+    // One loan for all: re-typing the sum re-allocates EVERY scenario's mix
+    // (both hold the basket4 lineup, so both re-allocate exactly).
+    useComparisonStore.getState().setMortgageSum('2,000,000', null)
+    const scaled = useComparisonStore.getState()
+    expect(scaled.shared.mortgageSumText).toBe('2,000,000')
+    for (const index of [0, 1]) {
+      expect(scaled.scenarios[index].tracks.map((track) => track.amountText)).toEqual([
+        '800,000',
+        '680,000',
+        '520,000',
+      ])
+    }
+    expect(scaled.results[1].loanAmount).toBe(2_000_000)
   })
 
-  it('typing a mortgage sum scales an existing hand-built mix proportionally', () => {
+  it('editing a track rebalances the others so the mix still totals the loan', () => {
     const store = useComparisonStore.getState()
     const scenario = store.scenarios[1]
-    // A hand-built two-track mix (no property set): typing 120k into the
-    // first track, then adding one - the calculator parity split funds the
-    // new track with half of the largest (120k → 60k + 60k).
+    // A hand-built two-track mix in the blank scenario. A single track has
+    // nothing to rebalance against, so 120k is kept as typed; adding one
+    // splits it (calculator parity: half of the largest → 60k + 60k).
     useComparisonStore.getState().updateTrackAmount(scenario.id, scenario.tracks[0].id, '120,000', null)
     useComparisonStore.getState().addTrack(scenario.id)
     const state2 = useComparisonStore.getState()
     const second = state2.scenarios[1].tracks[1]
     useComparisonStore.getState().updateTrackAmount(state2.scenarios[1].id, second.id, '80,000', null)
-    // Tracks now hold 60k + 80k; the sum field mirrors their total.
-    expect(useComparisonStore.getState().scenarios[1].mortgageSumText).toBe('140,000')
-    // Scale the same 3:4 proportions up to a 1,000,000 loan via the sum input.
-    useComparisonStore.getState().setScenarioMortgageSum(state2.scenarios[1].id, '1,000,000', null)
     const after = useComparisonStore.getState()
-    // 60/140 and 80/140 scale: 428,571 + 571,429 (last track absorbs rounding).
+    // The edited track keeps 80,000 and the sibling absorbs the rest of the
+    // shared 1,000,000 loan (the calculator's own rebalance rule).
     expect(after.scenarios[1].tracks.map((track) => track.amountText)).toEqual([
-      '428,571',
-      '571,429',
+      '920,000',
+      '80,000',
     ])
-    // The sum field keeps the typed text.
-    expect(after.scenarios[1].mortgageSumText).toBe('1,000,000')
+    // The sum is an input, not a mirror of one scenario's tracks.
+    expect(after.shared.mortgageSumText).toBe('1,000,000')
+    expect(after.results[1].loanAmount).toBe(1_000_000)
   })
 
   it('property value drives the sum field and locks the loan (calculator parity)', () => {
@@ -518,8 +540,8 @@ describe('comparisonStore', () => {
     useComparisonStore.getState().setPropertyValue('1,200,000', null)
     useComparisonStore.getState().setCapital('200,000', null)
     const after = useComparisonStore.getState()
-    // Loan = 1,200,000 - 200,000 = 1,000,000, mirrored into the sum field.
-    expect(after.scenarios[1].mortgageSumText).toBe('1,000,000')
+    // Loan = 1,200,000 - 200,000 = 1,000,000, mirrored into the shared sum.
+    expect(after.shared.mortgageSumText).toBe('1,000,000')
     expect(after.scenarios[1].tracks.map((track) => track.amountText)).toEqual([
       '400,000',
       '340,000',
@@ -528,7 +550,7 @@ describe('comparisonStore', () => {
     // Clearing the property restores loan + capital into the sum field.
     useComparisonStore.getState().setPropertyValue('', null)
     const cleared = useComparisonStore.getState()
-    expect(cleared.scenarios[1].mortgageSumText).toBe('1,200,000')
+    expect(cleared.shared.mortgageSumText).toBe('1,200,000')
     // Tracks keep their last allocation while the property is gone.
     expect(cleared.scenarios[1].tracks.map((track) => track.amountText)).toEqual([
       '400,000',
@@ -537,10 +559,10 @@ describe('comparisonStore', () => {
     ])
   })
 
-  it('editing one track with a property set rebalances the others live', () => {
-    // Property 1.2M, capital 200k pins scenario 1's loan at 1,000,000 (the
+  it('editing one track rebalances the others live against the shared loan', () => {
+    // Property 1.2M, capital 200k pins the shared loan at 1,000,000 (the
     // opening preset mix 400/340/260). Editing track 1 to 500k must pull the
-    // others down proportionally (340:260 held) so the sum stays the loan.
+    // others down proportionally (340:260 held) so the mix stays the loan.
     useComparisonStore.getState().setPropertyValue('1,200,000', null)
     useComparisonStore.getState().setCapital('200,000', null)
     const store = useComparisonStore.getState()
@@ -559,7 +581,7 @@ describe('comparisonStore', () => {
     expect(amounts[2]).toBe(1_000_000 - 500_000 - amounts[1])
   })
 
-  it('track amount blur snaps the tracks back to the pinned loan', () => {
+  it('track amount blur snaps the mix back to the pinned shared loan', () => {
     useComparisonStore.getState().setPropertyValue('1,200,000', null)
     useComparisonStore.getState().setCapital('200,000', null)
     const store = useComparisonStore.getState()
@@ -657,5 +679,115 @@ describe('comparisonStore', () => {
     const state = useComparisonStore.getState()
     expect(state.results[0].error).toBe('variableCap')
     expect(state.results[0].totals.firstPayment).toBe(0)
+  })
+})
+
+describe('sharedInputSuggestions (calculator-parity hints)', () => {
+  /** The hint basis mirrors the page's shared buyer block. */
+  const hintInputs = {
+    propertyValueText: '',
+    capitalText: '',
+    incomeText: '',
+    purpose: 'first' as PropertyPurpose,
+    renovations: 0,
+    otherMonthly: 0,
+    ptiThresholdPercent: 33,
+  }
+
+  const blankBuyer: SharedBuyerInputs = {
+    ...baseInputs,
+    propertyValueText: '',
+    capitalText: '',
+    incomeText: '',
+  }
+
+  it('hints the financing value, required equity and ceiling income for the opening mix', () => {
+    // A single ₪1M fixed track @ 4.5% / 15y (first payment 7,649.96).
+    const result = computeScenario([track()], blankBuyer)
+    const suggestions = sharedInputSuggestions([result], hintInputs)
+    // שווי הנכס: the smallest value financing ₪1M at the 75% first-home limit
+    // (1,333,333.33, above the ₪100k-equity floor), rounded up to ₪500.
+    expect(suggestions.propertyValue).toBe(1_333_500)
+    // הון עצמי: 25% of the effective value (loan + capital = ₪1M), ₪500 step.
+    expect(suggestions.capital).toBe(250_000)
+    // הכנסה נטו: the income whose 33% allowance covers the 7,649.96 payment
+    // (7,649.96 / 0.33 = 23,181.7 → ceil to the ₪500 step).
+    expect(suggestions.income).toBe(23_500)
+  })
+
+  it('hints from the binding (largest) scenario when several are priced', () => {
+    const small = computeScenario([track({ amountText: '400,000' })], blankBuyer)
+    const large = computeScenario([track({ amountText: '900,000' })], blankBuyer)
+    const suggestions = sharedInputSuggestions([small, large], hintInputs)
+    // The 900k scenario binds both hints: a 1.2M financing floor (the 400k
+    // column alone would hint 533,500).
+    expect(suggestions.propertyValue).toBe(1_200_000)
+    // Its 6,884.96 payment needs 21,000 at the ceiling (not 9,500).
+    expect(suggestions.income).toBe(21_000)
+  })
+
+  it('follows תכלית הרכישה', () => {
+    const result = computeScenario([track()], blankBuyer)
+    const suggestions = sharedInputSuggestions([result], {
+      ...hintInputs,
+      purpose: 'investment',
+    })
+    // 50% financing: the ₪2M value floor dominates; the required equity is
+    // 50% of the effective value.
+    expect(suggestions.propertyValue).toBe(2_000_000)
+    expect(suggestions.capital).toBe(500_000)
+  })
+
+  it('typed fields lose their hints; the typed property drives the capital hint', () => {
+    const result = computeScenario([track()], baseInputs)
+    // The hints are placeholders, so a field carrying a value has none - but
+    // the typed property still drives the OTHER two fields' hints.
+    const suggestions = sharedInputSuggestions([result], {
+      ...hintInputs,
+      propertyValueText: '1,200,000',
+    })
+    expect(suggestions.propertyValue).toBeNull()
+    // With a property set the hint is the purpose's required share of the
+    // value (25% of ₪1.2M), regardless of the loan.
+    expect(suggestions.capital).toBe(300_000)
+    const typedCapital = sharedInputSuggestions([result], {
+      ...hintInputs,
+      propertyValueText: '1,200,000',
+      capitalText: '200,000',
+    })
+    expect(typedCapital.capital).toBeNull()
+    const typedIncome = sharedInputSuggestions([result], {
+      ...hintInputs,
+      incomeText: '30,000',
+    })
+    expect(typedIncome.income).toBeNull()
+  })
+
+  it('folds shared monthly expenses into the income hint', () => {
+    const result = computeScenario([track()], blankBuyer)
+    const suggestions = sharedInputSuggestions([result], {
+      ...hintInputs,
+      otherMonthly: 1_000,
+    })
+    // (7,649.96 + 1,000) / 0.33 = 26,212 → ceil to the ₪500 step.
+    expect(suggestions.income).toBe(26_500)
+  })
+
+  it('hints nothing while nothing is priced or an error gates the numbers', () => {
+    const blank = computeScenario([track({ amountText: '' })], blankBuyer)
+    expect(sharedInputSuggestions([blank], hintInputs)).toEqual({
+      propertyValue: null,
+      capital: null,
+      income: null,
+    })
+    // A scenario gated by the Bank of Israel 2/3 cap contributes nothing -
+    // there are no figures to advise on.
+    const capped = computeScenario([track({ type: 'prime', rateText: '5.75' })], blankBuyer)
+    expect(capped.error).toBe('variableCap')
+    expect(sharedInputSuggestions([capped], hintInputs)).toEqual({
+      propertyValue: null,
+      capital: null,
+      income: null,
+    })
   })
 })
