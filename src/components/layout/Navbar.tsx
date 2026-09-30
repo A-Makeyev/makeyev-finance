@@ -319,6 +319,18 @@ export function Navbar({
                     // mouse hover-out closes it here.
                     if (event.pointerType !== 'touch') scheduleAccountClose()
                   }}
+                  onBlur={(event) => {
+                    // Close once focus leaves the whole control (trigger +
+                    // menu). This is the keyboard half of what the old CSS
+                    // :focus-within rule did, and its removal is what lets a
+                    // CLICKED-open menu disappear on hover-out: the click
+                    // focuses the trigger, and a lingering focus-within kept
+                    // the menu painted after the pointer had left.
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                      cancelAccountClose()
+                      setAccountMenuOpen(false)
+                    }
+                  }}
                 >
                   <button
                     type="button"

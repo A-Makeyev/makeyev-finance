@@ -459,6 +459,51 @@ test.describe('web app: navigation + chrome parity', () => {
     expect(card.x + card.width).toBeLessThanOrEqual(360)
   })
 
+  test('a clicked-open account menu closes again when the pointer leaves', async ({ page }) => {
+    await mockGetSessionNull(page)
+    const app = new WebAppPage(page)
+    await app.goto('/')
+    await app.waitForHydration()
+
+    // First click hovers the trigger in (which opens the menu) and its own
+    // click toggles it shut; the second click re-opens it with the trigger
+    // focused. That focus is the state a stale CSS :focus-within rule read as
+    // "keep painting the menu", so the menu survived the pointer leaving.
+    await app.navAvatar.click()
+    await app.navAvatar.click()
+    await expect(app.navAccountMenu).toBeVisible()
+    await expect(app.navAvatar).toBeFocused()
+
+    await page.mouse.move(10, 400)
+    await expect(app.navAccountMenu).toBeHidden()
+  })
+
+  test('focus leaving the account control closes the menu', async ({ page }) => {
+    await mockGetSessionNull(page)
+    const app = new WebAppPage(page)
+    await app.goto('/')
+    await app.waitForHydration()
+
+    // Reached by keyboard, with the pointer parked in the corner: the menu
+    // opens from focus (:focus-visible) with no hover in play, so what follows
+    // tests the focus path alone. Tabbing keeps the menu up while focus stays
+    // inside the control (trigger + rows), and leaving closes it - the
+    // keyboard half the removed :focus-within rule used to cover.
+    await page.mouse.move(5, 5)
+    await app.tabTo(app.navAvatar)
+    await expect(app.navAvatar).toBeFocused()
+    await expect(app.navAccountMenu).toBeVisible()
+
+    await page.keyboard.press('Tab')
+    await expect(app.navAccountLanguage).toBeFocused()
+    await expect(app.navAccountMenu).toBeVisible()
+
+    // Past the last row, two more steps guarantee focus is outside the
+    // control whichever session state the menu is in.
+    for (let step = 0; step < 4; step++) await page.keyboard.press('Tab')
+    await expect(app.navAccountMenu).toBeHidden()
+  })
+
   test('the signed-in account menu carries both preference rows above the identity line', async ({ page }) => {
     await mockGetSessionUser(page)
     const app = new WebAppPage(page)

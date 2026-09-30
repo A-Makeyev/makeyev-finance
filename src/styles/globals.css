@@ -2268,9 +2268,14 @@ nav#navbar .nav-account-item:disabled {
 
 /* Keep the menu open while the pointer travels from the avatar to it: the
    menu hugs the button (8px), and closing on hover-out would fight the
-   click-to-toggle. Closing is outside-click / Escape / navigation's job. */
-nav#navbar .nav-account:hover .nav-account-menu,
-nav#navbar .nav-account:focus-within .nav-account-menu {
+   click-to-toggle.
+
+   Deliberately NOT extended to :focus-within. A CLICK on the trigger leaves
+   the button focused, so a focus-within rule kept the menu painted after the
+   pointer left even though the hover grace had already closed it in state.
+   Keyboard focus is handled in React instead (open on :focus-visible, close
+   on focus leaving the wrapper), so visibility answers to one owner. */
+nav#navbar .nav-account:hover .nav-account-menu {
   opacity: 1;
   visibility: visible;
   transform: none;

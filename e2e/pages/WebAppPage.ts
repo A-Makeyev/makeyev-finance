@@ -122,6 +122,19 @@ export class WebAppPage {
     return this.page.getByTestId('hamburger')
   }
 
+  /**
+   * Keyboard-only focus: Tab until the locator holds focus. Bounded, so a
+   * control that is not in the tab order fails the follow-up assertion
+   * instead of looping forever. Used where a mouse click would also hover the
+   * control in, which masks the focus behaviour under test.
+   */
+  async tabTo(locator: Locator): Promise<void> {
+    for (let step = 0; step < 20; step++) {
+      if (await locator.evaluate((el) => el === el.ownerDocument.activeElement)) return
+      await this.page.keyboard.press('Tab')
+    }
+  }
+
   async openMobileMenu(): Promise<void> {
     await this.hamburger().click()
     await expect(this.navbar).toHaveAttribute('data-menu-open', 'true')
