@@ -93,18 +93,16 @@ export class HeroScrollCuePage {
   private async expectContentLanded(): Promise<void> {
     const chrome = await this.chromeHeight()
 
-    // The scroll animates; poll until the target's top stops moving, then
-    // measure where it actually landed.
-    let previousTop: number | null = null
+    // Poll for the FINAL state directly (content top at the chrome edge).
+    // An earlier "top stopped moving" heuristic could fire during a frame
+    // stall mid-animation and read a half-scrolled position under load.
     await expect
       .poll(
         async () => {
           const top = (await this.page.evaluate(CONTENT_TOP_EXPR)) as number | null
-          const settled = previousTop !== null && top !== null && Math.abs(top - previousTop) < 0.5
-          previousTop = top
-          return settled
+          return top !== null && Math.abs(top - chrome) <= 3
         },
-        { timeout: 5_000 },
+        { timeout: 8_000 },
       )
       .toBe(true)
 

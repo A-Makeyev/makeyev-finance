@@ -136,20 +136,24 @@ test.describe('Markets strip', () => {
 
     // No "Tracks ..." suffix on the TA-35 row: the server now serves the real
     // TASE index level, so there is nothing to disclose. ILS-quoted: no $, and
-    // the unit (index points, never shekels) is named in the tooltip only.
-    await expect(page.getByTestId('market-row-ta35')).toHaveAttribute(
-      'title',
+    // the unit (index points, never shekels) is named in the hover tooltip
+    // only - it used to be a native title on the row.
+    const ta35 = page.getByTestId('market-row-ta35')
+    await expect(ta35).toHaveText(/TA-35\s*125\.32/)
+    await ta35.hover()
+    await expect(page.getByRole('tooltip')).toHaveText(
       'TA-35: 125.32 (-0.78%) ~ Index level in points',
     )
-    await expect(page.getByTestId('market-row-ta35')).toHaveText(/TA-35\s*125\.32/)
     // Gold is the metal itself now (GC=F, dollars per ounce), but it is the
     // front-month CONTRACT, so the row must say which price this is instead of
-    // letting $4,408.90 read as a bullion quote.
-    await expect(page.getByTestId('market-row-gold')).toHaveAttribute(
-      'title',
+    // letting $4,408.90 read as a bullion quote. Moving straight across from
+    // the TA-35 row, only one tooltip may be open at a time.
+    const gold = page.getByTestId('market-row-gold')
+    await expect(gold).not.toContainText('Tracks')
+    await gold.hover()
+    await expect(page.getByRole('tooltip')).toHaveText(
       'GOLD: $4,408.90 (+0.91%) ~ COMEX front-month futures, above the spot price',
     )
-    await expect(page.getByTestId('market-row-gold')).not.toContainText('Tracks')
   })
 
   test('collapses to one sliding line below 1200px, with a hidden loop copy', async ({ page }) => {
@@ -275,8 +279,13 @@ test.describe('Markets strip', () => {
     await expect(bar).toContainText('CPI')
     await expect(bar).toContainText('Monthly change')
     await expect(bar).not.toContainText('Yearly change')
-    // The full official feed name is still available on hover.
-    await expect(bar.locator('span[title]').first()).toHaveAttribute('title', /.+/)
+    // The full official feed name is still available on hover - the styled
+    // tooltip now, not a native title. Hovering the bar pauses the marquee,
+    // which is what makes the sliding name reachable.
+    await bar.hover()
+    const firstName = bar.locator('[data-tooltip-anchor]').first()
+    await firstName.hover()
+    await expect(page.getByRole('tooltip')).toHaveText(/.+/)
 
     // The loop copy is hidden from assistive tech and kept out of the tab
     // order, so the strip does not read or tab twice.
@@ -528,7 +537,9 @@ test.describe('Markets strip', () => {
 
     const bitcoinRow = page.getByTestId('market-row-bitcoin')
     await expect(bitcoinRow).toHaveClass(/markets-row-stale/)
-    await expect(bitcoinRow).toHaveAttribute('title', /Cached data/)
+    // The stale note rides in the hover tooltip now (native title removed).
+    await bitcoinRow.hover()
+    await expect(page.getByRole('tooltip')).toContainText('Cached data')
   })
 
   test('refreshes on the server-provided interval without hard-coding it', async ({ page }) => {
@@ -768,9 +779,75 @@ test.describe('Markets strip', () => {
       await expect(ta35).toHaveText(/TA-35\s*125\.32\s*-0\.78%\s*⭣/)
       await expect(ta35).not.toContainText('₪')
       const pointsNote = language === 'hebrew' ? 'רמת המדד בנקודות' : 'Index level in points'
-      await expect(ta35).toHaveAttribute('title', new RegExp(`${pointsNote}$`))
+      // The points note rides in the hover tooltip now (native title removed).
+      await ta35.hover()
+      await expect(page.getByRole('tooltip')).toContainText(pointsNote)
     })
   }
+
+  test('Indexes bar holds its slot with skeleton bars while the feeds load', async ({ page }) => {
+    // The standard CBS mocks are installed first, then overridden with a
+    // DELAYED call that ultimately fails: that exercises both halves of the
+    // contract - skeleton bars while in flight, legacy silent degradation
+    // (bar gone) once every feed has failed.
+    await installExternalMocks(page)
+    await page.route(/api\.cbs\.gov\.il/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      await route.abort()
+    })
+    await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await page.goto('/')
+
+    const bar = page.getByTestId('indexes-bar')
+    await expect(bar).toBeVisible()
+    await expect(bar).toHaveAttribute('data-state', 'loading')
+    await expect(bar).toHaveAttribute('aria-busy', 'true')
+    // One entry per feed, each holding the name + value slots.
+    await expect(bar.locator('.indexes-skeleton')).toHaveCount(3)
+
+    // The name is the real localized label (it must not blink in and out per
+    // feed); only the value slot shimmers, and it is the same shimmer the
+    // Markets strip uses while it loads.
+    const shimmer = (await page.evaluate(`(() => {
+      const entry = document.querySelector('[data-testid="indexes-skeleton-cpi"]')
+      const name = entry.querySelector('.indexes-skeleton-name')
+      const value = entry.querySelector('.indexes-skeleton-value')
+      return {
+        nameText: name.textContent,
+        nameAnimation: getComputedStyle(name).animationName,
+        valueAnimation: getComputedStyle(value).animationName,
+        nameWidth: name.getBoundingClientRect().width,
+        valueWidth: value.getBoundingClientRect().width,
+      }
+    })()`)) as {
+      nameText: string
+      nameAnimation: string
+      valueAnimation: string
+      nameWidth: number
+      valueWidth: number
+    }
+    expect(shimmer.nameText).toBe('CPI')
+    expect(shimmer.nameAnimation).toBe('none')
+    expect(shimmer.valueAnimation).toBe('market-skeleton-shimmer')
+    expect(shimmer.nameWidth).toBeGreaterThan(0)
+    expect(shimmer.valueWidth).toBeGreaterThan(0)
+
+    // The stack is settled while loading: Markets sits directly under the bar,
+    // so the numbers landing (or the feeds failing) never moves the navbar.
+    const geometry = (await page.evaluate(`(() => {
+      const box = (selector) => document.querySelector(selector).getBoundingClientRect()
+      return {
+        barBottom: Math.round(box('[data-testid="indexes-bar"]').bottom),
+        marketsTop: Math.round(box('[data-testid="market-tracker"]').top),
+      }
+    })()`)) as { barBottom: number; marketsTop: number }
+    expect(geometry.marketsTop).toBe(geometry.barBottom)
+
+    // Every feed failed: the bar disappears and Markets takes the top slot.
+    await expect(bar).toBeHidden()
+    await expect(page.getByTestId('market-tracker')).toHaveClass(/markets-no-indexes/)
+  })
 
   test('strip stays visible above the navbar when the Indexes bar is absent', async ({ page }) => {
     // The Indexes bar must stay hidden (CBS feeds fail), so the Markets
@@ -805,9 +882,18 @@ test.describe('Markets strip', () => {
     await expect(bar).toContainText('CPI')
     await expect(bar).toContainText('Monthly change')
     await expect(bar).toContainText('Yearly change')
-    await expect(bar).not.toContainText('מדד המחירים לצרכן')
-    await expect(bar).not.toContainText('שינוי חודשי')
-    await expect(bar).not.toContainText('שינוי שנתי')
+    // The Hebrew feed name is the hover tooltip's content now (it used to be
+    // the row's native title), so it lives in a visually-hidden span. Read the
+    // strip's VISIBLE text with those spans stripped to check the labels that
+    // actually paint.
+    const visibleText = (await page.evaluate(`(() => {
+      const clone = document.querySelector('[data-testid="indexes-bar"]').cloneNode(true)
+      clone.querySelectorAll('.visually-hidden').forEach((el) => el.remove())
+      return clone.textContent
+    })()`)) as string
+    expect(visibleText).not.toContain('מדד המחירים לצרכן')
+    expect(visibleText).not.toContain('שינוי חודשי')
+    expect(visibleText).not.toContain('שינוי שנתי')
     // Default CPI fixture: monthly 0.4 (rising), yearly 3.5 - both trends
     // up, so both are red and carry '+'. The sign leads the percent and
     // the arrow trails it in English reading order.
@@ -829,7 +915,9 @@ test.describe('Markets strip', () => {
       await page.goto('/')
 
       const bar = page.getByTestId('indexes-bar')
-      await expect(bar).toBeVisible()
+      // The bar now holds its slot with skeleton bars while the feeds load, so
+      // "visible" is no longer the same as "loaded": wait for the numbers.
+      await expect(bar).toHaveAttribute('data-state', 'ready')
 
       // Same evaluate-string pattern as qa-visual.spec.ts (the e2e tsconfig
       // has no DOM lib; the page context provides document).
@@ -883,7 +971,9 @@ test.describe('Markets strip', () => {
       await page.goto('/')
 
       const bar = page.getByTestId('indexes-bar')
-      await expect(bar).toBeVisible()
+      // Skeleton bars hold the slot until the feeds land (see the strip's
+      // loading test): wait for the loaded state, not just for visibility.
+      await expect(bar).toHaveAttribute('data-state', 'ready')
 
       const directions = (await page.evaluate(
         `(() => {

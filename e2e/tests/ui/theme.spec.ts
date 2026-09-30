@@ -2,9 +2,13 @@ import { test, expect } from '../../fixtures'
 import type { Page } from '@playwright/test'
 
 /**
- * UI contract for the site theme (sun / crescent toggle beside the language
- * flag): follows the OS on a first visit, remembers an explicit choice in
- * localStorage, and flips the whole surface - not just the navbar.
+ * UI contract for the site theme: follows the OS on a first visit, remembers
+ * an explicit choice in localStorage, and flips the whole surface - not just
+ * the navbar.
+ *
+ * The standalone crescent/sun glyph was removed from the navbar; the only
+ * toggle is now the color-mode row inside the account menu, so every
+ * flip in here opens that menu first.
  *
  * `data-theme` on <html> is the single source of truth the CSS hangs off, so
  * these tests read it instead of sniffing Tailwind classes.
@@ -30,24 +34,39 @@ function channelsOf(rgb: string): number[] {
     .map(Number)
 }
 
+/**
+ * Flips the theme through the account menu (the navbar glyph is gone). Hover
+ * opens the menu; the row itself is a button, so the same helper works on
+ * mobile too once the panel is open. The menu stays open after the click.
+ */
+async function toggleTheme(page: Page): Promise<void> {
+  await page.getByTestId('nav-avatar').hover()
+  const row = page.getByTestId('nav-account-theme')
+  await expect(row).toBeVisible()
+  await row.click()
+}
+
 test.describe('theme toggle', () => {
   test('first visit follows the OS (light here), and the toggle persists', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByTestId('theme-switch')).toBeVisible()
 
     // No saved choice + a light OS => light, and nothing written yet.
     expect(await themeAttr(page)).toBe('light')
     expect(await page.evaluate(`localStorage.getItem('${STORAGE_KEY}')`)).toBeNull()
 
-    const toggle = page.getByTestId('theme-switch')
     // The label names the ACTION, so a light page offers "dark mode".
-    await expect(toggle).toHaveAttribute('aria-label', 'מצב כהה')
+    await page.getByTestId('nav-avatar').hover()
+    const row = page.getByTestId('nav-account-theme')
+    await expect(row).toBeVisible()
+    await expect(row).toHaveText('מצב כהה')
 
-    await toggle.click()
+    await row.click()
     expect(await themeAttr(page)).toBe('dark')
     // The explicit choice is persisted (never 'system').
     expect(await page.evaluate(`localStorage.getItem('${STORAGE_KEY}')`)).toBe('dark')
-    await expect(toggle).toHaveAttribute('aria-label', 'מצב בהיר')
+    // The menu stays open, which is the point of the row.
+    await expect(row).toBeVisible()
+    await expect(row).toHaveText('מצב בהיר')
 
     // The page itself repaints, not just the attribute.
     const bodyBg = (await page.evaluate(
@@ -60,7 +79,7 @@ test.describe('theme toggle', () => {
     expect(await themeAttr(page)).toBe('dark')
 
     // Toggling back to light is remembered too.
-    await page.getByTestId('theme-switch').click()
+    await toggleTheme(page)
     expect(await themeAttr(page)).toBe('light')
     await page.reload()
     expect(await themeAttr(page)).toBe('light')
@@ -68,7 +87,7 @@ test.describe('theme toggle', () => {
 
   test('applies to the calculator surfaces, not only the chrome', async ({ page }) => {
     await page.goto('/calculators')
-    await page.getByTestId('theme-switch').click()
+    await toggleTheme(page)
     expect(await themeAttr(page)).toBe('dark')
 
     await expect(page.locator('.calculator-panel')).toBeVisible()
@@ -78,7 +97,7 @@ test.describe('theme toggle', () => {
 
   test('fields dim down in dark mode, with light text inside', async ({ page }) => {
     await page.goto('/calculators')
-    await page.getByTestId('theme-switch').click()
+    await toggleTheme(page)
 
     // The calculator's own field frame.
     const fieldBg = (await page.evaluate(
@@ -111,33 +130,50 @@ test.describe('theme toggle', () => {
   }) => {
     await page.goto('/')
 
-    const scrolledBar = async () => {
-      await page.evaluate(`window.scrollTo(0, 400)`)
-      await page.waitForTimeout(500)
-      return (await page.evaluate(`(() => {
+    /** Computed backdrop + background of the (scrolled) navbar. */
+    const read = () =>
+      page.evaluate(`(() => {
         const nav = document.getElementById('navbar')
         const cs = getComputedStyle(nav)
         return cs.backdropFilter + '|' + cs.backgroundColor
-      })()`)) as string
+      })()`) as Promise<string>
+    /**
+     * Scrolls and polls until the bar has SETTLED into a state matching
+     * `ok`. Polling (and re-scrolling each tick, so a scroll missed before
+     * hydration is retried) removes the fixed-delay window in which the
+     * scrolled class could drop between the read and the assertion - the
+     * flake that made the full suite's light read see the base blur.
+     */
+    const settled = async (ok: (bar: string) => boolean) => {
+      await expect
+        .poll(async () => {
+          await page.evaluate(`window.scrollTo(0, 400)`)
+          return ok(await read())
+        })
+        .toBe(true)
+      return read()
     }
 
     // Light: the legacy bar - solid aliceblue, no blur.
-    const [lightBackdrop, lightBg] = (await scrolledBar()).split('|')
-    expect(lightBackdrop).toBe('none')
-    expect(channelsOf(lightBg)).toEqual([240, 248, 255])
+    const lightBar = await settled((bar) => {
+      const [backdrop, bg] = bar.split('|')
+      return backdrop === 'none' && channelsOf(bg).join(',') === '240,248,255'
+    })
+    expect(lightBar.split('|')[0]).toBe('none')
 
     // Dark: the top state's frosted glass, translucent over dark.
-    await page.getByTestId('theme-switch').click()
-    const [darkBackdrop, darkBg] = (await scrolledBar()).split('|')
-    expect(darkBackdrop).toContain('blur')
-    const darkAlpha = Number(darkBg.match(/[\d.]+\)$/)?.[0]?.replace(')', ''))
-    expect(darkAlpha).toBeGreaterThan(0.5)
-    expect(darkAlpha).toBeLessThan(1)
+    await toggleTheme(page)
+    const darkBar = await settled((bar) => {
+      const [backdrop, bg] = bar.split('|')
+      const alpha = Number(bg.match(/[\d.]+\)$/)?.[0]?.replace(')', ''))
+      return backdrop.includes('blur') && alpha > 0.5 && alpha < 1
+    })
+    expect(darkBar.split('|')[0]).toContain('blur')
   })
 
   test('dark text stays legible on the dark surfaces (contrast)', async ({ page }) => {
     await page.goto('/calculators')
-    await page.getByTestId('theme-switch').click()
+    await toggleTheme(page)
 
     // WCAG-style contrast against the nearest painted ancestor background.
     // These are the roles most likely to be picked wrong in a future edit:
@@ -178,7 +214,34 @@ test.describe('theme toggle', () => {
     }
   })
 
-  test('closes the mobile menu, like the language flag does', async ({ page }) => {
+  test('the password-reset panel uses the theme roles, not raw colours', async ({ page }) => {
+    await page.goto('/login')
+    await toggleTheme(page)
+    expect(await themeAttr(page)).toBe('dark')
+
+    await page.getByTestId('auth-forgot').click()
+    await expect(page.getByTestId('auth-forgot-panel')).toBeVisible()
+
+    const panel = (await page.evaluate(`(() => {
+      const field = document.querySelector('[data-testid="auth-email"]')
+      const card = document.querySelector('[data-testid="auth-forgot-panel"]')
+      const hint = card.querySelector('p')
+      return {
+        bg: getComputedStyle(field).backgroundColor,
+        ink: getComputedStyle(field).color,
+        cardBg: getComputedStyle(card.parentElement).backgroundColor,
+        hintInk: getComputedStyle(hint).color,
+      }
+    })()`)) as { bg: string; ink: string; cardBg: string; hintInk: string }
+
+    // Dark surface, light text: the same roles as the rest of the app.
+    for (const channel of channelsOf(panel.bg)) expect(channel).toBeLessThan(80)
+    for (const channel of channelsOf(panel.cardBg)) expect(channel).toBeLessThan(80)
+    for (const channel of channelsOf(panel.ink)) expect(channel).toBeGreaterThan(150)
+    for (const channel of channelsOf(panel.hintInk)) expect(channel).toBeGreaterThan(100)
+  })
+
+  test('toggling from the account menu works with the mobile panel open', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/')
 
@@ -186,24 +249,27 @@ test.describe('theme toggle', () => {
     await page.getByTestId('hamburger').click()
     await expect(nav).toHaveAttribute('data-menu-open', 'true')
 
-    await page.getByTestId('theme-switch').click()
-    await expect(nav).toHaveAttribute('data-menu-open', 'false')
+    await toggleTheme(page)
     expect(await themeAttr(page)).toBe('dark')
   })
 
-  test('the extra icon still fits the 360px control row', async ({ page }) => {
+  test('the control row still fits 360px', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 800 })
     await page.goto('/')
     await page.getByTestId('hamburger').click()
 
-    const toggle = page.getByTestId('theme-switch')
-    await expect(toggle).toBeVisible()
-    const box = await toggle.boundingBox()
+    // The row holds the account trigger alone now (the language switch moved
+    // into the account menu), and it must stay inside the narrowest supported
+    // width.
+    const box = await page.getByTestId('nav-avatar').boundingBox()
     expect(box).not.toBeNull()
     if (box) {
       expect(box.x).toBeGreaterThanOrEqual(0)
       expect(box.x + box.width).toBeLessThanOrEqual(360)
     }
+    const row = (await page.getByTestId('nav-bar-controls').boundingBox())!
+    expect(row.x).toBeGreaterThanOrEqual(0)
+    expect(row.x + row.width).toBeLessThanOrEqual(360)
   })
 
   test('a dark-preferring visitor lands dark without touching the toggle', async ({ browser }) => {

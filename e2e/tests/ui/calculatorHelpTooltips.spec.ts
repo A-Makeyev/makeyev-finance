@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect, seedLanguage, seedSiteState } from '../../fixtures'
-import { HOVER_CLOSE_DELAY_MS, PANEL_EXIT_DURATION_MS } from '../../../client/src/lib/timings'
+import { HOVER_CLOSE_DELAY_MS, PANEL_EXIT_DURATION_MS } from '@/lib/timings'
 
 /**
  * The calculator's inline "?" help tooltips: a toggle tip per tooltip must
@@ -58,7 +58,8 @@ for (const language of ['hebrew', 'english'] as const) {
         await expect(trigger).toHaveAttribute('aria-expanded', 'true')
         const panel = page.locator(`[data-testid="${icon}-panel"]`)
         await expect(panel).toBeVisible()
-        await expect(trigger).toHaveAttribute('aria-describedby', /:r\d+:|r\d+/)
+        // React 18 used ':r2:'; React 19 (the Next app) uses '_R_<hash>_' - accept both.
+        await expect(trigger).toHaveAttribute('aria-describedby', /:r\d+:|_[rR]_[a-z0-9]+_|r\d+/)
         const readMore = panel.locator('a')
         await expect(readMore).toBeVisible()
         expect(await readMore.getAttribute('href')).toMatch(linkHref)
@@ -114,20 +115,26 @@ test('calculator help tooltip - hover opens, grace close, click pins', async ({ 
   let panel = page.getByTestId('help-method-1-panel')
   await expect(panel).toBeVisible()
 
-  // Walking the pointer onto the read-more link - across the gap - keeps it
-  // open (grace close + bridge), and the link is really clickable.
+  // Moving the pointer onto the read-more link keeps the panel open (grace
+  // close + bridge), and the link is really clickable. One direct move to the
+  // link's center, not a pixel path across the gap: the path's intermediate
+  // points are load-sensitive and flaked in the full suite, while the behavior
+  // under test (the grace close is NOT triggered once the pointer lands on the
+  // panel's link) is identical. Playwright's own hover() is avoided here
+  // because its stability wait needs rAF frames, and the virtual clock below
+  // never lets them advance - it retried until the panel had re-rendered.
   const link = panel.locator('a')
-  const from = (await trigger.boundingBox())!
-  const to = (await link.boundingBox())!
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
-  const steps = 14
-  for (let step = 1; step <= steps; step++) {
-    await page.mouse.move(
-      from.x + ((to.x + to.width / 2 - from.x) * step) / steps,
-      from.y + ((to.y + to.height / 2 - from.y) * step) / steps,
-    )
-  }
-  await expect(panel).toBeVisible()
+  // Move + check are retried as ONE step: under parallel-suite load the
+  // widget's DOM node can be replaced (a late hydration re-render) while the
+  // pointer is on its way, which detaches the node the move was aimed at.
+  // Retrying re-resolves the link on the live panel; the behavior under test
+  // (the grace close is NOT triggered once the pointer lands on the link) is
+  // unchanged, and the virtual clock below cannot close the panel meanwhile.
+  await expect(async () => {
+    const box = (await link.boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await expect(panel).toBeVisible()
+  }).toPass({ timeout: 20_000 })
   await page.mouse.down()
   await page.mouse.up()
   await expect(page).toHaveURL(/\/articles\/mortgage-decisions$/)
@@ -203,7 +210,7 @@ test('calculator help tooltip - near does nothing, over the icon opens and recol
 
   const trigger = page.getByTestId('help-method-1')
   const labelText = trigger.evaluate((icon) =>
-    icon.closest('.label-help-row').querySelector('.label-help-text').getBoundingClientRect(),
+    icon.closest('.label-help-row')!.querySelector('.label-help-text')!.getBoundingClientRect(),
   )
 
   // Hover NEAR: over the neighbouring label text, right next to the icon.

@@ -41,7 +41,7 @@ test.describe('mortgage comparison - /compare', () => {
     await page.goto('/compare')
     await expect(page.getByTestId('compare-shell')).toBeVisible()
     await expect(page.getByTestId('compare-table')).toBeVisible()
-    // Scenario 1 (תרחיש 1) opens with the calculator's own ₪1,000,000
+    // Scenario 1 (תמהיל 1) opens with the calculator's own ₪1,000,000
     // תמהיל מומלץ: 400k prime @ 5.75 + 340k fixed @ 4.5 + 260k indexed @ 3.0
     // (fallback prime - the compare page does not fetch the live BOI rate).
     await expect(page.getByTestId('compare-track-amount-1-1')).toHaveValue('400,000')
@@ -256,7 +256,7 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(page.getByTestId('compare-table')).toHaveCount(0)
     // Tab 2 shows scenario 2's metrics; the editor switches with it.
     await page.getByTestId('compare-switch-tab-2').click()
-    await expect(page.getByTestId('compare-card')).toContainText('תרחיש 2')
+    await expect(page.getByTestId('compare-card')).toContainText('תמהיל 2')
     await expect(page.getByTestId('compare-scenario-editor-2')).toBeVisible()
     // No horizontal overflow at 375px.
     const overflow = (await page.evaluate(
@@ -523,8 +523,9 @@ test('back link returns to the calculator and flips with the reading direction',
 })
 
 test('English compare heading fits a 360px viewport', async ({ page }) => {
-  // "Mortgage scenario comparison" is the longest hero title on the site and
-  // used to overhang the viewport (the hero h1 is nowrap by default).
+  // "Mortgage mix comparison" was the longest hero title on the site (it was
+  // "Mortgage scenario comparison") and used to overhang the viewport (the
+  // hero h1 is nowrap by default).
   await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
   await page.setViewportSize({ width: 360, height: 800 })
   await page.goto('/compare')

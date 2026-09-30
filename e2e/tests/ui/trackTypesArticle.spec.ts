@@ -38,7 +38,7 @@ for (const language of ['hebrew', 'english'] as const) {
       expect(listBanner).toContain('/images/articles-cover.jpg')
 
       // The card is on the list and leads to the article.
-      const card = page.locator('.article-card[href="/articles/mortgage-track-types"]')
+      const card = page.locator('.article-card[href$="/articles/mortgage-track-types"]')
       await expect(card).toBeVisible()
       // The listing card carries a thumbnail for this article.
       await expect(card.locator('img.article-card-media')).toBeVisible()
@@ -83,14 +83,14 @@ for (const language of ['hebrew', 'english'] as const) {
 
       // Both in-app links are real routes: the prepayment article and the
       // calculator. Walk each one and come back.
-      const prepaymentLink = article.locator('.article-link[href="/articles/prepayment-penalties"]')
+      const prepaymentLink = article.locator('.article-link[href$="/articles/prepayment-penalties"]')
       await expect(prepaymentLink).toBeVisible()
       await prepaymentLink.click()
       await expect(page).toHaveURL(/\/articles\/prepayment-penalties$/)
       await page.goBack()
       await expect(article).toBeVisible()
 
-      const calculatorLink = article.locator('.article-link[href="/calculators"]')
+      const calculatorLink = article.locator('.article-link[href$="/calculators"]')
       await expect(calculatorLink).toBeVisible()
       await calculatorLink.click()
       await expect(page).toHaveURL(/\/calculators$/)

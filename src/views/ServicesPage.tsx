@@ -1,0 +1,49 @@
+'use client'
+
+import { useTranslation } from 'react-i18next'
+import { ScrollCue } from '@/components/layout/ScrollCue'
+
+/** Services page - legacy services.html content carried over verbatim. */
+export function ServicesPage() {
+  const { t } = useTranslation()
+
+  return (
+    <>
+      <section className="sub-header">
+        <div className="text-box">
+          <h1 className="gradient-text-no-hover">{t('services.title')}</h1>
+        </div>
+        <ScrollCue />
+      </section>
+
+      <section className="services">
+        {[0, 1, 2].map((index) => (
+          <div
+            className="services-row"
+            key={index}
+            data-testid={`service-card-${index + 1}`}
+          >
+            <div className="services-col">
+              <h1>{t('services.cardTitle')}</h1>
+              <p>{t('services.cardBody')}</p>
+              <a
+                href="#"
+                onClick={(event) => event.preventDefault()}
+                className="hero-btn btn-blue remove-highlight"
+              >
+                {t('services.explore')}
+              </a>
+            </div>
+
+            <div className="services-col">
+              <img
+                src={`/images/${['carry-house', 'shaking-hands', 'handing-home'][index]}.jpg`}
+                alt=""
+              />
+            </div>
+          </div>
+        ))}
+      </section>
+    </>
+  )
+}

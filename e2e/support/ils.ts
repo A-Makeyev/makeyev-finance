@@ -1,4 +1,4 @@
-import { formatCurrency, formatGroupedNumber } from '../../client/src/lib/format'
+import { formatCurrency, formatGroupedNumber } from '@/lib/format'
 
 export { formatCurrency, formatGroupedNumber }
 

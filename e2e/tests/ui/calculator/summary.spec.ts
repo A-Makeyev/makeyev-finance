@@ -142,7 +142,11 @@ test.describe('mortgage calculator - summary notes', () => {
     // The current band is highlighted AND framed: its background differs from
     // an ordinary row's, and so does its accent border color.
     await expect(rows.nth(1)).toHaveClass(/is-current/)
-    await expect(rows.nth(1)).toHaveAttribute('title', 'מדרגה נוכחית')
+    // The current band carries its label as the styled hover tooltip now (it
+    // used to be a native title on the row): hovering the row shows the panel.
+    await expect(rows.nth(1)).toHaveAttribute('data-tooltip-anchor', 'true')
+    await rows.nth(1).hover()
+    await expect(calc.page.getByRole('tooltip')).toHaveText('מדרגה נוכחית')
     const styles = (await calc.page.evaluate(`(() => {
       const rows = document.querySelectorAll('[data-testid="purchase-tax-breakdown"] tbody tr')
       const cell = (i) => rows[i].querySelector('td')

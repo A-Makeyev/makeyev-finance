@@ -42,7 +42,7 @@ for (const language of ['hebrew', 'english'] as const) {
 
       // The card is on the list and leads to the article (targeted via its
       // href now that the list carries more than one card).
-      const card = page.locator('.article-card[href="/articles/moving-checklist"]')
+      const card = page.locator('.article-card[href$="/articles/moving-checklist"]')
       await expect(card).toBeVisible()
       await card.click()
       await expect(page).toHaveURL(/\/articles\/moving-checklist$/)
@@ -54,8 +54,11 @@ for (const language of ['hebrew', 'english'] as const) {
       await expect
         .poll(async () => (await readMetaDescription())?.trim() ?? '')
         .not.toBe(listDescription?.trim() ?? '')
-      const articleDescription = await readMetaDescription()
-      expect(articleDescription?.trim() ?? '', 'article meta description').not.toBe('')
+      // Next updates the <meta> on client navigation by swapping the tag, so
+      // poll for the settled non-empty value rather than reading mid-swap.
+      await expect
+        .poll(async () => (await readMetaDescription())?.trim() ?? '')
+        .not.toBe('')
 
       const article = page.getByTestId('moving-checklist-article')
       await expect(article).toBeVisible()

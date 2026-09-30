@@ -12,10 +12,15 @@ concurrency:
 env:
   # Dummy EmailJS credentials for build/e2e - tests mock the network, so no
   # real secrets are ever required (or present) in CI. Real credentials are
-  # scoped to deployment environments only; see SECURITY.md.
-  VITE_EMAILJS_SERVICE_ID: service_dummy_ci
-  VITE_EMAILJS_TEMPLATE_ID: template_dummy_ci
-  VITE_EMAILJS_PUBLIC_KEY: dummy_public_key_ci
+  # scoped to deployment environments only; see SECURITY.md. The clean names
+  # are inlined into the client bundle via next.config.ts (NEXT_PUBLIC_* is
+  # also accepted).
+  EMAILJS_SERVICE_ID: service_dummy_ci
+  EMAILJS_TEMPLATE_ID: template_dummy_ci
+  EMAILJS_PUBLIC_KEY: dummy_public_key_ci
+  # Better Auth refuses to boot in production without a secret. This is a
+  # throwaway CI value, never a deployment credential.
+  BETTER_AUTH_SECRET: ci_only_not_a_real_secret_0123456789abcdef
 
 jobs:
   quality:
@@ -41,17 +46,20 @@ jobs:
       - name: Build (includes typecheck)
         run: npm run build
 
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: client/dist
-          retention-days: 3
-
   e2e:
     name: E2E (UI + API) with published results
-    needs: quality
+    needs: [quality]
     runs-on: ubuntu-latest
+    # A throwaway Mongo for the auth e2e tests: the MongoDB adapter needs a
+    # live database to validate sessions, and a service container keeps CI
+    # free of any real credential (see SECURITY.md).
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27017/makeyev_e2e
     permissions:
       contents: write
       pages: write
@@ -68,15 +76,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download dist
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: client/dist
-
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      # One config, one app: the webServer builds and boots the production
+      # Next server (see playwright.config.ts). No separate legacy suite.
       - name: Run Playwright tests
         id: test-step
         run: npx playwright test

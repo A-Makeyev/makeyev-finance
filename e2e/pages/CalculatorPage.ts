@@ -45,6 +45,10 @@ export class CalculatorPage {
   async goto(): Promise<void> {
     await this.page.goto('/calculators')
     await expect(this.monthlyPayment).toBeVisible()
+    // The calculator is server-rendered and interactive only after hydration;
+    // wait for the marker so controlled inputs are wired before we act.
+    // String form: the e2e tsconfig has no DOM lib.
+    await this.page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
   }
 
   track(index: number): TrackPanel {
@@ -86,7 +90,7 @@ export class TrackPanel {
   private readonly root: (index: number) => Locator
 
   constructor(
-    private readonly page: Page,
+    page: Page,
     private readonly index: number,
   ) {
     this.root = (i) => page.getByTestId(`track-${i}`)

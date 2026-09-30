@@ -42,7 +42,7 @@ for (const language of ['hebrew', 'english'] as const) {
       await page.goto('/articles')
 
       // The card is on the list and leads to the article.
-      const card = page.locator('.article-card[href="/articles/mortgage-decisions"]')
+      const card = page.locator('.article-card[href$="/articles/mortgage-decisions"]')
       await expect(card).toBeVisible()
       await expect(card.locator('img.article-card-media')).toBeVisible()
       await card.click()
@@ -78,7 +78,8 @@ for (const language of ['hebrew', 'english'] as const) {
         await expect(block.locator('p')).not.toHaveText('')
         const tryLink = block.locator('a.article-link')
         await expect(tryLink).toBeVisible()
-        expect(await tryLink.getAttribute('href')).toMatch(/^\/calculators\?preset=basket\d$/)
+        // The Next app prefixes English links with /en; Hebrew stays at the root.
+        expect(await tryLink.getAttribute('href')).toMatch(/^(\/en)?\/calculators\?preset=basket\d$/)
       }
       // The prepayment rule-of-thumb facts (core rule + penalty exception).
       const prepayFacts = sections.nth(1).locator('.article-facts li')
@@ -86,14 +87,14 @@ for (const language of ['hebrew', 'english'] as const) {
 
       // The two in-app article links are real routes: the prepayment article
       // and the track-types article. Walk each one and come back.
-      const prepaymentLink = article.locator('.article-link[href="/articles/prepayment-penalties"]')
+      const prepaymentLink = article.locator('.article-link[href$="/articles/prepayment-penalties"]')
       await expect(prepaymentLink).toBeVisible()
       await prepaymentLink.click()
       await expect(page).toHaveURL(/\/articles\/prepayment-penalties$/)
       await page.goBack()
       await expect(article).toBeVisible()
 
-      const trackTypesLink = article.locator('.article-link[href="/articles/mortgage-track-types"]')
+      const trackTypesLink = article.locator('.article-link[href$="/articles/mortgage-track-types"]')
       await expect(trackTypesLink).toBeVisible()
       await trackTypesLink.click()
       await expect(page).toHaveURL(/\/articles\/mortgage-track-types$/)

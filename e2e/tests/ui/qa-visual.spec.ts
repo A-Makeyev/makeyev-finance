@@ -92,6 +92,86 @@ for (const language of ['hebrew', 'english'] as const) {
   }
 }
 
+/**
+ * The auth screen is the only page shell with no hero banner: it carries its
+ * own faint backdrop, fills the viewport (so the footer starts below the
+ * fold) and has to stay clear of the fixed chrome. Checked in both themes at
+ * both widths, with a full-page shot for the human pass.
+ */
+for (const theme of ['light', 'dark'] as const) {
+  for (const viewport of [
+    { width: 360, height: 800, tag: '360' },
+    { width: 1280, height: 900, tag: '1280' },
+  ]) {
+    test(`visual qa: auth page shell - ${theme} @ ${viewport.tag}px`, async ({ page }) => {
+      await page.addInitScript((value) => localStorage.setItem('site_theme', value), theme)
+      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      await page.goto('/login')
+
+      expect(await page.locator('html').getAttribute('data-theme')).toBe(theme)
+
+      const layout = (await page.evaluate(
+        `(() => {
+          const box = (selector) => document.querySelector(selector).getBoundingClientRect()
+          const main = document.querySelector('main.auth-page')
+          return {
+            navbarBottom: Math.round(box('[data-testid="navbar"]').bottom),
+            headingTop: Math.round(box('h1').top),
+            footers: document.querySelectorAll('footer.footer').length,
+            backdrop: getComputedStyle(main).backgroundImage,
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          }
+        })()`,
+      )) as {
+        navbarBottom: number
+        headingTop: number
+        footers: number
+        backdrop: string
+        overflow: number
+      }
+
+      expect(layout.overflow, 'horizontal overflow').toBeLessThanOrEqual(1)
+      expect(layout.headingTop, 'card clears the fixed chrome').toBeGreaterThanOrEqual(
+        layout.navbarBottom,
+      )
+      // No footer on the auth surface, and the photo backdrop really paints.
+      expect(layout.footers, 'auth page has no footer').toBe(0)
+      expect(layout.backdrop, 'auth backdrop applied').toContain('/images/login-cover.jpg')
+
+      await page.screenshot({
+        path: `${SHOT_DIR}/auth-${theme}-${viewport.tag}.png`,
+        fullPage: true,
+      })
+    })
+  }
+}
+
+test('visual qa: auth submit loading state', async ({ page }) => {
+  // Slow the credential call down so the button's in-flight state can be
+  // captured: a spinning glyph, the "sending" label, locked and busy.
+  await page.route('**/api/auth/sign-in/email', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ token: 'visual-qa', user: { emailVerified: true } }),
+    })
+  })
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/login')
+  await page.getByTestId('auth-email').fill('user@example.test')
+  await page.getByTestId('auth-password').fill('password123')
+
+  const submit = page.getByTestId('auth-submit')
+  await submit.click()
+  await expect(submit).toHaveAttribute('aria-busy', 'true')
+  await expect(submit).toBeDisabled()
+  await expect(page.getByTestId('auth-submit-spinner')).toBeVisible()
+
+  await submit.screenshot({ path: `${SHOT_DIR}/auth-submit-loading.png` })
+  await page.screenshot({ path: `${SHOT_DIR}/auth-page-loading.png`, fullPage: false })
+})
+
 for (const language of ['hebrew', 'english'] as const) {
   for (const viewport of VIEWPORTS) {
     test(`visual qa: purchase-tax breakdown - ${language} @ ${viewport.tag}px`, async ({
