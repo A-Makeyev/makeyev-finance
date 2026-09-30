@@ -35,6 +35,9 @@ What moved to Next in phase 1:
   tests execute directly - one source, not a copied `<script>` block.
 - The env adapter (`web/src/config/env.ts`): reads `NEXT_PUBLIC_*` with a
   `VITE_*` fallback so the deploy configs did not have to rename anything.
+  (The `VITE_*` fallback was removed later, once every deploy config had
+  moved to the clean names; the adapter now reads only `NEXT_PUBLIC_*` and
+  the bare names.)
 
 Phase-1 deltas, deliberate and visible:
 

@@ -3,10 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 /**
  * The env adapter maps NEXT_PUBLIC_* (the Next convention) and the clean bare
  * names (what deploy configs and .env carry) into the same validated shape
- * the app code reads. The previous VITE_* spellings remain accepted only as a
- * transitional deploy fallback. The module caches its result at import time,
- * so each test re-imports it with a fresh module registry and stubbed
- * process.env.
+ * the app code reads. The module caches its result at import time, so each
+ * test re-imports it with a fresh module registry and stubbed process.env.
  */
 async function loadEnvWith(envValues: Record<string, string | undefined>) {
   vi.resetModules()
@@ -51,25 +49,6 @@ describe('env adapter', () => {
     expect(env.EMAILJS_PUBLIC_KEY).toBe('key_bare')
   })
 
-  it('still accepts the previous VITE_* spelling as a transitional fallback', async () => {
-    const env = await loadEnvWith({
-      VITE_EMAILJS_SERVICE_ID: 'svc_vite',
-      VITE_EMAILJS_TEMPLATE_ID: 'tpl_vite',
-      VITE_EMAILJS_PUBLIC_KEY: 'key_vite',
-    })
-    expect(env.EMAILJS_SERVICE_ID).toBe('svc_vite')
-    expect(env.EMAILJS_TEMPLATE_ID).toBe('tpl_vite')
-    expect(env.EMAILJS_PUBLIC_KEY).toBe('key_vite')
-  })
-
-  it('prefers NEXT_PUBLIC_* over VITE_* when both spellings are set', async () => {
-    const env = await loadEnvWith({
-      NEXT_PUBLIC_EMAILJS_SERVICE_ID: 'svc_next',
-      VITE_EMAILJS_SERVICE_ID: 'svc_vite',
-    })
-    expect(env.EMAILJS_SERVICE_ID).toBe('svc_next')
-  })
-
   it('falls back to the legacy inline credentials when env is missing', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     // Cleared explicitly: the app lives at the repo root now, so a developer's
@@ -78,13 +57,10 @@ describe('env adapter', () => {
     const env = await loadEnvWith({
       NEXT_PUBLIC_EMAILJS_SERVICE_ID: undefined,
       EMAILJS_SERVICE_ID: undefined,
-      VITE_EMAILJS_SERVICE_ID: undefined,
       NEXT_PUBLIC_EMAILJS_TEMPLATE_ID: undefined,
       EMAILJS_TEMPLATE_ID: undefined,
-      VITE_EMAILJS_TEMPLATE_ID: undefined,
       NEXT_PUBLIC_EMAILJS_PUBLIC_KEY: undefined,
       EMAILJS_PUBLIC_KEY: undefined,
-      VITE_EMAILJS_PUBLIC_KEY: undefined,
     })
     // Public by design (legacy index.html shipped them inline); a missing
     // env must degrade to a working send pipeline, never a disabled one.
@@ -109,9 +85,11 @@ describe('env adapter', () => {
 
   it('ignores an explicitly empty value and falls through to the next name', async () => {
     const env = await loadEnvWith({
-      EMAILJS_SERVICE_ID: '',
-      VITE_EMAILJS_SERVICE_ID: 'svc_vite',
+      NEXT_PUBLIC_EMAILJS_SERVICE_ID: '',
+      EMAILJS_SERVICE_ID: 'svc_bare',
+      NEXT_PUBLIC_EMAILJS_TEMPLATE_ID: 'tpl',
+      NEXT_PUBLIC_EMAILJS_PUBLIC_KEY: 'key',
     })
-    expect(env.EMAILJS_SERVICE_ID).toBe('svc_vite')
+    expect(env.EMAILJS_SERVICE_ID).toBe('svc_bare')
   })
 })

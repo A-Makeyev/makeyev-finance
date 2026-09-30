@@ -40,26 +40,13 @@ function readFirst(...names: string[]): string | undefined {
 }
 
 /**
- * Precedence per variable: NEXT_PUBLIC_* (the Next convention) first, then the
- * bare name, then the previous VITE_* spelling kept only as a transitional
- * fallback for deploys that still carry it (remove once nothing sets it).
+ * Precedence per variable: NEXT_PUBLIC_* (the Next convention) first, then
+ * the bare name (what deploy configs and .env carry).
  */
 const rawEnv = {
-  EMAILJS_SERVICE_ID: readFirst(
-    'NEXT_PUBLIC_EMAILJS_SERVICE_ID',
-    'EMAILJS_SERVICE_ID',
-    'VITE_EMAILJS_SERVICE_ID',
-  ),
-  EMAILJS_TEMPLATE_ID: readFirst(
-    'NEXT_PUBLIC_EMAILJS_TEMPLATE_ID',
-    'EMAILJS_TEMPLATE_ID',
-    'VITE_EMAILJS_TEMPLATE_ID',
-  ),
-  EMAILJS_PUBLIC_KEY: readFirst(
-    'NEXT_PUBLIC_EMAILJS_PUBLIC_KEY',
-    'EMAILJS_PUBLIC_KEY',
-    'VITE_EMAILJS_PUBLIC_KEY',
-  ),
+  EMAILJS_SERVICE_ID: readFirst('NEXT_PUBLIC_EMAILJS_SERVICE_ID', 'EMAILJS_SERVICE_ID'),
+  EMAILJS_TEMPLATE_ID: readFirst('NEXT_PUBLIC_EMAILJS_TEMPLATE_ID', 'EMAILJS_TEMPLATE_ID'),
+  EMAILJS_PUBLIC_KEY: readFirst('NEXT_PUBLIC_EMAILJS_PUBLIC_KEY', 'EMAILJS_PUBLIC_KEY'),
   BOI_INTEREST_URL: readFirst('NEXT_PUBLIC_BOI_INTEREST_URL', 'BOI_INTEREST_URL'),
   CBS_API_BASE: readFirst('NEXT_PUBLIC_CBS_API_BASE', 'CBS_API_BASE'),
 }

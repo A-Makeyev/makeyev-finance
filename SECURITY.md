@@ -25,8 +25,9 @@ live in `src/config/siteConfig.ts` as typed constants.
 - Client variables use the clean (non-prefixed) names (`EMAILJS_*`,
   `BOI_INTEREST_URL`, `CBS_API_BASE`), inlined into the browser bundle via the
   `env` block in `next.config.ts`; `NEXT_PUBLIC_*` spellings are also accepted
-  and preferred. (Legacy `VITE_*` values are still read as a transitional
-  fallback by the adapter in `src/config/env.ts`.) **Anything client-side is
+  and preferred. (The legacy `VITE_*` fallback was removed once nothing set
+  it; the adapter in `src/config/env.ts` reads only `NEXT_PUBLIC_*` and the
+  bare names.) **Anything client-side is
   public.** Never place server-only credentials in client variables.
 - Server-only variables carry no prefix and are reachable only from server
   code: `FINNHUB_API_KEY`, `MONGODB_URI`, `BETTER_AUTH_SECRET`,
