@@ -532,11 +532,17 @@ test.describe('password reset', () => {
     // untranslated, beside its icon.
     await expect(auth.socialGoogle).toHaveText('Google')
 
-    // The "or sign in with email" rule sits BELOW the button, introducing the
+    // The "or ... with email" rule sits BELOW the button, introducing the
     // email form that follows.
     const rule = (await auth.orEmail.boundingBox())!
     const buttonBox = (await auth.socialGoogle.boundingBox())!
     expect(rule.y).toBeGreaterThanOrEqual(buttonBox.y + buttonBox.height)
+
+    // Its copy names the form UNDER it, so it follows the tab rather than
+    // describing sign-in above a registration form.
+    await expect(auth.orEmail).toHaveText('or sign in with email')
+    await auth.switchToSignUp()
+    await expect(auth.orEmail).toHaveText('or sign up with email')
 
     // One button, laid out like the form's own full-width controls: it fills
     // the card and sits centered on it rather than hugging either side.
@@ -547,9 +553,16 @@ test.describe('password reset', () => {
       Math.abs(button.x + button.width / 2 - (field.x + field.width / 2)),
     ).toBeLessThanOrEqual(1)
 
+    // Same copy rule in Hebrew, asserted verbatim: the sign-up tab reads
+    // "or sign up with email", never the sign-in wording.
+    await auth.goto('/login')
+    await expect(auth.orEmail).toHaveText('או התחברות עם דוא״ל')
+    await auth.switchToSignUp()
+    await expect(auth.orEmail).toHaveText('או הרשמה עם דוא״ל')
+    await auth.goto('/login')
+
     // The icon keeps the button's start edge in both locales (the same LTR
     // row inside the button): the G sits LEFT of the word in Hebrew too.
-    await auth.goto('/login')
     const internals = (await mockedPage.evaluate(`(() => {
       const button = document.querySelector('[data-testid="auth-social-google"]')
       if (!button) return null

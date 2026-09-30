@@ -829,6 +829,10 @@ export const he = {
       otpErrorTooManyRequests: 'יותר מדי בקשות. המתינו דקה ונסו שוב.',
       socialGoogle: 'Google',
       orEmail: 'או התחברות עם דוא״ל',
+      // The rule introduces the form UNDER it, so the sign-up tab needs its
+      // own copy: "or sign in with email" above a registration form misnames
+      // the action the person is about to take.
+      orEmailSignUp: 'או הרשמה עם דוא״ל',
       gotoSignUp: 'יצירת חשבון',
       signedInAs: 'מחובר בתור {{email}}',
       advisorTitle: 'אזור יועצים',

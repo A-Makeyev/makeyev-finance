@@ -610,8 +610,10 @@ export function AuthPage() {
                 credentials for. Providers without credentials render nothing,
                 so the buttons can never advertise a flow that would fail at
                 the OAuth handshake. The Google button leads the card (styled
-                like the form's controls), and the "or sign in with email"
-                rule sits BELOW it (user-requested), introducing the form. The
+                like the form's controls), and the "or ... with email" rule
+                sits BELOW it (user-requested), introducing the form. Its copy
+                follows the active tab, since it names the action the form
+                under it performs. The
                 brand name stays untranslated either way, and the icon keeps
                 the button's start edge: a fixed LTR row inside the (RTL)
                 Hebrew button, so the G never flips sides. */}
@@ -640,7 +642,9 @@ export function AuthPage() {
                   data-testid="auth-or-email"
                 >
                   <span className="h-px flex-1 bg-line-soft" />
-                  <span className="text-xs text-ink-muted">{t('auth.orEmail')}</span>
+                  <span className="text-xs text-ink-muted">
+                    {t(isSignUp ? 'auth.orEmailSignUp' : 'auth.orEmail')}
+                  </span>
                   <span className="h-px flex-1 bg-line-soft" />
                 </div>
               </>

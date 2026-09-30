@@ -841,6 +841,7 @@ export const en: { translation: Translation } = {
       otpErrorTooManyRequests: 'Too many requests. Please wait a minute and try again.',
       socialGoogle: 'Google',
       orEmail: 'or sign in with email',
+      orEmailSignUp: 'or sign up with email',
       gotoSignUp: 'Create an account',
       signedInAs: 'Signed in as {{email}}',
       advisorTitle: 'Advisor area',
