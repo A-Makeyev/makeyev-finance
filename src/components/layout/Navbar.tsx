@@ -272,9 +272,10 @@ export function Navbar({
         </Link>
       </div>
 
-      {/* Centered content: nav links + social icons, and (as a sibling of the
-          list) the account control. */}
-      <div className="nav-center flex-col md:flex-row md:items-center md:justify-start md:ml-8">
+      {/* Centred content: nav links + social icons. The account control is a
+          sibling OUTSIDE this group, pinned to the bar's right edge (see
+          .nav-bar-controls in globals.css). */}
+      <div className="nav-center flex-col md:flex-row md:items-center md:justify-start">
         <ul id="nav-list" data-testid={menuChecked ? 'mobile-nav-panel-open' : 'mobile-nav-panel'} className="nav-content w-full flex-col md:flex-row md:items-center md:justify-start gap-4 md:gap-6">
           {NAV_ITEMS.map((item) => renderNavItem(item))}
           <div className="nav-icons-center w-full flex justify-center md:w-auto md:justify-start">
@@ -282,12 +283,11 @@ export function Navbar({
           </div>
         </ul>
 
-        {/* The account control: the tail of the wide nav row, and (below
-          1200px) the RIGHT side of the bar itself - the hamburger owns the
-          left and the logo stays centred. Kept out of #nav-list so it stays
-          on the bar while the sheet, now links + socials only, slides down
-          behind it. The language switch used to sit here too; it is now a row
-          in the account menu. */}
+        {/* The account control: pinned to the RIGHT edge of the bar at every
+          width (below 1200px the hamburger owns the left and the logo stays
+          centred). Kept out of #nav-list so it stays on the bar while the
+          sheet, now links + socials only, slides down behind it. The language
+          switch used to sit here too; it is now a row in the account menu. */}
       <ul className="nav-bar-controls" data-testid="nav-bar-controls">
             {/* Account control. While the session is being looked up a muted
                 skeleton circle holds the trigger's slot (the slot used to sit

@@ -1972,11 +1972,11 @@ nav#navbar #nav-list {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Content width, not the Tailwind w-full: the account row
-     (.nav-bar-controls) is a sibling in the nav row, so the list must not
-     swallow the whole .nav-center. The two then centre together (see the
-     .nav-center rule below). The <=1200px sheet re-pins its own full width
-     with left/right: 0. */
+  /* Content width, not the Tailwind w-full: the list is the one flex line
+     .nav-center centres (see the .nav-center rule below). The account row
+     (.nav-bar-controls) is pinned to the bar's right edge and plays no part
+     in that centring. The <=1200px sheet re-pins its own full width with
+     left/right: 0. */
   width: auto;
   transition: bottom 0.5s ease-in-out;
 }
@@ -2145,9 +2145,6 @@ nav#navbar .nav-avatar-img {
   height: 28px;
   border-radius: 50%;
   object-fit: cover;
-  /* Literal hairline (not a token): like the strips, the avatar sits on
-     chrome that is dark in both themes, and needs a visible edge on the
-     light bar too. */
   border: 1px solid rgba(255, 255, 255, 0.55);
   background: rgba(255, 255, 255, 0.12);
   transition: transform 0.25s ease, box-shadow 0.25s ease;
@@ -2448,12 +2445,23 @@ nav#navbar.nav-scrolling-resize {
   align-items: center;
 }
 
-/* The links + socials (in the list) and the account control
-   (.nav-bar-controls) are one centred group on the wide bar; the id selector
+/* The links + socials (in the list) centre on the wide bar; the id selector
    outranks Tailwind's md:justify-start, which is what used to left-align the
    flex line. */
 nav#navbar .nav-center {
   justify-content: center;
+}
+
+/* Mirror the logo's 25% column on the right so the flex space spans
+   logo-edge to bar-edge symmetrically and the centred list lands on the
+   viewport centre, not the centre of the space-after-logo (which sat
+   ~150px right of true centre). Wide tier only: below 1200px the list is
+   the fixed slide-down sheet and .nav-center has no in-flow children, so
+   the margin would be dead weight. */
+@media screen and (min-width: 1201px) {
+  nav#navbar .nav-center {
+    margin-right: 25%;
+  }
 }
 
 .nav-content {
@@ -2477,15 +2485,24 @@ nav#navbar .nav-center {
   list-style: none;
 }
 
-/* The account control. Desktop: the tail of the centred nav row. Hamburger tier: absolutely positioned on the RIGHT of the bar (see the
-   <=1200px block), leaving the LEFT to the hamburger and the middle to the
-   logo. Kept outside #nav-list so it stays on the bar while the sheet, which
-   now carries only the links and socials, slides down. */
+/* The account control: pinned to the RIGHT edge of the bar at every width.
+   On the wide bar it sits outside the centred row entirely; the <=1200px
+   block re-asserts the same absolutes for the hamburger tier, where it also
+   leaves the LEFT to the hamburger and the middle to the logo. Kept outside
+   #nav-list so it stays on the bar while the sheet, which now carries only
+   the links and socials, slides down. The 5% inset mirrors the hamburger's
+   right: 5% and the scrolled bar's 0 5% padding. */
 nav#navbar .nav-bar-controls {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 0 12px;
+  position: absolute;
+  top: 50%;
+  right: 5%;
+  transform: translateY(-50%);
+  /* Above the logo (z-index 1000) and the sheet, like the hamburger. */
+  z-index: 1001;
+  margin: 0;
   padding: 0;
 }
 

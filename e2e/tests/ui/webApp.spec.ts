@@ -222,6 +222,11 @@ test.describe('web app: navigation + chrome parity', () => {
     const app = new WebAppPage(page)
     await page.setViewportSize({ width: 390, height: 844 })
     await app.goto('/')
+    // Measure only once the real account control has replaced the loading
+    // skeleton: the swap (28px skeleton -> 40px control) moves the pinned
+    // row's left edge by 12px, and catching it mid-swap made the
+    // before/after-menu geometry comparisons flake.
+    await expect(app.navAccount).toBeVisible()
 
     const box = async (testId: string) => (await page.getByTestId(testId).boundingBox())!
     const hamburger = await box('hamburger')
@@ -254,17 +259,22 @@ test.describe('web app: navigation + chrome parity', () => {
     expect(Math.abs(openControls.x - controls.x)).toBeLessThan(2)
     await expect(page.getByTestId('nav-bar-controls')).toBeVisible()
 
-    // Desktop: the hamburger is gone and the controls stay in the centred row
-    // right after the socials, NOT pinned to the bar's right edge.
+    // Desktop: the hamburger is gone, the links centre on the bar, and the
+    // controls pin to the bar's right edge OUTSIDE the centred row.
     await page.setViewportSize({ width: 1280, height: 900 })
     await app.goto('/')
     await app.waitForHydration()
     await expect(page.getByTestId('hamburger')).toBeHidden()
     const navList = (await page.locator('#nav-list').boundingBox())!
     const desktopControls = await box('nav-bar-controls')
-    const gap = desktopControls.x - (navList.x + navList.width)
-    expect(gap).toBeGreaterThan(0)
-    expect(gap, 'controls follow the socials instead of hugging the right edge').toBeLessThan(30)
+    const listOffset = navList.x + navList.width / 2 - 1280 / 2
+    // 1280 sits in the band where the list just outgrows the space between
+    // the 25% logo column and its 25% mirror margin, so it settles a hair
+    // right of centre (~22px measured); wider viewports land exactly on 0.
+    expect(Math.abs(listOffset), 'nav links centred on the bar').toBeLessThan(30)
+    // right: 5% on the bar - the same inset as the scrolled bar's padding.
+    const rightInset = 1280 - desktopControls.x - desktopControls.width
+    expect(rightInset, 'controls pinned to the bar right edge').toBeLessThan(80)
   })
 
   test('the mobile login icon is visible on the dark bar and opens the menu on tap', async ({
