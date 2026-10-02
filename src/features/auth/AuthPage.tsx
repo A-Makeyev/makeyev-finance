@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { FaGoogle, FaSpinner } from 'react-icons/fa'
 import { authClient } from '@/lib/auth-client'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { FieldError } from '@/components/ui/FieldError'
 import { useRouter } from '@/router'
-import { applyOtpInput, emptyOtpSlots, OTP_LENGTH } from './otp'
+import { applyOtpInput, emptyOtpSlots, isOtpComplete, OTP_LENGTH } from './otp'
 
 /**
  * Sign in / register form, shared by both locale route segments.
@@ -67,6 +68,9 @@ export function AuthPage() {
   // One slot per square (not a plain string): a box left untouched must stay
   // empty instead of collapsing into its neighbour on the next edit.
   const [otp, setOtp] = useState<string[]>(emptyOtpSlots)
+  // The reset step is two stages: the code is verified on the server first,
+  // and only a code that passes swaps the boxes for the new-password fields.
+  const [codeVerified, setCodeVerified] = useState(false)
   // One ref per square input, so typing can auto-advance focus to the next
   // box (and backspace can fall back to the previous one).
   const otpRefs = useRef<Array<HTMLInputElement | null>>([])
@@ -129,6 +133,8 @@ export function AuthPage() {
       setResetSent(false)
       setOtp(emptyOtpSlots())
     }
+    // A fresh attempt always starts at stage 1, never at the password fields.
+    setCodeVerified(false)
   }
 
   /**
@@ -174,7 +180,11 @@ export function AuthPage() {
     setPending(true)
     try {
       if (isSignUp) {
-        const { data, error: signUpError } = await authClient.signUp.email({ name, email, password })
+        const { data, error: signUpError } = await authClient.signUp.email({
+          name,
+          email,
+          password,
+        })
         if (signUpError) {
           setError(describeError(signUpError.code))
           return
@@ -242,6 +252,35 @@ export function AuthPage() {
    * credential account is updated; the user is NOT signed in automatically
    * (Better Auth policy), so the form returns to sign-in with a confirmation.
    */
+  /**
+   * Stage 1 submit: check the code before asking for a new password, so the
+   * user is not asked to invent one only to be told the code was wrong.
+   *
+   * The check is the plugin's own endpoint against the 'forget-password'
+   * identifier. Note it counts as one of the code's allowed attempts, which the
+   * final submit shares; see the allowedAttempts note in src/server/auth.
+   */
+  async function onVerifyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    if (!isOtpComplete(otp)) return
+    setPending(true)
+    try {
+      const { error: verifyError } = await authClient.emailOtp.checkVerificationOtp({
+        email,
+        otp: otp.join(''),
+        type: 'forget-password',
+      })
+      if (verifyError) {
+        setError(describeError(verifyError.code))
+        return
+      }
+      setCodeVerified(true)
+    } finally {
+      setPending(false)
+    }
+  }
+
   async function onResetPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
@@ -327,7 +366,9 @@ export function AuthPage() {
     // floating in the middle of a short page.
     <main className="below-chrome auth-page flex min-h-screen items-center justify-center px-4 pb-16">
       <div className="w-full max-w-md rounded-2xl border border-line-soft bg-surface-card p-6 shadow-[0_10px_30px_-15px_rgba(15,15,15,0.35)] sm:p-8">
-        <h1 className="mb-6 text-center text-2xl font-semibold text-ink">{t('auth.pageTitle')}</h1>
+        <h1 className="mb-6 text-center text-2xl font-semibold text-ink">
+          {t(flow === 'credentials' ? 'auth.pageTitle' : 'auth.resetTitle')}
+        </h1>
 
         {verifyEmail ? (
           <div className="flex flex-col gap-4" data-testid="auth-verify-panel">
@@ -357,16 +398,6 @@ export function AuthPage() {
                 {t('auth.resendSent')}
               </p>
             )}
-            {error && (
-              <p
-                role="alert"
-                data-testid="auth-error"
-                className="rounded-lg border border-danger px-3 py-2 text-sm text-danger"
-              >
-                {error}
-              </p>
-            )}
-
             <button
               type="button"
               data-testid="auth-resend"
@@ -379,6 +410,9 @@ export function AuthPage() {
               {resend === 'sending' && <FaSpinner aria-hidden="true" className="animate-spin" />}
               {t('auth.resend')}
             </button>
+            {/* After the control that caused it: this panel has no fields, so
+                "below the inputs" is "below the resend button". */}
+            {error && <FieldError message={error} testId="auth-error" />}
             <button
               type="button"
               data-testid="auth-back-to-signin"
@@ -395,21 +429,9 @@ export function AuthPage() {
           </div>
         ) : flow === 'forgot' ? (
           <div data-testid="auth-forgot-panel">
-            <h2 className="mb-2 text-center text-lg font-semibold text-ink">
-              {t('auth.resetTitle')}
-            </h2>
             <p className="mb-4 text-center text-sm text-ink-muted">
               {t('auth.resetRequestHint')}
             </p>
-            {error && (
-              <p
-                role="alert"
-                data-testid="auth-error"
-                className="mb-4 rounded-lg border border-danger px-3 py-2 text-sm text-danger"
-              >
-                {error}
-              </p>
-            )}
             <form onSubmit={onRequestReset} className="flex flex-col gap-4">
               <label className="flex flex-col gap-1 text-start">
                 <span className="text-sm text-ink-muted">{t('auth.emailLabel')}</span>
@@ -424,6 +446,7 @@ export function AuthPage() {
                   onChange={(event) => setEmail(event.target.value)}
                 />
               </label>
+              {error && <FieldError message={error} testId="auth-error" />}
               <button
                 type="submit"
                 disabled={pending}
@@ -456,113 +479,138 @@ export function AuthPage() {
           </div>
         ) : flow === 'reset' ? (
           <div data-testid="auth-reset-panel">
-            <h2 className="mb-2 text-center text-lg font-semibold text-ink">
-              {t('auth.resetTitle')}
-            </h2>
-            <p className="mb-4 text-center text-sm text-ink-muted" data-testid="auth-reset-hint">
-              {t('auth.resetSent')}
-              <span className="mt-1 block font-medium text-ink" dir="ltr">
-                {email}
-              </span>
-            </p>
-            {error && (
-              <p
-                role="alert"
-                data-testid="auth-error"
-                className="mb-4 rounded-lg border border-danger px-3 py-2 text-sm text-danger"
-              >
-                {error}
+            {/* Only while the code is still being typed: it says which address
+                the code went to. Once verified it is history, and it pushes the
+                fields down the card. */}
+            {!codeVerified && (
+              <p className="mb-4 text-center text-sm text-ink-muted" data-testid="auth-reset-hint">
+                {t('auth.resetSent')}
+                <span className="mt-1 block font-medium text-ink" dir="ltr">
+                  {email}
+                </span>
               </p>
             )}
-            <form onSubmit={onResetPassword} className="flex flex-col gap-4">
-              {/* The code as four square boxes: digits-only, auto-advance on
-                  type, a paste (or the OS one-time-code autofill) spreads
-                  across the boxes, backspace falls back. All four inputs
-                  carry the same data-testid so the specs (and autofill) keep
-                  working against the group. */}
-              <div
-                role="group"
-                aria-label={t('auth.resetCodeLabel')}
-                className="flex justify-center gap-2"
-                dir="ltr"
-              >
-                {Array.from({ length: OTP_LENGTH }, (_, index) => (
-                  <input
-                    key={index}
-                    ref={(node) => {
-                      otpRefs.current[index] = node
-                    }}
-                    type="text"
-                    dir="ltr"
-                    required
-                    name={`reset-code-${index + 1}`}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    autoComplete={index === 0 ? 'one-time-code' : 'off'}
-                    aria-label={`${t('auth.resetCodeLabel')} ${index + 1}`}
-                    data-testid="auth-otp"
-                    data-otp-index={index}
-                    className={OTP_INPUT_CLASS}
-                    value={otp[index] ?? ''}
-                    onChange={(event) => onOtpChange(index, event.target.value)}
-                    onKeyDown={(event) => onOtpKeyDown(index, event)}
-                    onFocus={(event) => event.target.select()}
-                  />
-                ))}
-              </div>
-              <span className="text-xs text-ink-muted">{t('auth.resetCodeHint')}</span>
-              <label className="flex flex-col gap-1 text-start">
-                <span className="text-sm text-ink-muted">{t('auth.resetNewPasswordLabel')}</span>
-                <PasswordInput
-                  value={password}
-                  onChange={setPassword}
-                  testId="auth-new-password"
-                  name="new-password"
-                  autoComplete="new-password"
-                  inputClassName={INPUT_CLASS}
-                />
-                <span className="text-xs text-ink-muted">{t('auth.passwordHint')}</span>
-              </label>
-              <label className="flex flex-col gap-1 text-start">
-                <span className="text-sm text-ink-muted">{t('auth.confirmPasswordLabel')}</span>
-                <PasswordInput
-                  value={confirm}
-                  onChange={setConfirm}
-                  testId="auth-confirm-password"
-                  name="confirm-password"
-                  autoComplete="new-password"
-                  inputClassName={INPUT_CLASS}
-                />
-              </label>
-              <button
-                type="submit"
-                disabled={pending}
-                aria-busy={pending}
-                aria-label={pending ? t('auth.submitting') : undefined}
-                data-testid="auth-reset-submit"
-                className={submitButtonClass}
-              >
-                {pending ? (
-                  <span className="flex h-5 w-5 items-center justify-center">
-                    <FaSpinner
-                      aria-hidden="true"
-                      data-testid="auth-submit-spinner"
-                      className="animate-spin"
+            {!codeVerified ? (
+              <form onSubmit={onVerifyCode} className="flex flex-col gap-4">
+                {/* The code as four square boxes: digits-only, auto-advance on
+                    type, a paste (or the OS one-time-code autofill) spreads
+                    across the boxes, backspace falls back. All four inputs
+                    carry the same data-testid so the specs (and autofill) keep
+                    working against the group. */}
+                <div
+                  role="group"
+                  aria-label={t('auth.resetCodeLabel')}
+                  className="flex justify-center gap-2"
+                  dir="ltr"
+                >
+                  {Array.from({ length: OTP_LENGTH }, (_, index) => (
+                    <input
+                      key={index}
+                      ref={(node) => {
+                        otpRefs.current[index] = node
+                      }}
+                      type="text"
+                      dir="ltr"
+                      required
+                      name={`reset-code-${index + 1}`}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                      aria-label={`${t('auth.resetCodeLabel')} ${index + 1}`}
+                      data-testid="auth-otp"
+                      data-otp-index={index}
+                      className={OTP_INPUT_CLASS}
+                      value={otp[index] ?? ''}
+                      onChange={(event) => onOtpChange(index, event.target.value)}
+                      onKeyDown={(event) => onOtpKeyDown(index, event)}
+                      onFocus={(event) => event.target.select()}
                     />
-                  </span>
-                ) : (
-                  t('auth.resetAction')
-                )}
-              </button>
-              <button
-                type="button"
-                data-testid="auth-back-to-signin"
-                onClick={() => switchFlow('credentials')}
-                className={secondaryButtonClass}
-              >
-                {t('auth.backToSignIn')}
-              </button>
-            </form>
+                  ))}
+                </div>
+                {/* Centered under the boxes it describes: as a stretched flex item the
+                    text would otherwise sit on the start edge. */}
+                <span className="text-center text-xs text-ink-muted">{t('auth.resetCodeHint')}</span>
+                {error && <FieldError message={error} testId="auth-error" />}
+                <button
+                  type="submit"
+                  // Nothing to verify until the code is complete, and a dead
+                  // button explains nothing.
+                  disabled={pending || !isOtpComplete(otp)}
+                  aria-busy={pending}
+                  aria-label={pending ? t('auth.submitting') : undefined}
+                  data-testid="auth-reset-verify"
+                  className={submitButtonClass}
+                >
+                  {pending ? (
+                    <span className="flex h-5 w-5 items-center justify-center">
+                      <FaSpinner
+                        aria-hidden="true"
+                        data-testid="auth-submit-spinner"
+                        className="animate-spin"
+                      />
+                    </span>
+                  ) : (
+                    t('auth.resetVerifyAction')
+                  )}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={onResetPassword} className="flex flex-col gap-4">
+                <label className="flex flex-col gap-1 text-start">
+                  <span className="text-sm text-ink-muted">{t('auth.resetNewPasswordLabel')}</span>
+                  <PasswordInput
+                    value={password}
+                    onChange={setPassword}
+                    testId="auth-new-password"
+                    name="new-password"
+                    autoComplete="new-password"
+                    inputClassName={INPUT_CLASS}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-start">
+                  <span className="text-sm text-ink-muted">{t('auth.confirmPasswordLabel')}</span>
+                  <PasswordInput
+                    value={confirm}
+                    onChange={setConfirm}
+                    testId="auth-confirm-password"
+                    name="confirm-password"
+                    autoComplete="new-password"
+                    inputClassName={INPUT_CLASS}
+                  />
+                </label>
+                {error && <FieldError message={error} testId="auth-error" />}
+                <button
+                  type="submit"
+                  disabled={pending}
+                  aria-busy={pending}
+                  aria-label={pending ? t('auth.submitting') : undefined}
+                  data-testid="auth-reset-submit"
+                  className={submitButtonClass}
+                >
+                  {pending ? (
+                    <span className="flex h-5 w-5 items-center justify-center">
+                      <FaSpinner
+                        aria-hidden="true"
+                        data-testid="auth-submit-spinner"
+                        className="animate-spin"
+                      />
+                    </span>
+                  ) : (
+                    t('auth.resetAction')
+                  )}
+                </button>
+              </form>
+            )}
+            {/* Outside both stage forms, so it gets none of their gap-4, and a
+                primary action directly above it needs more air than that. */}
+            <button
+              type="button"
+              data-testid="auth-back-to-signin"
+              onClick={() => switchFlow('credentials')}
+              className={`${secondaryButtonClass} mt-6`}
+            >
+              {t('auth.backToSignIn')}
+            </button>
           </div>
         ) : (
           <>
@@ -602,16 +650,6 @@ export function AuthPage() {
                 {t('auth.resetDone')}
               </p>
             )}
-            {error && (
-              <p
-                role="alert"
-                data-testid="auth-error"
-                className="mb-4 rounded-lg border border-danger px-3 py-2 text-sm text-danger"
-              >
-                {error}
-              </p>
-            )}
-
             {/* Social sign-in: one button per provider the server has
                 credentials for. Providers without credentials render nothing,
                 so the buttons can never advertise a flow that would fail at
@@ -697,7 +735,7 @@ export function AuthPage() {
                   autoComplete={isSignUp ? 'new-password' : 'current-password'}
                   inputClassName={INPUT_CLASS}
                 />
-                {isSignUp && <span className="text-xs text-ink-muted">{t('auth.passwordHint')}</span>}
+                
               </label>
 
               {isSignUp && (
@@ -713,6 +751,8 @@ export function AuthPage() {
                   />
                 </label>
               )}
+
+              {error && <FieldError message={error} testId="auth-error" />}
 
               {/* While the request is in flight the label is replaced by the
                   spinner alone (plus the .btn-sheen sweep). leading-5 + the
@@ -744,11 +784,12 @@ export function AuthPage() {
               </button>
             </form>
 
-            {/* Sign-in extras: forgot password on the start side (left in
-                English/LTR, right in Hebrew/RTL via the logical utilities),
-                create-account hint on the end side. */}
+            {/* Sign-in extra: forgot password on the start side (left in English/LTR,
+                right in Hebrew/RTL via the logical utilities). The signup tab
+                above already switches to registration, so this row carries no
+                second link duplicating it. */}
             {!isSignUp && (
-              <div className="mt-3 flex items-center justify-between gap-2">
+              <div className="mt-3 flex items-center gap-2">
                 <button
                   type="button"
                   data-testid="auth-forgot"
@@ -756,14 +797,6 @@ export function AuthPage() {
                   onClick={() => switchFlow('forgot')}
                 >
                   {t('auth.forgotPassword')}
-                </button>
-                <button
-                  type="button"
-                  data-testid="auth-goto-signup"
-                  className="text-sm text-ink-muted underline-offset-2 transition-colors hover:text-ink hover:underline"
-                  onClick={() => switchMode('signup')}
-                >
-                  {t('auth.gotoSignUp')}
                 </button>
               </div>
             )}

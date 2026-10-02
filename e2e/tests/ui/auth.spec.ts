@@ -4,7 +4,6 @@ import {
   mockGetSessionNull,
   mockRequestPasswordReset,
   mockSocialSignIn,
-  mockResetPasswordInvalidCode,
   mockResetPasswordSuccess,
   mockSendVerificationEmail,
   mockSignInInvalid,
@@ -12,6 +11,7 @@ import {
   mockSignInSuccess,
   mockSignUpAutoSignedIn,
   mockSignUpSuccess,
+  mockVerifyResetCode,
 } from '../../support/authMocks'
 
 const HEBREW_PAGE_TITLE = 'התחברות או הרשמה'
@@ -377,8 +377,75 @@ test.describe('password reset', () => {
     await expect(auth.resetHint).toContainText(HEBREW_RESET_SENT)
     await expect(auth.resetHint).toContainText('user@example.test')
     await expect(auth.resetCode).toBeVisible()
+  })
+
+  test('the password fields wait for a verified code', async ({ mockedPage }) => {
+    await mockRequestPasswordReset(mockedPage)
+    await mockVerifyResetCode(mockedPage, (otp) => otp === '1234')
+    const auth = new AuthPage(mockedPage)
+
+    await auth.goto('/login')
+    await auth.openReset()
+    await auth.requestResetCode('user@example.test')
+
+    // Stage one is the code alone: nothing to type a password into yet, and no
+    // submit control that could not possibly succeed.
+    await expect(auth.resetNewPassword).toHaveCount(0)
+    await expect(auth.resetConfirmPassword).toHaveCount(0)
+    await expect(auth.resetSubmit).toHaveCount(0)
+    await expect(auth.resetVerify).toBeDisabled()
+
+    // Three digits is not a code, so there is still nothing to verify.
+    for (const [index, digit] of ['1', '2', '3'].entries()) {
+      await auth.resetCodeInputs.nth(index).fill(digit)
+    }
+    await expect(auth.resetVerify).toBeDisabled()
+    await expect(auth.resetNewPassword).toHaveCount(0)
+
+    // A wrong code: the error replaces the fields, the boxes stay to fix.
+    await auth.resetCodeInputs.nth(3).fill('9')
+    await auth.resetVerify.click()
+    await expect(auth.error).toHaveText(HEBREW_RESET_INVALID_CODE)
+    await expect(auth.resetCode).toBeVisible()
+    await expect(auth.resetNewPassword).toHaveCount(0)
+
+    // The right code swaps the boxes for the password fields.
+    await auth.verifyResetCode('1234')
+    await expect(auth.resetCodeInputs).toHaveCount(0)
+    await expect(auth.error).toHaveCount(0)
     await expect(auth.resetNewPassword).toBeVisible()
     await expect(auth.resetConfirmPassword).toBeVisible()
+    await expect(auth.resetSubmit).toBeVisible()
+    await expect(auth.resetVerify).toHaveCount(0)
+    // The code is in; "we emailed a code to..." is history and would push the
+    // fields down the card.
+    await expect(auth.resetHint).toHaveCount(0)
+  })
+
+  test('the heading names the reset flow, not sign-in or register', async ({ mockedPage }) => {
+    await mockRequestPasswordReset(mockedPage)
+    await mockVerifyResetCode(mockedPage)
+    const auth = new AuthPage(mockedPage)
+
+    await auth.goto('/login')
+    // The credentials screen still calls itself sign-in/register...
+    await expect(auth.heading).toHaveText(HEBREW_PAGE_TITLE)
+
+    await auth.openReset()
+    // ...but asking for a code is a password reset, and the header says so
+    // rather than sitting above a contradicting one.
+    await expect(auth.heading).toHaveText('איפוס סיסמה')
+    // The panel must not repeat it as a second heading.
+    await expect(auth.resetPanel.getByRole('heading')).toHaveCount(0)
+
+    await auth.requestResetCode('user@example.test')
+    await expect(auth.heading).toHaveText('איפוס סיסמה')
+    await expect(auth.resetHint).toBeVisible()
+
+    // Still one heading after the swap to the password stage.
+    await auth.verifyResetCode('1234')
+    await expect(auth.heading).toHaveText('איפוס סיסמה')
+    await expect(auth.resetPanel.getByRole('heading')).toHaveCount(0)
   })
 
   test('the forgot-password link is absent on the sign-up tab', async ({ mockedPage }) => {
@@ -390,21 +457,22 @@ test.describe('password reset', () => {
     await expect(auth.forgot).toHaveCount(0)
   })
 
-  test('the forgot-password link starts the row, and mirrors in Hebrew', async ({ mockedPage }) => {
+  test('the forgot-password link sits on the start edge, and mirrors in Hebrew', async ({
+    mockedPage,
+  }) => {
     const auth = new AuthPage(mockedPage)
 
-    // English page: the forgot link's left edge sits clearly left of the
-    // create-account hint, i.e. it starts the row.
+    // English page: LTR, so the link starts flush with the fields' left edge.
     await auth.goto('/en/login')
-    const english = await auth.forgotRowBoxes()
-    expect(english.forgotLeft).toBeLessThan(english.signupLeft)
+    const english = await auth.forgotLinkAlignment()
+    expect(Math.abs(english.forgotLeft - english.fieldLeft)).toBeLessThanOrEqual(1)
 
     // Hebrew page: the document is RTL (direction follows the locale - see
-    // src/app/(he)/layout.tsx), so the row mirrors and the forgot link's RIGHT
-    // edge is the one that starts it.
+    // src/app/(he)/layout.tsx), so the link starts flush with the fields'
+    // RIGHT edge instead. A left/right that did not flip fails here.
     await auth.goto('/login')
-    const hebrew = await auth.forgotRowBoxes()
-    expect(hebrew.forgotRight).toBeGreaterThan(hebrew.signupRight)
+    const hebrew = await auth.forgotLinkAlignment()
+    expect(Math.abs(hebrew.forgotRight - hebrew.fieldRight)).toBeLessThanOrEqual(1)
   })
 
   test('the code is four square inputs that keep digits only', async ({ mockedPage }) => {
@@ -467,13 +535,13 @@ test.describe('password reset', () => {
 
   test('shows a localized error for a wrong code', async ({ mockedPage }) => {
     await mockRequestPasswordReset(mockedPage)
-    await mockResetPasswordInvalidCode(mockedPage)
+    await mockVerifyResetCode(mockedPage, (otp) => otp === '1234')
     const auth = new AuthPage(mockedPage)
 
     await auth.goto('/login')
     await auth.openReset()
     await auth.requestResetCode('user@example.test')
-    await auth.submitResetCode('0000', 'password123')
+    await auth.verifyResetCode('0000')
 
     await expect(auth.error).toHaveText(HEBREW_RESET_INVALID_CODE)
     // The panel stays put, so the code can be corrected without re-requesting.
@@ -483,6 +551,7 @@ test.describe('password reset', () => {
 
   test('rejects a short new password before it reaches the server', async ({ mockedPage }) => {
     await mockRequestPasswordReset(mockedPage)
+    await mockVerifyResetCode(mockedPage)
     await mockResetPasswordSuccess(mockedPage)
     const auth = new AuthPage(mockedPage)
 
@@ -497,6 +566,7 @@ test.describe('password reset', () => {
 
   test('confirms the reset and returns the user to the sign-in form', async ({ mockedPage }) => {
     await mockRequestPasswordReset(mockedPage)
+    await mockVerifyResetCode(mockedPage)
     await mockResetPasswordSuccess(mockedPage)
     const auth = new AuthPage(mockedPage)
 
@@ -510,42 +580,46 @@ test.describe('password reset', () => {
     await expect(auth.resetDone).toHaveText(HEBREW_RESET_DONE)
     await expect(auth.submit).toBeVisible()
     await expect(auth.resetSubmit).toHaveCount(0)
+    await expect(auth.resetVerify).toHaveCount(0)
     await expect(auth.email).toHaveValue('user@example.test')
     await expect(auth.password).toHaveValue('')
   })
 
-  test('the reset panel fits a 360px phone, code field included', async ({ mockedPage }) => {
+  test('the reset panel fits a 360px phone in both stages', async ({ mockedPage }) => {
     await mockRequestPasswordReset(mockedPage)
+    await mockVerifyResetCode(mockedPage)
     const auth = new AuthPage(mockedPage)
     await mockedPage.setViewportSize({ width: 360, height: 800 })
+
+    const assertInside = async (controls: Locator[]) => {
+      const overflow = (await mockedPage.evaluate(
+        'document.documentElement.scrollWidth - document.documentElement.clientWidth',
+      )) as number
+      expect(overflow, 'horizontal overflow').toBeLessThanOrEqual(1)
+      for (const control of controls) {
+        const box = await control.boundingBox()
+        expect(box).not.toBeNull()
+        expect(box!.width).toBeGreaterThan(0)
+        expect(box!.x).toBeGreaterThanOrEqual(0)
+        expect(box!.x + box!.width).toBeLessThanOrEqual(360)
+      }
+    }
 
     await auth.goto('/login')
     await auth.openReset()
     await auth.requestResetCode('user@example.test')
 
-    const overflow = (await mockedPage.evaluate(
-      'document.documentElement.scrollWidth - document.documentElement.clientWidth',
-    )) as number
-    expect(overflow, 'horizontal overflow').toBeLessThanOrEqual(1)
+    // Stage one: the boxes and the verify control.
+    await assertInside([...[0, 1, 2, 3].map((index) => auth.resetCodeInputs.nth(index)), auth.resetVerify])
 
-    // The boxes, both fields and the submit control stay inside the card, not
-    // off the right edge where a phone user could not reach them.
-    const controls = [
-      ...[0, 1, 2, 3].map((index) => auth.resetCodeInputs.nth(index)),
-      auth.resetNewPassword,
-      auth.resetSubmit,
-    ]
-    for (const control of controls) {
-      const box = await control.boundingBox()
-      expect(box).not.toBeNull()
-      expect(box!.width).toBeGreaterThan(0)
-      expect(box!.x).toBeGreaterThanOrEqual(0)
-      expect(box!.x + box!.width).toBeLessThanOrEqual(360)
-    }
+    // Stage two: the two fields and the submit, which only exist after verify.
+    await auth.verifyResetCode('1234')
+    await assertInside([auth.resetNewPassword, auth.resetSubmit])
   })
 
   test('the reset panel works in the English locale too', async ({ mockedPage }) => {
     await mockRequestPasswordReset(mockedPage)
+    await mockVerifyResetCode(mockedPage)
     await mockResetPasswordSuccess(mockedPage)
     const auth = new AuthPage(mockedPage)
 

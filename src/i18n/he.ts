@@ -873,7 +873,6 @@ export const he = {
       signInAction: 'התחברות',
       signUpAction: 'יצירת חשבון',
       submitting: 'שולח...',
-      passwordHint: 'לפחות 8 תווים',
       showPassword: 'הצגת סיסמה',
       hidePassword: 'הסתרת סיסמה',
       errorInvalidCredentials: 'כתובת הדוא״ל או הסיסמה שגויים',
@@ -896,6 +895,7 @@ export const he = {
       resetCodeHint: 'הקוד תקף ל-5 דקות מרגע השליחה.',
       resetNewPasswordLabel: 'סיסמה חדשה',
       resetAction: 'איפוס הסיסמה',
+      resetVerifyAction: 'אימות הקוד',
       resetDone: 'הסיסמה עודכנה. אפשר להתחבר עם הסיסמה החדשה.',
       resetInvalidCode: 'הקוד שגוי או שפג תוקפו',
       resetTooManyAttempts: 'יותר מדי ניסיונות. בקשו קוד חדש ונסו שוב.',
@@ -906,7 +906,6 @@ export const he = {
       // own copy: "or sign in with email" above a registration form misnames
       // the action the person is about to take.
       orEmailSignUp: 'או הרשמה עם דוא״ל',
-      gotoSignUp: 'יצירת חשבון',
       signedInAs: 'מחובר בתור {{email}}',
       advisorTitle: 'אזור יועצים',
       advisorBody: 'העמוד הזה זמין ליועצים ולמנהלים בלבד.',

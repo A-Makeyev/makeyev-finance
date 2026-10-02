@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyOtpInput, emptyOtpSlots, OTP_LENGTH } from '@/features/auth/otp'
+import { applyOtpInput, emptyOtpSlots, isOtpComplete, OTP_LENGTH } from '@/features/auth/otp'
 
 /** The value the reset panel submits: the filled boxes, in order. */
 function code(slots: readonly string[]): string {
@@ -76,5 +76,33 @@ describe('applyOtpInput', () => {
     const original = ['1', '2', '3', '4']
     applyOtpInput(original, 0, '9')
     expect(original).toEqual(['1', '2', '3', '4'])
+  })
+})
+
+describe('isOtpComplete', () => {
+  it('is false until the last box is filled', () => {
+    // The reset panel reveals the password fields on this flip, so every
+    // prefix has to stay false.
+    expect(isOtpComplete(emptyOtpSlots())).toBe(false)
+    expect(isOtpComplete(['1', '', '', ''])).toBe(false)
+    expect(isOtpComplete(['1', '2', '', ''])).toBe(false)
+    expect(isOtpComplete(['1', '2', '3', ''])).toBe(false)
+    expect(isOtpComplete(['1', '2', '3', '4'])).toBe(true)
+  })
+
+  it('is false again when a digit is cleared', () => {
+    expect(isOtpComplete(['1', '', '3', '4'])).toBe(false)
+  })
+
+  it('rejects a slot that is not exactly one digit', () => {
+    expect(isOtpComplete(['1', '2', '3', '44'])).toBe(false)
+    expect(isOtpComplete(['1', '2', '3', 'x'])).toBe(false)
+    expect(isOtpComplete(['1', '2', '3', ' 4'])).toBe(false)
+  })
+
+  it('rejects the wrong number of boxes', () => {
+    expect(isOtpComplete([])).toBe(false)
+    expect(isOtpComplete(['1', '2', '3'])).toBe(false)
+    expect(isOtpComplete(['1', '2', '3', '4', '5'])).toBe(false)
   })
 })

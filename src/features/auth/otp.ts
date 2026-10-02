@@ -11,6 +11,15 @@
 /** The reset code is 4 digits, one square input per digit. */
 export const OTP_LENGTH = 4
 
+/**
+ * True once every box holds one digit. The reset step reveals the password
+ * fields at that point, so it is a completeness check, not a validity one:
+ * the code is only actually verified server-side on submit.
+ */
+export function isOtpComplete(slots: readonly string[]): boolean {
+  return slots.length === OTP_LENGTH && slots.every((slot) => /^\d$/.test(slot))
+}
+
 /** Four empty boxes. A fresh array each call, so it is always safe to edit. */
 export function emptyOtpSlots(): string[] {
   return Array.from({ length: OTP_LENGTH }, () => '')

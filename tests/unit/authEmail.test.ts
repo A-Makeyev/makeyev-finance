@@ -74,6 +74,22 @@ describe('buildOtpEmail', () => {
     expect(email.html).toContain('dir="ltr"')
   })
 
+  it('colours the digits without a filled background behind them', () => {
+    const email = buildOtpEmail('hebrew', '1234')
+    expect(email.html).toContain('color:#0f5c4b')
+    // The old treatment was white on a green block; the digits are the accent
+    // now, so a background would double the emphasis and hide the underline
+    // clients may add.
+    expect(email.html).not.toContain('background:#0f5c4b')
+    expect(email.html).not.toContain('color:#ffffff')
+  })
+
+  it('sets the code on the start edge, so it flips with the language', () => {
+    // start, not right/left: the same template serves both locales.
+    expect(buildOtpEmail('hebrew', '1234').html).toContain('text-align:start')
+    expect(buildOtpEmail('english', '1234').html).toContain('text-align:start')
+  })
+
   it('carries no link: the code is typed into the form the user came from', () => {
     const email = buildOtpEmail('english', '9876')
     expect(email.html).not.toContain('href=')

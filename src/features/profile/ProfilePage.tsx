@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { FaKey, FaRegUser, FaSignOutAlt } from 'react-icons/fa'
 import { AppModal } from '@/components/ui/AppModal'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { FieldError } from '@/components/ui/FieldError'
 import { authClient } from '@/lib/auth-client'
 import { useRouter } from '@/router'
 import { initialsFor } from '@/lib/avatar'
@@ -267,16 +268,6 @@ export function ProfilePage({
             {t('auth.profileChangePasswordTitle')}
           </h3>
 
-          {error && (
-            <p
-              role="alert"
-              data-testid="profile-error"
-              className="rounded-lg border border-danger px-3 py-2 text-sm text-danger"
-            >
-              {error}
-            </p>
-          )}
-
           <label className="flex flex-col gap-1 text-start">
             <span className="text-sm text-ink-muted">{t('auth.profileCurrentPasswordLabel')}</span>
             <PasswordInput
@@ -298,7 +289,6 @@ export function ProfilePage({
               autoComplete="new-password"
               inputClassName={INPUT_CLASS}
             />
-            <span className="text-xs text-ink-muted">{t('auth.passwordHint')}</span>
           </label>
           <label className="flex flex-col gap-1 text-start">
             <span className="text-sm text-ink-muted">{t('auth.confirmPasswordLabel')}</span>
@@ -322,6 +312,8 @@ export function ProfilePage({
             />
             <span>{t('auth.profileRevokeOtherSessions')}</span>
           </label>
+
+          {error && <FieldError message={error} testId="profile-error" />}
 
           <div className="mt-2 flex justify-end gap-3">
             <button

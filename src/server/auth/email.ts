@@ -203,7 +203,7 @@ export function buildOtpEmail(language: Language, otp: string): VerificationEmai
     `<tr><td style="padding:32px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;text-align:start;">`,
     `<h1 style="margin:0 0 16px;font-size:20px;">${escapeHtml(t.otpHeading)}</h1>`,
     `<p style="margin:0 0 20px;font-size:15px;line-height:1.6;">${escapeHtml(t.otpBody)}</p>`,
-    `<p style="margin:0 0 24px;text-align:center;"><span dir="ltr" style="display:inline-block;padding:12px 24px;background:#0f5c4b;color:#ffffff;border-radius:8px;font-size:26px;letter-spacing:8px;font-weight:700;">${safeOtp}</span></p>`,
+    `<p style="margin:0 0 24px;text-align:start;"><span dir="ltr" style="display:inline-block;color:#0f5c4b;font-size:26px;letter-spacing:8px;font-weight:700;">${safeOtp}</span></p>`,
     `<p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#555555;">${escapeHtml(t.otpExpiry)}</p>`,
     `<p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#555555;">${escapeHtml(t.otpIgnore)}</p>`,
     `<p style="margin:0;font-size:13px;color:#777777;">${escapeHtml(t.signature)}</p>`,

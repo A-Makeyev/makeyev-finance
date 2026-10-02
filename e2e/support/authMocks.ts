@@ -166,6 +166,34 @@ export function mockResetPasswordSuccess(page: Page): Promise<void> {
     .then(() => undefined)
 }
 
+/**
+ * Stage 1 of the reset: the code is checked before the password fields appear.
+ * `check` sees the posted otp so a spec can accept one code and reject another.
+ */
+export function mockVerifyResetCode(
+  page: Page,
+  check: (otp: string) => boolean = () => true,
+): Promise<void> {
+  return page
+    .route('**/api/auth/email-otp/check-verification-otp', async (route) => {
+      const otp = String((route.request().postDataJSON() as { otp?: string }).otp ?? '')
+      if (check(otp)) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true }),
+        })
+        return
+      }
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'INVALID_OTP', message: 'Invalid OTP' }),
+      })
+    })
+    .then(() => undefined)
+}
+
 /** A wrong or expired code: Better Auth answers 400 with an INVALID_OTP code. */
 export function mockResetPasswordInvalidCode(page: Page): Promise<void> {
   return page

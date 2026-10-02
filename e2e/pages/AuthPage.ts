@@ -27,7 +27,7 @@ export class AuthPage {
   readonly resendSent: Locator
   readonly backToSignIn: Locator
   readonly forgot: Locator
-  readonly gotoSignUp: Locator
+  
   readonly forgotPanel: Locator
   readonly forgotEmail: Locator
   readonly sendCode: Locator
@@ -39,6 +39,7 @@ export class AuthPage {
   readonly resetNewPassword: Locator
   readonly resetConfirmPassword: Locator
   readonly resetSubmit: Locator
+  readonly resetVerify: Locator
   readonly resetDone: Locator
   readonly footer: Locator
   readonly navLogin: Locator
@@ -80,7 +81,7 @@ export class AuthPage {
     this.resendSent = page.getByTestId('auth-resend-sent')
     this.backToSignIn = page.getByTestId('auth-back-to-signin')
     this.forgot = page.getByTestId('auth-forgot')
-    this.gotoSignUp = page.getByTestId('auth-goto-signup')
+    
     this.forgotPanel = page.getByTestId('auth-forgot-panel')
     this.forgotEmail = this.forgotPanel.getByTestId('auth-email')
     this.sendCode = page.getByTestId('auth-send-code')
@@ -91,6 +92,7 @@ export class AuthPage {
     this.resetNewPassword = page.getByTestId('auth-new-password')
     this.resetConfirmPassword = page.getByTestId('auth-confirm-password')
     this.resetSubmit = page.getByTestId('auth-reset-submit')
+    this.resetVerify = page.getByTestId('auth-reset-verify')
     this.resetDone = page.getByTestId('auth-reset-done')
     this.footer = page.locator('footer.footer')
     this.navLogin = page.getByTestId('nav-login')
@@ -169,30 +171,39 @@ export class AuthPage {
     await this.page.keyboard.insertText(code)
   }
 
+  /**
+   * Stage 1: type the code across the four boxes and press verify, which is
+   * what swaps them for the password fields.
+   */
+  async verifyResetCode(code: string): Promise<void> {
+    const digits = code.replace(/\D/g, '').slice(0, 4).split('')
+    for (const [index, digit] of digits.entries()) {
+      await this.resetCodeInputs.nth(index).fill(digit)
+    }
+    await this.resetVerify.click()
+  }
+
   async submitResetCode(code: string, newPassword: string): Promise<void> {
     // Type the code across the four square inputs the way a user does: a
     // digit per box (typing into the group auto-advances, so a straight
     // pressSequentially on the first box also lands; fill per box is the
     // deterministic path a paste would end in).
-    const digits = code.replace(/\D/g, '').slice(0, 4).split('')
-    for (const [index, digit] of digits.entries()) {
-      await this.resetCodeInputs.nth(index).fill(digit)
-    }
+    await this.verifyResetCode(code)
     await this.resetNewPassword.fill(newPassword)
     await this.resetConfirmPassword.fill(newPassword)
     await this.resetSubmit.click()
   }
 
   /**
-   * The edges of the sign-in row's two links, in CSS pixels: which of them
-   * starts the row on screen. Measured rather than read off a dir attribute,
-   * so it catches a layout that does not actually mirror.
+   * The forgot-password link's edges against the email field's, in CSS pixels:
+   * which edge of the card it sits flush with. Measured rather than read off a
+   * dir attribute, so it catches a layout that does not actually mirror.
    */
-  async forgotRowBoxes(): Promise<{
+  async forgotLinkAlignment(): Promise<{
     forgotLeft: number
     forgotRight: number
-    signupLeft: number
-    signupRight: number
+    fieldLeft: number
+    fieldRight: number
   }> {
     const measure = async (locator: Locator) => {
       const box = await locator.boundingBox()
@@ -200,8 +211,13 @@ export class AuthPage {
       return { left, right: left + (box?.width ?? 0) }
     }
     const forgot = await measure(this.forgot)
-    const signup = await measure(this.gotoSignUp)
-    return { forgotLeft: forgot.left, forgotRight: forgot.right, signupLeft: signup.left, signupRight: signup.right }
+    const field = await measure(this.email)
+    return {
+      forgotLeft: forgot.left,
+      forgotRight: forgot.right,
+      fieldLeft: field.left,
+      fieldRight: field.right,
+    }
   }
 
   /** Opens the signed-in account menu (hover, as a desktop user would). */
