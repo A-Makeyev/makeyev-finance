@@ -39,6 +39,8 @@ export class CommentsPage {
   readonly toggleWithNoRail: Locator
   /** The collapse toggle inside such a comment. */
   readonly toggleWithNoRailButton: Locator
+  /** The article's prose block: the reference for width and alignment checks. */
+  readonly article: Locator
 
   constructor(page: Page) {
     this.page = page
@@ -70,6 +72,7 @@ export class CommentsPage {
     this.toggleWithNoRailButton = page.locator(
       '.comment-node.has-collapse:not(.has-children) [data-testid="comment-collapse"]',
     )
+    this.article = page.locator('article.article-page')
   }
 
   /** A single comment by its data id (the element carries #comment-<id>). */

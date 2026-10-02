@@ -224,16 +224,12 @@ strong {
 =========================================================================== */
 html {
   scroll-behavior: smooth;
-  /* Legacy had no line-height rules - Tailwind preflight's 1.5 inflates
-     every input/label/button vs the original metrics (56px inputs, 62px
-     button). UA `normal` restores the legacy geometry site-wide. */
+  /* Legacy set no line-height: Tailwind preflight's 1.5 inflates every input,
+     label and button vs the original metrics. UA `normal` restores them. */
   line-height: normal;
-  /* The site never scrolls horizontally by design, but Windows font
-     rendering and zoom rounding can poke an element a fraction of a pixel
-     past the viewport, and Chrome then shows a page-width horizontal
-     scrollbar at the bottom edge (mostly on hover). Clip it: vertical
-     scrolling is untouched, and anything displaced this slightly is not
-     reachable content anyway. */
+  /* The site never scrolls horizontally by design, but Windows font rendering
+     and zoom rounding can poke an element a fraction of a pixel past the
+     viewport and Chrome then shows a page-width scrollbar. Clip it. */
   overflow-x: clip;
 }
 
@@ -2695,6 +2691,10 @@ nav#navbar .nav-bar-controls li {
 .footer {
   width: 100%;
   padding: 10px 0;
+  /* Constant light hairline, NOT --line-strong: the footer is near-black in
+     BOTH themes, so a theme-aware border resolved to rgb(15,15,15) here in
+     light mode and vanished into the background it was meant to divide. */
+  border-top: 1px solid rgba(233, 241, 239, 0.3);
   user-select: none;
   text-align: center;
   color: var(--soft-white);
@@ -7229,12 +7229,10 @@ tbody tr:hover {
   text-decoration: underline;
 }
 
-/* The article surfaces are always LTR today (only the calculator goes RTL
-   for Hebrew), but the layout is written with logical properties so a future
-   direction rule change mirrors them without a per-component override.
-   The list is wider than the reading measure (.article-page keeps 820px for
-   prose): a card grid needs the room, four cards settle as a balanced 2x2
-   instead of one long column. */
+/* Written with logical properties so a future direction change mirrors these
+   surfaces without a per-component override.
+   The list is wider than the prose measure: a card grid needs the room, four
+   cards settle as a balanced 2x2 instead of one long column. */
 .articles-list,
 .article-page {
   inline-size: 90%;
@@ -7246,15 +7244,17 @@ tbody tr:hover {
   max-inline-size: 1080px;
 }
 
-.article-page {
+/* The prose measure, shared with .article-comments: the thread is a SIBLING of
+   <article>, so it inherits nothing from .article-page and rendered full-bleed.
+   One rule for both stops it drifting when the measure changes. */
+.article-page,
+.article-comments {
   max-inline-size: 820px;
 }
 
-/* The shared sub-header keeps its h1 on one line (.sub-header h1 is
-   white-space: nowrap), which suits the short fixed page titles but overflows
-   a phone (360px) once a title is a sentence. Article titles come from
-   content, so the article pages opt into wrapping; higher specificity than
-   the base rules, so placement here is enough. */
+/* .sub-header h1 is nowrap, which suits the short fixed page titles but
+   overflows a 360px phone once a title is a sentence. Article titles come from
+   content, so they opt into wrapping; specificity beats the base rule. */
 .sub-header.article-sub-header h1 {
   white-space: normal;
 }
@@ -7387,8 +7387,6 @@ tbody tr:hover {
   font-weight: 700;
 }
 
-/* The sign-in prompt reads as a quiet text action on the heading line, not a
-   bordered button; the middot before it is decorative separation. */
 .comments-heading-sep {
   color: var(--ink-muted);
 }
@@ -7401,9 +7399,10 @@ tbody tr:hover {
   font: inherit;
   font-size: 0.9rem;
   font-weight: 600;
-  text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+  position: relative;
+  top: -2px;
 }
 
 .comment-sign-in-link:hover {
@@ -7416,20 +7415,21 @@ tbody tr:hover {
   border-radius: 4px;
 }
 
-/* Reader comments under an article. A separate region on purpose: it is not
-   one of the article's own content sections (the structural assertions count
-   those), so it carries its own class while sharing their heading treatment.
-   Logical properties keep it mirrored in RTL. */
+/* Reader comments: a separate region on purpose, since it is not one of the
+   article's own content sections (the structural assertions count those). */
 .article-comments {
-  margin-block: 34px 8px;
+  /* Centred and measured like the article above it; logical properties so RTL
+     needs no override. The bottom margin is the gap to the footer, matching the
+     article's own 60px. */
+  inline-size: 90%;
+  margin-inline: auto;
+  margin-block: 34px 60px;
 }
 
-/* Comment text keeps its OWN bidi base direction (dir="auto" on the element,
-   so a Hebrew sentence reads correctly even on the English page) but is
-   ALIGNED to the page's direction: a Hebrew comment on the LTR page then stays
-   beside the author's name instead of jumping to the far edge of the card, and
-   vice versa. The alignment therefore has to come from the document direction
-   - `text-align: start` would follow dir="auto" and reproduce the bug. */
+/* Comment text keeps its OWN bidi base direction (dir="auto", so a Hebrew
+   sentence reads correctly on the English page) but is ALIGNED to the page's
+   direction, so it stays beside the author's name instead of jumping to the far
+   edge. `text-align: start` would follow dir="auto" and reproduce the bug. */
 .comment-text {
   text-align: start;
 }
@@ -7442,8 +7442,7 @@ html[dir='rtl'] .comment-text {
   text-align: right;
 }
 
-/* The Reply glyph is an arrow that points the way the thread reads, so it is
-   mirrored under RTL; the Edit and Delete glyphs are direction-neutral. */
+/* The Reply glyph points the way the thread reads, so it mirrors under RTL. */
 :root[dir='rtl'] .comment-reply-icon {
   transform: scaleX(-1);
 }

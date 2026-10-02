@@ -17,6 +17,39 @@ test.describe('article comments', () => {
     await serveQuotes(mockedPage, [])
   })
 
+  for (const viewport of [
+    { width: 360, height: 800, tag: '360' },
+    { width: 1280, height: 900, tag: '1280' },
+  ]) {
+    // Both directions: alignment comes from logical properties, and an LTR
+    // pass is the only thing that catches a left/right that did not flip.
+    for (const locale of [
+      { prefix: '', tag: 'hebrew' },
+      { prefix: '/en', tag: 'english' },
+    ]) {
+      test(`the thread is aligned under the article, not full width - ${locale.tag} @ ${viewport.tag}px`, async ({
+        mockedPage,
+      }) => {
+        const comments = new CommentsPage(mockedPage)
+        await mockedPage.setViewportSize({ width: viewport.width, height: viewport.height })
+        await comments.goto(`${locale.prefix}/articles/mortgage-decisions`)
+
+        const article = await comments.article.boundingBox()
+        const thread = await comments.section.boundingBox()
+        expect(article).not.toBeNull()
+        expect(thread).not.toBeNull()
+
+        // The thread lives OUTSIDE <article> on purpose (page furniture, not
+        // prose), so only the CSS gives it the article's measure. Without it
+        // the thread spans the whole page.
+        expect(Math.round(thread!.width)).toBeLessThanOrEqual(Math.round(article!.width))
+        // Same inline start, so it reads as part of the column.
+        expect(Math.round(thread!.x)).toBe(Math.round(article!.x))
+        expect(thread!.y).toBeGreaterThan(article!.y + article!.height - 1)
+      })
+    }
+  }
+
   test('a signed-out reader gets the sign-in prompt instead of a form', async ({ mockedPage }) => {
     const comments = new CommentsPage(mockedPage)
     await comments.goto('/articles/mortgage-decisions')

@@ -73,9 +73,8 @@ export function MovingChecklistArticlePage() {
           {t('education.movingChecklist.backToArticles')}
         </Link>
       </article>
-      {/* The discussion is page furniture, not article prose: a reader (or a
-          screen reader) walking the article should not run the whole comment
-          thread as part of the article's content. */}
+      {/* Page furniture, not article prose: a screen reader walking the
+          article should not run the thread as article content. */}
       <CommentsSection slug="moving-checklist" />
     </>
   )
