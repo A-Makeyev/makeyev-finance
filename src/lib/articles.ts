@@ -47,3 +47,13 @@ export const ARTICLE_LIST: readonly { slug: ArticleSlug; key: string }[] = [
   { slug: 'mortgage-track-types', key: 'trackTypes' },
   { slug: 'mortgage-decisions', key: 'mortgageDecisions' },
 ]
+
+/**
+ * The i18n key for an article's title, so a surface holding only a slug (a
+ * reply card) can name the article in the reader's language instead of
+ * persisting a title that goes stale on retitle. Null for an unknown slug.
+ */
+export function articleTitleKey(slug: string): string | null {
+  const entry = ARTICLE_LIST.find((article) => article.slug === slug)
+  return entry ? `articles.${entry.key}.title` : null
+}
