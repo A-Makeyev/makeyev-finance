@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth'
 import { mongodbAdapter } from 'better-auth/adapters/mongodb'
 import { nextCookies } from 'better-auth/next-js'
 import { emailOTP } from 'better-auth/plugins/email-otp'
-import { getAuthConfig, parseSocialProviders } from './config'
+import { getAuthConfig, parseSocialProviders, buildBaseURLConfig } from './config'
 import { getDb } from './mongo'
 import { sendPasswordResetOtpEmail, sendVerificationEmail } from './email'
 import { DEFAULT_ROLE } from './roles'
@@ -38,7 +38,8 @@ async function createAuth() {
       transaction: false,
     }),
     secret: config.BETTER_AUTH_SECRET,
-    baseURL: config.BETTER_AUTH_URL,
+    // Resolved per request, allowlist-gated - see `buildBaseURLConfig`.
+    baseURL: buildBaseURLConfig(config.BETTER_AUTH_URL),
     // Each provider is plain options, not a provider instance: Better Auth
     // 1.7 accepts the options object here and builds the provider itself.
     // Built conditionally, because an unconfigured provider must not be
@@ -122,6 +123,11 @@ async function createAuth() {
     advanced: {
       // Render terminates TLS and forwards the client address here.
       ipAddress: { ipAddressHeaders: ['x-forwarded-for'] },
+      // Render rewrites Host/scheme to the container's internal origin, so the
+      // public pair arrives only via x-forwarded-*; without this the resolved
+      // protocol is `http` and Google rejects the redirect_uri. Safe to trust
+      // because allowedHosts re-checks the host before building it.
+      trustedProxyHeaders: true,
     },
     plugins: [
       // Password reset with a 4-digit one-time code emailed to the user (the

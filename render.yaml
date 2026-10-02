@@ -35,6 +35,8 @@ services:
         sync: false
       - key: AUTH_EMAIL_FROM
         sync: false
-      # Public origin auth links are built from (e.g. the onrender.com URL).
+      # This deployment's public origin (e.g. the onrender.com URL). Its host
+      # joins the redirect allowlist and it is the fallback origin. Required on
+      # deploys; local dev needs no value.
       - key: BETTER_AUTH_URL
         sync: false

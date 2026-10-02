@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canSendAuthEmail, parseAuthConfig } from '@/server/auth/config'
+import { buildBaseURLConfig, canSendAuthEmail, parseAuthConfig } from '@/server/auth/config'
 
 describe('parseAuthConfig', () => {
   it('applies the default From address and keeps secrets optional (so next build works)', () => {
@@ -33,6 +33,31 @@ describe('parseAuthConfig', () => {
 
   it('rejects a malformed BETTER_AUTH_URL', () => {
     expect(() => parseAuthConfig({ BETTER_AUTH_URL: 'not-a-url' })).toThrow(/BETTER_AUTH_URL/)
+  })
+})
+
+describe('buildBaseURLConfig', () => {
+  it('accepts loopback on any port when no public origin is configured', () => {
+    // Zero env config locally: dev (3000) and e2e (3100) differ only by port.
+    const config = buildBaseURLConfig(undefined)
+    expect(config.allowedHosts).toEqual(['localhost:*', '127.0.0.1:*', '[::1]:*'])
+    expect(config).not.toHaveProperty('fallback')
+  })
+
+  it("adds the deployment's own host and falls back to its origin", () => {
+    const config = buildBaseURLConfig('https://makeyev-finance.onrender.com')
+    expect(config.allowedHosts).toContain('makeyev-finance.onrender.com')
+    // Still accepts localhost, so one build serves both dev and prod.
+    expect(config.allowedHosts).toContain('localhost:*')
+    // An unrecognised Host resolves to our origin instead of throwing, and
+    // never to the host in the request.    expect(config.fallback).toBe('https://makeyev-finance.onrender.com')
+  })
+
+  it('keeps the port when the configured origin has one', () => {
+    // The allowlist matches the full `host:port`, so dropping the port would
+    // reject a legitimate origin.
+    const config = buildBaseURLConfig('http://localhost:8080')
+    expect(config.allowedHosts).toContain('localhost:8080')
   })
 })
 

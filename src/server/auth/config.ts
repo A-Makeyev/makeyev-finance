@@ -26,7 +26,11 @@ const authConfigSchema = z.object({
     .string()
     .min(32, 'BETTER_AUTH_SECRET must be at least 32 characters')
     .optional(),
-  /** Public origin Better Auth builds links from. Inferred from the request when unset. */
+  /**
+   * This deployment's public origin, when it is not localhost. Contributes the
+   * host to accept and the fallback origin (see `buildBaseURLConfig`); a purely
+   * local run needs no value.
+   */
   BETTER_AUTH_URL: z.string().url().optional(),
   /**
    * From address for verification emails. The default is Resend's onboarding
@@ -73,6 +77,25 @@ export function parseSocialProviders(raw: Record<string, string | undefined>): S
 }
 
 export type AuthConfig = z.infer<typeof authConfigSchema>
+
+/** Loopback hosts, any port: dev (3000), e2e (3100) and `next dev -p` all vary. */
+const LOCAL_HOST_PATTERNS = ['localhost:*', '127.0.0.1:*', '[::1]:*']
+
+/**
+ * Better Auth's dynamic `baseURL`: resolved per request instead of pinned, so
+ * each environment need not know its own origin. `allowedHosts` is what makes
+ * that safe - an unrecognised Host is rejected rather than used to build an
+ * OAuth `redirect_uri`. Without a known origin there is no fallback, so a bad
+ * Host fails loud.
+ */
+export function buildBaseURLConfig(authUrl: string | undefined) {
+  const allowedHosts = [...LOCAL_HOST_PATTERNS]
+  if (authUrl) allowedHosts.push(new URL(authUrl).host)
+  return {
+    allowedHosts,
+    ...(authUrl ? { fallback: authUrl } : {}),
+  }
+}
 
 function readRawEnv(): Record<string, string | undefined> {
   // Node/Next load .env into process.env. Deliberately not import.meta.env:
