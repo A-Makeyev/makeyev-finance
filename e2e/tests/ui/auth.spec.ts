@@ -64,6 +64,27 @@ test.describe('auth pages', () => {
     })
   }
 
+  test('the fields start at the page start edge, in both directions', async ({ mockedPage }) => {
+    // Hard-coding dir="ltr" on the email/password fields made Hebrew typing
+    // start at the wrong edge. The contract now is "no dir override, and
+    // align to start": the browser resolves `start` against the document
+    // direction, so the same rule puts the text on the right in Hebrew and on
+    // the left in English.
+    const auth = new AuthPage(mockedPage)
+
+    for (const [path, heading] of [
+      ['/login', HEBREW_PAGE_TITLE],
+      ['/en/login', ENGLISH_PAGE_TITLE],
+    ] as const) {
+      await auth.goto(path)
+      await expect(auth.heading).toHaveText(heading)
+      for (const field of [auth.email, auth.password]) {
+        await expect(field).not.toHaveAttribute('dir')
+        expect(await auth.textAlignOf(field)).toBe('start')
+      }
+    }
+  })
+
   test('switching to sign-up reveals the name and confirmation fields', async ({ mockedPage }) => {
     const auth = new AuthPage(mockedPage)
     await auth.goto('/login')
@@ -71,6 +92,33 @@ test.describe('auth pages', () => {
     await expect(auth.name).toHaveCount(0)
     await auth.switchToSignUp()
     await expect(auth.confirmPassword).toBeVisible()
+  })
+
+  test('the password fields can be revealed and masked again', async ({ mockedPage }) => {
+    const auth = new AuthPage(mockedPage)
+    await auth.goto('/login')
+
+    await expect(auth.password).toHaveAttribute('type', 'password')
+    await expect(auth.passwordToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(auth.passwordToggle).toHaveAttribute('aria-label', 'הצגת סיסמה')
+
+    await auth.password.fill('secret123')
+    await auth.passwordToggle.click()
+    await expect(auth.password).toHaveAttribute('type', 'text')
+    await expect(auth.passwordToggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(auth.passwordToggle).toHaveAttribute('aria-label', 'הסתרת סיסמה')
+    // Toggling reveals the same field, so the typed value is not lost.
+    await expect(auth.password).toHaveValue('secret123')
+
+    await auth.passwordToggle.click()
+    await expect(auth.password).toHaveAttribute('type', 'password')
+
+    // The sign-up confirmation field has its own, independent toggle.
+    await auth.switchToSignUp()
+    await expect(auth.confirmPassword).toHaveAttribute('type', 'password')
+    await auth.confirmPasswordToggle.click()
+    await expect(auth.confirmPassword).toHaveAttribute('type', 'text')
+    await expect(auth.password).toHaveAttribute('type', 'password')
   })
 
   test('rejects mismatched passwords locally, in the page language', async ({ mockedPage }) => {

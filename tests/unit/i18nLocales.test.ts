@@ -68,12 +68,48 @@ describe('createI18nInstance', () => {
     expect(a).not.toBe(b)
   })
 
+  it('resolves the save-control labels instead of echoing the key path', async () => {
+    // A key can satisfy the Translation type (both locale files agree) and
+    // still be unreachable at runtime if it landed in the wrong block; i18next
+    // then renders the raw key path, which is exactly what the save button did
+    // ("savedMixes.saving" instead of "saving..."). Assert the resolved string.
+    for (const language of ['hebrew', 'english'] as const) {
+      const instance = createI18nInstance(language)
+      await instance.init()
+      const source = language === 'hebrew' ? he.translation : en.translation
+      for (const value of [
+        instance.t('savedMixes.saveAction'),
+        instance.t('savedMixes.saving'),
+        instance.t('savedMixes.savedState'),
+      ]) {
+        expect(value).not.toContain('savedMixes.')
+        expect(value.trim()).not.toBe('')
+      }
+      expect(instance.t('savedMixes.saving')).toBe(source.savedMixes.saving)
+    }
+  })
+
   it('falls back to Hebrew when a key is missing in the active locale', async () => {
     const instance = createI18nInstance('english')
     await instance.init()
     // Both locales currently carry every key; fallbackLng guards the day one
     // does not, so assert the configuration rather than inventing a key.
     expect(instance.options.fallbackLng).toEqual(['he'])
+  })
+})
+
+describe('savedMixes.termFor pluralization', () => {
+  it('uses the singular for one year and the right plural form otherwise', async () => {
+    const heInstance = createI18nInstance('hebrew')
+    await heInstance.init()
+    expect(heInstance.t('savedMixes.termFor', { count: 1 })).toBe('לתקופה של שנה')
+    expect(heInstance.t('savedMixes.termFor', { count: 2 })).toBe('לתקופה של שנתיים')
+    expect(heInstance.t('savedMixes.termFor', { count: 15 })).toBe('לתקופה של 15 שנים')
+
+    const enInstance = createI18nInstance('english')
+    await enInstance.init()
+    expect(enInstance.t('savedMixes.termFor', { count: 1 })).toBe('For a term of 1 year')
+    expect(enInstance.t('savedMixes.termFor', { count: 15 })).toBe('For a term of 15 years')
   })
 })
 

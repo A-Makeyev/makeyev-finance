@@ -17,6 +17,15 @@ export const ARTICLE_IMAGES = {
 export type ArticleSlug = keyof typeof ARTICLE_IMAGES
 
 /**
+ * True when the value names a real article. The comment routes take the slug
+ * from the URL, so this is what keeps an arbitrary string from reaching the
+ * database as an "article".
+ */
+export function isArticleSlug(value: string): value is ArticleSlug {
+  return Object.prototype.hasOwnProperty.call(ARTICLE_IMAGES, value)
+}
+
+/**
  * The hero banner background for an article page: the same dark overlay and
  * image pairing `.sub-header` uses in globals.css, but with the article's own
  * picture. Applied inline so the per-article image stays driven by the map

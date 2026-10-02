@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FaGoogle, FaSpinner } from 'react-icons/fa'
 import { authClient } from '@/lib/auth-client'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { useRouter } from '@/router'
 import { applyOtpInput, emptyOtpSlots, OTP_LENGTH } from './otp'
 
@@ -25,7 +26,11 @@ type Flow = 'credentials' | 'forgot' | 'reset'
 type ResendState = 'idle' | 'sending' | 'sent'
 
 const INPUT_CLASS =
-  'w-full rounded-lg border border-line-strong bg-surface-page px-3 py-2 text-ink outline-none transition-colors hover:border-ink focus:border-ink'
+  // text-start (not a hard direction): every field inherits the page's
+  // direction, so typed text begins at the page's start edge - right in
+  // Hebrew, left in English. No `dir` override on these inputs for the same
+  // reason: forcing LTR made Hebrew typing start at the wrong edge.
+  'w-full rounded-lg border border-line-strong bg-surface-page px-3 py-2 text-start text-ink outline-none transition-colors hover:border-ink focus:border-ink'
 
 /** Shared keyboard ring: the site's blue over the card, never the UA outline. */
 const FOCUS_RING =
@@ -301,11 +306,15 @@ export function AuthPage() {
     `rounded-lg border px-3 py-2 text-sm transition-colors ${FOCUS_RING} ${
       active
         ? 'border-ink bg-ink text-surface-page hover:bg-ink/85'
-        : 'border-line-strong bg-surface-page text-ink hover:border-ink hover:bg-surface-soft'
+        : 'border-line-strong bg-surface-raised text-ink hover:border-ink hover:bg-ink/10'
     }`
 
+  // surface-raised: these sit on the auth card, and in the dark theme the page
+  // colour is darker than the card, so a page-coloured button read as a hole.
+  // The hover is an ink tint rather than the soft surface, so it tints the same
+  // way in both themes instead of dropping to a darker fill in dark mode.
   const secondaryButtonClass =
-    `rounded-lg border border-line-strong bg-surface-page px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-surface-soft ${FOCUS_RING}`
+    `rounded-lg border border-line-strong bg-surface-raised px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-ink/10 ${FOCUS_RING}`
 
   const submitButtonClass = `mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2.5 font-medium leading-5 text-surface-page transition-[background-color,transform] hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-soft-blue focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 ${
     pending ? 'btn-sheen' : ''
@@ -406,8 +415,8 @@ export function AuthPage() {
                 <span className="text-sm text-ink-muted">{t('auth.emailLabel')}</span>
                 <input
                   type="email"
-                  dir="ltr"
                   required
+                  name="email"
                   autoComplete="email"
                   data-testid="auth-email"
                   className={INPUT_CLASS}
@@ -486,6 +495,7 @@ export function AuthPage() {
                     type="text"
                     dir="ltr"
                     required
+                    name={`reset-code-${index + 1}`}
                     inputMode="numeric"
                     pattern="[0-9]*"
                     autoComplete={index === 0 ? 'one-time-code' : 'off'}
@@ -503,29 +513,25 @@ export function AuthPage() {
               <span className="text-xs text-ink-muted">{t('auth.resetCodeHint')}</span>
               <label className="flex flex-col gap-1 text-start">
                 <span className="text-sm text-ink-muted">{t('auth.resetNewPasswordLabel')}</span>
-                <input
-                  type="password"
-                  dir="ltr"
-                  required
-                  autoComplete="new-password"
-                  data-testid="auth-new-password"
-                  className={INPUT_CLASS}
+                <PasswordInput
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={setPassword}
+                  testId="auth-new-password"
+                  name="new-password"
+                  autoComplete="new-password"
+                  inputClassName={INPUT_CLASS}
                 />
                 <span className="text-xs text-ink-muted">{t('auth.passwordHint')}</span>
               </label>
               <label className="flex flex-col gap-1 text-start">
                 <span className="text-sm text-ink-muted">{t('auth.confirmPasswordLabel')}</span>
-                <input
-                  type="password"
-                  dir="ltr"
-                  required
-                  autoComplete="new-password"
-                  data-testid="auth-confirm-password"
-                  className={INPUT_CLASS}
+                <PasswordInput
                   value={confirm}
-                  onChange={(event) => setConfirm(event.target.value)}
+                  onChange={setConfirm}
+                  testId="auth-confirm-password"
+                  name="confirm-password"
+                  autoComplete="new-password"
+                  inputClassName={INPUT_CLASS}
                 />
               </label>
               <button
@@ -656,8 +662,8 @@ export function AuthPage() {
                   <span className="text-sm text-ink-muted">{t('auth.nameLabel')}</span>
                   <input
                     type="text"
-                    dir="auto"
                     required
+                    name="name"
                     autoComplete="name"
                     data-testid="auth-name"
                     className={INPUT_CLASS}
@@ -671,8 +677,8 @@ export function AuthPage() {
                 <span className="text-sm text-ink-muted">{t('auth.emailLabel')}</span>
                 <input
                   type="email"
-                  dir="ltr"
                   required
+                  name="email"
                   autoComplete="email"
                   data-testid="auth-email"
                   className={INPUT_CLASS}
@@ -683,15 +689,13 @@ export function AuthPage() {
 
               <label className="flex flex-col gap-1 text-start">
                 <span className="text-sm text-ink-muted">{t('auth.passwordLabel')}</span>
-                <input
-                  type="password"
-                  dir="ltr"
-                  required
-                  data-testid="auth-password"
-                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                  className={INPUT_CLASS}
+                <PasswordInput
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={setPassword}
+                  testId="auth-password"
+                  name="password"
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                  inputClassName={INPUT_CLASS}
                 />
                 {isSignUp && <span className="text-xs text-ink-muted">{t('auth.passwordHint')}</span>}
               </label>
@@ -699,15 +703,13 @@ export function AuthPage() {
               {isSignUp && (
                 <label className="flex flex-col gap-1 text-start">
                   <span className="text-sm text-ink-muted">{t('auth.confirmPasswordLabel')}</span>
-                  <input
-                    type="password"
-                    dir="ltr"
-                    required
-                    autoComplete="new-password"
-                    data-testid="auth-confirm-password"
-                    className={INPUT_CLASS}
+                  <PasswordInput
                     value={confirm}
-                    onChange={(event) => setConfirm(event.target.value)}
+                    onChange={setConfirm}
+                    testId="auth-confirm-password"
+                    name="confirm-password"
+                    autoComplete="new-password"
+                    inputClassName={INPUT_CLASS}
                   />
                 </label>
               )}

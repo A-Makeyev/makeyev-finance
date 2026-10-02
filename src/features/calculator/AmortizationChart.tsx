@@ -1,7 +1,13 @@
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
-import { alignedDualTicks, formatAxisShekel, niceTicks, xAxisTicks } from '@/lib/charts'
+import {
+  alignedDualTicks,
+  formatAxisShekel,
+  niceTicks,
+  svgRound,
+  xAxisTicks,
+} from '@/lib/charts'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
 
 /** One chart-ready period row - mapped from the schedule table's source. */
@@ -61,7 +67,11 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
     const pad = Math.min(INNER_W * 0.04, 16)
     const plotW = INNER_W - pad * 2
     const slot = plotW / rows.length
-    const x = (index: number) => MARGIN.left + pad + slot * (index + 0.5)
+    // Every coordinate leaves this memo already rounded (see svgRound): the
+    // schedule behind the rows can differ by a last bit between the server's
+    // V8 and the browser's, which React would report as a hydration mismatch.
+    // Rounding the pixels erases that without touching a single shekel.
+    const x = (index: number) => svgRound(MARGIN.left + pad + slot * (index + 0.5))
     // Aligned dual-axis scales: both axes share one gridline count, so the
     // solid payments grid and the dashed balance grid coincide. Scale tops
     // are a round step at or above the data max (headroom); the fallback
@@ -69,8 +79,10 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
     const aligned = alignedDualTicks(maxPayment, maxBalance)
     const scaleMaxPayment = aligned ? aligned.scaleMaxPayment : maxPayment
     const scaleMaxBalance = aligned ? aligned.scaleMaxBalance : maxBalance
-    const yPayment = (value: number) => MARGIN.top + INNER_H * (1 - value / scaleMaxPayment)
-    const yBalance = (value: number) => MARGIN.top + INNER_H * (1 - value / scaleMaxBalance)
+    const yPayment = (value: number) =>
+      svgRound(MARGIN.top + INNER_H * (1 - value / scaleMaxPayment))
+    const yBalance = (value: number) =>
+      svgRound(MARGIN.top + INNER_H * (1 - value / scaleMaxBalance))
     return { maxPayment, maxBalance, aligned, slot, pad, x, yPayment, yBalance }
   }, [rows])
 
@@ -79,7 +91,7 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
   const paymentTicks = aligned ? aligned.paymentTicks : niceTicks(maxPayment)
   const balanceTicks = aligned ? aligned.balanceTicks : niceTicks(maxBalance)
   const useBars = rows.length <= MAX_BARS
-  const barWidth = Math.min(30, slot * 0.66)
+  const barWidth = svgRound(Math.min(30, slot * 0.66))
 
   const activeRow = active !== null ? rows[active] : null
   const xTicks = xAxisTicks(rows.length, monthly)
@@ -323,7 +335,7 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
             // page is RTL, so the logical property would mirror the position.
             // The clamp hook adjusts the transform near the plot edges so
             // the whole tooltip stays on screen.
-            left: `${(x(active!) / WIDTH) * 100}%`,
+            left: `${svgRound((x(active!) / WIDTH) * 100)}%`,
           }}
         >
           <strong>{periodLabel(activeRow.period)}</strong>

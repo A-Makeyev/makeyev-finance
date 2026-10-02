@@ -6,8 +6,33 @@ import {
   formatAxisShekel,
   midAngle,
   niceTicks,
+  svgRound,
   xAxisTicks,
 } from '../../src/lib/charts'
+
+describe('svgRound', () => {
+  it('keeps three decimals and drops the rest', () => {
+    expect(svgRound(136.84585422025947)).toBe(136.846)
+    expect(svgRound(23.848000000000003)).toBe(23.848)
+    expect(svgRound(256)).toBe(256)
+    expect(svgRound(0)).toBe(0)
+  })
+
+  it('makes a last-bit difference render identically on both sides', () => {
+    // The reported hydration mismatch: the same bar's y, a ULP apart after the
+    // schedule's Math.pow landed differently in Node and the browser. Both must
+    // now serialize to the same attribute.
+    const server = 136.84585422025947
+    const client = 136.8458542202594
+    expect(server).not.toBe(client)
+    expect(svgRound(server)).toBe(svgRound(client))
+  })
+
+  it('leaves non-finite values alone rather than producing NaN', () => {
+    expect(svgRound(Number.NaN)).toBeNaN()
+    expect(svgRound(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY)
+  })
+})
 
 describe('formatAxisShekel', () => {
   it('abbreviates millions, thousands and plain shekels', () => {

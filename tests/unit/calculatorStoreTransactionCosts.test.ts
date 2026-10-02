@@ -234,6 +234,19 @@ describe('realtor/lawyer percent ↔ ₪ amount pair', () => {
     expect(s.lawyerAmountText).toBe('7,080')
   })
 
+  it('keeps a typed ₪ amount below the floor and flags the note', () => {
+    useCalculatorStore.getState().setPropertyValue('1,000,000', null)
+    useCalculatorStore.getState().updateLawyerAmount('1', null)
+    const s = useCalculatorStore.getState()
+    // The field keeps what was typed (user-requested) instead of snapping to
+    // the mirror; the estimate still prices the ₪6,000 pre-VAT floor → 7,080
+    // with VAT, and the floor note explains why.
+    expect(s.lawyerAmountText).toBe('1')
+    expect(s.lawyerFloorApplied).toBe(true)
+    expect(s.snapshot.transactionCosts!.lawyerPreVat).toBe(6_000)
+    expect(s.snapshot.transactionCosts!.lawyer).toBeCloseTo(7_080, 6)
+  })
+
   it('the percent stays the driver when the fee basis changes', () => {
     useCalculatorStore.getState().setPropertyValue('1,000,000', null)
     useCalculatorStore.getState().updateRealtorAmount('25,000', null)
@@ -341,11 +354,12 @@ describe('blank fee fields fall back to the market defaults', () => {
 
   it('flags when the lawyer floor overrides a typed amount or percent', () => {
     useCalculatorStore.getState().setPropertyValue('1,000,000', null)
-    // 7,000 → 0.59% → raw 5,900 sits below the ₪6,000 pre-VAT minimum, so
-    // the mirror lands on 7,080 and the note must explain why.
+    // 7,000 → 0.59% → raw 5,900 sits below the ₪6,000 pre-VAT minimum. The
+    // typed ₪ figure is kept (user-requested) and the note explains why the
+    // real fee is the minimum.
     useCalculatorStore.getState().updateLawyerAmount('7,000', null)
     let s = useCalculatorStore.getState()
-    expect(s.lawyerAmountText).toBe('7,080')
+    expect(s.lawyerAmountText).toBe('7,000')
     expect(s.lawyerFloorApplied).toBe(true)
     // Exactly at the floor (0.6% → 6,000 raw) nothing was overridden.
     useCalculatorStore.getState().updateLawyerAmount('7,080', null)

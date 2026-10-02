@@ -14,7 +14,9 @@ export class AuthPage {
   readonly name: Locator
   readonly email: Locator
   readonly password: Locator
+  readonly passwordToggle: Locator
   readonly confirmPassword: Locator
+  readonly confirmPasswordToggle: Locator
   readonly submit: Locator
   readonly submitSpinner: Locator
   readonly error: Locator
@@ -65,7 +67,9 @@ export class AuthPage {
     this.name = page.getByTestId('auth-name')
     this.email = page.getByTestId('auth-email')
     this.password = page.getByTestId('auth-password')
+    this.passwordToggle = page.getByTestId('auth-password-toggle')
     this.confirmPassword = page.getByTestId('auth-confirm-password')
+    this.confirmPasswordToggle = page.getByTestId('auth-confirm-password-toggle')
     this.submit = page.getByTestId('auth-submit')
     this.submitSpinner = page.getByTestId('auth-submit-spinner')
     this.error = page.getByTestId('auth-error')
@@ -122,6 +126,18 @@ export class AuthPage {
     await this.password.fill(password)
     await this.confirmPassword.fill(password)
     await this.submit.click()
+  }
+
+  /**
+   * The computed text-align of a field, read as a string expression because
+   * the e2e tsconfig has no DOM lib. Asserts what the reader actually sees:
+   * which edge their typed text starts from.
+   */
+  async textAlignOf(locator: Locator): Promise<string> {
+    const testId = await locator.getAttribute('data-testid')
+    return this.page.evaluate(
+      `(() => getComputedStyle(document.querySelector('[data-testid="${testId}"]')).textAlign)()`,
+    )
   }
 
   async signIn(email: string, password: string): Promise<void> {

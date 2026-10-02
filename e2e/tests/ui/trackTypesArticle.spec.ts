@@ -1,4 +1,4 @@
-import { test, expect, seedLanguage, seedSiteState } from '../../fixtures'
+import { test, expect, seedLanguage, seedSiteState, serveNoComments } from '../../fixtures'
 
 /**
  * The mortgage-track-types article: reachable from the articles list, reads in
@@ -29,6 +29,9 @@ for (const language of ['hebrew', 'english'] as const) {
       const rtl = language === 'hebrew'
       await seedLanguage(page, language)
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      // The article carries a comments thread. Mocked, or the page reads the
+      // real database and renders whatever real comments exist there.
+      await serveNoComments(page)
       await page.goto('/articles')
 
       // The list has its own banner picture rather than the shared sub-cover.

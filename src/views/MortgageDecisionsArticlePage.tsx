@@ -5,6 +5,7 @@ import { PRESET_IDS } from '@/lib/amortization'
 import { articleHeroBackground } from '@/lib/articles'
 import { ScrollCue } from '@/components/layout/ScrollCue'
 import { Link } from '@/router'
+import { CommentsSection } from '@/features/comments/CommentsSection'
 
 /**
  * Practical mortgage decisions article: the ready-made mixes (explaining each
@@ -105,6 +106,10 @@ export function MortgageDecisionsArticlePage() {
           {t('education.mortgageDecisions.backToArticles')}
         </Link>
       </article>
+      {/* The discussion is page furniture, not article prose: a reader (or a
+          screen reader) walking the article should not run the whole comment
+          thread as part of the article's content. */}
+      <CommentsSection slug="mortgage-decisions" />
     </>
   )
 }

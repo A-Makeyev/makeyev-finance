@@ -110,6 +110,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
             onBlur={() => commitTrackYearsBlur(track.id)}
             required
             aria-label={`${t('calculator.track.yearsLabel')} ${index + 1}`}
+            name={`track-years-${index + 1}`}
             data-testid={`track-years-${index + 1}`}
           />
           <span>{t('calculator.track.yearsSuffix')}</span>
@@ -129,6 +130,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
             onBlur={() => commitTrackRateBlur(track.id)}
             required
             aria-label={`${t('calculator.track.rateLabel')} ${index + 1}`}
+            name={`track-rate-${index + 1}`}
             data-testid={`track-rate-${index + 1}`}
           />
           <span>%</span>

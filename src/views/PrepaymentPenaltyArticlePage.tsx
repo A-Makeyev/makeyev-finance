@@ -5,6 +5,7 @@ import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenalty
 import { articleHeroBackground } from '@/lib/articles'
 import { ScrollCue } from '@/components/layout/ScrollCue'
 import { Link } from '@/router'
+import { CommentsSection } from '@/features/comments/CommentsSection'
 
 /**
  * Prepayment-penalty (עמלת פירעון מוקדם) article. General educational content -
@@ -45,6 +46,10 @@ export function PrepaymentPenaltyArticlePage() {
           {t('education.prepaymentPenalty.backToArticles')}
         </Link>
       </article>
+      {/* The discussion is page furniture, not article prose: a reader (or a
+          screen reader) walking the article should not run the whole comment
+          thread as part of the article's content. */}
+      <CommentsSection slug="prepayment-penalties" />
     </>
   )
 }

@@ -68,7 +68,9 @@ export function FloatingLabelField({
     // lighter (rgb 70 vs soft-black's 15) so they read less heavy. On focus
     // the border darkens toward the original soft-black.
     status === 'neutral' && 'border-line-soft shadow-black focus:border-line-strong',
-    isRtl ? 'text-right' : 'text-left',
+    // Logical, not a physical left/right picked from the language: the field
+    // starts its text at the page's start edge either way.
+    'text-start',
   )
 
   return (

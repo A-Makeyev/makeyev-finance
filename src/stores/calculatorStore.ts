@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import {
   MAX_YEARS,
+  MAX_TRACKS,
   MAX_OTHER_EXPENSES,
   MAX_HOME_VALUE,
   DEFAULT_TERM_YEARS,
@@ -89,6 +90,20 @@ export interface TrackState {
 
 export type CalculationError = { kind: 'term' } | { kind: 'positive' } | { kind: 'variableCap' }
 
+/**
+ * A track as it is persisted in a saved mortgage mix: the user-entered fields
+ * only. The live-only internals of TrackState (the ephemeral `id`, plus
+ * `isAutoRate`/`loanShareMemory`, which describe the current editing session)
+ * are deliberately left out - they are re-initialized on load.
+ */
+export interface SavedTrackInput {
+  type: TrackType
+  amountText: string
+  yearsText: string
+  rateText: string
+  method: AmortizationMethod
+}
+
 /** One repeatable expense line: a recurring monthly amount plus an optional
     one-time amount (cash paid once, e.g. moving or furniture). */
 export interface OtherExpense {
@@ -96,6 +111,30 @@ export interface OtherExpense {
   label: string
   amountText: string
   oneTimeAmountText: string
+}
+
+/**
+ * The scenario inputs a saved mix also carries, so "load in calculator"
+ * restores the whole picture (property price, equity, income, purpose, fees,
+ * expenses) rather than dropping the user back into a bare track mix. Kept as
+ * the user-entered TEXT for the same reason as SavedTrackInput: it is the shape
+ * the store loads back, and reformatting on the server would not round-trip.
+ *
+ * Derived figures (fee mirrors, hints, norm amounts) are NOT stored - they are
+ * rebuilt by recalculate() on load, so they can never be stale in storage.
+ */
+export interface SavedMixScenario {
+  startingAmountText: string
+  propertyValueText: string
+  capitalText: string
+  incomeText: string
+  purpose: PropertyPurpose
+  realtorPercentText: string
+  lawyerPercentText: string
+  appraiserFeeText: string
+  renovationAmountText: string
+  otherExpenses: Array<Pick<OtherExpense, 'label' | 'amountText' | 'oneTimeAmountText'>>
+  ptiThresholdPercent: number
 }
 
 /** Per-track payback metric (total repaid ÷ principal) for the results display. */
@@ -260,6 +299,23 @@ interface CalculatorData {
   otherExpenses: OtherExpense[]
   /** Payment-to-income ceiling in percent (20-40, default 33). */
   ptiThresholdPercent: number
+  /**
+   * Serialized tracks + term at the last save/load/reset, used to tell
+   * whether the current mix has unsaved changes. Compared against the live
+   * state via isMixDirty rather than mutated by every action.
+   */
+  mixBaseline: string
+  /**
+   * The id of the saved mix currently in the editor, or null when the mix is
+   * unsaved work. Saving with one set UPDATES that mix (no new slot, so the
+   * cap does not block it) instead of creating another.
+   */
+  loadedMixId: string | null
+  /**
+   * Set by the unsaved-changes dialog's Save button to ask the save control to
+   * open its naming dialog; the control clears it once it opens.
+   */
+  saveMixRequested: boolean
 }
 
 export interface CalculatorState extends CalculatorData {
@@ -315,6 +371,25 @@ export interface CalculatorActions {
   changeTrackType(id: string, type: TrackType): void
   changeTrackMethod(id: string, method: AmortizationMethod): void
   loadPreset(presetId: PresetId): void
+  /**
+   * Replaces the current mix (and, when given, the whole scenario) with a saved
+   * one (fresh track ids) and re-baselines it.
+   */
+  loadSavedMix(
+    tracks: SavedTrackInput[],
+    termYears: number,
+    scenario?: SavedMixScenario | null,
+    id?: string,
+  ): void
+  /**
+   * Records the current mix as saved, clearing the unsaved-changes state. When
+   * an id is given (a create), it also becomes the loaded mix, so a later save
+   * updates it instead of creating another.
+   */
+  markMixSaved(id?: string): void
+  /** Asks the save control to open its naming dialog (the unsaved dialog's Save). */
+  requestSaveMix(): void
+  clearSaveMixRequest(): void
   autofixMix(): void
   submit(): void
   toggleScheduleExpanded(): void
@@ -324,6 +399,121 @@ export interface CalculatorActions {
 }
 
 export type CalculatorStore = CalculatorState & CalculatorActions
+
+/**
+ * The mix identity used for the unsaved-changes check: the tracks' entered
+ * fields plus the term. Scenario inputs (property, capital, income, fees) are
+ * deliberately excluded, since a saved mix stores the mix only.
+ */
+export function serializeMix(mix: Pick<CalculatorData, 'tracks' | 'termYears'>): string {
+  return JSON.stringify({
+    termYears: mix.termYears,
+    tracks: mix.tracks.map((track) => ({
+      type: track.type,
+      amountText: track.amountText,
+      yearsText: track.yearsText,
+      rateText: track.rateText,
+      method: track.method,
+    })),
+  })
+}
+
+/**
+ * The tracks a save may persist: only those holding a positive amount (the
+ * server requires every stored track to carry money). Shared by the save
+ * control and the unsaved-changes dialog's Save so both send the same payload.
+ */
+export function serializeSavableTracks(tracks: TrackState[]): SavedTrackInput[] {
+  return tracks
+    .filter((track) => parseAmountText(track.amountText) > 0)
+    .map((track) => ({
+      type: track.type,
+      amountText: track.amountText,
+      yearsText: track.yearsText,
+      rateText: track.rateText,
+      method: track.method,
+    }))
+}
+
+/**
+ * The scenario as persisted. Drops the ephemeral expense ids (re-minted on
+ * load) so the shape fits what the API returns.
+ */
+export function serializeScenario(
+  s: Pick<
+    CalculatorData,
+    | 'startingAmountText'
+    | 'propertyValueText'
+    | 'capitalText'
+    | 'incomeText'
+    | 'purpose'
+    | 'realtorPercentText'
+    | 'lawyerPercentText'
+    | 'appraiserFeeText'
+    | 'renovationAmountText'
+    | 'otherExpenses'
+    | 'ptiThresholdPercent'
+  >,
+): SavedMixScenario {
+  return {
+    startingAmountText: s.startingAmountText,
+    propertyValueText: s.propertyValueText,
+    capitalText: s.capitalText,
+    incomeText: s.incomeText,
+    purpose: s.purpose,
+    realtorPercentText: s.realtorPercentText,
+    lawyerPercentText: s.lawyerPercentText,
+    appraiserFeeText: s.appraiserFeeText,
+    renovationAmountText: s.renovationAmountText,
+    otherExpenses: s.otherExpenses.map(({ label, amountText, oneTimeAmountText }) => ({
+      label,
+      amountText,
+      oneTimeAmountText,
+    })),
+    ptiThresholdPercent: s.ptiThresholdPercent,
+  }
+}
+
+/**
+ * Everything a save actually persists: the tracks/term AND the scenario inputs
+ * the API stores alongside them.
+ */
+type PersistedMixSource = Pick<
+  CalculatorState,
+  | 'tracks'
+  | 'termYears'
+  | 'startingAmountText'
+  | 'propertyValueText'
+  | 'capitalText'
+  | 'incomeText'
+  | 'purpose'
+  | 'realtorPercentText'
+  | 'lawyerPercentText'
+  | 'appraiserFeeText'
+  | 'renovationAmountText'
+  | 'otherExpenses'
+  | 'ptiThresholdPercent'
+>
+
+/**
+ * The persisted shape of a mix, as a stable string.
+ *
+ * The unsaved-changes baseline compares THIS, not just the tracks: every field
+ * a save would write counts as the user's work. Comparing tracks alone made a
+ * scenario edit (the appraiser fee, income, renovation, other expenses, the
+ * realtor/lawyer fee amounts) invisible, so the save control still claimed
+ * "saved" after a change that leaving the page would have thrown away.
+ */
+export function serializeMixBaseline(state: PersistedMixSource): string {
+  return JSON.stringify({ mix: serializeMix(state), scenario: serializeScenario(state) })
+}
+
+/** True when the current mix differs from the last saved/loaded baseline. */
+export function isMixDirty(
+  state: Pick<CalculatorState, 'mixBaseline'> & PersistedMixSource,
+): boolean {
+  return state.mixBaseline !== serializeMixBaseline(state)
+}
 
 const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   totals: EMPTY_TOTALS,
@@ -918,6 +1108,9 @@ const initialData: CalculatorData = {
     { id: `expense-${nextExpenseId++}`, label: '', amountText: '', oneTimeAmountText: '' },
   ],
   ptiThresholdPercent: PTI_DEFAULT_THRESHOLD * 100,
+  mixBaseline: '',
+  loadedMixId: null,
+  saveMixRequested: false,
 }
 
 function createInitialState(): CalculatorState {
@@ -933,6 +1126,9 @@ function createInitialState(): CalculatorState {
   state.tracks = createInitialTracks(null)
   state.activePreset = 'basket4'
   recalculate(state)
+  // The opening mix is the baseline: the calculator starts with no unsaved
+  // changes, so leaving it immediately never prompts.
+  state.mixBaseline = serializeMixBaseline(state)
   return state
 }
 
@@ -966,6 +1162,19 @@ function markRebalanced(s: Pick<CalculatorState, 'rebalancedTrackIds'>, ids: str
     rebalanceClearTimer = null
     useCalculatorStore.setState({ rebalancedTrackIds: [] })
   }, 1400)
+}
+
+/**
+ * Click-driven mix changes are choices made with the mouse, not typed-in work:
+ * picking a preset, adding or removing a track, switching a track's type or
+ * method, auto-fixing an over-cap mix. They change the mix, but they must not
+ * put it into the "unsaved changes" state on their own, or merely browsing the
+ * presets would raise the leave-without-saving warning. Called with the mix's
+ * dirty state from BEFORE the change, so a mix the user had genuinely edited
+ * keeps its dirty state.
+ */
+function rebaselineIfClean(s: CalculatorState, wasDirty: boolean): void {
+  if (!wasDirty) s.mixBaseline = serializeMixBaseline(s)
 }
 
 export const useCalculatorStore = create<CalculatorStore>()(
@@ -1114,6 +1323,12 @@ export const useCalculatorStore = create<CalculatorStore>()(
           s.lawyerPercentText = ''
         }
         recalculate(s)
+        // Keep the typed ₪ figure when the ₪6,000 pre-VAT minimum would have
+        // replaced it (user-requested): the field shows what was typed, and
+        // the floor note under the pair explains that the real fee is the
+        // minimum. The estimate itself already prices the floor (recalculate
+        // applied it), so only the displayed text is preserved.
+        if (s.lawyerFloorApplied) s.lawyerAmountText = formatted.text
       })
       return formatted
     },
@@ -1198,6 +1413,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
     addTrack: (values) => {
       set((s) => {
         if (s.tracks.length >= 3) return
+        const wasDirty = isMixDirty(s)
         const track = trackFromValues(values ?? { years: s.termYears }, s.termYears, s.primeRate)
         s.tracks.push(track)
         if (!track.amountText.trim()) {
@@ -1223,14 +1439,17 @@ export const useCalculatorStore = create<CalculatorStore>()(
           }
         }
         recalculate(s)
+        rebaselineIfClean(s, wasDirty)
       })
     },
 
     removeTrack: (id) => {
       set((s) => {
         if (s.tracks.length <= 1) return
+        const wasDirty = isMixDirty(s)
         s.tracks = s.tracks.filter((track) => track.id !== id)
         recalculate(s)
+        rebaselineIfClean(s, wasDirty)
       })
     },
 
@@ -1335,9 +1554,11 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         const track = s.tracks.find((t) => t.id === id)
         if (!track) return
+        const wasDirty = isMixDirty(s)
         track.type = type
         applyTrackTypeLogic(s, track, type)
         recalculate(s)
+        rebaselineIfClean(s, wasDirty)
       })
     },
 
@@ -1345,8 +1566,10 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         const track = s.tracks.find((t) => t.id === id)
         if (!track) return
+        const wasDirty = isMixDirty(s)
         track.method = method
         recalculate(s)
+        rebaselineIfClean(s, wasDirty)
       })
     },
 
@@ -1354,6 +1577,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         const preset = PRESETS[presetId]
         if (!preset) return
+        // Browsing the presets is not unsaved work: picking a mix is a click,
+        // not typing, so a clean mix takes the chosen preset as its baseline.
+        const wasDirty = isMixDirty(s)
         const existingTotal = s.tracks.reduce(
           (sum, track) => sum + parseAmountText(track.amountText),
           0,
@@ -1369,12 +1595,87 @@ export const useCalculatorStore = create<CalculatorStore>()(
         )
         s.activePreset = presetId
         s.startingPointDirty = false
+        // Picking a preset is a fresh mix, not the saved one.
+        s.loadedMixId = null
         recalculate(s)
+        rebaselineIfClean(s, wasDirty)
+      })
+    },
+
+    loadSavedMix: (tracks, termYears, scenario, id) => {
+      set((s) => {
+        // Defensive cap only: the server schema already bounds both, but a
+        // malformed payload must not be able to grow the editor past its
+        // limits.
+        s.tracks = tracks.slice(0, MAX_TRACKS).map((track) => ({
+          id: makeTrackId(),
+          type: track.type,
+          amountText: track.amountText,
+          yearsText: track.yearsText,
+          rateText: track.rateText,
+          method: track.method,
+          isAutoRate: Boolean(track.rateText.trim()),
+          loanShareMemory: null,
+        }))
+        s.termYears = Math.min(MAX_YEARS, Math.max(1, Math.round(termYears)))
+        s.activePreset = null
+        s.startingPointDirty = false
+        s.loadedMixId = id ?? null
+        if (scenario) {
+          // Restore the saved scenario verbatim: the user-entered text fields,
+          // the choice fields, and the expenses (fresh ids). recalculate()
+          // below rebuilds every derived figure (fee mirrors, hints, norms),
+          // so none of those are stored or need restoring.
+          s.startingAmountText = scenario.startingAmountText
+          s.propertyValueText = scenario.propertyValueText
+          s.capitalText = scenario.capitalText
+          s.incomeText = scenario.incomeText
+          s.purpose = scenario.purpose
+          s.realtorPercentText = scenario.realtorPercentText
+          s.lawyerPercentText = scenario.lawyerPercentText
+          s.appraiserFeeText = scenario.appraiserFeeText
+          s.renovationAmountText = scenario.renovationAmountText
+          s.ptiThresholdPercent = clampPtiThreshold(scenario.ptiThresholdPercent)
+          s.otherExpenses = scenario.otherExpenses.slice(0, MAX_OTHER_EXPENSES).map((expense) => ({
+            id: `expense-${nextExpenseId++}`,
+            label: expense.label,
+            amountText: expense.amountText,
+            oneTimeAmountText: expense.oneTimeAmountText,
+          }))
+        } else if (!parseAmountText(s.propertyValueText)) {
+          // No scenario (an older saved mix): without a property pin the loan
+          // field mirrors the tracks, the same way a preset load does.
+          syncStartingAmountFromTracks(s)
+        }
+        recalculate(s)
+        s.mixBaseline = serializeMixBaseline(s)
+      })
+    },
+
+    markMixSaved: (id) => {
+      set((s) => {
+        s.mixBaseline = serializeMixBaseline(s)
+        // A create adopts its new id, so the next save updates it.
+        if (id) s.loadedMixId = id
+      })
+    },
+
+    requestSaveMix: () => {
+      set((s) => {
+        s.saveMixRequested = true
+      })
+    },
+
+    clearSaveMixRequest: () => {
+      set((s) => {
+        s.saveMixRequested = false
       })
     },
 
     autofixMix: () => {
       set((s) => {
+        // Auto-fix is a one-click repair of an invalid mix, not typed-in work.
+        const wasDirty = isMixDirty(s)
         const inputs = s.tracks.map((track) => ({
           amount: parseAmountText(track.amountText),
           isVariable: isVariableType(track.type),
@@ -1396,11 +1697,15 @@ export const useCalculatorStore = create<CalculatorStore>()(
         // it, so the field must keep showing property - capital.
         if (!parseAmountText(s.propertyValueText)) syncStartingAmountFromTracks(s)
         recalculate(s)
+        rebaselineIfClean(s, wasDirty)
       })
     },
 
     submit: () => {
       set((s) => {
+        // Pressing Show payments re-allocates the active preset; that is a
+        // click, not typed-in work, so a clean mix stays clean.
+        const wasDirty = isMixDirty(s)
         if (s.activePreset && s.startingPointDirty) {
           // replicate: reload the active preset with the new parameters
           const preset = PRESETS[s.activePreset]
@@ -1426,6 +1731,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
           s.startingPointDirty = false
         }
         recalculate(s)
+        rebaselineIfClean(s, wasDirty)
       })
     },
 
@@ -1481,11 +1787,23 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.snapshot.incomePlaceholder = null
         s.error = null
         recalculate(s)
+        // A reset restores a clean default state, not unsaved work: nothing
+        // here is worth warning about on the way out. It also detaches from
+        // whatever saved mix was loaded.
+        s.mixBaseline = serializeMixBaseline(s)
+        s.loadedMixId = null
       })
     },
 
     applyPrimeRate: (rate) => {
       set((s) => {
+        // Live market data is not the user's work. Seeding the prime rate into
+        // an untouched track changes the mix, but it must not make the mix
+        // look like it has unsaved changes: otherwise simply opening the
+        // calculator would set off the "leave without saving" warning the
+        // moment the rate query resolved. A mix the user HAD edited keeps its
+        // dirty state.
+        const wasDirty = isMixDirty(s)
         s.primeRate = rate
         let changed = false
         s.tracks.forEach((track) => {
@@ -1496,7 +1814,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
             changed = true
           }
         })
-        if (changed) recalculate(s)
+        if (!changed) return
+        recalculate(s)
+        if (!wasDirty) s.mixBaseline = serializeMixBaseline(s)
       })
     },
 

@@ -35,7 +35,7 @@ export function FlipSelect({
     <span className={cn('select-wrap', open && 'open')}>
       <select
         className={className}
-        id={selectId}
+        id={selectId ?? testId}
         value={value}
         aria-label={ariaLabel}
         data-testid={testId}

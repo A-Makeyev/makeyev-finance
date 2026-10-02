@@ -124,20 +124,30 @@ test('calculator help tooltip - hover opens, grace close, click pins', async ({ 
   // because its stability wait needs rAF frames, and the virtual clock below
   // never lets them advance - it retried until the panel had re-rendered.
   const link = panel.locator('a')
-  // Move + check are retried as ONE step: under parallel-suite load the
-  // widget's DOM node can be replaced (a late hydration re-render) while the
-  // pointer is on its way, which detaches the node the move was aimed at.
-  // Retrying re-resolves the link on the live panel; the behavior under test
-  // (the grace close is NOT triggered once the pointer lands on the link) is
-  // unchanged, and the virtual clock below cannot close the panel meanwhile.
+  // Move, check and click are retried as ONE step: under parallel-suite load
+  // the widget's DOM node can be replaced (a late hydration re-render) while
+  // the pointer is on its way, which detaches the node the move was aimed at
+  // and makes the click land on whatever is underneath. Retrying re-resolves
+  // the link on the live panel and re-aims; the behavior under test (the grace
+  // close is NOT triggered once the pointer lands on the link) is unchanged,
+  // and the virtual clock below cannot close the panel meanwhile.
   await expect(async () => {
+    // Scroll the link into view INSTANTLY before aiming. The site sets a
+    // smooth scroll-behavior, and with the virtual clock installed that
+    // animation never gets a frame to finish, so the link can sit below the
+    // fold while its box coordinates are still off-viewport - a raw mouse
+    // click there hits nothing at all (the flake this replaces).
+    await page.evaluate(
+      `document.querySelector('[data-testid="help-method-1-panel"] a')?.scrollIntoView({ block: 'center', behavior: 'instant' })`,
+    )
     const box = (await link.boundingBox())!
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
     await expect(panel).toBeVisible()
-  }).toPass({ timeout: 20_000 })
-  await page.mouse.down()
-  await page.mouse.up()
-  await expect(page).toHaveURL(/\/articles\/mortgage-decisions$/)
+    await page.mouse.down()
+    await page.mouse.up()
+    // Shorter than the block's budget so a missed click can be retried.
+    await expect(page).toHaveURL(/\/articles\/mortgage-decisions$/, { timeout: 5000 })
+  }).toPass({ timeout: 30_000 })
 
   // Back on the calculator: leaving the widget closes the hover-open panel
   // after the grace period (not instantly - jitter must not flap it).

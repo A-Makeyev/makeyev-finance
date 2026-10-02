@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fa'
 import { socialLinks } from '@/config/siteConfig'
 import { cn } from '@/lib/cn'
+import { initialsFor } from '@/lib/avatar'
 import { useMediaQuery, useScrolled } from '@/hooks/useScrolled'
 import { useTheme } from '@/hooks/useTheme'
 import { Link, usePathname, useRouter } from '@/router'
@@ -202,15 +203,9 @@ export function Navbar({
   const user = session?.user ?? null
   const avatarUrl = user?.image ?? null
   // Name initials for the fallback avatar (e.g. "נ" or "AB"). A name made
-  // only of whitespace falls back to the empty-avatar glyph.
-  const initials = user?.name
-    ? user.name
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0])
-        .join('')
-    : ''
+  // only of whitespace falls back to the empty-avatar glyph. Shared with the
+  // profile header via lib/avatar so the two surfaces cannot drift.
+  const initials = initialsFor(user?.name)
 
   const onSignOut = useCallback(async () => {
     setAccountMenuOpen(false)
@@ -400,11 +395,19 @@ export function Navbar({
                     // before its text.
                     dir={i18n.dir()}
                   >
-                    {/* Preferences block on the menu's top rows (both session
-                        states): the language switch, then the color-mode
-                        toggle. Both render the same icon-then-label row, so
-                        the two "site settings" read as one group above the
-                        identity/actions below. */}
+                    {/* Identity first: the account's own name sits at the top
+                        of the menu, above the site preferences and the
+                        actions, so the menu reads as "who am I" and then what
+                        I can do here. */}
+                    {user && (
+                      <div className="nav-account-id" data-testid="nav-account-id" dir="auto">
+                        {user.name || user.email}
+                      </div>
+                    )}
+                    {/* Preferences block (both session states): the language
+                        switch, then the color-mode toggle. Both render the
+                        same icon-then-label row, so the two "site settings"
+                        read as one group. */}
                     <div className="nav-account-prefs">
                       {/* Language switch. It targets the OTHER locale, so it
                           carries the raw href (computed above) rather than
@@ -449,22 +452,16 @@ export function Navbar({
                     </div>
                     {user ? (
                       <>
-                        <div className="nav-account-id" dir="auto">
-                          {user.name || user.email}
-                        </div>
-                        <button
-                          type="button"
+                        <Link
+                          to="/profile"
                           role="menuitem"
                           className="nav-account-item"
                           data-testid="nav-account-profile"
-                          // The profile page does not exist yet; the item is
-                          // rendered (visible affordance) but inert until then.
-                          // Its label is the visible text, so no title/tooltip.
-                          disabled
+                          onClick={() => setAccountMenuOpen(false)}
                         >
                           <FaRegUser aria-hidden="true" />
                           <span>{t('auth.profileItem')}</span>
-                        </button>
+                        </Link>
                         <button
                           type="button"
                           role="menuitem"

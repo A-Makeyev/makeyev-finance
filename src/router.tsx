@@ -25,6 +25,29 @@ import { createContext, useCallback, useContext, type ComponentProps, type React
 
 const LocaleContext = createContext<'he' | 'en'>('he')
 
+/**
+ * A navigation block-guard registered by a page that has unsaved work (the
+ * calculator's unsaved mix). It returns false to veto a client-side
+ * navigation; the page that registered it is responsible for explaining why
+ * and for clearing itself. Kept here, in the one seam every ported component
+ * already routes through, rather than sprinkling checks into each caller.
+ *
+ * Serving both directions of navigation is deliberate: a browser back/forward
+ * cannot be intercepted this way, so the calculator additionally warns on
+ * unload (beforeunload), which does cover those.
+ */
+type BlockGuard = (to: string) => boolean
+
+let blockGuard: BlockGuard | null = null
+
+export function setNavigationBlockGuard(guard: BlockGuard | null): void {
+  blockGuard = guard
+}
+
+function mayNavigate(to: string): boolean {
+  return blockGuard === null || blockGuard(to)
+}
+
 export function LocaleContextProvider({
   segment,
   children,
@@ -53,7 +76,18 @@ export interface LinkProps extends Omit<ComponentProps<typeof NextLink>, 'href'>
 
 export function Link({ to, ...rest }: LinkProps) {
   const segment = useLocaleSegment()
-  return <NextLink href={hrefFor(segment, to)} {...rest} />
+  const href = hrefFor(segment, to)
+  // Only in-app navigation is guarded; leaving the site is a full load, which
+  // the page's own beforeunload warning already covers.
+  const isInternal = href.startsWith('/') && !href.startsWith('//')
+  const onClick: typeof rest.onClick = (event) => {
+    if (isInternal && !mayNavigate(to)) {
+      event.preventDefault()
+      return
+    }
+    rest.onClick?.(event)
+  }
+  return <NextLink href={href} {...rest} onClick={onClick} />
 }
 
 export interface AppRouterLike {
@@ -66,8 +100,14 @@ export function useRouter(): AppRouterLike {
   const router = useNextRouter()
   const segment = useLocaleSegment()
   return {
-    push: (to) => router.push(hrefFor(segment, to)),
-    replace: (to) => router.replace(hrefFor(segment, to)),
+    push: (to) => {
+      if (!mayNavigate(to)) return
+      router.push(hrefFor(segment, to))
+    },
+    replace: (to) => {
+      if (!mayNavigate(to)) return
+      router.replace(hrefFor(segment, to))
+    },
   }
 }
 
@@ -81,6 +121,7 @@ export function useNavigate(): (to: string, options?: { replace?: boolean }) => 
   const segment = useLocaleSegment()
   return useCallback(
     (to, options) => {
+      if (!mayNavigate(to)) return
       const href = hrefFor(segment, to)
       if (options?.replace) router.replace(href)
       else router.push(href)

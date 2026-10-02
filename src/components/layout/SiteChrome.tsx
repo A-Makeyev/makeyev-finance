@@ -9,6 +9,7 @@ import { OfflineBanner } from './OfflineBanner'
 import { Footer } from './Footer'
 import { usePathname } from '@/router'
 import { applyDocumentDirection, type Language } from '@/i18n'
+import { shouldHideFooter } from '@/lib/siteChrome'
 
 /**
  * The fixed chrome every page sits under: CBS Indexes strip, Markets strip,
@@ -54,12 +55,11 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   // numbers land.
   const indexesPresent = feeds.anySuccess || feeds.anyPending
 
-  // The auth screen is a self-contained sign-in surface with nothing to scroll
-  // past, so it drops the footer (user-requested): it is the one route with no
-  // page content underneath the card.
+  // Surfaces that are self-contained and read better without page furniture
+  // drop the footer (user-requested): the sign-in screen and the profile page.
   // usePathname() reports the locale-stripped path, so "/en/login" arrives
-  // here as "/login"; testing for the prefixed form could never match.
-  const isAuthSurface = pathname === '/login'
+  // here as "/login"; the rule handles the stripping.
+  const hideFooter = shouldHideFooter(pathname)
 
   return (
     <>
@@ -76,7 +76,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       />
       <OfflineBanner />
       <main>{children}</main>
-      {!isAuthSurface && <Footer />}
+      {!hideFooter && <Footer />}
     </>
   )
 }

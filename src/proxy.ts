@@ -21,7 +21,7 @@ import { getSessionCookie } from 'better-auth/cookies'
  * as the gate would let anyone forge a cookie.
  */
 
-const PROTECTED_PREFIXES = ['/advisor', '/client'] as const
+const PROTECTED_PREFIXES = ['/advisor', '/client', '/profile'] as const
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl

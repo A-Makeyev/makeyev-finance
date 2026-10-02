@@ -1,4 +1,5 @@
-import { test, expect, seedLanguage, seedTheme } from '../../fixtures'
+import { test, expect, seedLanguage, seedTheme, serveNoComments } from '../../fixtures'
+import { CalculatorPage } from '../../pages/CalculatorPage'
 
 /**
  * Prepayment-penalty education: the collapsible note inside the calculator
@@ -26,6 +27,10 @@ for (const language of ['hebrew', 'english'] as const) {
       const rtl = language === 'hebrew'
       await seedLanguage(page, language)
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      // The linked article carries a comments thread. Mocked, or the page reads
+      // the real database: the thread count then depends on live user content
+      // and leaked into this test's own list-item count below.
+      await serveNoComments(page)
       await page.goto('/calculators')
 
       // Prove each mode before judging the layout (the calculator is the one
@@ -249,8 +254,10 @@ for (const language of ['hebrew', 'english'] as const) {
         })
       }
 
-      // Note → article.
+      // Note → article. The test edited the calculator above, so leaving it
+      // now raises the unsaved-changes confirm; acknowledge it and continue.
       await note.getByRole('link').click()
+      await new CalculatorPage(page).confirmLeaveIfPrompted()
       await expect(page).toHaveURL(/\/articles\/prepayment-penalties$/)
 
       const article = page.getByTestId('prepayment-penalty-article')

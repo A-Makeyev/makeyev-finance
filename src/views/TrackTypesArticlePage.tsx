@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { articleHeroBackground } from '@/lib/articles'
 import { ScrollCue } from '@/components/layout/ScrollCue'
 import { Link } from '@/router'
+import { CommentsSection } from '@/features/comments/CommentsSection'
 
 /**
  * Mortgage track types (מסלולי משכנתא) article. General educational content,
@@ -98,6 +99,10 @@ export function TrackTypesArticlePage() {
           {t('education.trackTypes.backToArticles')}
         </Link>
       </article>
+      {/* The discussion is page furniture, not article prose: a reader (or a
+          screen reader) walking the article should not run the whole comment
+          thread as part of the article's content. */}
+      <CommentsSection slug="mortgage-track-types" />
     </>
   )
 }

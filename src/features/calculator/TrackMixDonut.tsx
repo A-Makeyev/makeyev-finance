@@ -12,10 +12,10 @@ export interface TrackShare {
   amount: number
 }
 
-const SIZE = 320
-const CENTER = SIZE / 2
-const R_OUTER = 150
-const R_INNER = 92
+const BASE_SIZE = 320
+/** Geometry ratios of the original 320px donut, so any `size` scales it. */
+const R_OUTER_RATIO = 150 / BASE_SIZE
+const R_INNER_RATIO = 92 / BASE_SIZE
 /** Angular gap between slices, in radians. */
 const GAP = 0.035
 
@@ -26,13 +26,32 @@ const GAP = 0.035
  * with that track's name, amount and share - mirroring the amortization
  * chart's hover. The center shows the total סכום המשכנתא; the legend below
  * lists each slice's amount and share.
+ *
+ * `size` scales the ring while keeping the original proportions (the saved-mix
+ * card renders the SAME chart at a smaller size rather than a second
+ * implementation). `showLegend` lets that card drop the legend, since it
+ * already lists the tracks as text beside the ring.
  */
-export function TrackMixDonut({ shares }: { shares: TrackShare[] }) {
+export function TrackMixDonut({
+  shares,
+  size = BASE_SIZE,
+  showLegend = true,
+  className,
+}: {
+  shares: TrackShare[]
+  size?: number
+  showLegend?: boolean
+  className?: string
+}) {
   const { t } = useTranslation()
   const [active, setActive] = useState<number | null>(null)
   const total = shares.reduce((sum, share) => sum + Math.max(0, share.amount), 0)
   const segments = donutSegments(shares.map((share) => share.amount))
   const activeShare = active !== null ? shares[active] : null
+
+  const center = size / 2
+  const rOuter = size * R_OUTER_RATIO
+  const rInner = size * R_INNER_RATIO
 
   // Position the callout just OUTSIDE the hovered slice, on the side it faces.
   // Anchor the tooltip's facing edge to the slice's outer-edge point so it
@@ -47,45 +66,45 @@ export function TrackMixDonut({ shares }: { shares: TrackShare[] }) {
   if (activeAngle !== null) {
     const cos = Math.cos(activeAngle)
     const sin = Math.sin(activeAngle)
-    const px = CENTER + R_OUTER * cos // slice outer-edge x (viewBox units)
-    const py = CENTER + R_OUTER * sin // slice outer-edge y (viewBox units)
+    const px = center + rOuter * cos // slice outer-edge x (viewBox units)
+    const py = center + rOuter * sin // slice outer-edge y (viewBox units)
     if (Math.abs(cos) >= Math.abs(sin)) {
       // Slice is on the left or right of the circle.
       if (cos >= 0) {
         tipSide = 'left' // arrow on tooltip's left edge, pointing toward circle
-        tipLeft = ((px + MARGIN) / SIZE) * 100
-        tipTop = (py / SIZE) * 100
+        tipLeft = ((px + MARGIN) / size) * 100
+        tipTop = (py / size) * 100
       } else {
         tipSide = 'right'
-        tipLeft = ((px - MARGIN) / SIZE) * 100
-        tipTop = (py / SIZE) * 100
+        tipLeft = ((px - MARGIN) / size) * 100
+        tipTop = (py / size) * 100
       }
     } else {
       // Slice is near the bottom or top of the circle.
       if (sin >= 0) {
         tipSide = 'top' // arrow on tooltip's top edge, pointing up toward circle
-        tipTop = ((py + MARGIN) / SIZE) * 100
-        tipLeft = (px / SIZE) * 100
+        tipTop = ((py + MARGIN) / size) * 100
+        tipLeft = (px / size) * 100
       } else {
         tipSide = 'bottom'
-        tipTop = ((py - MARGIN) / SIZE) * 100
-        tipLeft = (px / SIZE) * 100
+        tipTop = ((py - MARGIN) / size) * 100
+        tipLeft = (px / size) * 100
       }
     }
   }
 
   return (
-    <div className="mix-donut" data-testid="track-mix-donut">
+    <div className={`mix-donut${className ? ` ${className}` : ''}`} data-testid="track-mix-donut">
       <div className="mix-donut-plot">
         <svg
-          viewBox={`0 0 ${SIZE} ${SIZE}`}
+          viewBox={`0 0 ${size} ${size}`}
           role="img"
           aria-label={t('calculator.charts.mixAria')}
           direction="ltr"
           data-testid="track-mix-donut-plot"
         >
           {total === 0 && (
-            <circle cx={CENTER} cy={CENTER} r={(R_OUTER + R_INNER) / 2} className="donut-empty" />
+            <circle cx={center} cy={center} r={(rOuter + rInner) / 2} className="donut-empty" />
           )}
           {segments.map((segment, index) => {
             const share = shares[index]
@@ -93,7 +112,7 @@ export function TrackMixDonut({ shares }: { shares: TrackShare[] }) {
             const insetEnd = segment.endAngle - (segment.fraction > 0 ? GAP / 2 : 0)
             if (insetEnd <= insetStart) return null
             const mid = midAngle(insetStart, insetEnd)
-            const labelRadius = (R_OUTER + R_INNER) / 2
+            const labelRadius = (rOuter + rInner) / 2
             const percent = Math.round(segment.fraction * 100)
             const isActive = active === index
             // The slice and its % label share one animated group, so the
@@ -102,16 +121,18 @@ export function TrackMixDonut({ shares }: { shares: TrackShare[] }) {
               <g
                 key={share.trackId}
                 className={`mix-slice${isActive ? ' mix-slice-active' : ''}`}
+                style={{ transformOrigin: `${center}px ${center}px` }}
                 onMouseEnter={() => setActive(index)}
                 onMouseLeave={() => setActive(null)}
               >
                 <path
-                  d={arcPath(CENTER, CENTER, R_OUTER, R_INNER, insetStart, insetEnd)}
+                  d={arcPath(center, center, rOuter, rInner, insetStart, insetEnd)}
                   fill={TRACK_TYPE_COLORS[share.type]}
                 />
-                {percent >= 8 && (                  <text
-                    x={CENTER + labelRadius * Math.cos(mid)}
-                    y={CENTER + labelRadius * Math.sin(mid)}
+                {percent >= 8 && (
+                  <text
+                    x={center + labelRadius * Math.cos(mid)}
+                    y={center + labelRadius * Math.sin(mid)}
                     className="donut-slice-label"
                   >
                     {percent}%
@@ -120,10 +141,10 @@ export function TrackMixDonut({ shares }: { shares: TrackShare[] }) {
               </g>
             )
           })}
-          <text x={CENTER} y={CENTER - 6} className="donut-center-label">
+          <text x={center} y={center - 6} className="donut-center-label">
             {t('calculator.charts.mixTotalLabel')}
           </text>
-          <text x={CENTER} y={CENTER + 14} className="donut-center-value">
+          <text x={center} y={center + 14} className="donut-center-value">
             {formatCurrency(total)}
           </text>
         </svg>
@@ -146,22 +167,24 @@ export function TrackMixDonut({ shares }: { shares: TrackShare[] }) {
         )}
       </div>
 
-      <ul className="mix-legend">
-        {shares.map((share) => {
-          const percent = total > 0 ? Math.round((Math.max(0, share.amount) / total) * 100) : 0
-          return (
-            <li key={share.trackId} className="mix-legend-item">
-              <i className="chart-swatch" style={{ background: TRACK_TYPE_COLORS[share.type] }} />
-              <div className="mix-legend-text">
-                <span className="mix-legend-name">{t(`calculator.trackTypes.${share.type}`)}</span>
-                <span className="mix-legend-amount">
-                  {formatCurrency(share.amount)} · {percent}%
-                </span>
-              </div>
-            </li>
-          )
-        })}
-      </ul>
+      {showLegend && (
+        <ul className="mix-legend">
+          {shares.map((share) => {
+            const percent = total > 0 ? Math.round((Math.max(0, share.amount) / total) * 100) : 0
+            return (
+              <li key={share.trackId} className="mix-legend-item">
+                <i className="chart-swatch" style={{ background: TRACK_TYPE_COLORS[share.type] }} />
+                <div className="mix-legend-text">
+                  <span className="mix-legend-name">{t(`calculator.trackTypes.${share.type}`)}</span>
+                  <span className="mix-legend-amount">
+                    {formatCurrency(share.amount)} · {percent}%
+                  </span>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }

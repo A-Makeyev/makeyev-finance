@@ -128,4 +128,23 @@ test.describe('mortgage calculator - amortization schedule', () => {
     await calc.track(1).setAmount('500,000')
     await expect(calc.page.locator('[data-testid^="schedule-year-"]')).toHaveCount(15)
   })
+
+  test('the chart hydrates without a server/client mismatch', async ({ calc }) => {
+    // The calculator is prerendered, so anything the server and the browser
+    // render differently surfaces here as a React hydration error. The chart is
+    // the risky part: its geometry comes out of Math.pow, which is not required
+    // to be correctly rounded, so the two renders can land a last bit apart -
+    // invisible, but React compares the attributes as written.
+    const messages: string[] = []
+    calc.page.on('console', (message) => {
+      if (message.type() === 'error' || message.type() === 'warning') {
+        messages.push(message.text())
+      }
+    })
+    await calc.page.reload()
+    await expect(calc.page.getByTestId('amortization-chart')).toBeVisible()
+
+    const mismatches = messages.filter((text) => /hydrat|did not match|server rendered/i.test(text))
+    expect(mismatches, `console:\n${messages.join('\n')}`).toEqual([])
+  })
 })

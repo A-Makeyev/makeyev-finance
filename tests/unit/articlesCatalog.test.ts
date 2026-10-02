@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ARTICLE_IMAGES, ARTICLE_LIST, articleHeroBackground } from '@/lib/articles'
+import { ARTICLE_IMAGES, ARTICLE_LIST, articleHeroBackground, isArticleSlug } from '@/lib/articles'
 import { PRESET_IDS, PRESETS, PRIME_MARGIN, VARIABLE_SHARE_LIMIT } from '@/lib/amortization'
 
 describe('article catalog', () => {
@@ -13,6 +13,16 @@ describe('article catalog', () => {
     for (const { slug } of ARTICLE_LIST) {
       expect(ARTICLE_IMAGES[slug]).toMatch(/^\/images\//)
     }
+  })
+
+  it('accepts exactly the real slugs (the comment routes validate with this)', () => {
+    for (const slug of Object.keys(ARTICLE_IMAGES)) {
+      expect(isArticleSlug(slug)).toBe(true)
+    }
+    expect(isArticleSlug('nope')).toBe(false)
+    expect(isArticleSlug('')).toBe(false)
+    // A prototype key must not pass as an article.
+    expect(isArticleSlug('toString')).toBe(false)
   })
 
   it('builds the hero background from the article image with the dark overlay', () => {

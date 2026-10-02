@@ -164,6 +164,12 @@ strong {
      --------------------------------------------------------------------- */
   --surface-page: var(--soft-white);
   --surface-card: #ffffff;
+  /* Raised controls (secondary buttons) sit ON a card: same white here, so the
+     light theme keeps its existing white-on-white button with a strong
+     border. The dark theme gives them a lighter fill below, because
+     --surface-page is DARKER than --surface-card and a page-coloured button on
+     a card read as a black slab. */
+  --surface-raised: #ffffff;
   --surface-soft: #f1f5ef;
   --surface-modal: rgba(240, 248, 255, 0.98);
   /* Ink is channel-form so Tailwind's `text-ink/80`-style modifiers work. */
@@ -176,6 +182,9 @@ strong {
   --line-strong: rgb(15, 15, 15);
   --line-soft: rgb(70, 70, 70);
   --hairline: rgba(15, 15, 15, 0.15);
+  /* Comment-thread rail: deliberately lighter than --line-soft, which is a
+     heavy dark grey in this theme. */
+  --comment-line: rgba(15, 15, 15, 0.18);
   --danger: #bb3a3a;
   --danger-strong: #d32f2f;
   /* Scrolled navbar: the legacy solid aliceblue bar in light. The dark block
@@ -449,6 +458,109 @@ img {
   background-image:
     linear-gradient(var(--soft-black-background), var(--soft-black-background)),
     url(/images/login-cover.jpg);
+}
+
+/* The profile page's backdrop: a dark, mixed-hue gradient (teal / blue / green
+   brand washes over a deep base). Like the hero, footer and the Indexes strips
+   this is deliberately dark chrome, so it is NOT tokenized and stays dark in
+   both themes - the cards on top keep their own theme surfaces for contrast.
+   The title sits directly on the gradient, so it is always light. */
+.profile-page {
+  background-color: #0b1220;
+  background-image:
+    radial-gradient(900px 520px at 12% -10%, rgba(8, 127, 120, 0.55), transparent 60%),
+    radial-gradient(760px 520px at 100% 0%, rgba(56, 102, 255, 0.42), transparent 55%),
+    radial-gradient(720px 620px at 50% 112%, rgba(26, 150, 90, 0.34), transparent 62%),
+    linear-gradient(160deg, #0b1220 0%, #101a2e 55%, #0c1524 100%);
+}
+
+/* "My mixes" sits beside the save button it feeds, as a quiet text link with
+   the running count in parentheses. Anchors need the underline suppressed,
+   since the button family beside it has none. */
+/* "My mixes" keeps the row's button shape and the save control's own text
+   weight, but sits on a transparent fill rather than the save button's
+   surface: it is a navigation shortcut rather than a write, so it stays the
+   quieter of the two without looking like a different kind of label. It fills
+   in on hover, so it still reads as pressable. */
+.calculate-button.my-mixes-link {
+  border: 1px solid var(--calc-line);
+  color: var(--calc-ink);
+  background: transparent;
+  background-image: none;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.calculate-button.my-mixes-link:hover {
+  background: var(--calc-field);
+}
+
+/* The saved-mix card's two actions carry deliberately different weights, and
+   both use roles that flip with the theme rather than brand or danger hues.
+   "Load into calculator" is the card's primary: an ink fill, which is a dark
+   button in the light theme and a light one in the dark theme (a fixed dark
+   fill would vanish into the dark card - that is what --surface-action was
+   doing, and it read as soft). "Delete" is the brand red, not --danger-strong:
+   the danger role flips to a PALE red in dark mode, which put white text on a
+   pink wash. --soft-red is a brand hue and does not flip, matching the other
+   destructive confirm buttons. */
+.saved-mix-load-button {
+  border: 1px solid var(--ink);
+  color: var(--surface-page);
+  background: var(--ink);
+}
+
+.saved-mix-load-button:hover {
+  opacity: 0.88;
+}
+
+.saved-mix-delete-button {
+  border: 1px solid var(--soft-red);
+  color: #ffffff;
+  background: var(--soft-red);
+}
+
+.saved-mix-delete-button:hover {
+  opacity: 0.9;
+}
+
+/* The saved-mix card renders the SAME donut as the calculator
+   (TrackMixDonut), centered with the term phrase above it, at a smaller size
+   and without the legend (the card lists the tracks as text beside it).
+   Scoped with two classes so it can shrink `.mix-donut svg`'s 280px width. */
+.saved-mix-donut {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.mix-donut.saved-mix-donut-chart {
+  justify-items: center;
+}
+
+.mix-donut.saved-mix-donut-chart svg {
+  width: 176px;
+  max-width: min(176px, 60vw);
+}
+
+.mix-donut.saved-mix-donut-chart .donut-empty {
+  stroke-width: 18;
+}
+
+/* The card renders the calculator ring smaller, so its labels step down too -
+   at full size they crowd the smaller circle. */
+.mix-donut.saved-mix-donut-chart .donut-center-label {
+  font-size: 10px;
+}
+
+.mix-donut.saved-mix-donut-chart .donut-center-value {
+  font-size: 15px;
+}
+
+.mix-donut.saved-mix-donut-chart .donut-slice-label {
+  font-size: 12px;
 }
 
 /* BUSY BUTTON SHEEN
@@ -2150,6 +2262,16 @@ nav#navbar .nav-avatar-img {
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
+/* On a wide screen the account control grows a little: there is room for it,
+   and it is the entry point to the identity line and the site preferences, so
+   it should not read as the smallest control in the bar. */
+@media screen and (min-width: 1201px) {
+  nav#navbar .nav-avatar-img {
+    width: 34px;
+    height: 34px;
+  }
+}
+
 nav#navbar button[data-testid='nav-avatar']:hover .nav-avatar-img,
 nav#navbar button[data-testid='nav-avatar']:focus-visible .nav-avatar-img {
   transform: scale(1.08);
@@ -2225,8 +2347,22 @@ nav#navbar .nav-account-id {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 220px;
+  /* The identity line leads the menu now, so it carries the divider that
+     separates it from the site preferences below. */
   border-bottom: 1px solid var(--line-soft);
   margin-bottom: 4px;
+}
+
+/* The identity line keeps dir="auto" (so a Hebrew name reads correctly on the
+   English page) but must ALIGN to the menu's own side: `text-align: start`
+   would follow dir="auto" and push a Latin name to the far edge of the Hebrew
+   menu. Same document-direction trick as .comment-text. */
+html[dir='ltr'] nav#navbar .nav-account-id {
+  text-align: left;
+}
+
+html[dir='rtl'] nav#navbar .nav-account-id {
+  text-align: right;
 }
 
 nav#navbar .nav-account-item {
@@ -3451,7 +3587,10 @@ textarea {
   outline: none;
   padding: 12px 14px;
   font-size: 16px;
-  text-align: right;
+  /* Logical, so typed text starts at the field's start edge: right in
+     Hebrew, left in English (a hard `right` pushed the English form's text
+     to the far edge, away from its labels). */
+  text-align: start;
   border-radius: 8px;
   margin-bottom: 12px;
   transition: all 0.1s;
@@ -4993,6 +5132,140 @@ e #name,
   background-position: 100% center;
   transform: translateY(-2px);
   box-shadow: 0 10px 22px rgba(8, 127, 120, 0.25);
+}
+
+.calculate-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.calculate-button:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* The starting-point cell holds the primary action and its peer, the save
+   control: two actions on the same mix, so they sit side by side in one row.
+   The container owns the gap, so the base button's own top margin is cleared
+   on both. flex-wrap is the honest fallback at ~360px - once two full labels
+   can no longer fit, the peer drops to its own line instead of clipping. */
+.starting-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.starting-actions>.calculate-button {
+  /* Content-sized, not grown: three controls sharing one line and each
+     stretching to fill it left the save button far wider than its label.
+     flex-shrink stays 1 so a narrow viewport still wraps the row rather than
+     overflowing it. */
+  flex: 0 1 auto;
+  width: auto;
+  margin-top: 0;
+  /* The action row is deliberately compact - three controls share the line
+     (Show payments, save, and the link to the saved mixes), so the base
+     calculate-button's generous padding and type would leave them oversized
+     next to the field row AND push the third one onto its own row. Higher
+     specificity than .starting-calculate-button, so it also overrides that
+     rule's heights. */
+  height: 38px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  gap: 6px;
+  /* One line per label: a two-line button also made the row wrap. */
+  white-space: nowrap;
+}
+
+/* The cap and status lines are their own full-width rows, so they never
+   squeeze in beside the buttons and the link. */
+.starting-actions>.save-mix-notice {
+  flex-basis: 100%;
+}
+
+/* The save control reads as the same button family as Show payments - same
+   shape, padding and weight - with a secondary surface instead of duplicating
+   the primary emphasis. */
+.calculate-button.save-mix-button {
+  border: 1px solid var(--calc-line);
+  color: var(--calc-ink);
+  background: var(--calc-field);
+  background-size: auto;
+}
+
+.calculate-button.save-mix-button:hover {
+  background-position: 0% center;
+  box-shadow: 0 8px 18px rgba(8, 127, 120, 0.16);
+}
+
+/* The action row lifts and glows less than the calculator's standalone CTAs:
+   up to three controls sit side by side there, and a 2px lift with a wide teal
+   glow on each made the row feel jumpy. One pixel and a tight shadow, scoped
+   to the row so every other calculate-button keeps its own. Placed before the
+   saved-state rule, which must stay completely flat. */
+.starting-actions>.calculate-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(8, 127, 120, 0.14);
+}
+
+/* The "saved" state: the save control's own footprint with a muted, checked
+   treatment, so the action row does not reflow when the mix goes clean. It is
+   a status rather than a button - there is nothing to write while the editor
+   matches the stored mix, and a control that does nothing would be worse than
+   saying so. */
+.calculate-button.save-mix-saved-state {
+  cursor: default;
+  border-style: dashed;
+  color: var(--calc-muted);
+  background: transparent;
+  background-image: none;
+}
+
+.calculate-button.save-mix-saved-state:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* The save control swaps its label for the in-flight one without ever changing
+   width, so nothing in the action row moves while a save runs. The idle label
+   keeps its box (invisible mid-save) and the saving state is positioned over
+   that box, which is why the width is the idle label's and only the idle
+   label's. Overflow is clipped rather than allowed to reach a neighbour. */
+.save-mix-label-swap {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.save-mix-label-swap-active {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* Reserves the save button's slot while the session is still loading. */
+.save-mix-placeholder {
+  display: block;
+  min-height: 46px;
+}
+
+.save-mix-notice {
+  margin: 0;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--calc-muted);
+}
+
+.save-mix-notice.is-error {
+  color: var(--danger);
 }
 
 .results-layout {
@@ -6761,12 +7034,15 @@ tbody tr:hover {
 
   --surface-page: #0e1416;
   --surface-card: #172023;
+  /* Lighter than --surface-card, so a secondary button on a card reads as
+     raised rather than punched into it. */
+  --surface-raised: #223033;
   --surface-soft: #121a1c;
   --surface-modal: rgba(23, 32, 35, 0.98);
-  /* Text selection highlight. The UA default is a dark slab on the dark page,
-     and the legacy selection ink (--soft-black) is near-black, so selected
-     text all but disappears; the light tint keeps that ink readable. */
-  --selection-bg: #bfe3f5;
+  /* Text selection highlight. The UA default is a dark slab on the dark page
+     with the legacy near-black selection ink, so selected text disappears;
+     a dark tint + light ink (set on the rule below) keeps it readable. */
+  --selection-bg: #2d4a48;
   --ink-rgb: 233 241 239;
   --ink: rgb(var(--ink-rgb));
   /* Muted text + soft dividers/hover fills, in channel form so Tailwind's
@@ -6778,6 +7054,9 @@ tbody tr:hover {
   --line-strong: rgba(233, 241, 239, 0.3);
   --line-soft: rgba(233, 241, 239, 0.24);
   --hairline: rgba(233, 241, 239, 0.15);
+  /* Comment-thread rail: softer than --line-soft, so it reads as a guide and
+     not a hard outline. */
+  --comment-line: rgba(233, 241, 239, 0.18);
   /* The legacy reds are too dark to read on a dark page. */
   --danger: #ff9a9a;
   --danger-strong: #ff8f8f;
@@ -6844,10 +7123,21 @@ tbody tr:hover {
   color: var(--calc-teal-dark);
 }
 
-/* Selected text: swap the UA highlight for the light `--selection-bg` token
-   above, so the legacy dark selection ink stays readable on the dark page. */
+/* Selected text: swap the UA highlight for the `--selection-bg` token above
+   and force LIGHT ink (user-requested), since the legacy near-black selection
+   color disappears against the dark page. */
 :root[data-theme='dark'] *::selection {
   background-color: var(--selection-bg);
+  color: var(--ink);
+  text-shadow: none;
+}
+
+/* The profile page is dark chrome in BOTH themes, so its selected text needs
+   the same light ink even when data-theme is light. */
+.profile-page ::selection {
+  background-color: #2d4a48;
+  color: #e8f0ee;
+  text-shadow: none;
 }
 
 /* ---------------------------------------------------------------------
@@ -7081,11 +7371,255 @@ tbody tr:hover {
 /* Long-form article sections (the moving checklist is the first user):
    headings and items styled from the theme tokens only, and logical
    properties so an RTL body mirrors without overrides. */
-.article-section h2 {
+.article-section h2,
+.comments-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
   margin-block: 26px 12px;
+}
+
+.article-comments h2 {
+  margin: 0;
   color: var(--ink);
   font-size: 1.2rem;
   font-weight: 700;
+}
+
+/* The sign-in prompt reads as a quiet text action on the heading line, not a
+   bordered button; the middot before it is decorative separation. */
+.comments-heading-sep {
+  color: var(--ink-muted);
+}
+
+.comment-sign-in-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.comment-sign-in-link:hover {
+  color: var(--ink);
+}
+
+.comment-sign-in-link:focus-visible {
+  outline: 2px solid var(--soft-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reader comments under an article. A separate region on purpose: it is not
+   one of the article's own content sections (the structural assertions count
+   those), so it carries its own class while sharing their heading treatment.
+   Logical properties keep it mirrored in RTL. */
+.article-comments {
+  margin-block: 34px 8px;
+}
+
+/* Comment text keeps its OWN bidi base direction (dir="auto" on the element,
+   so a Hebrew sentence reads correctly even on the English page) but is
+   ALIGNED to the page's direction: a Hebrew comment on the LTR page then stays
+   beside the author's name instead of jumping to the far edge of the card, and
+   vice versa. The alignment therefore has to come from the document direction
+   - `text-align: start` would follow dir="auto" and reproduce the bug. */
+.comment-text {
+  text-align: start;
+}
+
+html[dir='ltr'] .comment-text {
+  text-align: left;
+}
+
+html[dir='rtl'] .comment-text {
+  text-align: right;
+}
+
+/* The Reply glyph is an arrow that points the way the thread reads, so it is
+   mirrored under RTL; the Edit and Delete glyphs are direction-neutral. */
+:root[dir='rtl'] .comment-reply-icon {
+  transform: scaleX(-1);
+}
+
+/* The comment thread. Indentation lives on the CHILDREN container (one step per
+   level) rather than on each comment, so nesting cannot compound it. Past
+   MAX_VISUAL_DEPTH the container stops indenting ('is-flat'), so a deep chain
+   reads as a continuation instead of marching off the side of a phone screen.
+
+   The connector descends from the COMMENT that owns the replies (see
+   .comment-node.has-children), curving roundly into each reply, and it stops
+   at the last reply rather than running past it. Layout uses logical offsets,
+   so it flips with the document direction. */
+.comment-thread,
+.comment-children {
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 0;
+}
+
+.comment-children {
+  position: relative;
+  margin-inline-start: 0.25rem;
+  padding-inline-start: 1.5rem;
+}
+
+/* The connector starts at the COMMENT that owns the replies - under its own
+   avatar - and is then drawn one segment per reply. That per-reply structure
+   is what ends the line AT the last reply: the last one draws no downward
+   segment (see :not(:last-child) below), so nothing runs past it. A comment
+   with no replies draws nothing at all (the .has-children guard). */
+.comment-node.has-children>.comment-row,
+.comment-node.has-collapse>.comment-row {
+  position: relative;
+}
+
+.comment-node.has-children>.comment-row::after {
+  content: '';
+  position: absolute;
+  /* Centred on the comment's own avatar (2rem wide, so 1rem to its middle),
+     starting at the avatar's bottom edge so it never crosses the photo. */
+  inset-inline-start: calc(1rem - 1px);
+  inset-block: 2rem 0;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--comment-line);
+  pointer-events: none;
+}
+
+.comment-children>li {
+  position: relative;
+}
+
+/* The rail continuing past a reply toward the next one. The LAST reply has no
+   such segment, which is what ends the line there. -1rem (the sibling gap)
+   reaches the previous segment, so they join whether or not the margin
+   collapses. */
+.comment-children>li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: calc(-0.75rem - 1px);
+  inset-block: -1rem 0;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--comment-line);
+  pointer-events: none;
+}
+
+/* Each reply's connector is a rounded elbow: a right angle whose corner is a
+   full quarter circle, so the rail curves smoothly into the reply at the
+   avatar's mid-line. Logical borders put the curve on the inline-start side in
+   both directions - the left in English, the right in Hebrew. */
+.comment-children>li::before {
+  content: '';
+  position: absolute;
+  /* Starts on the rail's outer edge and reaches the reply's avatar. */
+  inset-inline-start: calc(-0.75rem - 1px);
+  inset-block-start: -1rem;
+  width: calc(0.75rem + 1px);
+  height: 2rem;
+  border-inline-start: 2px solid var(--comment-line);
+  border-block-end: 2px solid var(--comment-line);
+  border-end-start-radius: calc(0.75rem + 1px);
+  pointer-events: none;
+}
+
+/* The collapse/expand toggle sits ON the rail, midway between the comment's own
+   avatar and the first reply's, so it reads as part of the connector rather
+   than a control pinned to the avatar. The rail runs from the avatar's bottom
+   (2rem) down to the first reply's avatar mid-line (row bottom + 2rem), so its
+   midpoint is 50% + 2rem from the row's top. Both nudges are -10px (half the
+   button) to centre it on the 2px rail; margin-inline-start (not translateX)
+   keeps the inline centring correct in RTL. The glyph swaps between minus
+   (expanded) and plus (collapsed); aria-expanded carries the state for
+   assistive tech. */
+.comment-node.has-collapse>.comment-row>.comment-collapse {
+  position: absolute;
+  inset-inline-start: 1rem;
+  inset-block-start: calc(50% + 2rem);
+  margin-inline-start: -10px;
+  margin-block-start: -10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--comment-line);
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--ink-muted);
+  font-size: 9px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.comment-node.has-collapse>.comment-row>.comment-collapse:hover {
+  color: var(--ink);
+  border-color: var(--ink-muted);
+}
+
+.comment-node.has-collapse>.comment-row>.comment-collapse:focus-visible {
+  outline: 2px solid var(--soft-blue);
+  outline-offset: 2px;
+}
+
+/* The comment a #comment- link jumped to, flashed briefly so the visitor can
+   see which one they landed on. The tint comes from a theme role rather than a
+   raw colour, so it reads correctly in dark mode too; the fade is decoration,
+   so reduced-motion users get the steady tint instead (the class is removed on
+   the same timer either way). */
+.comment-node.is-target>.comment-row {
+  border-radius: 12px;
+  background: var(--surface-soft);
+  animation: comment-target-flash 2.4s ease-out 1 both;
+}
+
+@keyframes comment-target-flash {
+  0% {
+    background: var(--surface-soft);
+  }
+
+  100% {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comment-node.is-target>.comment-row {
+    animation: none;
+  }
+}
+
+/* Past the visual-depth cap there is no rail for the mid-point to sit on, so
+   the toggle stays tucked under the avatar. */
+.comment-node.has-collapse:not(.has-children)>.comment-row>.comment-collapse {
+  inset-block-start: 2rem;
+}
+
+/* Folded away: no replies are drawn, so the rail would be a line into nothing.
+   Only the toggle remains, as the affordance to bring them back. */
+.comment-node.is-collapsed>.comment-row::after {
+  content: none;
+}
+
+/* Past MAX_VISUAL_DEPTH the level stops indenting and drops the elbow, so the
+   chain reads as a flat continuation. Its parent also skips the rail (see the
+   has-children guard in CommentsSection), since a rail there would cross the
+   no-longer-indented replies. */
+.comment-children.is-flat {
+  margin-inline-start: 0;
+  padding-inline-start: 0;
+}
+
+.comment-children.is-flat>li::before,
+.comment-children.is-flat>li::after {
+  content: none;
 }
 
 .article-section ul {

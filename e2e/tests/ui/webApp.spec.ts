@@ -514,7 +514,7 @@ test.describe('web app: navigation + chrome parity', () => {
     await expect(app.navAccountMenu).toBeHidden()
   })
 
-  test('the signed-in account menu carries both preference rows above the identity line', async ({ page }) => {
+  test('the signed-in account menu carries the identity line above both preference rows', async ({ page }) => {
     await mockGetSessionUser(page)
     const app = new WebAppPage(page)
     await app.goto('/')
@@ -524,21 +524,47 @@ test.describe('web app: navigation + chrome parity', () => {
     await app.navAvatar.hover()
     await expect(app.navAccountMenu).toBeVisible()
 
-    // Both preference rows precede the identity line, language first, and
-    // toggling from the menu flips the theme and keeps the menu open.
+    // The identity line leads the menu, then both preference rows (language
+    // first); toggling from the menu flips the theme and keeps the menu open.
     const menuText = (await app.navAccountMenu.textContent()) ?? ''
     // The Hebrew menu's language row offers 'English' (the target language).
+    const identityIndex = menuText.indexOf('Test User')
     const languageIndex = menuText.indexOf('English')
     const themeIndex = menuText.indexOf('מצב')
-    const identityIndex = menuText.indexOf('Test User')
-    expect(languageIndex).toBeGreaterThanOrEqual(0)
+    expect(identityIndex).toBeGreaterThanOrEqual(0)
+    expect(languageIndex).toBeGreaterThan(identityIndex)
     expect(themeIndex).toBeGreaterThan(languageIndex)
-    expect(identityIndex).toBeGreaterThan(themeIndex)
 
     const before = await app.themeAttr()
     await app.navAccountTheme.click()
     expect(await app.themeAttr()).toBe(before === 'dark' ? 'light' : 'dark')
     await expect(app.navAccountMenu).toBeVisible()
+  })
+
+  test('the identity line aligns with the menu, not with its own text', async ({ page }) => {
+    // The name keeps dir="auto" (so a Hebrew name reads correctly on the
+    // English page), but it must sit at the MENU's start edge: a Latin name
+    // carries an LTR base direction, which used to push it to the far edge of
+    // the Hebrew menu.
+    await mockGetSessionUser(page)
+    const app = new WebAppPage(page)
+
+    const align = `(() => {
+      const el = document.querySelector('[data-testid="nav-account-id"]')
+      return getComputedStyle(el).textAlign
+    })()`
+
+    await app.goto('/')
+    await app.waitForHydration()
+    await app.navAvatar.hover()
+    await expect(app.navAccountId).toBeVisible()
+    expect(await page.evaluate(align)).toBe('right')
+
+    await app.goto('/en')
+    await app.waitForHydration()
+    await app.navAvatar.hover()
+    await expect(app.navAccountId).toBeVisible()
+    expect(await page.evaluate(align)).toBe('left')
   })
 
   test('the signed-in account control is an avatar with a hover menu', async ({ page }) => {
@@ -701,5 +727,26 @@ test.describe('web app: navigation + chrome parity', () => {
     // The choice is stored so a later direct visit can be honored.
     const stored = await page.evaluate(`localStorage.getItem('site_language')`)
     expect(stored).toBe('english')
+  })
+
+  test('every form field carries an id or a name', async ({ page }) => {
+    // The browser autofills by id/name; a field with neither (and no matching
+    // label binding) is skipped. The audit is site-wide, so this walks the
+    // form-heavy routes rather than one page.
+    const nameless = `(() => {
+      const out = []
+      for (const el of document.querySelectorAll('input, textarea, select')) {
+        if (el.id || el.getAttribute('name')) continue
+        out.push(el.tagName.toLowerCase() + ':' + (el.getAttribute('data-testid') || 'no-testid'))
+      }
+      return out
+    })()`
+
+    for (const path of ['/login', '/calculators', '/compare', '/contact']) {
+      await page.goto(path)
+      await page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+      const missing = (await page.evaluate(nameless)) as string[]
+      expect(missing, `${path}: ${missing.join(', ')}`).toEqual([])
+    }
   })
 })

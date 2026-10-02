@@ -14,6 +14,12 @@ export interface MoneyInputProps {
   placeholder?: string
   suffix?: string
   ariaLabel?: string
+  /**
+   * Form field name, so the browser can autofill/identify the field. Defaults
+   * to the test id: every caller gives each money input its own test id, which
+   * keeps the names unique without threading a name through every call site.
+   */
+  name?: string
   testId?: string
   className?: string
 }
@@ -30,6 +36,7 @@ export function MoneyInput({
   placeholder,
   suffix,
   ariaLabel,
+  name,
   testId,
   className,
 }: MoneyInputProps) {
@@ -71,6 +78,7 @@ export function MoneyInput({
         disabled={disabled}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        name={name ?? testId}
         data-testid={testId}
       />
       {suffix !== undefined ? <span aria-hidden="true">{suffix}</span> : null}

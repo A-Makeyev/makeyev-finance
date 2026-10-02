@@ -3,6 +3,24 @@
  * formatting. No DOM, no dependencies; see tests/unit/charts.test.ts.
  */
 
+/**
+ * Rounds a pixel coordinate for the DOM, to three decimals (a thousandth of a
+ * pixel: invisible at any zoom).
+ *
+ * This exists to keep server and client renders byte-identical. The schedule
+ * behind the charts runs Math.pow with fractional and negative exponents, which
+ * neither the IEEE spec nor V8 requires to be correctly rounded, so Node and
+ * the browser can end up a last bit apart (e.g. a bar's y as
+ * 136.84585422025947 on one side and 136.8458542202594 on the other). The
+ * difference cannot be seen, but React compares the attributes as written and
+ * reports it as a hydration mismatch. Rounding only the geometry keeps the
+ * financial figures themselves untouched.
+ */
+export function svgRound(value: number): number {
+  if (!Number.isFinite(value)) return value
+  return Math.round(value * 1000) / 1000
+}
+
 /** Short ₪ label for chart axes: ₪1.5M / ₪250K / ₪750 - never full digits. */
 export function formatAxisShekel(value: number): string {
   if (!Number.isFinite(value) || value === 0) return '₪0'

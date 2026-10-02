@@ -313,6 +313,7 @@ export function ComparePage() {
             value={scenario.label}
             placeholder={t('compare.scenarioUntitle', { index: scenarioIndex + 1 })}
             aria-label={t('compare.scenarioLabelAria')}
+            name={`compare-scenario-name-${scenarioIndex + 1}`}
             data-testid={`compare-scenario-name-${scenarioIndex + 1}`}
             onChange={(event) => actions.setLabel(scenario.id, event.target.value)}
           />
@@ -451,6 +452,7 @@ export function ComparePage() {
                   onBlur={() => actions.commitTrackRateBlur(scenario.id, track.id)}
                   required
                   aria-label={t('compare.trackRateLabel')}
+                  name={`compare-track-rate-${scenarioIndex + 1}-${trackIndex + 1}`}
                   data-testid={`compare-track-rate-${scenarioIndex + 1}-${trackIndex + 1}`}
                 />
                 <span>%</span>
@@ -625,6 +627,7 @@ export function ComparePage() {
                         actions.updateSharedExpenseLabel(expense.id, event.target.value)
                       }
                       aria-label={t('calculator.expenseLabelAria')}
+                      name={`compare-expense-label-${expense.id}`}
                       data-testid={`compare-expense-label-${expense.id}`}
                     />
                   </div>

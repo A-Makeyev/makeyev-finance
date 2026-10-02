@@ -119,3 +119,4 @@ export const test = base.extend<AppFixtures>({
 export { expect }
 export { seedLanguage, seedTheme, seedSiteState } from './seed'
 export { serveQuotes, mockMarketQuotes } from '../support/marketMocks'
+export { serveNoComments, mockArticleComments } from '../support/commentMocks'

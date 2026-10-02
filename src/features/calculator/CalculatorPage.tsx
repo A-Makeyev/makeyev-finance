@@ -1,11 +1,14 @@
 'use client'
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from '@/router'
+import { Link, setNavigationBlockGuard, useNavigate } from '@/router'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPrimeRatePercent } from '@/services/boi'
-import { useCalculatorStore } from '@/stores/calculatorStore'
+import { isMixDirty, useCalculatorStore } from '@/stores/calculatorStore'
+import { authClient } from '@/lib/auth-client'
+import { SaveMixButton } from '@/features/mixes/SaveMixButton'
+import { useSavedMixes } from '@/features/mixes/api'
 import { seedFromCalculator } from '@/stores/comparisonStore'
 import { MAX_OTHER_EXPENSES, MAX_TRACKS, MAX_YEARS, PRESET_IDS, type PresetId, type PropertyPurpose } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
@@ -31,7 +34,14 @@ export function CalculatorPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const resultsRef = useRef<HTMLDivElement | null>(null)
+  // The panel heading ("monthly payment planning...") a loaded saved mix
+  // should land on.
+  const panelHeadingRef = useRef<HTMLDivElement | null>(null)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  // The unsaved dialog only offers Save to a signed-in visitor; a signed-out
+  // one has nothing to save into (the save control is a sign-in prompt).
+  const { data: session } = authClient.useSession()
+  const signedIn = Boolean(session)
   // Preset deep links from the articles (e.g. /calculators?preset=basket2):
   // load the named mix once on mount so a reader lands on exactly the mix the
   // article described. A missing or unknown param leaves the default state.
@@ -47,6 +57,33 @@ export function CalculatorPage() {
     // state, not a live sync - changing the mix afterwards is the user's own
     // interaction and must not be fought by a stale URL param.
   }, [])
+
+  // Saved-mix deep link (/calculators?mix=<id>): the profile's "load" button
+  // navigates here rather than mutating the store, so the URL names the mix
+  // and a refresh reloads it. Read from window.location for the same
+  // static-route reason as the preset link above; an authenticated fetch then
+  // supplies the full scenario. Loaded ONCE, so a later background refetch
+  // cannot clobber the user's edits.
+  const [deepLinkMixId, setDeepLinkMixId] = useState<string | null>(null)
+  useEffect(() => {
+    const mixId = new URLSearchParams(window.location.search).get('mix')
+    if (mixId) setDeepLinkMixId(mixId)
+  }, [])
+  const deepLinkMixes = useSavedMixes(Boolean(deepLinkMixId))
+  const deepLinkLoaded = useRef(false)
+  useEffect(() => {
+    if (deepLinkLoaded.current || !deepLinkMixId || !deepLinkMixes.data) return
+    const mix = deepLinkMixes.data.mixes.find((item) => item.id === deepLinkMixId)
+    if (!mix) return
+    deepLinkLoaded.current = true
+    useCalculatorStore.getState().loadSavedMix(mix.tracks, mix.termYears, mix.scenario, mix.id)
+    // Loading from the profile should land on the calculator's own heading,
+    // not at the top of the page the visitor just left; wait a frame so the
+    // loaded state has rendered.
+    window.requestAnimationFrame(() => {
+      panelHeadingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [deepLinkMixId, deepLinkMixes.data])
   // Expense rows playing their exit animation - the row is removed from the
   // store only after the animation ends, so the fade-out plays in full.
   const [removingExpenseIds, setRemovingExpenseIds] = useState<ReadonlySet<string>>(() => new Set())
@@ -117,6 +154,66 @@ export function CalculatorPage() {
       tracks: useCalculatorStore.getState().tracks,
     })
     navigate('/compare')
+  }
+
+  // The mix has unsaved changes relative to its last save/load/reset.
+  const mixDirty = useCalculatorStore((s) => isMixDirty(s))
+  /** True while the unsaved-changes dialog is explaining a blocked navigation. */
+  const [unsavedOpen, setUnsavedOpen] = useState(false)
+  /** Where the visitor was heading when the guard stopped them. */
+  const pendingNav = useRef<string | null>(null)
+
+  // Leaving the page with unsaved work warns first. beforeunload covers
+  // reload/close and browser back-forward, which cannot be intercepted in
+  // app; the router guard below covers in-app navigation.
+  useEffect(() => {
+    if (!mixDirty) return
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      // Legacy browsers need returnValue set to show their own prompt.
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [mixDirty])
+
+  useEffect(() => {
+    if (!mixDirty) {
+      setNavigationBlockGuard(null)
+      return
+    }
+    setNavigationBlockGuard((to) => {
+      // Staying in the calculator is not leaving; anything else is checked.
+      if (to.startsWith('/calculators')) return true
+      pendingNav.current = to
+      setUnsavedOpen(true)
+      return false
+    })
+    return () => setNavigationBlockGuard(null)
+  }, [mixDirty])
+
+  /** Confirmed leaving without saving: clear the guard, then continue. */
+  const leaveWithoutSaving = () => {
+    const target = pendingNav.current
+    pendingNav.current = null
+    setUnsavedOpen(false)
+    setNavigationBlockGuard(null)
+    if (target) navigate(target)
+  }
+
+  const stayOnPage = () => {
+    pendingNav.current = null
+    setUnsavedOpen(false)
+  }
+
+  /**
+   * The unsaved dialog's Save: hand off to the calculator's own save control
+   * (the single save surface, which knows the loaded mix and its name) and stay
+   * on the page. Once saved, leaving no longer raises this confirm.
+   */
+  const saveFromUnsaved = () => {
+    useCalculatorStore.getState().requestSaveMix()
+    stayOnPage()
   }
 
   const store = {
@@ -215,7 +312,11 @@ export function CalculatorPage() {
 
       <main className="calculator-shell">
         <section className="calculator-panel" aria-label={t('nav.calculators')}>
-          <div className="panel-heading">
+          <div
+            className="panel-heading scroll-mt-28"
+            data-testid="panel-heading"
+            ref={panelHeadingRef}
+          >
             <div>
               <h2>{t('calculator.panelHeading')}</h2>
             </div>
@@ -284,13 +385,19 @@ export function CalculatorPage() {
                 />
               </label>
 
-              <button
-                className="calculate-button starting-calculate-button"
-                type="submit"
-                data-testid="show-payments"
-              >
-                <span>{t('calculator.showPayments')}</span>
-              </button>
+              {/* Show payments is the primary action and the save control is
+                  its peer: both act on the mix the user has built, so they
+                  share one cell and the same button treatment. */}
+              <div className="starting-actions" data-testid="starting-actions">
+                <button
+                  className="calculate-button starting-calculate-button"
+                  type="submit"
+                  data-testid="show-payments"
+                >
+                  <span>{t('calculator.showPayments')}</span>
+                </button>
+                <SaveMixButton />
+              </div>
             </div>
 
             <div className="limits-row">
@@ -367,6 +474,7 @@ export function CalculatorPage() {
                       onChange={(event) => store.updateRealtorPercent(event.target.value)}
                       placeholder={vm.realtorPercentHint ?? undefined}
                       aria-label={t('calculator.realtorPercentLabel')}
+                      name="realtor-percent"
                       data-testid="realtor-percent"
                     />
                     <span aria-hidden="true">%</span>
@@ -398,6 +506,7 @@ export function CalculatorPage() {
                       onChange={(event) => store.updateLawyerPercent(event.target.value)}
                       placeholder={vm.lawyerPercentHint ?? undefined}
                       aria-label={t('calculator.lawyerPercentLabel')}
+                      name="lawyer-percent"
                       data-testid="lawyer-percent"
                     />
                     <span aria-hidden="true">%</span>
@@ -486,6 +595,7 @@ export function CalculatorPage() {
                             store.updateOtherExpenseLabel(expense.id, event.target.value)
                           }
                           aria-label={t('calculator.expenseLabelAria')}
+                          name={`expense-label-${expense.id}`}
                           data-testid={`expense-label-${expense.id}`}
                         />
                       </div>
@@ -701,6 +811,51 @@ export function CalculatorPage() {
 
         <ScheduleSection />
       </main>
+
+      <AppModal
+        open={unsavedOpen}
+        onOpenChange={(open) => {
+          if (!open) stayOnPage()
+        }}
+        testId="unsaved-mix-confirm"
+        dir={i18n.dir()}
+        contentClassName="max-w-[420px] !border-0 !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
+      >
+        <div className="p-6">
+          <h3 className="mb-4 text-[20px] font-bold leading-tight text-ink">
+            {t('savedMixes.unsavedTitle')}
+          </h3>
+          <p className="text-[15px] leading-relaxed text-ink">{t('savedMixes.unsavedBody')}</p>
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
+            {signedIn && (
+              <button
+                type="button"
+                data-testid="unsaved-mix-save"
+                className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
+                onClick={saveFromUnsaved}
+              >
+                {t('savedMixes.unsavedSave')}
+              </button>
+            )}
+            <button
+              type="button"
+              data-testid="unsaved-mix-stay"
+              className="rounded-[5px] border border-[var(--calc-line)] px-5 py-2 text-[15px] font-medium text-[var(--calc-muted)] transition-colors hover:text-[var(--calc-teal-dark)]"
+              onClick={stayOnPage}
+            >
+              {t('savedMixes.unsavedStay')}
+            </button>
+            <button
+              type="button"
+              data-testid="unsaved-mix-leave"
+              className="rounded-[5px] border border-[var(--calc-line)] px-5 py-2 text-[15px] font-medium text-[var(--calc-muted)] transition-colors hover:text-[var(--calc-teal-dark)]"
+              onClick={leaveWithoutSaving}
+            >
+              {t('savedMixes.unsavedLeave')}
+            </button>
+          </div>
+        </div>
+      </AppModal>
 
       <AppModal
         open={resetConfirmOpen}

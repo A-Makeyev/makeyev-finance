@@ -24,6 +24,9 @@ const config: Config = {
           page: 'var(--surface-page)',
           card: 'var(--surface-card)',
           soft: 'var(--surface-soft)',
+          // For controls that sit ON a card; dark theme lifts it above the
+          // card, since --surface-page is darker there.
+          raised: 'var(--surface-raised)',
         },
         ink: {
           DEFAULT: 'rgb(var(--ink-rgb) / <alpha-value>)',

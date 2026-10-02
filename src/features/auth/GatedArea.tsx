@@ -39,7 +39,7 @@ export function GatedArea({ area, email }: { area: 'advisor' | 'client'; email: 
           type="button"
           data-testid="gated-sign-out"
           onClick={signOut}
-          className="rounded-lg border border-line-strong bg-surface-page px-4 py-2 font-medium text-ink transition-colors hover:border-ink hover:bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-soft-blue focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card"
+          className="rounded-lg border border-line-strong bg-surface-raised px-4 py-2 font-medium text-ink transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-soft-blue focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card"
         >
           {t('auth.signOut')}
         </button>
