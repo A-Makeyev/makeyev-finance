@@ -30,10 +30,16 @@ const LEGACY_DEFAULTS = {
   EMAILJS_PUBLIC_KEY: '2y064p5z9qRvVxOHN',
 } as const
 
-/** First non-empty value among the given variable names, else undefined. */
-function readFirst(...names: string[]): string | undefined {
-  for (const name of names) {
-    const value = process.env[name]
+/**
+ * First non-empty value, else undefined.
+ *
+ * Callers MUST pass literal `process.env.X` accesses. This module is bundled for
+ * the browser, which only receives env values through the bundler's static
+ * substitution of `process.env.NAME`; a dynamic `process.env[name]` cannot be
+ * substituted and silently read as undefined.
+ */
+function firstNonEmpty(...values: (string | undefined)[]): string | undefined {
+  for (const value of values) {
     if (value !== undefined && value !== '') return value
   }
   return undefined
@@ -44,11 +50,23 @@ function readFirst(...names: string[]): string | undefined {
  * the bare name (what deploy configs and .env carry).
  */
 const rawEnv = {
-  EMAILJS_SERVICE_ID: readFirst('NEXT_PUBLIC_EMAILJS_SERVICE_ID', 'EMAILJS_SERVICE_ID'),
-  EMAILJS_TEMPLATE_ID: readFirst('NEXT_PUBLIC_EMAILJS_TEMPLATE_ID', 'EMAILJS_TEMPLATE_ID'),
-  EMAILJS_PUBLIC_KEY: readFirst('NEXT_PUBLIC_EMAILJS_PUBLIC_KEY', 'EMAILJS_PUBLIC_KEY'),
-  BOI_INTEREST_URL: readFirst('NEXT_PUBLIC_BOI_INTEREST_URL', 'BOI_INTEREST_URL'),
-  CBS_API_BASE: readFirst('NEXT_PUBLIC_CBS_API_BASE', 'CBS_API_BASE'),
+  EMAILJS_SERVICE_ID: firstNonEmpty(
+    process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID,
+    process.env.EMAILJS_SERVICE_ID,
+  ),
+  EMAILJS_TEMPLATE_ID: firstNonEmpty(
+    process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID,
+    process.env.EMAILJS_TEMPLATE_ID,
+  ),
+  EMAILJS_PUBLIC_KEY: firstNonEmpty(
+    process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY,
+    process.env.EMAILJS_PUBLIC_KEY,
+  ),
+  BOI_INTEREST_URL: firstNonEmpty(
+    process.env.NEXT_PUBLIC_BOI_INTEREST_URL,
+    process.env.BOI_INTEREST_URL,
+  ),
+  CBS_API_BASE: firstNonEmpty(process.env.NEXT_PUBLIC_CBS_API_BASE, process.env.CBS_API_BASE),
 }
 
 export type AppEnv = z.infer<typeof envSchema>
