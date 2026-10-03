@@ -283,8 +283,8 @@ export function Navbar({
           centred). Kept out of #nav-list so it stays on the bar while the
           sheet, now links + socials only, slides down behind it. The language
           switch used to sit here too; it is now a row in the account menu. */}
-      <ul className="nav-bar-controls" data-testid="nav-bar-controls">
-            {/* Account control. While the session is being looked up a muted
+        <ul className="nav-bar-controls" data-testid="nav-bar-controls">
+          {/* Account control. While the session is being looked up a muted
                 skeleton circle holds the trigger's slot (the slot used to sit
                 empty, so the row jumped when the icon appeared; the skeleton
                 wears the same colour as the nav links). Both session states
@@ -293,205 +293,205 @@ export function Navbar({
                 items; signed out it holds the person-glyph circle and the
                 sign-in entry. The color mode row sits in the menu in both
                 states, so the menu is now the only theme toggle. */}
-            <li>
-              {sessionPending ? (
-                <span
-                  className="nav-auth-pending"
-                  aria-hidden="true"
-                  data-testid="nav-auth-pending"
-                >
-                  <span className="nav-auth-skeleton" />
-                </span>
-              ) : (
-                <div
-                  className="nav-account"
-                  ref={accountRef}
-                  data-testid="nav-account"
-                  onPointerEnter={cancelAccountClose}
-                  onPointerLeave={(event) => {
-                    // Touch fires pointerleave right after the tap, which
-                    // would close the menu the tap just opened - only the
-                    // mouse hover-out closes it here.
-                    if (event.pointerType !== 'touch') scheduleAccountClose()
+          <li>
+            {sessionPending ? (
+              <span
+                className="nav-auth-pending"
+                aria-hidden="true"
+                data-testid="nav-auth-pending"
+              >
+                <span className="nav-auth-skeleton" />
+              </span>
+            ) : (
+              <div
+                className="nav-account"
+                ref={accountRef}
+                data-testid="nav-account"
+                onPointerEnter={cancelAccountClose}
+                onPointerLeave={(event) => {
+                  // Touch fires pointerleave right after the tap, which
+                  // would close the menu the tap just opened - only the
+                  // mouse hover-out closes it here.
+                  if (event.pointerType !== 'touch') scheduleAccountClose()
+                }}
+                onBlur={(event) => {
+                  // Close once focus leaves the whole control (trigger +
+                  // menu). This is the keyboard half of what the old CSS
+                  // :focus-within rule did, and its removal is what lets a
+                  // CLICKED-open menu disappear on hover-out: the click
+                  // focuses the trigger, and a lingering focus-within kept
+                  // the menu painted after the pointer had left.
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    cancelAccountClose()
+                    setAccountMenuOpen(false)
+                  }
+                }}
+              >
+                <button
+                  type="button"
+                  data-testid="nav-avatar"
+                  className="nav-link remove-highlight flex items-center"
+                  aria-haspopup="menu"
+                  aria-expanded={accountMenuOpen}
+                  // No native title here: hovering the trigger opens the
+                  // account menu, whose identity line already names the
+                  // user, so a tooltip would only overlap it.
+                  aria-label={user ? user.name || t('auth.account') : t('auth.account')}
+                  onClick={() => setAccountMenuOpen((open) => !open)}
+                  onPointerEnter={(event) => {
+                    // Hover peek is a MOUSE gesture. On touch the browser
+                    // fires compatibility mouse events just before the
+                    // tap's click, which would open the menu and let the
+                    // click immediately toggle it shut - so a tap could
+                    // never open it. Touch opens on click instead.
+                    if (event.pointerType !== 'touch') setAccountMenuOpen(true)
                   }}
-                  onBlur={(event) => {
-                    // Close once focus leaves the whole control (trigger +
-                    // menu). This is the keyboard half of what the old CSS
-                    // :focus-within rule did, and its removal is what lets a
-                    // CLICKED-open menu disappear on hover-out: the click
-                    // focuses the trigger, and a lingering focus-within kept
-                    // the menu painted after the pointer had left.
-                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                      cancelAccountClose()
-                      setAccountMenuOpen(false)
+                  onFocus={(event) => {
+                    // Keyboard only, like HelpTooltip: a tap also focuses
+                    // this button, and opening here would hand the tap's
+                    // click a close to perform.
+                    if (event.currentTarget.matches(':focus-visible')) {
+                      setAccountMenuOpen(true)
                     }
                   }}
                 >
-                  <button
-                    type="button"
-                    data-testid="nav-avatar"
-                    className="nav-link remove-highlight flex items-center"
-                    aria-haspopup="menu"
-                    aria-expanded={accountMenuOpen}
-                    // No native title here: hovering the trigger opens the
-                    // account menu, whose identity line already names the
-                    // user, so a tooltip would only overlap it.
-                    aria-label={user ? user.name || t('auth.account') : t('auth.account')}
-                    onClick={() => setAccountMenuOpen((open) => !open)}
-                    onPointerEnter={(event) => {
-                      // Hover peek is a MOUSE gesture. On touch the browser
-                      // fires compatibility mouse events just before the
-                      // tap's click, which would open the menu and let the
-                      // click immediately toggle it shut - so a tap could
-                      // never open it. Touch opens on click instead.
-                      if (event.pointerType !== 'touch') setAccountMenuOpen(true)
-                    }}
-                    onFocus={(event) => {
-                      // Keyboard only, like HelpTooltip: a tap also focuses
-                      // this button, and opening here would hand the tap's
-                      // click a close to perform.
-                      if (event.currentTarget.matches(':focus-visible')) {
-                        setAccountMenuOpen(true)
-                      }
-                    }}
-                  >
-                    {user && avatarUrl ? (
-                      // Google profile photo, when the provider returned
-                      // one. referrerPolicy="no-referrer"
-                      // keeps the auth header out of Google's request.
-                      <img
-                        src={avatarUrl}
-                        alt=""
-                        referrerPolicy="no-referrer"
-                        className="nav-avatar-img"
-                        data-testid="nav-avatar-img"
-                      />
-                    ) : user && initials ? (
-                      <span className="nav-avatar-img nav-avatar-fallback" aria-hidden="true">
-                        {initials}
-                      </span>
-                    ) : (
-                      // Signed out (or no photo and no initials): the person
-                      // glyph in the same circle, so the trigger reads
-                      // identically in both session states.
-                      <span
-                        className="nav-avatar-img nav-avatar-empty"
-                        aria-hidden="true"
-                        data-testid="nav-avatar-empty"
-                      >
-                        <FaRegUser />
-                      </span>
-                    )}
-                  </button>
-                  <div
-                    className={cn('nav-account-menu', accountMenuOpen && 'open')}
-                    data-testid="nav-account-menu"
-                    role="menu"
-                    aria-label={t('auth.account')}
-                    aria-hidden={!accountMenuOpen}
-                    // The bar is deliberately LTR on every locale, but the
-                    // menu is content: it follows the page direction, so the
-                    // Hebrew menu reads right-to-left with each row's icon
-                    // before its text.
-                    dir={i18n.dir()}
-                  >
-                    {/* Identity first: the account's own name sits at the top
+                  {user && avatarUrl ? (
+                    // Google profile photo, when the provider returned
+                    // one. referrerPolicy="no-referrer"
+                    // keeps the auth header out of Google's request.
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="nav-avatar-img"
+                      data-testid="nav-avatar-img"
+                    />
+                  ) : user && initials ? (
+                    <span className="nav-avatar-img nav-avatar-fallback" aria-hidden="true">
+                      {initials}
+                    </span>
+                  ) : (
+                    // Signed out (or no photo and no initials): the person
+                    // glyph in the same circle, so the trigger reads
+                    // identically in both session states.
+                    <span
+                      className="nav-avatar-img nav-avatar-empty"
+                      aria-hidden="true"
+                      data-testid="nav-avatar-empty"
+                    >
+                      <FaRegUser />
+                    </span>
+                  )}
+                </button>
+                <div
+                  className={cn('nav-account-menu', accountMenuOpen && 'open')}
+                  data-testid="nav-account-menu"
+                  role="menu"
+                  aria-label={t('auth.account')}
+                  aria-hidden={!accountMenuOpen}
+                  // The bar is deliberately LTR on every locale, but the
+                  // menu is content: it follows the page direction, so the
+                  // Hebrew menu reads right-to-left with each row's icon
+                  // before its text.
+                  dir={i18n.dir()}
+                >
+                  {/* Identity first: the account's own name sits at the top
                         of the menu, above the site preferences and the
                         actions, so the menu reads as "who am I" and then what
                         I can do here. */}
-                    {user && (
-                      <div className="nav-account-id" data-testid="nav-account-id" dir="auto">
-                        {user.name || user.email}
-                      </div>
-                    )}
-                    {/* Preferences block (both session states): the language
+                  {user && (
+                    <div className="nav-account-id" data-testid="nav-account-id" dir="auto">
+                      {user.name || user.email}
+                    </div>
+                  )}
+                  {/* Preferences block (both session states): the language
                         switch, then the color-mode toggle. Both render the
                         same icon-then-label row, so the two "site settings"
                         read as one group. */}
-                    <div className="nav-account-prefs">
-                      {/* Language switch. It targets the OTHER locale, so it
+                  <div className="nav-account-prefs">
+                    {/* Language switch. It targets the OTHER locale, so it
                           carries the raw href (computed above) rather than
                           going through the locale-aware Link adapter, and it
                           persists the choice on the way out. */}
-                      <NextLink
-                        href={languageSwitchHref}
+                    <NextLink
+                      href={languageSwitchHref}
+                      role="menuitem"
+                      className="nav-account-item nav-account-lang"
+                      data-testid="nav-account-language"
+                      onClick={() => {
+                        setAccountMenuOpen(false)
+                        if (menuOpen) closeMenu()
+                        try {
+                          localStorage.setItem('site_language', isHebrew ? 'english' : 'hebrew')
+                        } catch {
+                          // Storage unavailable - the choice applies to this visit.
+                        }
+                      }}
+                    >
+                      <img
+                        aria-hidden="true"
+                        src={isHebrew ? 'https://flagcdn.com/w40/us.png' : 'https://flagcdn.com/w40/il.png'}
+                        alt=""
+                        width={24}
+                        height={16}
+                        className="nav-account-flag"
+                        loading="eager"
+                      />
+                      <span>{t('nav.switchLanguage')}</span>
+                    </NextLink>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="nav-account-item nav-account-theme"
+                      data-testid="nav-account-theme"
+                      onClick={toggleTheme}
+                    >
+                      {isDark ? <FaSun aria-hidden="true" /> : <FaMoon aria-hidden="true" />}
+                      <span>{t(isDark ? 'nav.lightMode' : 'nav.darkMode')}</span>
+                    </button>
+                  </div>
+                  {user ? (
+                    <>
+                      <Link
+                        to="/profile"
                         role="menuitem"
-                        className="nav-account-item nav-account-lang"
-                        data-testid="nav-account-language"
-                        onClick={() => {
-                          setAccountMenuOpen(false)
-                          if (menuOpen) closeMenu()
-                          try {
-                            localStorage.setItem('site_language', isHebrew ? 'english' : 'hebrew')
-                          } catch {
-                            // Storage unavailable - the choice applies to this visit.
-                          }
-                        }}
+                        className="nav-account-item"
+                        data-testid="nav-account-profile"
+                        onClick={() => setAccountMenuOpen(false)}
                       >
-                        <img
-                          aria-hidden="true"
-                          src={isHebrew ? 'https://flagcdn.com/w40/us.png' : 'https://flagcdn.com/w40/il.png'}
-                          alt=""
-                          width={24}
-                          height={16}
-                          className="nav-account-flag"
-                          loading="eager"
-                        />
-                        <span>{t('nav.switchLanguage')}</span>
-                      </NextLink>
+                        <FaRegUser aria-hidden="true" />
+                        <span>{t('auth.profileItem')}</span>
+                      </Link>
                       <button
                         type="button"
                         role="menuitem"
-                        className="nav-account-item nav-account-theme"
-                        data-testid="nav-account-theme"
-                        onClick={toggleTheme}
-                      >
-                        {isDark ? <FaSun aria-hidden="true" /> : <FaMoon aria-hidden="true" />}
-                        <span>{t(isDark ? 'nav.lightMode' : 'nav.darkMode')}</span>
-                      </button>
-                    </div>
-                    {user ? (
-                      <>
-                        <Link
-                          to="/profile"
-                          role="menuitem"
-                          className="nav-account-item"
-                          data-testid="nav-account-profile"
-                          onClick={() => setAccountMenuOpen(false)}
-                        >
-                          <FaRegUser aria-hidden="true" />
-                          <span>{t('auth.profileItem')}</span>
-                        </Link>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className="nav-account-item"
-                          data-testid="nav-account-signout"
-                          onClick={onSignOut}
-                        >
-                          <FaSignOutAlt aria-hidden="true" />
-                          <span>{t('auth.signOut')}</span>
-                        </button>
-                      </>
-                    ) : (
-                      <Link
-                        to="/login"
-                        role="menuitem"
                         className="nav-account-item"
-                        data-testid="nav-account-signin"
-                        onClick={() => {
-                          if (menuOpen) closeMenu()
-                          setAccountMenuOpen(false)
-                        }}
+                        data-testid="nav-account-signout"
+                        onClick={onSignOut}
                       >
-                        <FaRegUser aria-hidden="true" />
-                        <span>{t('auth.loginLink')}</span>
-                      </Link>
-                    )}
-                  </div>
+                        <FaSignOutAlt aria-hidden="true" />
+                        <span>{t('auth.signOut')}</span>
+                      </button>
+                    </>
+                  ) : (
+                    <Link
+                      to="/login"
+                      role="menuitem"
+                      className="nav-account-item"
+                      data-testid="nav-account-signin"
+                      onClick={() => {
+                        if (menuOpen) closeMenu()
+                        setAccountMenuOpen(false)
+                      }}
+                    >
+                      <FaRegUser aria-hidden="true" />
+                      <span>{t('auth.loginLink')}</span>
+                    </Link>
+                  )}
                 </div>
-              )}
-            </li>
+              </div>
+            )}
+          </li>
         </ul>
       </div>
 
