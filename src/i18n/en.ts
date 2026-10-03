@@ -868,6 +868,17 @@ export const en: { translation: Translation } = {
       unsavedStay: 'Stay',
       savedState: 'Saved',
       unsavedSave: 'Save',
+      editingMix: 'Editing mix',
+      newMix: 'New mix',
+      newMixConfirmTitle: 'Start a new mix',
+      newMixConfirmBody:
+        'Your current mix has unsaved changes. Starting a new mix clears the calculator and stops editing the loaded mix.',
+      newMixConfirmAction: 'Start new mix',
+      duplicateName: 'You already have a mix with this name. Choose a different name.',
+      noSavedMixes: 'No saved mixes yet',
+      loadOtherMixTitle: 'Load another mix?',
+      loadOtherMixBody: 'The current mix has unsaved changes. Loading another mix will discard them.',
+      loadOtherMixAction: 'Load mix',
     },
     auth: {
       account: 'Account',

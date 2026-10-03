@@ -265,11 +265,9 @@ export function CommentsSection({ slug }: { slug: string }) {
         data-visual-depth={visualDepth(node.depth)}
         // scroll-mt keeps the target clear of the sticky header when a reply
         // link jumps to it from the profile.
-        className={`comment-node mt-4 scroll-mt-28${hasRail ? ' has-children' : ''}${
-          hasChildren ? ' has-collapse' : ''
-        }${collapsed ? ' is-collapsed' : ''}${
-          comment.id === highlightedId ? ' is-target' : ''
-        }`}
+        className={`comment-node mt-4 scroll-mt-28${hasRail ? ' has-children' : ''}${hasChildren ? ' has-collapse' : ''
+          }${collapsed ? ' is-collapsed' : ''}${comment.id === highlightedId ? ' is-target' : ''
+          }`}
       >
         <div className="comment-row flex items-start gap-3">
           {avatar(comment)}
@@ -550,7 +548,7 @@ export function CommentsSection({ slug }: { slug: string }) {
               {t('comments.deleteFailed')}
             </p>
           )}
-          <div className="mt-6 flex justify-end gap-3">
+          <div className="mt-6 modal-actions modal-actions-reversed">
             <button
               type="button"
               data-testid="comment-delete-cancel"
@@ -580,9 +578,8 @@ export function CommentsSection({ slug }: { slug: string }) {
         <div
           aria-live="polite"
           data-testid="comment-toast"
-          className={`pointer-events-none fixed bottom-24 left-1/2 z-[1100] -translate-x-1/2 transition-opacity duration-300 ${
-            toastVisible ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`pointer-events-none fixed bottom-24 left-1/2 z-[1100] -translate-x-1/2 transition-opacity duration-300 ${toastVisible ? 'opacity-100' : 'opacity-0'
+            }`}
         >
           <div
             dir="auto"

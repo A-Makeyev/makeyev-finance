@@ -23,8 +23,10 @@ import { expect, type Locator, type Page } from '@playwright/test'
   /** The starting-point row's primary action and its action cell. */
   readonly showPayments: Locator
   readonly startingActions: Locator
-  /** Panel-heading link to the saved mixes on the profile page. */
-  readonly myMixesLink: Locator
+  /** Saved-mix menu trigger, menu and profile management link. */
+  readonly myMixesMenuTrigger: Locator
+  readonly savedMixesMenu: Locator
+  readonly myMixesProfileLink: Locator
   /** Toggle that reveals the twelve secondary result cards. */
   readonly resultsToggle: Locator
   /** Save-this-mix control, and its signed-out sign-in variant. */
@@ -37,6 +39,17 @@ import { expect, type Locator, type Page } from '@playwright/test'
   readonly saveMixSaved: Locator
   /** The saved-state affordance shown while the loaded mix has no edits. */
   readonly saveMixState: Locator
+  /** The loaded mix's name, shown under the panel heading. */
+  readonly mixTitle: Locator
+  /** "New mix": drops the link to the loaded mix (with a confirm if edited). */
+  readonly newMix: Locator
+  readonly newMixDialog: Locator
+  readonly newMixConfirm: Locator
+  readonly loadMixDialog: Locator
+  readonly loadMixConfirm: Locator
+  readonly loadMixCancel: Locator
+  /** The inline duplicate-name hint in the save dialog. */
+  readonly saveMixDuplicate: Locator
   /** The "unsaved mix" confirm raised before leaving an edited calculator. */
   readonly unsavedDialog: Locator
   readonly unsavedSave: Locator
@@ -63,7 +76,9 @@ import { expect, type Locator, type Page } from '@playwright/test'
     this.termSlider = page.getByTestId('term-years')
     this.showPayments = page.getByTestId('show-payments')
     this.startingActions = page.getByTestId('starting-actions')
-    this.myMixesLink = page.getByTestId('my-mixes-link')
+    this.myMixesMenuTrigger = page.getByTestId('my-mixes-menu-trigger')
+    this.savedMixesMenu = page.getByTestId('saved-mixes-menu')
+    this.myMixesProfileLink = page.getByTestId('my-mixes-link')
     this.resultsToggle = page.getByTestId('results-toggle')
     this.saveMix = page.getByTestId('save-mix')
     this.saveMixSignIn = page.getByTestId('save-mix-sign-in')
@@ -72,6 +87,14 @@ import { expect, type Locator, type Page } from '@playwright/test'
     this.saveMixModal = page.getByTestId('save-mix-modal')
     this.saveMixSaved = page.getByTestId('save-mix-saved')
     this.saveMixState = page.getByTestId('save-mix-saved-state')
+    this.mixTitle = page.getByTestId('mix-title')
+    this.newMix = page.getByTestId('new-mix')
+    this.newMixDialog = page.getByTestId('new-mix-confirm')
+    this.newMixConfirm = page.getByTestId('new-mix-confirm-yes')
+    this.loadMixDialog = page.getByTestId('load-mix-confirm')
+    this.loadMixConfirm = page.getByTestId('load-mix-confirm-yes')
+    this.loadMixCancel = page.getByTestId('load-mix-cancel')
+    this.saveMixDuplicate = page.getByTestId('save-mix-duplicate')
     this.unsavedDialog = page.getByTestId('unsaved-mix-confirm')
     this.unsavedSave = page.getByTestId('unsaved-mix-save')
     this.unsavedStay = page.getByTestId('unsaved-mix-stay')
@@ -156,7 +179,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
   async actionRowReadingOrder(): Promise<string[]> {
     return this.page.evaluate(`(() => {
       const rtl = document.documentElement.dir === 'rtl'
-      return ['show-payments', 'save-mix', 'my-mixes-link']
+      return ['show-payments', 'my-mixes-menu-trigger', 'new-mix', 'save-mix']
         .map((id) => {
           const el = document.querySelector('[data-testid="' + id + '"]')
           return el ? { id, x: el.getBoundingClientRect().left } : null
@@ -164,6 +187,63 @@ import { expect, type Locator, type Page } from '@playwright/test'
         .filter((entry) => entry !== null)
         .sort((a, b) => (rtl ? b.x - a.x : a.x - b.x))
         .map((entry) => entry.id)
+    })()`)
+  }
+
+  /** Unsaved-dialog actions in the visual reading direction. */
+  async unsavedDialogActionOrder(): Promise<string[]> {
+    return this.page.evaluate(`(() => {
+      const dialog = document.querySelector('[data-testid="unsaved-mix-confirm"]')
+      const rtl = dialog?.getAttribute('dir') === 'rtl'
+      return ['unsaved-mix-save', 'unsaved-mix-stay', 'unsaved-mix-leave']
+        .map((id) => {
+          const element = document.querySelector('[data-testid="' + id + '"]')
+          return element ? { id, x: element.getBoundingClientRect().left } : null
+        })
+        .filter((item) => item !== null)
+        .sort((first, second) => rtl ? second.x - first.x : first.x - second.x)
+        .map((item) => item.id)
+    })()`)
+  }
+
+  async modalActionVisualOrder(dialogTestId: string, actionIds: string[]): Promise<string[]> {
+    const dialogSelector = JSON.stringify(`[data-testid="${dialogTestId}"]`)
+    const serializedActionIds = JSON.stringify(actionIds)
+    return this.page.evaluate(`(() => {
+      const dialog = document.querySelector(${dialogSelector})
+      const rtl = dialog?.getAttribute('dir') === 'rtl'
+      const actionIds = ${serializedActionIds}
+      const elements = Array.from(dialog?.querySelectorAll('[data-testid]') ?? [])
+      return actionIds
+        .map((id) => {
+          const element = elements.find((candidate) => candidate.getAttribute('data-testid') === id)
+          return element ? { id, x: element.getBoundingClientRect().left } : null
+        })
+        .filter((item) => item !== null)
+        .sort((first, second) => rtl ? second.x - first.x : first.x - second.x)
+        .map((item) => item.id)
+    })()`)
+  }
+
+  async saveSpinnerPrecedesTextInReadingOrder(): Promise<boolean> {
+    return this.page.evaluate(`(() => {
+      const active = document.querySelector('.save-mix-label-swap-active')
+      const spinner = active?.querySelector('svg')
+      if (!active || !spinner) return false
+      const walker = document.createTreeWalker(active, 4)
+      const range = document.createRange()
+      while (walker.nextNode()) {
+        const node = walker.currentNode
+        if (node.textContent && node.textContent.trim()) {
+          range.selectNodeContents(node)
+          const spinnerBox = spinner.getBoundingClientRect()
+          const textBox = range.getBoundingClientRect()
+          return document.documentElement.dir === 'rtl'
+            ? spinnerBox.left > textBox.left
+            : spinnerBox.right < textBox.left
+        }
+      }
+      return false
     })()`)
   }
 
@@ -194,6 +274,18 @@ import { expect, type Locator, type Page } from '@playwright/test'
     })()`)
   }
 
+  savedMixMenuItem(id: string): Locator {
+    return this.page.getByTestId(`saved-mix-menu-item-${id}`)
+  }
+
+  async documentDirection(): Promise<string> {
+    return this.page.evaluate('document.documentElement.dir')
+  }
+
+  async scrollPosition(): Promise<number> {
+    return this.page.evaluate('window.scrollY')
+  }
+
   /** Expand the results grid so the twelve secondary cards are visible. */
   async showAllResults(): Promise<void> {
     await this.resultsToggle.click()
@@ -211,6 +303,7 @@ export class TrackPanel {
     this.root = (i) => page.getByTestId(`track-${i}`)
   }
 
+  /** Track test ids are 1-based (track(1) is track-1 / track-amount-1). */
   amount(): Locator {
     return this.root(this.index).getByTestId(`track-amount-${this.index}`)
   }

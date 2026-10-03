@@ -1,10 +1,17 @@
+
+➖➖➖🟩🟩➖🟩🟩
+➖➖🟩🟩🟩🟩🟩🟩🟩
+➖🟩🟩⬜⬛⬜⬜⬛🟩
+➖🟩🟩🟩🟩🟩🟩🟩
+🟩🟩🟩🟩🟥🟥🟥🟥
+🟩🟩🟩🟩🟩🟩🟩
+
 Ideas for my business
 ~~~~~~~~~~~~~~~~~~~~~
 
 1) Make wall sticker with QR code to my website, with saying free wifi
 
 2) 
-
 
 
 
@@ -16,13 +23,16 @@ change to node mailer
 email sub -> when rate change
 
 
+
 add affiliate next to lawyer, realtor etc
+ביטוח
+
 
 email about rate change (change to node mailer)
 
 
+to live should finish faster and pay less rates
 recommend mix based on investor or home owner who lives there
-compare mortgage mixes
 
 
 הסבר על כל תמהיל
@@ -34,17 +44,10 @@ investment property or home to live?
 add mix based on logic, investment input how much rent you get -> mortgage should be 30 years
 rent bigger to home payment
 
-to live should finish faster and pay less rates
-
 
 make login, roles, save to mongodb, save users mortgage, pension details, tasks, remindeds
 save advisors clients, details
 
-
-add articles, based on mortgage book
-
-
-users panel, each client gets page with his details
 
 advisor panel, more tools, crm app
 quick links to bank, needed files

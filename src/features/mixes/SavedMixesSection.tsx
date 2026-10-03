@@ -258,7 +258,7 @@ export function SavedMixesSection() {
               {t('savedMixes.deleteError')}
             </p>
           )}
-          <div className="mt-6 flex justify-end gap-3">
+          <div className="mt-6 modal-actions modal-actions-reversed flex-wrap">
             <button
               type="button"
               data-testid="delete-mix-cancel"

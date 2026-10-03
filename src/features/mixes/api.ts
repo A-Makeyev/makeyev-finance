@@ -79,6 +79,24 @@ export function useSaveMix() {
   })
 }
 
+/**
+ * Whether `label` is already one of the caller's mix names, compared the way
+ * the server compares them (trimmed, case-insensitive). `ignoreId` lets a
+ * loaded mix keep its own name. This is only the inline hint: the server is
+ * the real check, and its refusal is what a stale list cannot miss.
+ */
+export function isMixLabelTaken(
+  mixes: SavedMix[],
+  label: string,
+  ignoreId?: string | null,
+): boolean {
+  const wanted = label.trim().toLocaleLowerCase()
+  if (!wanted) return false
+  return mixes.some(
+    (mix) => mix.id !== ignoreId && mix.label.trim().toLocaleLowerCase() === wanted,
+  )
+}
+
 export function useDeleteMix() {
   const queryClient = useQueryClient()
   return useMutation({

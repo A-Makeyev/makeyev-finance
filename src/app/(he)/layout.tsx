@@ -52,7 +52,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // otherwise report a server/client attribute mismatch on every load. The
     // children are not suppressed, so a real mismatch inside the tree still
     // surfaces.
-    <html lang="he" dir="rtl" suppressHydrationWarning>
+    <html lang="he" dir="rtl" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

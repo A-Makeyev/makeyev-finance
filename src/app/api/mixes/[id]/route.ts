@@ -47,12 +47,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const { id } = await params
-  const mix = await updateSavedMix(session.user.id, id, parsed.data)
-  if (!mix) {
+  const result = await updateSavedMix(session.user.id, id, parsed.data)
+  if (!result.ok) {
+    // A rename onto another mix's name is refused the same way a create is;
+    // the mix's own name never counts as a duplicate of itself.
+    if (result.reason === 'duplicate') {
+      return NextResponse.json({ error: 'duplicate' }, { status: 409, headers: NO_STORE })
+    }
     return NextResponse.json({ error: 'not_found' }, { status: 404, headers: NO_STORE })
   }
 
-  return NextResponse.json({ mix }, { headers: NO_STORE })
+  return NextResponse.json({ mix: result.mix }, { headers: NO_STORE })
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {

@@ -8,6 +8,7 @@ import { fetchPrimeRatePercent } from '@/services/boi'
 import { isMixDirty, useCalculatorStore } from '@/stores/calculatorStore'
 import { authClient } from '@/lib/auth-client'
 import { SaveMixButton } from '@/features/mixes/SaveMixButton'
+import { NewMixButton } from '@/features/mixes/NewMixButton'
 import { useSavedMixes } from '@/features/mixes/api'
 import { seedFromCalculator } from '@/stores/comparisonStore'
 import { MAX_OTHER_EXPENSES, MAX_TRACKS, MAX_YEARS, PRESET_IDS, type PresetId, type PropertyPurpose } from '@/lib/amortization'
@@ -76,7 +77,9 @@ export function CalculatorPage() {
     const mix = deepLinkMixes.data.mixes.find((item) => item.id === deepLinkMixId)
     if (!mix) return
     deepLinkLoaded.current = true
-    useCalculatorStore.getState().loadSavedMix(mix.tracks, mix.termYears, mix.scenario, mix.id)
+    useCalculatorStore
+      .getState()
+      .loadSavedMix(mix.tracks, mix.termYears, mix.scenario, mix.id, mix.label)
     // Loading from the profile should land on the calculator's own heading,
     // not at the top of the page the visitor just left; wait a frame so the
     // loaded state has rendered.
@@ -158,6 +161,9 @@ export function CalculatorPage() {
 
   // The mix has unsaved changes relative to its last save/load/reset.
   const mixDirty = useCalculatorStore((s) => isMixDirty(s))
+  // The loaded mix's name, shown as the panel's mix title.
+  const loadedMixLabel = useCalculatorStore((s) => s.loadedMixLabel)
+  const loadedMixId = useCalculatorStore((s) => s.loadedMixId)
   /** True while the unsaved-changes dialog is explaining a blocked navigation. */
   const [unsavedOpen, setUnsavedOpen] = useState(false)
   /** Where the visitor was heading when the guard stopped them. */
@@ -293,9 +299,8 @@ export function CalculatorPage() {
     lines.map((line, index) => (
       <span
         key={index}
-        className={`note-line ${line.status}${
-          index > 0 && line.status !== lines[index - 1].status ? ' group-start' : ''
-        }`}
+        className={`note-line ${line.status}${index > 0 && line.status !== lines[index - 1].status ? ' group-start' : ''
+          }`}
       >
         {line.node}
       </span>
@@ -319,6 +324,19 @@ export function CalculatorPage() {
           >
             <div>
               <h2>{t('calculator.panelHeading')}</h2>
+              {/* Which saved mix is in the editor, so a visitor who loaded one
+                  (or reset it) can see they are still editing it rather than
+                  wondering whether the next save will overwrite it. */}
+              {loadedMixId && (
+                <div className="panel-mix-actions" data-testid="panel-mix-actions">
+                  {loadedMixLabel && (
+                    <p className="panel-mix-title" data-testid="mix-title">
+                      {t('savedMixes.editingMix')}: <strong>{loadedMixLabel}</strong>
+                    </p>
+                  )}
+                  {signedIn && <NewMixButton />}
+                </div>
+              )}
             </div>
             <div className="panel-heading-actions">
               <button
@@ -826,7 +844,7 @@ export function CalculatorPage() {
             {t('savedMixes.unsavedTitle')}
           </h3>
           <p className="text-[15px] leading-relaxed text-ink">{t('savedMixes.unsavedBody')}</p>
-          <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <div className="mt-6 modal-actions flex-wrap">
             {signedIn && (
               <button
                 type="button"
@@ -873,7 +891,7 @@ export function CalculatorPage() {
               {t('calculator.resetConfirmMessage')}
             </p>
           </div>
-          <div className="flex justify-end gap-3">
+          <div className="modal-actions modal-actions-reversed">
             <button
               type="button"
               data-testid="reset-confirm-no"

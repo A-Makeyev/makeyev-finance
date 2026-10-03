@@ -312,6 +312,13 @@ interface CalculatorData {
    */
   loadedMixId: string | null
   /**
+   * The loaded mix's name, so the calculator can show which mix it is editing
+   * and the save dialog can start from it. A reset clears the inputs but keeps
+   * both this and loadedMixId (the editor still belongs to that mix); only
+   * detachMix clears them.
+   */
+  loadedMixLabel: string | null
+  /**
    * Set by the unsaved-changes dialog's Save button to ask the save control to
    * open its naming dialog; the control clears it once it opens.
    */
@@ -373,20 +380,29 @@ export interface CalculatorActions {
   loadPreset(presetId: PresetId): void
   /**
    * Replaces the current mix (and, when given, the whole scenario) with a saved
-   * one (fresh track ids) and re-baselines it.
+   * one (fresh track ids) and re-baselines it. `label` is the saved mix's name,
+   * carried so the calculator can title itself with it.
    */
   loadSavedMix(
     tracks: SavedTrackInput[],
     termYears: number,
     scenario?: SavedMixScenario | null,
     id?: string,
+    label?: string,
   ): void
   /**
    * Records the current mix as saved, clearing the unsaved-changes state. When
    * an id is given (a create), it also becomes the loaded mix, so a later save
-   * updates it instead of creating another.
+   * updates it instead of creating another; a `label` is stored alongside it so
+   * the title reflects a rename immediately.
    */
-  markMixSaved(id?: string): void
+  markMixSaved(id?: string, label?: string): void
+  /**
+   * Drops the editor's link to a saved mix (the "New mix" action): the numbers
+   * on screen stay, but the next save creates a new mix instead of updating the
+   * one that was loaded.
+   */
+  detachMix(): void
   /** Asks the save control to open its naming dialog (the unsaved dialog's Save). */
   requestSaveMix(): void
   clearSaveMixRequest(): void
@@ -646,6 +662,15 @@ function syncStartingFromProperty(s: CalculatorData): void {
       const gross = Math.round(s.derivedLoanMemory + effectiveCapital(s))
       s.startingAmountText = gross > 0 ? formatGroupedNumber(gross) : ''
       s.derivedLoanMemory = 0
+    } else if (s.tracks.every((track) => parseAmountText(track.amountText) === 0)) {
+      const rememberedLoan = s.tracks.reduce(
+        (total, track) => total + (track.loanShareMemory ?? 0),
+        0,
+      )
+      if (rememberedLoan > 0) {
+        const gross = Math.round(rememberedLoan + effectiveCapital(s))
+        s.startingAmountText = gross > 0 ? formatGroupedNumber(gross) : ''
+      }
     } else if (/\D/.test(s.startingAmountText.replace(/[,\s]/g, ''))) {
       s.startingAmountText = ''
     }
@@ -1028,9 +1053,9 @@ function recalculate(s: CalculatorState): void {
     incomePlaceholder:
       firstMonthPayment > 0
         ? // Allowance-based hint: the income at which the ceiling allowance
-          // (the PTI share of income minus liabilities) covers the required
-          // payment, matching the summary's monthlyAllowance line.
-          suggestedIncomeForAllowance(firstMonthPayment, otherMonthly, ptiThreshold)
+        // (the PTI share of income minus liabilities) covers the required
+        // payment, matching the summary's monthlyAllowance line.
+        suggestedIncomeForAllowance(firstMonthPayment, otherMonthly, ptiThreshold)
         : s.snapshot.incomePlaceholder,
     suggestedCapital: suggested,
     capitalShortfall: capitalForLoan > 0 && suggested !== null && suggested > capitalForLoan,
@@ -1110,6 +1135,7 @@ const initialData: CalculatorData = {
   ptiThresholdPercent: PTI_DEFAULT_THRESHOLD * 100,
   mixBaseline: '',
   loadedMixId: null,
+  loadedMixLabel: null,
   saveMixRequested: false,
 }
 
@@ -1597,12 +1623,13 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.startingPointDirty = false
         // Picking a preset is a fresh mix, not the saved one.
         s.loadedMixId = null
+        s.loadedMixLabel = null
         recalculate(s)
         rebaselineIfClean(s, wasDirty)
       })
     },
 
-    loadSavedMix: (tracks, termYears, scenario, id) => {
+    loadSavedMix: (tracks, termYears, scenario, id, label) => {
       set((s) => {
         // Defensive cap only: the server schema already bounds both, but a
         // malformed payload must not be able to grow the editor past its
@@ -1621,6 +1648,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.activePreset = null
         s.startingPointDirty = false
         s.loadedMixId = id ?? null
+        s.loadedMixLabel = id ? (label ?? null) : null
         if (scenario) {
           // Restore the saved scenario verbatim: the user-entered text fields,
           // the choice fields, and the expenses (fresh ids). recalculate()
@@ -1652,11 +1680,20 @@ export const useCalculatorStore = create<CalculatorStore>()(
       })
     },
 
-    markMixSaved: (id) => {
+    markMixSaved: (id, label) => {
       set((s) => {
         s.mixBaseline = serializeMixBaseline(s)
-        // A create adopts its new id, so the next save updates it.
+        // A create adopts its new id, so the next save updates it; a rename
+        // updates the title without detaching from the mix.
         if (id) s.loadedMixId = id
+        if (label) s.loadedMixLabel = label
+      })
+    },
+
+    detachMix: () => {
+      set((s) => {
+        s.loadedMixId = null
+        s.loadedMixLabel = null
       })
     },
 
@@ -1744,6 +1781,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
 
     reset: () => {
       set((s) => {
+        const resetLoadedMix = Boolean(s.loadedMixId)
         // A zero loan allocates zero amounts, which trackFromValues renders as
         // blank inputs (not "0") - no "positive amount" error fires and the
         // calculator returns to a clean empty state. External live data
@@ -1787,11 +1825,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.snapshot.incomePlaceholder = null
         s.error = null
         recalculate(s)
-        // A reset restores a clean default state, not unsaved work: nothing
-        // here is worth warning about on the way out. It also detaches from
-        // whatever saved mix was loaded.
-        s.mixBaseline = serializeMixBaseline(s)
-        s.loadedMixId = null
+        // Resetting a loaded mix is an edit to that mix. Keep its prior
+        // baseline so the save control does not report the cleared mix as saved.
+        if (!resetLoadedMix) s.mixBaseline = serializeMixBaseline(s)
       })
     },
 

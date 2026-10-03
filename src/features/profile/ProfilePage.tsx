@@ -315,7 +315,7 @@ export function ProfilePage({
 
           {error && <FieldError message={error} testId="profile-error" />}
 
-          <div className="mt-2 flex justify-end gap-3">
+          <div className="mt-2 modal-actions modal-actions-reversed">
             <button
               type="button"
               data-testid="change-password-cancel"

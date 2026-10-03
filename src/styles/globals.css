@@ -478,17 +478,85 @@ img {
    surface: it is a navigation shortcut rather than a write, so it stays the
    quieter of the two without looking like a different kind of label. It fills
    in on hover, so it still reads as pressable. */
-.calculate-button.my-mixes-link {
+.calculate-button.my-mixes-trigger {
   border: 1px solid var(--calc-line);
   color: var(--calc-ink);
   background: transparent;
   background-image: none;
-  text-decoration: none;
   white-space: nowrap;
 }
 
-.calculate-button.my-mixes-link:hover {
+.calculate-button.my-mixes-trigger:hover {
   background: var(--calc-field);
+}
+
+.my-mixes-menu-wrap {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.my-mixes-menu {
+  position: fixed;
+  z-index: 100;
+  inline-size: min(300px, calc(100vw - 24px));
+  padding: 6px;
+  border: 1px solid var(--calc-line);
+  border-radius: 6px;
+  background: var(--calc-field);
+  box-shadow: 0 10px 28px rgba(15, 15, 15, 0.18);
+}
+
+.my-mixes-menu-list {
+  display: grid;
+  gap: 2px;
+  max-block-size: min(45vh, 280px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.my-mixes-menu-item,
+.my-mixes-menu-manage {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--calc-ink);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: start;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.my-mixes-menu-item:hover,
+.my-mixes-menu-item:focus-visible,
+.my-mixes-menu-manage:hover,
+.my-mixes-menu-manage:focus-visible {
+  outline: none;
+  background: var(--calc-soft);
+}
+
+.my-mixes-menu-manage {
+  margin-block-start: 5px;
+  border-block-start: 1px solid var(--calc-line);
+  border-radius: 0;
+  color: var(--calc-teal-dark);
+}
+
+.my-mixes-menu-message {
+  padding: 8px 10px;
+  color: var(--calc-muted);
+  font-size: 0.85rem;
+  text-align: start;
 }
 
 /* The saved-mix card's two actions carry deliberately different weights, and
@@ -592,6 +660,7 @@ img {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   /* The spinner and the busy state already say "working"; the sweep is
      decoration, so it is dropped rather than slowed. */
   .btn-sheen::after {
@@ -796,6 +865,7 @@ img {
 }
 
 @keyframes scroll-cue-bounce {
+
   0%,
   100% {
     transform: translateY(0);
@@ -817,6 +887,7 @@ img {
    The smooth scrolling itself respects the OS preference separately in
    ScrollCue.tsx. */
 @media (prefers-reduced-motion: reduce) {
+
   .scroll-cue,
   .scroll-cue:hover svg {
     animation: none;
@@ -1193,6 +1264,16 @@ img {
    out of the dialog - keep it at 100% inside any dialog. */
 [role='dialog'] #submit-form {
   width: 100% !important;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+[role='dialog'][dir='rtl'] .modal-actions-reversed {
+  flex-direction: row-reverse;
 }
 
 .modal-body .contact-col {
@@ -2218,6 +2299,7 @@ nav#navbar.links-dark .nav-auth-skeleton {
 }
 
 @keyframes nav-auth-pulse {
+
   0%,
   100% {
     opacity: 0.22;
@@ -2643,6 +2725,7 @@ nav#navbar .nav-bar-controls li {
 }
 
 @media screen and (max-width: 800px) {
+
   /* In the hamburger tier this width is always `links-dark` (the slide-down
      sheet is a light surface), which paints the controls ink. They sit on the
      BAR here, though, so until the bar turns solid they must keep the bar's
@@ -3078,6 +3161,7 @@ nav#navbar .nav-bar-controls li {
 /* Reduced motion: keep the one-line layout but never animate it, and let the
    strip be scrolled by hand instead. */
 @media (prefers-reduced-motion: reduce) and (max-width: 1200px) {
+
   .indexes,
   .markets {
     overflow-x: auto;
@@ -5198,6 +5282,50 @@ e #name,
 .calculate-button.save-mix-button:hover {
   background-position: 0% center;
   box-shadow: 0 8px 18px rgba(8, 127, 120, 0.16);
+}
+
+/* "New mix" is the secondary action in the row (the save control stays the
+   last, primary one), so it keeps the button shape but drops the teal fill. */
+.calculate-button.new-mix-button {
+  color: var(--calc-teal-dark);
+  background: transparent;
+  background-image: none;
+  border: 1px solid var(--calc-line);
+}
+
+/* The row's shared hover lift/glow still applies; only the outline deepens. */
+.calculate-button.new-mix-button:hover {
+  border-color: var(--calc-teal-dark);
+}
+
+/* Which saved mix is in the editor, under the panel heading. Sized between
+   the heading and the input labels so it reads as a caption, and it sits
+   inside the heading column so the logical order flips with the direction. */
+.panel-mix-title {
+  margin: 0;
+  color: var(--calc-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.panel-mix-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -14px 0 22px;
+}
+
+.panel-mix-actions .new-mix-button {
+  width: auto;
+  margin-top: 0;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.panel-mix-title strong {
+  color: var(--calc-teal-dark);
+  font-weight: 600;
 }
 
 /* The action row lifts and glows less than the calculator's standalone CTAs:
@@ -8286,4 +8414,23 @@ html[dir='rtl'] .comment-text {
   align-items: flex-start;
   gap: 18px;
   margin-bottom: 50px;
+}
+
+.starting-actions>.my-mixes-menu-wrap {
+  flex: 0 1 auto;
+}
+
+.starting-actions>.my-mixes-menu-wrap>.calculate-button {
+  flex: 0 1 auto;
+  width: auto;
+  height: 38px;
+  margin-top: 0;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  gap: 6px;
+}
+
+.starting-actions>.my-mixes-menu-wrap>.calculate-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(8, 127, 120, 0.14);
 }

@@ -64,7 +64,12 @@ export async function POST(request: NextRequest) {
   const result = await createSavedMix(session.user.id, parsed.data)
   if (!result.ok) {
     // Refused, not evicted: silently dropping a mix the user chose to keep is
-    // worse than making them remove one.
+    // worse than making them remove one. A duplicate name is refused for the
+    // same reason a cap is: with four slots the name is the only handle a mix
+    // has, so two identical ones are a mistake, not a feature.
+    if (result.reason === 'duplicate') {
+      return NextResponse.json({ error: 'duplicate' }, { status: 409, headers: NO_STORE })
+    }
     return NextResponse.json(
       { error: 'cap', max: MAX_SAVED_MIXES },
       { status: 409, headers: NO_STORE },

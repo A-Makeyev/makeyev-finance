@@ -1,5 +1,6 @@
 import { ObjectId, type WithId } from 'mongodb'
 import { getDb } from '../auth/mongo'
+import { normalizeMixLabel } from './label'
 import {
   MAX_SAVED_MIXES,
   type SavedMixInput,
@@ -86,13 +87,42 @@ export async function listSavedMixes(userId: string): Promise<SavedMix[]> {
   return docs.map(toSavedMix)
 }
 
-export type SaveMixResult = { ok: true; mix: SavedMix } | { ok: false; reason: 'cap' }
+export type SaveMixResult =
+  | { ok: true; mix: SavedMix }
+  | { ok: false; reason: 'cap' }
+  | { ok: false; reason: 'duplicate' }
 
 /**
- * Stores one mix for the caller, unless the per-user cap is already reached.
+ * Whether the caller already has a mix with this name (case-insensitive,
+ * trimmed). `exceptId` lets an update keep its own name without counting as a
+ * duplicate of itself.
+ */
+async function labelTaken(
+  userId: string,
+  label: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const db = await getDb()
+  const docs = await db
+    .collection<SavedMixDoc>(COLLECTION)
+    .find({ userId }, { projection: { _id: 1, label: 1 } })
+    .toArray()
+  const wanted = normalizeMixLabel(label)
+  return docs.some(
+    (doc) =>
+      doc._id.toHexString() !== exceptId && normalizeMixLabel(doc.label) === wanted,
+  )
+}
+
+/**
+ * Stores one mix for the caller, unless the per-user cap is already reached or
+ * the caller already has a mix with that name.
  *
  * The cap is refused rather than evicting the oldest: silently deleting a
- * saved mix would throw away work the user deliberately chose to keep.
+ * saved mix would throw away work the user deliberately chose to keep. A
+ * duplicate name is refused too: with only four slots, two mixes called
+ * "First home" are indistinguishable, and the name is the only handle the
+ * profile card has.
  */
 export async function createSavedMix(userId: string, input: SavedMixInput): Promise<SaveMixResult> {
   await ensureIndexes()
@@ -101,6 +131,7 @@ export async function createSavedMix(userId: string, input: SavedMixInput): Prom
 
   const count = await collection.countDocuments({ userId })
   if (count >= MAX_SAVED_MIXES) return { ok: false, reason: 'cap' }
+  if (await labelTaken(userId, input.label)) return { ok: false, reason: 'duplicate' }
 
   const now = new Date()
   const doc: SavedMixDoc = {
@@ -119,17 +150,21 @@ export async function createSavedMix(userId: string, input: SavedMixInput): Prom
 /**
  * Overwrites one of the caller's own mixes (label, tracks, term, scenario).
  * Returns null when the id is malformed or belongs to someone else, so the
- * caller cannot probe for other users' ids. Deliberately ignores the cap: an
- * update uses no new slot, so editing a loaded mix is never blocked.
+ * caller cannot probe for other users' ids, and 'duplicate' when the new name
+ * is already taken by another of the caller's mixes. Deliberately ignores the
+ * cap: an update uses no new slot, so editing a loaded mix is never blocked.
  */
+export type UpdateMixResult = { ok: true; mix: SavedMix } | { ok: false; reason: 'not_found' | 'duplicate' }
+
 export async function updateSavedMix(
   userId: string,
   id: string,
   input: SavedMixInput,
-): Promise<SavedMix | null> {
-  if (!ObjectId.isValid(id)) return null
+): Promise<UpdateMixResult> {
+  if (!ObjectId.isValid(id)) return { ok: false, reason: 'not_found' }
   await ensureIndexes()
   const db = await getDb()
+  if (await labelTaken(userId, input.label, id)) return { ok: false, reason: 'duplicate' }
   const updated = await db.collection<SavedMixDoc>(COLLECTION).findOneAndUpdate(
     { _id: new ObjectId(id), userId },
     {
@@ -143,7 +178,7 @@ export async function updateSavedMix(
     },
     { returnDocument: 'after' },
   )
-  return updated ? toSavedMix(updated) : null
+  return updated ? { ok: true, mix: toSavedMix(updated) } : { ok: false, reason: 'not_found' }
 }
 
 /**

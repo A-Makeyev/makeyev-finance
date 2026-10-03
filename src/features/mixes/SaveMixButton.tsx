@@ -5,17 +5,26 @@ import { useTranslation } from 'react-i18next'
 import { FaCheck, FaSpinner } from 'react-icons/fa'
 import { AppModal } from '@/components/ui/AppModal'
 import { authClient } from '@/lib/auth-client'
-import { Link, useRouter } from '@/router'
+import { useRouter } from '@/router'
 import {
   isMixDirty,
   serializeSavableTracks,
   serializeScenario,
   useCalculatorStore,
 } from '@/stores/calculatorStore'
-import { useSaveMix, useSavedMixes } from './api'
+import { isMixLabelTaken, useSaveMix, useSavedMixes } from './api'
+import { SavedMixMenu } from './SavedMixMenu'
 
 /** How long the "mix saved" toast stays up before fading. */
 const TOAST_MS = 1800
+
+/** Maps a failed save onto the notice the user sees. */
+function saveErrorNotice(error: unknown): 'cap' | 'duplicate' | 'error' {
+  if (!(error instanceof Error)) return 'error'
+  if (error.message === 'cap') return 'cap'
+  if (error.message === 'duplicate') return 'duplicate'
+  return 'error'
+}
 
 /**
  * The calculator's "save this mix" control, shown beside the results cards.
@@ -39,6 +48,7 @@ export function SaveMixButton() {
   const termYears = useCalculatorStore((s) => s.termYears)
   const markMixSaved = useCalculatorStore((s) => s.markMixSaved)
   const loadedMixId = useCalculatorStore((s) => s.loadedMixId)
+  const loadedMixLabel = useCalculatorStore((s) => s.loadedMixLabel)
   const mixDirty = useCalculatorStore((s) => isMixDirty(s))
   const saveMixRequested = useCalculatorStore((s) => s.saveMixRequested)
   const clearSaveMixRequest = useCalculatorStore((s) => s.clearSaveMixRequest)
@@ -48,7 +58,7 @@ export function SaveMixButton() {
 
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
-  const [notice, setNotice] = useState<'saved' | 'cap' | 'error' | null>(null)
+  const [notice, setNotice] = useState<'saved' | 'cap' | 'duplicate' | 'error' | null>(null)
   // The save confirmation is a self-dismissing toast, not an inline line that
   // lingers under the button: it reports an event, so it should fade like the
   // other confirmations (wishlist, comment delete) rather than sit there.
@@ -70,28 +80,60 @@ export function SaveMixButton() {
   )
 
   const count = mixesQuery.data?.mixes.length ?? 0
-  const max = mixesQuery.data?.max ?? 5
+  const max = mixesQuery.data?.max ?? 4
   const atCap = count >= max
-  const loadedMix = loadedMixId
-    ? (mixesQuery.data?.mixes.find((mix) => mix.id === loadedMixId) ?? null)
-    : null
+  const mixes = mixesQuery.data?.mixes ?? []
+  const loadedMix = loadedMixId ? (mixes.find((mix) => mix.id === loadedMixId) ?? null) : null
+  const loadedMixMissing = Boolean(loadedMixId && mixesQuery.data && !loadedMix)
   // Updating the loaded mix uses no new slot, so the cap only blocks creates.
-  const blockedByCap = atCap && !loadedMixId
+  const blockedByCap = atCap && !loadedMix
 
   // Only entered tracks are savable; the server also requires every track to
   // hold a positive amount.
   const savableTracks = serializeSavableTracks(tracks)
   const canSave = savableTracks.length > 0
+  // Inline duplicate hint in the naming dialog; the server is the real check.
+  const duplicateLabel = isMixLabelTaken(mixes, label, loadedMix?.id)
+  const duplicateRejected = open && notice === 'duplicate'
+  const duplicateName = duplicateLabel || duplicateRejected
   // A stored mix with no edits since its load/save has nothing to write. The
   // control then reports that state instead of offering an action that would
   // either do nothing or silently re-send an identical mix.
-  const savedClean = Boolean(loadedMixId) && !mixDirty
+  const savedClean = Boolean(loadedMixId) && !loadedMixMissing && !mixDirty
 
   function openDialog() {
     // Updating a loaded mix starts from its own name, so a rename is optional.
-    setLabel(loadedMix?.label ?? '')
+    setLabel(loadedMixLabel ?? loadedMix?.label ?? '')
+    // Reopening starts clean: a duplicate hint left over from the previous
+    // name (or a server refusal) must not describe the name now in the field.
     setNotice(null)
     setOpen(true)
+  }
+
+  /**
+   * Drops the `?mix=` deep link once its mix has been saved. The URL named the
+   * mix as it was when it was opened; after this save the editor is newer than
+   * what a reload would fetch, so keeping the param would let a refresh
+   * overwrite the newer state with the older one. The store keeps the loaded
+   * mix either way, so saving again still updates the same document.
+   */
+  function clearStaleDeepLink(savedId: string) {
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('mix') !== savedId) return
+    url.searchParams.delete('mix')
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+  }
+
+  /**
+   * The default name for a new mix: the next unused "Mix N". Starting at the
+   * count keeps the common case (nothing renamed) consecutive, and the loop
+   * skips names already taken, since the server refuses a duplicate.
+   */
+  function nextDefaultLabel(): string {
+    const taken = new Set(mixes.map((mix) => mix.label.trim().toLocaleLowerCase()))
+    let index = count + 1
+    while (taken.has(`${t('savedMixes.defaultLabel')} ${index}`.toLocaleLowerCase())) index += 1
+    return `${t('savedMixes.defaultLabel')} ${index}`
   }
 
   /**
@@ -110,10 +152,11 @@ export function SaveMixButton() {
         termYears,
         scenario: serializeScenario(useCalculatorStore.getState()),
       })
-      markMixSaved(saved.id)
+      markMixSaved(saved.id, saved.label)
+      clearStaleDeepLink(saved.id)
       setNotice('saved')
     } catch (error) {
-      setNotice(error instanceof Error && error.message === 'cap' ? 'cap' : 'error')
+      setNotice(saveErrorNotice(error))
     }
   }
 
@@ -134,11 +177,14 @@ export function SaveMixButton() {
   }, [saveMixRequested, loadedMix, clearSaveMixRequest])
 
   async function confirmSave() {
-    const fallback = `${t('savedMixes.defaultLabel')} ${count + 1}`
+    // The fallback counts up from the mixes that exist, but skips names already
+    // taken (e.g. "Mix 3" after mix 3 was deleted), since the server refuses a
+    // duplicate and a silent rename would be confusing.
+    const fallback = nextDefaultLabel()
     try {
       const saved = await saveMix.mutateAsync({
         // A loaded mix is overwritten in place; anything else is a new mix.
-        id: loadedMixId ?? undefined,
+        id: loadedMix?.id,
         label: label.trim() || loadedMix?.label || fallback,
         tracks: savableTracks,
         termYears,
@@ -150,12 +196,16 @@ export function SaveMixButton() {
       // The mix in the editor is now what is stored, so leaving no longer
       // counts as unsaved work; a create adopts its new id so the next save
       // updates it instead of adding a copy.
-      markMixSaved(saved.id)
+      markMixSaved(saved.id, saved.label)
+      clearStaleDeepLink(saved.id)
       setOpen(false)
       setNotice('saved')
     } catch (error) {
-      setOpen(false)
-      setNotice(error instanceof Error && error.message === 'cap' ? 'cap' : 'error')
+      const failure = saveErrorNotice(error)
+      // A duplicate is about the name in the modal, so keep it open with the
+      // hint rather than dismissing the user's typing.
+      if (failure !== 'duplicate') setOpen(false)
+      setNotice(failure)
     }
   }
 
@@ -165,25 +215,14 @@ export function SaveMixButton() {
 
   return (
     <>
-      {/* The saved mixes live on the profile, so the link sits beside the save
-          action that feeds it, in the same button family so the row reads as
-          one group. It is shown only to a signed-in visitor: the profile is
-          gated, so a signed-out one would just be bounced to login. The count
-          rides it in parentheses rather than as a stray line under the
-          buttons. It comes BEFORE the save control, which keeps the save
-          button the last thing in the row: the save action concludes the row,
-          and the pointer to what is already saved reads as leading up to it.
-          Flex order is DOM order, so in Hebrew this lands on the right of the
-          save button, which is the end of the row in that direction too. */}
       {signedIn && (
-        <Link
-          to="/profile#saved-mixes"
-          data-testid="my-mixes-link"
-          className="calculate-button my-mixes-link"
-        >
-          {t('savedMixes.myMixesLink')}
-          <span data-testid="save-mix-count"> ({count}/{max})</span>
-        </Link>
+        <SavedMixMenu
+          mixes={mixes}
+          count={count}
+          max={max}
+          isPending={mixesQuery.isPending}
+          isError={mixesQuery.isError}
+        />
       )}
 
       {signedIn ? (
@@ -225,8 +264,8 @@ export function SaveMixButton() {
                 {t('savedMixes.saveAction')}
               </span>
               <span className="save-mix-label-swap-active">
-                {saveMix.isPending && t('savedMixes.saving')}
                 {saveMix.isPending && <FaSpinner aria-hidden="true" className="animate-spin" />}
+                {saveMix.isPending && t('savedMixes.saving')}
               </span>
             </span>
           </button>
@@ -249,9 +288,8 @@ export function SaveMixButton() {
         <div
           aria-live="polite"
           data-testid="save-mix-saved"
-          className={`pointer-events-none fixed bottom-24 left-1/2 z-[1100] -translate-x-1/2 transition-opacity duration-300 ${
-            toastVisible ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`pointer-events-none fixed bottom-24 left-1/2 z-[1100] -translate-x-1/2 transition-opacity duration-300 ${toastVisible ? 'opacity-100' : 'opacity-0'
+            }`}
         >
           <div
             dir="auto"
@@ -265,6 +303,11 @@ export function SaveMixButton() {
       {notice === 'cap' && (
         <p role="alert" data-testid="save-mix-cap-notice" className="save-mix-notice is-error">
           {t('savedMixes.capReached')}
+        </p>
+      )}
+      {notice === 'duplicate' && !open && (
+        <p role="alert" data-testid="save-mix-duplicate-notice" className="save-mix-notice is-error">
+          {t('savedMixes.duplicateName')}
         </p>
       )}
       {notice === 'error' && (
@@ -300,10 +343,18 @@ export function SaveMixButton() {
               placeholder={t('savedMixes.labelPlaceholder')}
               className="w-full rounded-lg border border-line-strong bg-surface-page px-3 py-2 text-ink outline-none transition-colors hover:border-ink focus:border-ink"
               value={label}
-              onChange={(event) => setLabel(event.target.value)}
+              onChange={(event) => {
+                setLabel(event.target.value)
+                if (notice === 'duplicate') setNotice(null)
+              }}
             />
           </label>
-          <div className="mt-6 flex justify-end gap-3">
+          {duplicateName && (
+            <p role="alert" data-testid="save-mix-duplicate" className="mt-3 text-sm text-danger">
+              {t('savedMixes.duplicateName')}
+            </p>
+          )}
+          <div className="mt-6 modal-actions modal-actions-reversed">
             <button
               type="button"
               data-testid="save-mix-cancel"
@@ -315,7 +366,7 @@ export function SaveMixButton() {
             <button
               type="button"
               data-testid="save-mix-confirm"
-              disabled={saveMix.isPending}
+              disabled={saveMix.isPending || duplicateName}
               aria-busy={saveMix.isPending}
               className="inline-flex items-center gap-2 rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)] disabled:cursor-not-allowed disabled:opacity-70"
               onClick={confirmSave}
@@ -326,6 +377,7 @@ export function SaveMixButton() {
           </div>
         </div>
       </AppModal>
+
     </>
   )
 }

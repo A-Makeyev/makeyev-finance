@@ -10,7 +10,7 @@ import '@/styles/globals.css'
  */
 export default function GlobalNotFound() {
   return (
-    <html lang="he" dir="rtl">
+    <html lang="he" dir="rtl" data-scroll-behavior="smooth">
       <head>
         <InlineScript script={PRE_PAINT_THEME_SCRIPT} />
       </head>

@@ -856,6 +856,17 @@ export const he = {
       unsavedStay: 'להישאר',
       savedState: 'תמהיל שמור',
       unsavedSave: 'שמירה',
+      editingMix: 'עריכת תמהיל',
+      newMix: 'תמהיל חדש',
+      newMixConfirmTitle: 'התחלת תמהיל חדש',
+      newMixConfirmBody:
+        'בתמהיל הנוכחי יש שינויים שלא נשמרו. התחלת תמהיל חדש תנקה את המחשבון ותפסיק את עריכת התמהיל שנטען.',
+      newMixConfirmAction: 'התחלת תמהיל חדש',
+      duplicateName: 'כבר יש תמהיל בשם הזה. יש לבחור שם אחר.',
+      noSavedMixes: 'עדיין אין תמהילים שמורים',
+      loadOtherMixTitle: 'לטעון תמהיל אחר?',
+      loadOtherMixBody: 'יש שינויים שלא נשמרו בתמהיל הנוכחי. טעינת תמהיל אחר תבטל אותם.',
+      loadOtherMixAction: 'טעינת תמהיל',
     },
     auth: {
       account: 'החשבון',

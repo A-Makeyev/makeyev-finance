@@ -251,14 +251,51 @@ describe('loaded mix identity (update in place)', () => {
     expect(useCalculatorStore.getState().loadedMixId).toBe('mix-1')
   })
 
-  it('detaches from the saved mix on a preset or a reset', () => {
-    useCalculatorStore.getState().loadSavedMix([fixed('100,000', '30', '4.8')], 30, null, 'mix-1')
+  it('carries the saved mix name alongside its id', () => {
+    useCalculatorStore
+      .getState()
+      .loadSavedMix([fixed('100,000', '30', '4.8')], 30, null, 'mix-1', 'First home')
+    expect(useCalculatorStore.getState().loadedMixLabel).toBe('First home')
+  })
+
+  it('detaches from the saved mix when a preset is picked', () => {
+    useCalculatorStore
+      .getState()
+      .loadSavedMix([fixed('100,000', '30', '4.8')], 30, null, 'mix-1', 'First home')
     useCalculatorStore.getState().loadPreset('basket4')
     expect(useCalculatorStore.getState().loadedMixId).toBeNull()
+    expect(useCalculatorStore.getState().loadedMixLabel).toBeNull()
+  })
 
-    useCalculatorStore.getState().loadSavedMix([fixed('100,000', '30', '4.8')], 30, null, 'mix-2')
+  it('keeps the loaded mix across a reset and marks the reset as unsaved', () => {
+    useCalculatorStore
+      .getState()
+      .loadSavedMix([fixed('100,000', '30', '4.8')], 30, null, 'mix-1', 'First home')
     useCalculatorStore.getState().reset()
+    expect(useCalculatorStore.getState().loadedMixId).toBe('mix-1')
+    expect(useCalculatorStore.getState().loadedMixLabel).toBe('First home')
+    expect(isMixDirty(useCalculatorStore.getState())).toBe(true)
+  })
+
+  it('detachMix drops the identity but keeps the numbers', () => {
+    useCalculatorStore
+      .getState()
+      .loadSavedMix([fixed('100,000', '30', '4.8')], 30, null, 'mix-1', 'First home')
+    useCalculatorStore.getState().detachMix()
     expect(useCalculatorStore.getState().loadedMixId).toBeNull()
+    expect(useCalculatorStore.getState().loadedMixLabel).toBeNull()
+    // The mix itself is untouched, so it is still the same baseline.
+    expect(useCalculatorStore.getState().tracks[0].amountText).toBe('100,000')
+    expect(isMixDirty(useCalculatorStore.getState())).toBe(false)
+  })
+
+  it('records the saved label on a rename without detaching', () => {
+    useCalculatorStore
+      .getState()
+      .loadSavedMix([fixed('100,000', '30', '4.8')], 30, null, 'mix-1', 'Old name')
+    useCalculatorStore.getState().markMixSaved('mix-1', 'New name')
+    expect(useCalculatorStore.getState().loadedMixId).toBe('mix-1')
+    expect(useCalculatorStore.getState().loadedMixLabel).toBe('New name')
   })
 
   it('adopts the id of a freshly created mix once it is saved', () => {

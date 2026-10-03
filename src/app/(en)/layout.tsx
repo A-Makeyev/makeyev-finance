@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // <html> before React hydrates, which React would otherwise report as a
     // server/client attribute mismatch on every load. The children are not
     // suppressed, so a real mismatch inside the tree still surfaces.
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html lang="en" dir="ltr" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { expect, serveQuotes, test } from '../../fixtures'
 import { mockGetSessionUser } from '../../support/authMocks'
 
@@ -29,28 +30,61 @@ test.describe('saved mixes', () => {
     await expect(mockedPage).toHaveURL(/\/login\?next=(%2F|\/)calculators$/)
   })
 
-  test('the calculator links to the saved mixes on the profile, signed in only', async ({
+  test('the saved-mix menu is signed-in only and loads mixes from the calculator', async ({
     mockedPage,
     calc,
   }) => {
-    // Signed out the profile is gated and would bounce to login, so the link is
-    // a dead end there: it belongs to a signed-in visitor only.
+    // Signed-out visitors cannot list private mixes.
     await calc.goto()
-    await expect(calc.myMixesLink).toHaveCount(0)
+    await expect(calc.myMixesMenuTrigger).toHaveCount(0)
 
-    await mockGetSessionUser(mockedPage)
-    await mockedPage.route('**/api/mixes', (route) =>
-      route.request().method() === 'GET'
-        ? route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ mixes: [], max: 4 }),
-          })
-        : route.continue(),
-    )
+    const firstId = '507f1f77bcf86cd799439011'
+    const secondId = '507f1f77bcf86cd799439012'
+    await mockSignedInWithMixes(mockedPage, [
+      savedMixFixture(firstId, 'First home'),
+      savedMixFixture(secondId, 'Second home'),
+    ])
     await calc.goto()
-    await expect(calc.myMixesLink).toBeVisible()
-    await expect(calc.myMixesLink).toHaveAttribute('href', '/profile#saved-mixes')
+    await expect(calc.myMixesMenuTrigger).toBeVisible()
+    await calc.myMixesMenuTrigger.hover()
+    await expect(calc.savedMixesMenu).toBeVisible()
+    await expect(calc.savedMixMenuItem(firstId)).toContainText('First home')
+    await expect(calc.myMixesProfileLink).toHaveAttribute('href', '/profile#saved-mixes')
+
+    // A clean calculator loads immediately, even though the URL stays on this page.
+    const scrollBeforeLoad = await calc.scrollPosition()
+    await calc.savedMixMenuItem(firstId).click()
+    await expect(calc.mixTitle).toContainText('First home')
+    await expect.poll(() => mockedPage.url()).toContain(`mix=${firstId}`)
+    await expect.poll(() => calc.scrollPosition()).toBe(scrollBeforeLoad)
+
+    // Dirty work is protected before a different saved mix replaces it.
+    await calc.termSlider.fill('20')
+    await calc.myMixesMenuTrigger.hover()
+    await calc.savedMixMenuItem(secondId).click()
+    await expect(calc.loadMixDialog).toBeVisible()
+    await calc.loadMixCancel.click()
+    await expect(calc.mixTitle).toContainText('First home')
+
+    await calc.myMixesMenuTrigger.hover()
+    await calc.savedMixMenuItem(secondId).click()
+    await calc.loadMixConfirm.click()
+    await expect(calc.mixTitle).toContainText('Second home')
+    await expect.poll(() => mockedPage.url()).toContain(`mix=${secondId}`)
+
+    await mockedPage.goto('/en/calculators')
+    await mockedPage.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+    expect(await calc.documentDirection()).toBe('ltr')
+    await mockedPage.setViewportSize({ width: 360, height: 800 })
+    await calc.myMixesMenuTrigger.click()
+    await expect(calc.savedMixesMenu).toBeVisible()
+    const menuBox = await calc.savedMixesMenu.boundingBox()
+    expect(menuBox).not.toBeNull()
+    expect(menuBox!.x).toBeGreaterThanOrEqual(0)
+    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(360)
+    await calc.savedMixMenuItem(firstId).click()
+    await expect(calc.mixTitle).toContainText('First home')
+    await expect.poll(() => mockedPage.url()).toContain(`/en/calculators?mix=${firstId}`)
   })
 
   test('a ?mix= deep link still renders the calculator signed out', async ({ mockedPage, calc }) => {
@@ -89,10 +123,10 @@ test.describe('saved mixes', () => {
     await mockedPage.route('**/api/mixes', (route) =>
       route.request().method() === 'GET'
         ? route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ mixes: [mix], max: 5 }),
-          })
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ mixes: [mix], max: 5 }),
+        })
         : route.continue(),
     )
 
@@ -152,15 +186,15 @@ test.describe('saved mixes', () => {
     await mockedPage.route('**/api/mixes', (route) =>
       route.request().method() === 'GET'
         ? route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ mixes: [], max: 4 }),
-          })
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ mixes: [], max: 4 }),
+        })
         : route.continue(),
     )
     await calc.goto()
-    await expect(calc.myMixesLink).toBeVisible()
-    for (const control of [calc.showPayments, calc.saveMix, calc.myMixesLink]) {
+    await expect(calc.myMixesMenuTrigger).toBeVisible()
+    for (const control of [calc.showPayments, calc.saveMix, calc.myMixesMenuTrigger]) {
       const box = await control.boundingBox()
       expect(box).not.toBeNull()
       expect(box!.x).toBeGreaterThanOrEqual(-1)
@@ -171,9 +205,9 @@ test.describe('saved mixes', () => {
     // that the third control no longer wraps onto a line of its own.
     await mockedPage.setViewportSize({ width: 1280, height: 900 })
     await calc.goto()
-    await expect(calc.myMixesLink).toBeVisible()
+    await expect(calc.myMixesMenuTrigger).toBeVisible()
     const row = await Promise.all(
-      [calc.showPayments, calc.saveMix, calc.myMixesLink].map((c) => c.boundingBox()),
+      [calc.showPayments, calc.saveMix, calc.myMixesMenuTrigger].map((c) => c.boundingBox()),
     )
     const ys = row.map((box) => box!.y)
     const xs = row.map((box) => box!.x)
@@ -192,7 +226,7 @@ test.describe('saved mixes', () => {
     // the end of the row in Hebrew (leftmost) as well as English (rightmost).
     expect(await calc.actionRowReadingOrder()).toEqual([
       'show-payments',
-      'my-mixes-link',
+      'my-mixes-menu-trigger',
       'save-mix',
     ])
   })
@@ -236,10 +270,10 @@ test.describe('saved mixes', () => {
     await mockedPage.route('**/api/mixes', (route) =>
       route.request().method() === 'GET'
         ? route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ mixes: [], max: 4 }),
-          })
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ mixes: [], max: 4 }),
+        })
         : route.continue(),
     )
     await calc.goto()
@@ -247,6 +281,12 @@ test.describe('saved mixes', () => {
 
     await mockedPage.getByTestId('nav-link-services').click()
     await expect(calc.unsavedDialog).toBeVisible()
+    await expect(calc.unsavedDialog).toHaveAttribute('dir', 'rtl')
+    expect(await calc.unsavedDialogActionOrder()).toEqual([
+      'unsaved-mix-save',
+      'unsaved-mix-stay',
+      'unsaved-mix-leave',
+    ])
 
     await calc.unsavedSave.click()
     await expect(calc.saveMixModal).toBeVisible()
@@ -287,15 +327,15 @@ test.describe('saved mixes', () => {
     await mockedPage.route('**/api/mixes', (route) =>
       route.request().method() === 'GET'
         ? route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ mixes: [mix], max: 4 }),
-          })
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ mixes: [mix], max: 4 }),
+        })
         : route.continue(),
     )
     // The PATCH is held open so the button can be measured while the save is
     // actually in flight, which is the state that used to resize it.
-    let releasePatch: () => void = () => {}
+    let releasePatch: () => void = () => { }
     const patchHeld = new Promise<void>((resolve) => {
       releasePatch = resolve
     })
@@ -342,6 +382,7 @@ test.describe('saved mixes', () => {
     // invisible idle label, so this is the text the reader actually sees.
     await expect(calc.saveMix).toHaveAttribute('aria-busy', 'true')
     expect((await calc.saveMix.boundingBox())!.width).toBeCloseTo(widthBefore, 1)
+    expect(await calc.saveSpinnerPrecedesTextInReadingOrder()).toBe(true)
     const textDuring = await calc.saveMix.innerText()
     expect(textDuring.trim()).not.toBe('')
     expect(textDuring).not.toBe(textBefore)
@@ -372,6 +413,309 @@ test.describe('saved mixes', () => {
       .poll(() => calc.transformOf(calc.showPayments))
       .toBe('matrix(1, 0, 0, 1, 0, -1)')
     expect(await calc.transformOf(calc.saveMixSignIn)).toBe('none')
+  })
+
+  /**
+   * A signed-in calculator whose saved mixes are `mixes` (GET), with the write
+   * routes left to the caller. Shared by the tests below so each one states
+   * only what it is about.
+   */
+  async function mockSignedInWithMixes(mockedPage: Page, mixes: unknown[]): Promise<void> {
+    await mockGetSessionUser(mockedPage)
+    await mockedPage.route('**/api/mixes', (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ mixes, max: 4 }),
+        })
+        : route.continue(),
+    )
+  }
+
+  function savedMixFixture(id: string, label: string) {
+    return {
+      id,
+      label,
+      termYears: 27,
+      tracks: [
+        { type: 'fixed', amountText: '250,000', yearsText: '27', rateText: '4.8', method: 'spitzer' },
+      ],
+      scenario: {
+        startingAmountText: '250,000',
+        propertyValueText: '1,500,000',
+        capitalText: '400,000',
+        incomeText: '22,000',
+        purpose: 'first',
+        realtorPercentText: '',
+        lawyerPercentText: '',
+        appraiserFeeText: '',
+        renovationAmountText: '',
+        otherExpenses: [],
+        ptiThresholdPercent: 33,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+  }
+
+  test('the loaded mix is named in the calculator', async ({ mockedPage, calc }) => {
+    await mockSignedInWithMixes(mockedPage, [
+      savedMixFixture('507f1f77bcf86cd799439011', 'First home'),
+    ])
+    await mockedPage.goto('/calculators?mix=507f1f77bcf86cd799439011')
+    await mockedPage.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+    await expect(calc.mixTitle).toBeVisible()
+    await expect(calc.mixTitle).toContainText('First home')
+  })
+
+  test('a reset keeps editing the loaded mix instead of starting a new one', async ({
+    mockedPage,
+    calc,
+  }) => {
+    // Reported bug: after a reset the save control fell back to "new mix", so
+    // saving created a second mix (with a default name) instead of updating the
+    // one on screen.
+    await mockSignedInWithMixes(mockedPage, [
+      savedMixFixture('507f1f77bcf86cd799439011', 'First home'),
+    ])
+    // `**/api/mixes/*` needs a path segment, so it never swallows the GET the
+    // helper above mocks. Whether the save went out as an update is read from
+    // the PATCH count and from the naming modal, which only a create opens.
+    let patchCalls = 0
+    await mockedPage.route('**/api/mixes/*', (route) => {
+      if (route.request().method() !== 'PATCH') return route.continue()
+      patchCalls += 1
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    })
+
+    await mockedPage.goto('/calculators?mix=507f1f77bcf86cd799439011')
+    await mockedPage.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+    await calc.resetButton.click()
+    await mockedPage.getByTestId('reset-confirm-yes').click()
+
+    // The title survives the reset: the editor still belongs to that mix.
+    await expect(calc.mixTitle).toBeVisible()
+    await expect(calc.saveMix).toBeVisible()
+    await expect(calc.saveMix).toBeDisabled()
+
+    // The reset blanked the amounts, so there is nothing to save until one is
+    // entered; then saving updates the loaded mix in place.
+    await calc.track(1).setAmount('200,000')
+    await expect(calc.saveMix).toBeEnabled()
+    await calc.saveMix.click()
+    await expect(calc.saveMixModal).toHaveCount(0)
+    await expect.poll(() => patchCalls).toBe(1)
+  })
+
+  test('typing then clearing property value restores a savable loaded mix', async ({
+    mockedPage,
+    calc,
+  }) => {
+    const mix = savedMixFixture('507f1f77bcf86cd799439011', 'First home')
+    mix.tracks[0].amountText = '1,100,000'
+    mix.scenario.startingAmountText = '1,500,000'
+    mix.scenario.propertyValueText = ''
+    await mockSignedInWithMixes(mockedPage, [mix])
+    await mockedPage.goto('/calculators?mix=507f1f77bcf86cd799439011')
+    await mockedPage.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+    await calc.propertyValue.fill('123,333')
+    await calc.propertyValue.fill('')
+
+    await expect(calc.track(1).amount()).toHaveValue('1,100,000')
+    await expect(calc.saveMixState).toHaveCount(1)
+  })
+
+  test('a mix missing from the refreshed list is saved as a new mix', async ({ mockedPage, calc }) => {
+    const original = savedMixFixture('507f1f77bcf86cd799439011', 'First home')
+    const created = savedMixFixture('507f1f77bcf86cd799439012', 'First home')
+    let listReads = 0
+    let postCalls = 0
+    let patchCalls = 0
+
+    await mockGetSessionUser(mockedPage)
+    await mockedPage.route('**/api/mixes', (route) => {
+      if (route.request().method() === 'GET') {
+        listReads += 1
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ mixes: listReads === 1 ? [original] : [], max: 4 }),
+        })
+      }
+      if (route.request().method() === 'POST') {
+        postCalls += 1
+        return route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({ mix: created }),
+        })
+      }
+      return route.continue()
+    })
+    await mockedPage.route('**/api/mixes/*', (route) => {
+      if (route.request().method() === 'PATCH') {
+        patchCalls += 1
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ mix: original }),
+        })
+      }
+      return route.continue()
+    })
+
+    await mockedPage.goto('/calculators?mix=507f1f77bcf86cd799439011')
+    await mockedPage.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+    await expect(calc.mixTitle).toBeVisible()
+
+    await calc.track(1).setAmount('300,000')
+    await calc.saveMix.click()
+    await expect(calc.saveMixSaved).toBeVisible()
+    await expect.poll(() => listReads).toBe(2)
+
+    await calc.saveMix.click()
+    await expect(calc.saveMixModal).toBeVisible()
+    await calc.saveMixConfirm.click()
+    await expect(calc.saveMixSaved).toBeVisible()
+
+    expect(patchCalls).toBe(1)
+    expect(postCalls).toBe(1)
+  })
+
+  test('a duplicate mix name is refused in the dialog', async ({ mockedPage, calc }) => {
+    await mockSignedInWithMixes(mockedPage, [
+      savedMixFixture('507f1f77bcf86cd799439011', 'First home'),
+      savedMixFixture('507f1f77bcf86cd799439012', 'Second home'),
+    ])
+    await calc.goto()
+
+    await calc.saveMix.click()
+    await expect(calc.saveMixModal).toBeVisible()
+    await expect(calc.saveMixModal).toHaveAttribute('dir', 'rtl')
+    expect(
+      await calc.modalActionVisualOrder('save-mix-modal', ['save-mix-confirm', 'save-mix-cancel']),
+    ).toEqual(['save-mix-confirm', 'save-mix-cancel'])
+
+    // Case and surrounding spaces are the same name, so the hint fires and the
+    // confirm is blocked before the request is ever sent.
+    await calc.saveMixLabel.fill('  first HOME  ')
+    await expect(calc.saveMixDuplicate).toBeVisible()
+    await expect(calc.saveMixConfirm).toBeDisabled()
+
+    // A fresh name clears it.
+    await calc.saveMixLabel.fill('Third home')
+    await expect(calc.saveMixDuplicate).toHaveCount(0)
+    await expect(calc.saveMixConfirm).toBeEnabled()
+
+    // Closing and reopening starts clean: the stale hint must not describe the
+    // name now in the field (the dialog reopens on the default name).
+    await calc.saveMixLabel.fill('  first HOME  ')
+    await expect(calc.saveMixDuplicate).toBeVisible()
+    await mockedPage.getByTestId('save-mix-cancel').click()
+    await calc.saveMix.click()
+    await expect(calc.saveMixDuplicate).toHaveCount(0)
+  })
+
+  test('a server duplicate response is shown in the open save dialog', async ({ mockedPage, calc }) => {
+    await mockSignedInWithMixes(mockedPage, [
+      savedMixFixture('507f1f77bcf86cd799439011', 'First home'),
+    ])
+    let postCalls = 0
+    await mockedPage.route('**/api/mixes', (route) => {
+      if (route.request().method() !== 'POST') return route.continue()
+      postCalls += 1
+      if (postCalls === 1) {
+        return route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'duplicate' }),
+        })
+      }
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ mix: savedMixFixture('507f1f77bcf86cd799439012', 'Fourth home') }),
+      })
+    })
+    await calc.goto()
+
+    await calc.saveMix.click()
+    await calc.saveMixLabel.fill('Third home')
+    await calc.saveMixConfirm.click()
+
+    await expect(calc.saveMixModal).toBeVisible()
+    await expect(calc.saveMixDuplicate).toBeVisible()
+    await expect(calc.saveMixConfirm).toBeDisabled()
+
+    await calc.saveMixLabel.fill('Fourth home')
+    await expect(calc.saveMixDuplicate).toHaveCount(0)
+    await expect(calc.saveMixConfirm).toBeEnabled()
+    await calc.saveMixConfirm.click()
+    await expect(calc.saveMixSaved).toBeVisible()
+  })
+
+  test('saving a deep-linked mix drops the stale ?mix= param', async ({ mockedPage, calc }) => {
+    // The URL names the mix as it was when it was opened. After a save the
+    // editor is newer than what a reload would fetch, so the param has to go or
+    // a refresh would overwrite the newer state with the older one.
+    await mockSignedInWithMixes(mockedPage, [
+      savedMixFixture('507f1f77bcf86cd799439011', 'First home'),
+    ])
+    await mockedPage.route('**/api/mixes/*', (route) => {
+      if (route.request().method() !== 'PATCH') return route.continue()
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ mix: savedMixFixture('507f1f77bcf86cd799439011', 'First home') }),
+      })
+    })
+
+    await mockedPage.goto('/calculators?mix=507f1f77bcf86cd799439011')
+    await mockedPage.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+    expect(mockedPage.url()).toContain('mix=')
+
+    await calc.track(1).setAmount('200,000')
+    await calc.saveMix.click()
+    await expect(calc.saveMixSaved).toBeVisible()
+
+    await expect.poll(() => mockedPage.url()).not.toContain('mix=')
+    // The store still knows which mix it is editing, so a further save updates
+    // the same document rather than creating another.
+    await expect(calc.mixTitle).toBeVisible()
+  })
+
+  test('New mix detaches from the loaded mix, confirming first when edited', async ({
+    mockedPage,
+    calc,
+  }) => {
+    await mockSignedInWithMixes(mockedPage, [
+      savedMixFixture('507f1f77bcf86cd799439011', 'First home'),
+    ])
+    await mockedPage.goto('/calculators?mix=507f1f77bcf86cd799439011')
+    await mockedPage.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+    await expect(calc.newMix).toBeVisible()
+
+    // Edited: confirm before clearing these values and starting over.
+    await calc.termSlider.fill('29')
+    await calc.newMix.click()
+    await expect(calc.newMixDialog).toBeVisible()
+    await calc.newMixConfirm.click()
+    await expect(calc.newMixDialog).toBeHidden()
+
+    // The link and all calculator values are cleared for a fresh mix.
+    await expect(calc.mixTitle).toHaveCount(0)
+    await expect(calc.newMix).toHaveCount(0)
+    await expect.poll(() => mockedPage.url()).not.toContain('mix=')
+    await expect(calc.termSlider).toHaveValue('15')
+    await expect(calc.track(1).amount()).toHaveValue('')
+    await calc.track(1).setAmount('200,000')
+    await calc.saveMix.click()
+    await expect(calc.saveMixModal).toBeVisible()
   })
 
   test('the mixes API refuses a caller with no session', async ({ mockedPage }) => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { normalizeMixLabel } from '@/server/mixes/label'
 import { MAX_MIX_LABEL_LENGTH, savedMixInputSchema } from '@/server/mixes/schema'
 import {
   MAX_OTHER_EXPENSES,
@@ -174,5 +175,20 @@ describe('savedMixInputSchema scenario', () => {
     })
     expect(savedMixInputSchema.safeParse(withExpenses(MAX_OTHER_EXPENSES)).success).toBe(true)
     expect(savedMixInputSchema.safeParse(withExpenses(MAX_OTHER_EXPENSES + 1)).success).toBe(false)
+  })
+})
+
+/**
+ * Duplicate names are compared through this helper (the repo refuses a mix
+ * whose normalized name is already taken). Case-insensitive and trimmed, so a
+ * reader cannot tell two mixes apart by a difference the eye does not see.
+ */
+describe('normalizeMixLabel', () => {
+  it('treats case and surrounding whitespace as the same name', () => {
+    expect(normalizeMixLabel('First Home')).toBe(normalizeMixLabel('  first home  '))
+  })
+
+  it('keeps genuinely different names apart', () => {
+    expect(normalizeMixLabel('First home')).not.toBe(normalizeMixLabel('Second home'))
   })
 })
