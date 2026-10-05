@@ -83,6 +83,11 @@ export function AuthPage() {
   const [resend, setResend] = useState<ResendState>('idle')
   // Set once the reset code has been requested; the reset step needs it.
   const [resetSent, setResetSent] = useState(false)
+  // The reset code step's own resend state, separate from `resend` (which
+  // belongs to the sign-up verification panel): they are different emails
+  // with different rate limits, and their messages must not overwrite each
+  // other's.
+  const [resetResend, setResetResend] = useState<ResendState>('idle')
 
   const isSignUp = mode === 'signup'
 
@@ -132,6 +137,11 @@ export function AuthPage() {
     if (next === 'credentials') {
       setResetSent(false)
       setOtp(emptyOtpSlots())
+    }
+    // Leaving the reset step abandons any half-typed code and its resend
+    // confirmation, so returning to it starts from the first request again.
+    if (next !== 'reset') {
+      setResetResend('idle')
     }
     // A fresh attempt always starts at stage 1, never at the password fields.
     setCodeVerified(false)
@@ -241,6 +251,7 @@ export function AuthPage() {
       // same for an unknown email): the code step is entered either way, so
       // the form cannot be used to probe accounts.
       setResetSent(false)
+      setResetResend('idle')
       setFlow('reset')
     } finally {
       setPending(false)
@@ -310,6 +321,43 @@ export function AuthPage() {
       setOtp(emptyOtpSlots())
     } finally {
       setPending(false)
+    }
+  }
+
+  /**
+   * Re-sends the RESET code while the user sits on the code step: the mail is
+   * lost, filtered, or simply never arrived, and a 5-minute expiry otherwise
+   * leaves them stuck with no way forward but to restart the whole flow.
+   *
+   * Calls the same endpoint as the first request, which both re-mails a code
+   * and invalidates the previous one (the plugin stores a single OTP per
+   * identifier), so the boxes are cleared here rather than left holding digits
+   * that can no longer verify. Same 3/minute server-side limit and the same
+   * no-enumeration answer as the first request.
+   */
+  async function onResendResetCode() {
+    if (resetResend === 'sending') return
+    setError(null)
+    setResetResend('sending')
+    try {
+      const { error: resendError } = await authClient.emailOtp.requestPasswordReset({ email })
+      if (resendError) {
+        setResetResend('idle')
+        setError(
+          resendError.status === 429
+            ? t('auth.otpErrorTooManyRequests')
+            : describeError(resendError.code),
+        )
+        return
+      }
+      setOtp(emptyOtpSlots())
+      setCodeVerified(false)
+      setResetResend('sent')
+      otpRefs.current[0]?.focus()
+    } finally {
+      // A settled request never leaves the button spinning: 'sent' swaps the
+      // label, and a failure resets to 'idle' above.
+      setResetResend((state) => (state === 'sending' ? 'idle' : state))
     }
   }
 
@@ -530,6 +578,15 @@ export function AuthPage() {
                 {/* Centered under the boxes it describes: as a stretched flex item the
                     text would otherwise sit on the start edge. */}
                 <span className="text-center text-xs text-ink-muted">{t('auth.resetCodeHint')}</span>
+                {resetResend === 'sent' && (
+                  <p
+                    role="status"
+                    data-testid="auth-reset-resend-sent"
+                    className="rounded-lg bg-surface-soft px-3 py-2 text-sm text-ink"
+                  >
+                    {t('auth.resetResendSent')}
+                  </p>
+                )}
                 {error && <FieldError message={error} testId="auth-error" />}
                 <button
                   type="submit"
@@ -552,6 +609,28 @@ export function AuthPage() {
                   ) : (
                     t('auth.resetVerifyAction')
                   )}
+                </button>
+                {/* Escape hatch for a code that never arrived, expired, or was
+                    deleted: re-mail it without making the user abandon the
+                    flow and retype their address. Secondary, below the verify
+                    action, and only while the code is still being typed. */}
+                <button
+                  type="button"
+                  data-testid="auth-reset-resend"
+                  disabled={resetResend === 'sending'}
+                  aria-busy={resetResend === 'sending'}
+                  aria-label={
+                    resetResend === 'sending' ? t('auth.submitting') : undefined
+                  }
+                  onClick={onResendResetCode}
+                  className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70 ${
+                    resetResend === 'sending' ? 'btn-sheen' : ''
+                  }`}
+                >
+                  {resetResend === 'sending' && (
+                    <FaSpinner aria-hidden="true" className="animate-spin" />
+                  )}
+                  {t('auth.resetResend')}
                 </button>
               </form>
             ) : (

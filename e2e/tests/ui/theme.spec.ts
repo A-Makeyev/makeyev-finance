@@ -125,50 +125,116 @@ test.describe('theme toggle', () => {
     for (const channel of channelsOf(contactField.ink)) expect(channel).toBeGreaterThan(150)
   })
 
-  test('the scrolled bar is solid aliceblue in light and frosted glass in dark', async ({
+  test('the bar is the same frosted glass at the top and scrolled, on every page', async ({
     page,
   }) => {
-    await page.goto('/')
-
-    /** Computed backdrop + background of the (scrolled) navbar. */
+    /**
+     * The bar is ONE treatment in both themes at BOTH scroll positions
+     * (user-requested: no per-page colour change), so this reads the top state
+     * AND the scrolled state and asserts they agree, per page. A regression
+     * that reintroduced the old dark top-state tint would show up here as the
+     * two disagreeing.
+     */
     const read = () =>
       page.evaluate(`(() => {
         const nav = document.getElementById('navbar')
         const cs = getComputedStyle(nav)
-        return cs.backdropFilter + '|' + cs.backgroundColor
+        const link = getComputedStyle(document.querySelector('#nav-list a'))
+        // The logo is swapped by CSS on data-theme, never by JS, so read the
+        // VISIBLE one: both variants are always in the DOM.
+        const logos = [...document.querySelectorAll('[data-testid^="logo-"]')]
+          .filter((el) => getComputedStyle(el).display !== 'none')
+          .map((el) => el.getAttribute('src'))
+          .join(',')
+        return [cs.backdropFilter, cs.backgroundColor, link.color, logos].join('|')
       })()`) as Promise<string>
-    /**
-     * Scrolls and polls until the bar has SETTLED into a state matching
-     * `ok`. Polling (and re-scrolling each tick, so a scroll missed before
-     * hydration is retried) removes the fixed-delay window in which the
-     * scrolled class could drop between the read and the assertion - the
-     * flake that made the full suite's light read see the base blur.
-     */
-    const settled = async (ok: (bar: string) => boolean) => {
+
+    await page.goto('/')
+    // Poll until hydrated: the pre-hydration paint is the server HTML, whose
+    // link/logo colours are the old hardcoded ones.
+    await expect
+      .poll(async () => page.evaluate(`document.documentElement.dataset.hydrated`))
+      .toBe('true')
+
+    // Hero pages, a plain-content page and the (light, hero-less) profile
+    // page all carry the identical bar.
+    const pages = ['/', '/calculators', '/articles', '/profile']
+    const topByPage: Record<string, string> = {}
+    for (const route of pages) {
+      await page.goto(route)
       await expect
-        .poll(async () => {
-          await page.evaluate(`window.scrollTo(0, 400)`)
-          return ok(await read())
-        })
-        .toBe(true)
-      return read()
+        .poll(async () => page.evaluate(`document.documentElement.dataset.hydrated`))
+        .toBe('true')
+      topByPage[route] = await read()
     }
 
-    // Light: the legacy bar - solid aliceblue, no blur.
-    const lightBar = await settled((bar) => {
-      const [backdrop, bg] = bar.split('|')
-      return backdrop === 'none' && channelsOf(bg).join(',') === '240,248,255'
-    })
-    expect(lightBar.split('|')[0]).toBe('none')
+    // Light: a pale, translucent tint with a real blur, dark ink links, the
+    // dark logo.
+    const [lightBackdrop, lightBg, lightLink, lightLogo] = topByPage['/'].split('|')
+    expect(lightBackdrop).toContain('blur')
+    const lightAlpha = Number(lightBg.match(/[\d.]+\)$/)?.[0]?.replace(')', ''))
+    expect(lightAlpha).toBeGreaterThan(0.5)
+    expect(lightAlpha).toBeLessThan(1)
+    for (const channel of channelsOf(lightBg)) expect(channel).toBeGreaterThan(200)
+    expect(channelsOf(lightLink).every((channel) => channel < 100)).toBe(true)
+    expect(lightLogo).toBe('/images/Logo.png')
 
-    // Dark: the top state's frosted glass, translucent over dark.
+    // Identical on every page (this is the per-page change the user removed).
+    for (const route of pages) {
+      expect(topByPage[route], route).toBe(topByPage['/'])
+    }
+
+    // Scrolled must equal the top state, not merely resemble it.
+    await page.goto('/articles')
+    await expect
+      .poll(async () => {
+        await page.evaluate(`window.scrollTo(0, 400)`)
+        return page.evaluate(`document.getElementById('navbar').classList.contains('navbar-scrolling')`)
+      })
+      .toBe(true)
+    expect(await read()).toBe(topByPage['/'])
+
+    // Dark: the same bar in the dark tint, light ink links, light logo.
     await toggleTheme(page)
-    const darkBar = await settled((bar) => {
-      const [backdrop, bg] = bar.split('|')
-      const alpha = Number(bg.match(/[\d.]+\)$/)?.[0]?.replace(')', ''))
-      return backdrop.includes('blur') && alpha > 0.5 && alpha < 1
-    })
-    expect(darkBar.split('|')[0]).toContain('blur')
+    // Poll until the bar has actually PAINTED dark, not merely until
+    // data-theme flipped. Two reasons a straight read here is wrong:
+    //   - the light tint's alpha is ALSO 0.78, so the alpha assertions pass on
+    //     the still-light bar;
+    //   - nav#navbar transitions background-color over 0.5s and the links
+    //     transition over 0.5s, so the colours read mid-fade.
+    // The logo carries no transition, which is why it flips first and made this
+    // look like a token bug rather than a timing one.
+    await expect
+      .poll(async () => {
+        const bar = await read()
+        return bar.split('|')[1] === 'rgba(6, 10, 11, 0.78)'
+      })
+      .toBe(true)
+    const darkTop = await read()
+    const [darkBackdrop, darkBg, darkLink, darkLogo] = darkTop.split('|')
+    expect(darkBackdrop).toContain('blur')
+    const darkAlpha = Number(darkBg.match(/[\d.]+\)$/)?.[0]?.replace(')', ''))
+    expect(darkAlpha).toBeGreaterThan(0.5)
+    expect(darkAlpha).toBeLessThan(1)
+    expect(channelsOf(darkLink).every((channel) => channel > 150)).toBe(true)
+    expect(darkLogo).toBe('/images/Logo-T.png')
+    for (const route of pages) {
+      await page.goto(route)
+      await expect
+        .poll(async () => page.evaluate(`document.documentElement.dataset.theme`))
+        .toBe('dark')
+      await expect
+        .poll(async () => page.evaluate(`document.documentElement.dataset.hydrated`))
+        .toBe('true')
+      // Same fade as above, on a fresh document load this time.
+      await expect
+        .poll(async () => {
+          const bar = await read()
+          return bar.split('|')[1] === 'rgba(6, 10, 11, 0.78)'
+        })
+        .toBe(true)
+      expect(await read(), route).toBe(darkTop)
+    }
   })
 
   test('dark text stays legible on the dark surfaces (contrast)', async ({ page }) => {

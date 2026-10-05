@@ -63,7 +63,6 @@ export function Navbar({
   const router = useRouter()
   const scrolled = useScrolled()
   const isDesktop770 = useMediaQuery('(min-width: 770px)')
-  const isMobileTop = useMediaQuery('(max-width: 800px)')
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuChecked, setMenuChecked] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
@@ -71,8 +70,15 @@ export function Navbar({
   const accountCloseTimer = useRef<number | null>(null)
 
   const solid = scrolled || menuOpen
-  const linksDark = solid || isMobileTop
-  const linesDark = solid
+  // The bar is now ONE frosted glass treatment at every scroll position and on
+  // every page (user-requested: no per-page colour change), so the link / line
+  // colours follow the THEME and not the scroll: --ink, which is near-black in
+  // light and near-white in dark, stays legible on both tinted slabs. Applying
+  // this unconditionally is what lets nav#navbar paint one theme-tinted glass
+  // everywhere instead of the old dark top-state tint that only worked over a
+  // dark hero banner.
+  const linksDark = true
+  const linesDark = true
 
   // Legacy stop-scrolling body lock while the panel is open.
   useEffect(() => {
@@ -256,13 +262,29 @@ export function Navbar({
           )}
           onClick={onLogoClick}
         >
-          {/* The solid bar is dark in dark mode, where the dark "Logo.png"
-              would disappear, so the light transparent logo carries both. */}
+          {/* BOTH logos render and CSS shows the right one (see
+              nav#navbar .logo-light / .logo-dark in globals.css), instead of
+              picking `src` from the theme in JS.
+
+              Picking src from useTheme() was SSR-unsafe: the theme lives in
+              localStorage, so the server has no idea which one is active and
+              always rendered Logo.png. On a hard load in dark mode React then
+              logged a hydration mismatch and - per its own rule - refused to
+              patch the attribute, leaving the DARK logo on the dark glass
+              (invisible). A CSS-only swap cannot mismatch, because
+              data-theme is already on <html> by the pre-paint script before
+              first paint. */}
           <img
-            src={solid && !isDark ? '/images/Logo.png' : '/images/Logo-T.png'}
+            src="/images/Logo.png"
             alt=""
-            data-testid={solid ? 'logo-solid' : 'logo-transparent'}
-            className="block w-full h-auto max-h-[75px] object-contain transition-all duration-1000"
+            data-testid="logo-solid"
+            className="logo-dark block w-full h-auto max-h-[75px] object-contain transition-all duration-1000"
+          />
+          <img
+            src="/images/Logo-T.png"
+            alt=""
+            data-testid="logo-transparent"
+            className="logo-light block w-full h-auto max-h-[75px] object-contain transition-all duration-1000"
           />
         </Link>
       </div>

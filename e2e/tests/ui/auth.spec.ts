@@ -1,3 +1,4 @@
+import type { Locator } from '@playwright/test'
 import { expect, serveQuotes, test } from '../../fixtures'
 import { AuthPage } from '../../pages/AuthPage'
 import {
@@ -23,6 +24,8 @@ const HEBREW_VERIFY_SENT = 'שלחנו הודעת אימות לכתובת הדו
 const HEBREW_RESET_SENT = 'שלחנו קוד בן 4 ספרות לכתובת הזו:'
 const HEBREW_RESET_INVALID_CODE = 'הקוד שגוי או שפג תוקפו'
 const HEBREW_RESET_DONE = 'הסיסמה עודכנה. אפשר להתחבר עם הסיסמה החדשה.'
+const HEBREW_RESET_RESEND = 'שליחת קוד חדש'
+const HEBREW_RESET_RESEND_SENT = 'שלחנו קוד חדש. הקוד הקודם אינו תקף יותר.'
 
 test.describe('auth pages', () => {
   test.beforeEach(async ({ mockedPage }) => {
@@ -420,6 +423,41 @@ test.describe('password reset', () => {
     // The code is in; "we emailed a code to..." is history and would push the
     // fields down the card.
     await expect(auth.resetHint).toHaveCount(0)
+  })
+
+  test('a lost or expired code can be re-requested without restarting the flow', async ({
+    mockedPage,
+  }) => {
+    await mockRequestPasswordReset(mockedPage)
+    const auth = new AuthPage(mockedPage)
+
+    await auth.goto('/login')
+    await auth.openReset()
+    await auth.requestResetCode('user@example.test')
+
+    // The escape hatch is there on the code step, in the Hebrew copy (no
+    // hardcoded English), and it is not the primary action.
+    await expect(auth.resetResend).toBeVisible()
+    await expect(auth.resetResend).toHaveText(HEBREW_RESET_RESEND)
+
+    // A code the user already typed must not survive: the re-sent code
+    // REPLACES it server-side, so a stale set of digits that now cannot verify
+    // must not sit in the boxes looking valid.
+    await auth.resetCodeInputs.nth(0).fill('1')
+    await auth.resetCodeInputs.nth(1).fill('2')
+    await expect(auth.resetCodeInputs.nth(0)).toHaveValue('1')
+
+    await auth.resendResetCode()
+
+    await expect(auth.resetResendSent).toContainText(HEBREW_RESET_RESEND_SENT)
+    await expect(auth.resetCodeInputs.nth(0)).toHaveValue('')
+    await expect(auth.resetCodeInputs.nth(1)).toHaveValue('')
+    // Still on the code step, still addressed to the same person: no restart,
+    // and the password fields stay hidden until a code actually verifies.
+    await expect(auth.resetPanel).toBeVisible()
+    await expect(auth.resetNewPassword).toHaveCount(0)
+    await expect(auth.resetVerify).toBeDisabled()
+    await expect(auth.resetHint).toContainText('user@example.test')
   })
 
   test('the heading names the reset flow, not sign-in or register', async ({ mockedPage }) => {

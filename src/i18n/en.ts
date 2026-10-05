@@ -919,6 +919,8 @@ export const en: { translation: Translation } = {
       resetNewPasswordLabel: 'New password',
       resetAction: 'Reset password',
       resetVerifyAction: 'Verify code',
+      resetResend: 'Send a new code',
+      resetResendSent: 'We sent a new code. The previous one is no longer valid.',
       resetDone: 'Your password has been updated. You can now sign in with the new password.',
       resetInvalidCode: 'The code is wrong or has expired',
       resetTooManyAttempts: 'Too many attempts. Request a new code and try again.',

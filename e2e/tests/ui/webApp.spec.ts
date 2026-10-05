@@ -231,7 +231,10 @@ test.describe('web app: navigation + chrome parity', () => {
     const box = async (testId: string) => (await page.getByTestId(testId).boundingBox())!
     const hamburger = await box('hamburger')
     const controls = await box('nav-bar-controls')
-    const logoOf = async () => (await page.locator('[data-testid="logo"] img').boundingBox())!
+    // Both logos are always in the DOM (the theme swap is CSS, so the server cannot
+    // get it wrong), so `:visible` is what names the one a visitor actually
+    // sees; a bare `img` selector matches both and is a strict-mode violation.
+    const logoOf = async () => (await page.locator('[data-testid="logo"] img:visible').boundingBox())!
     const logo = await logoOf()
 
     // Hamburger in the left third, controls in the right third.
@@ -598,32 +601,56 @@ test.describe('web app: navigation + chrome parity', () => {
     await page.mouse.move(10, 400)
     await expect(app.navAccountMenu).toBeHidden()
 
-    // Same visual role as the other icon controls: white text/icon colour on
-    // the dark bar, not the UA button colour.
+    // Same visual role as the other icon controls: the theme's ink on the
+    // glass, not the UA button colour. The bar is ONE tinted glass in both
+    // themes now, so ink (near-black in light) is correct at the top too.
     const colours = (await page.evaluate(`(() => {
       const avatar = document.querySelector('[data-testid="nav-avatar"]')
       const link = document.querySelector('#nav-list a.nav-link')
       return { avatar: getComputedStyle(avatar).color, link: getComputedStyle(link).color }
     })()`)) as { avatar: string; link: string }
     expect(colours.avatar).toBe(colours.link)
-    // Aliceblue, the nav-link role: not the UA button colour.
-    expect(colours.avatar).toBe('rgb(240, 248, 255)')
+    // The ink role, not the UA button colour.
+    expect(colours.avatar).toBe('rgb(15, 15, 15)')
   })
 
-  test('the avatar stays visible on the scrolled (light) bar', async ({ page }) => {
+  test('name initials ignore punctuation, so a bracketed role is not an initial', async ({
+    page,
+  }) => {
+    // The seeded accounts carry "(Admin)" / "(Advisor)" markers. Splitting on
+    // whitespace made the parenthesis its own "name part", so the avatar read
+    // "A(" - a bracket is not an initial.
+    for (const [name, expected] of [
+      ['Anatoly (Admin)', 'A'],
+      ['Maya (Advisor)', 'M'],
+      ['Noa (Client)', 'N'],
+    ] as const) {
+      await mockGetSessionUser(page, { image: null, name })
+      const app = new WebAppPage(page)
+      await app.goto('/')
+      await app.waitForHydration()
+
+      await expect(app.navAvatarInitials).toHaveText(expected)
+      // The full name is still shown in the menu: only the AVATAR drops it.
+      await app.openAccountMenu()
+      await expect(app.navAccountId).toContainText(name)
+    }
+  })
+
+  test('the avatar stays visible on the scrolled bar', async ({ page }) => {
     await mockGetSessionUser(page, { image: null, name: 'Anatoly Makeyev' })
     const app = new WebAppPage(page)
     await app.goto('/')
     await app.waitForHydration()
     await expect(app.navAvatar).toBeVisible()
 
-    // Scroll far enough that the bar turns into its solid light state
-    // (links-dark + navbar-scrolling), then read the initials' colour.
+    // Scroll far enough that the bar carries navbar-scrolling, then read the
+    // initials' colour.
     await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
     await expect(app.navbar).toHaveClass(/navbar-scrolling/, { timeout: 5000 })
 
-    // The initials must NOT stay white (rgb(255,255,255) = invisible on the
-    // aliceblue bar); they flip to the ink role like the links do.
+    // The initials must NOT stay white (invisible on the pale glass); they are
+    // on the ink role like the links are, at the top and scrolled alike.
     const initialsColour = (await page.evaluate(`(() => {
       const el = document.querySelector('[data-testid="nav-avatar"] .nav-avatar-fallback')
       return getComputedStyle(el).color

@@ -40,12 +40,17 @@ export class AuthPage {
   readonly resetConfirmPassword: Locator
   readonly resetSubmit: Locator
   readonly resetVerify: Locator
+  /** Re-sends the reset code while the code step is up (a lost/expired mail). */
+  readonly resetResend: Locator
+  readonly resetResendSent: Locator
   readonly resetDone: Locator
   readonly footer: Locator
   readonly navLogin: Locator
   readonly navAccount: Locator
   readonly navAvatar: Locator
   readonly navAvatarImg: Locator
+  /** Initials fallback circle (no provider photo): e.g. "A" for "Anatoly (Admin)". */
+  readonly navAvatarInitials: Locator
   readonly navAvatarEmpty: Locator
   readonly navAccountMenu: Locator
   readonly navAccountTheme: Locator
@@ -93,12 +98,15 @@ export class AuthPage {
     this.resetConfirmPassword = page.getByTestId('auth-confirm-password')
     this.resetSubmit = page.getByTestId('auth-reset-submit')
     this.resetVerify = page.getByTestId('auth-reset-verify')
+    this.resetResend = page.getByTestId('auth-reset-resend')
+    this.resetResendSent = page.getByTestId('auth-reset-resend-sent')
     this.resetDone = page.getByTestId('auth-reset-done')
     this.footer = page.locator('footer.footer')
     this.navLogin = page.getByTestId('nav-login')
     this.navAccount = page.getByTestId('nav-account')
     this.navAvatar = page.getByTestId('nav-avatar')
     this.navAvatarImg = page.getByTestId('nav-avatar-img')
+    this.navAvatarInitials = page.locator('[data-testid="nav-avatar"] .nav-avatar-fallback')
     this.navAvatarEmpty = page.getByTestId('nav-avatar-empty')
     this.navAccountMenu = page.getByTestId('nav-account-menu')
     this.navAccountTheme = page.getByTestId('nav-account-theme')
@@ -113,11 +121,22 @@ export class AuthPage {
     this.gatedSignOut = page.getByTestId('gated-sign-out')
   }
 
+  /**
+   * Navigates, then waits for React to attach.
+   *
+   * The waiting is not optional: the server HTML renders every control already,
+   * so a click can land on a button whose onClick does not exist yet and
+   * silently do NOTHING - the tab never switches, the panel never opens, and
+   * the failure reads like a broken feature. It bites hardest when the suite
+   * runs as a whole, because the dev server is busier and hydration lands later.
+   */
   async goto(path = '/login'): Promise<void> {
     await this.page.goto(path)
+    await this.waitForHydration()
   }
 
   async switchToSignUp(): Promise<void> {
+    await this.waitForHydration()
     await this.signUpTab.click()
     await expect(this.name).toBeVisible()
   }
@@ -143,6 +162,7 @@ export class AuthPage {
   }
 
   async signIn(email: string, password: string): Promise<void> {
+    await this.waitForHydration()
     await this.email.fill(email)
     await this.password.fill(password)
     await this.submit.click()
@@ -150,8 +170,19 @@ export class AuthPage {
 
   /** Steps of the password-reset flow, all inside the single login card. */
   async openReset(): Promise<void> {
+    await this.waitForHydration()
     await this.forgot.click()
     await expect(this.forgotPanel).toBeVisible()
+  }
+
+  /**
+   * Waits until React has attached to the server HTML (SiteChrome sets
+   * data-hydrated on <html> once its mount effect runs). A click on SSR-only
+   * markup silently does nothing, so any step that depends on a handler must
+   * come after this.
+   */
+  async waitForHydration(): Promise<void> {
+    await expect(this.page.locator('html')).toHaveAttribute('data-hydrated', 'true')
   }
 
   async requestResetCode(email: string): Promise<void> {
@@ -169,6 +200,16 @@ export class AuthPage {
   async insertResetCode(code: string, index = 0): Promise<void> {
     await this.resetCodeInputs.nth(index).click()
     await this.page.keyboard.insertText(code)
+  }
+
+  /**
+   * Asks for a fresh code from the code step. The typed boxes are cleared by
+   * the component (a re-sent code invalidates the old one), so this asserts
+   * the confirmation rather than the clearing.
+   */
+  async resendResetCode(): Promise<void> {
+    await this.resetResend.click()
+    await expect(this.resetResendSent).toBeVisible()
   }
 
   /**

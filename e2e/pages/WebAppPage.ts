@@ -21,6 +21,8 @@ export class WebAppPage {
   readonly navAccountMenu: Locator
   /** The identity line at the top of the account menu (the signed-in name). */
   readonly navAccountId: Locator
+  /** Initials fallback circle (no provider photo), e.g. "A" not "A(". */
+  readonly navAvatarInitials: Locator
   readonly navAccountTheme: Locator
   readonly navAccountLanguage: Locator
   readonly navAccountSignin: Locator
@@ -39,6 +41,7 @@ export class WebAppPage {
     this.navAvatarEmpty = page.getByTestId('nav-avatar-empty')
     this.navAccountMenu = page.getByTestId('nav-account-menu')
     this.navAccountId = page.getByTestId('nav-account-id')
+    this.navAvatarInitials = page.locator('[data-testid="nav-avatar"] .nav-avatar-fallback')
     this.navAccountTheme = page.getByTestId('nav-account-theme')
     this.navAccountLanguage = page.getByTestId('nav-account-language')
     this.navAccountSignin = page.getByTestId('nav-account-signin')

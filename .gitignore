@@ -22,3 +22,6 @@ Thumbs.db
 .next/
 next-env.d.ts
 tsconfig.tsbuildinfo
+
+# Agent
+.freebuff/

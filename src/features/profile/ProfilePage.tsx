@@ -22,9 +22,9 @@ import type { Role } from '@/server/auth/roles'
  * kill the other sessions, which pairs with the server's
  * `revokeSessionsOnPasswordReset`), sign out, and sign out everywhere.
  *
- * Layout: a deliberately dark, mixed-hue gradient page (the same dark chrome
- * family as the hero and footer - kept dark in both themes rather than
- * tokenized), the user's name as the page title, and the cards on top. The
+ * Layout: a theme-aware page backdrop (light surface in light mode; the
+ * branded dark mixed-hue gradient in dark mode, the same family as the hero
+ * and footer), the user's name as the page title, and the cards on top. The
  * identity and the account actions share ONE card so the page does not repeat
  * "the account" twice, and the password form lives behind a button and a modal
  * rather than sitting open on the page. All copy goes through i18n and the
@@ -152,7 +152,8 @@ export function ProfilePage({
   }
 
   return (
-    // Dark mixed-hue gradient chrome (profile-page), kept dark in both themes.
+    // Theme-aware backdrop (profile-page): light surface in light mode, the
+    // branded dark gradient in dark mode (see .profile-page in globals.css).
     <main className="below-chrome profile-page min-h-screen px-4 pb-20 pt-28">
       <div className="mx-auto w-full max-w-6xl" data-testid="profile-page">
         {/* Identity + account actions share one card; no page title and no

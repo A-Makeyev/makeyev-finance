@@ -907,6 +907,8 @@ export const he = {
       resetNewPasswordLabel: 'סיסמה חדשה',
       resetAction: 'איפוס הסיסמה',
       resetVerifyAction: 'אימות הקוד',
+      resetResend: 'שליחת קוד חדש',
+      resetResendSent: 'שלחנו קוד חדש. הקוד הקודם אינו תקף יותר.',
       resetDone: 'הסיסמה עודכנה. אפשר להתחבר עם הסיסמה החדשה.',
       resetInvalidCode: 'הקוד שגוי או שפג תוקפו',
       resetTooManyAttempts: 'יותר מדי ניסיונות. בקשו קוד חדש ונסו שוב.',

@@ -163,9 +163,10 @@ strong {
      `surface-*`/`ink`/`hairline` colors), never with raw white/black.
      --------------------------------------------------------------------- */
   --surface-page: var(--soft-white);
+  /* Clean white cards (the interim warm cream was too strong). */
   --surface-card: #ffffff;
-  /* Raised controls (secondary buttons) sit ON a card: same white here, so the
-     light theme keeps its existing white-on-white button with a strong
+  /* Raised controls (secondary buttons) sit ON a card: the same white here, so
+     the light theme keeps its existing white-on-white button with a strong
      border. The dark theme gives them a lighter fill below, because
      --surface-page is DARKER than --surface-card and a page-coloured button on
      a card read as a black slab. */
@@ -187,10 +188,15 @@ strong {
   --comment-line: rgba(15, 15, 15, 0.18);
   --danger: #bb3a3a;
   --danger-strong: #d32f2f;
-  /* Scrolled navbar: the legacy solid aliceblue bar in light. The dark block
-     below swaps in a frosted tint + blur over the same slot. */
-  --nav-glass-scrolled: var(--soft-white);
-  --nav-glass-filter: none;
+  /* Scrolled navbar: frosted glass in BOTH themes, tuned per theme. Light
+     gets a pale blue-white tint with real opacity + blur (not the old solid
+     aliceblue bar), so the slab still reads as glass over the light page
+     content below the hero. The dark block below swaps in its own ink tint +
+     blur over the same slot. Both values come through these tokens, never a
+     `[data-theme='dark']` override on the nav rule itself - see the comment
+     above nav#navbar.navbar-scrolling for why that matters. */
+  --nav-glass-scrolled: rgba(240, 248, 255, 0.78);
+  --nav-glass-filter: blur(10px) saturate(140%);
 
   /* Calculator surfaces that used to be raw white/off-white literals.
      `--calc-input-bg` is the field fill: white here, a dim slate in dark
@@ -456,12 +462,16 @@ img {
     url(/images/login-cover.jpg);
 }
 
-/* The profile page's backdrop: a dark, mixed-hue gradient (teal / blue / green
-   brand washes over a deep base). Like the hero, footer and the Indexes strips
-   this is deliberately dark chrome, so it is NOT tokenized and stays dark in
-   both themes - the cards on top keep their own theme surfaces for contrast.
-   The title sits directly on the gradient, so it is always light. */
+/* The profile page's backdrop. In LIGHT mode it is a normal page surface, so
+   the page follows the theme (user-requested; it used to be dark chrome in
+   both themes). DARK mode keeps the branded mixed-hue gradient (teal / blue /
+   green washes over a deep base), the same family as the hero and footer. The
+   cards on top keep their own theme surfaces for contrast in both modes. */
 .profile-page {
+  background-color: var(--surface-page);
+}
+
+:root[data-theme='dark'] .profile-page {
   background-color: #0b1220;
   background-image:
     radial-gradient(900px 520px at 12% -10%, rgba(8, 127, 120, 0.55), transparent 60%),
@@ -2039,19 +2049,27 @@ nav#navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Frosted-glass default (user-requested deviation from the legacy parity
-     pass): translucent ink tint + blur over the dark hero banners (.header /
-     .sub-header are both dark images under a 50% black overlay), so the
-     white links + transparent logo stay readable while the cover bleeds
-     through blurred. A faint cool white lift keeps the slab lit rather than
-     smoked. Browsers without backdrop-filter keep the tint only. */
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)), rgba(15, 15, 15, 0.3);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
-  backdrop-filter: blur(10px) saturate(140%);
-  /* Faint light hairline along the slab's bottom edge; the scrolled state
-     swaps it for its own drop shadow. */
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.25);
+  /* ONE glass treatment for the bar at every scroll position and on every
+     page (user-requested: the bar must not change colour per route). It was
+     previously a dark 30% ink tint at the top, tinted for the dark hero
+     banners and unreadable over a light page - which is what the per-page
+     forceSolid hack was papering over. Instead the top state now uses the
+     very same theme-tinted frosted glass as the scrolled state
+     (--nav-glass-scrolled / --nav-glass-filter, see :root), so the bar reads
+     identically everywhere: a pale blue-white slab in light, an ink slab in
+     dark, both blurring whatever sits behind them.
+
+     This only works because the LINK, LINE and LOGO colours are theme-driven
+     too (--ink, see nav#navbar.links-dark), not white-on-dark; that pairing
+     is applied unconditionally in Navbar.tsx, not per scroll position.
+
+     Browsers without backdrop-filter keep the tint only. */
+  background: var(--nav-glass-scrolled);
+  -webkit-backdrop-filter: var(--nav-glass-filter);
+  backdrop-filter: var(--nav-glass-filter);
+  /* Drop shadow rather than the old top-state hairline: a hairline reads as
+     a border on the translucent slab, the shadow as a slab floating above. */
+  box-shadow: 0 5px 5px 0 var(--soft-black-background);
   /* The nav (with the logo) slides up when the menu opens and back down to
      its place when it closes - instead of jumping. Colors keep their fade.
      backdrop-filter is deliberately NOT transitioned: animating the blur
@@ -2131,6 +2149,26 @@ nav#navbar.adjust-markets.no-indexes {
 nav#navbar.nav-scrolling-resize {
   padding: 0 5%;
 }
+
+/* The two logo variants, swapped by the THEME and never by JS (the server
+   cannot know the stored theme, so a JS-picked `src` was a hydration
+   mismatch that left the dark logo on the dark glass). The bar is one tinted
+   glass in both themes now, so the pairing is fixed: the dark ink logo on the
+   pale light glass, the light transparent logo on the dark glass.
+   `display` rather than visibility so only one occupies the box. */
+nav#navbar .logo-light {
+  display: none;
+}
+
+:root[data-theme='dark'] nav#navbar .logo-light {
+  display: block;
+}
+
+:root[data-theme='dark'] nav#navbar .logo-dark {
+  display: none;
+}
+
+
 
 .logo-image {
   content: url(/images/Logo.png);
@@ -2599,18 +2637,16 @@ nav#navbar .menu-icon .line:hover {
 }
 
 /* Id-qualified on purpose: the glass lives on nav#navbar (an id rule), so a
-   plain class here would lose the cascade. Light scrolled paints the legacy
-   solid aliceblue bar again; dark keeps the top state's frosted glass, so the
-   slab still floats over the content it blurs. Both come through tokens
-   rather than a `[data-theme='dark']` override here, because that override
-   would outrank nav#navbar.menu-open below and put the blur back while the
-   mobile sheet is open (which collapses the sheet). */
+   plain class here would lose the cascade. The bar is one consistent frosted
+   glass in BOTH themes, at the top and scrolled alike (user-requested: no
+   per-page colour change) - nav#navbar above already paints the same tokens,
+   so this rule only pins the INK link colour, which is what makes white-theme
+   links legible on the pale slab and dark-theme links legible on the ink
+   one. It stays id-qualified rather than becoming a `[data-theme='dark']`
+   override so it cannot outrank nav#navbar.menu-open below and put the blur
+   back while the mobile sheet is open (which collapses the sheet). */
 nav#navbar.navbar-scrolling {
   color: var(--ink);
-  background: var(--nav-glass-scrolled);
-  box-shadow: 0 5px 5px 0 var(--soft-black-background);
-  -webkit-backdrop-filter: var(--nav-glass-filter);
-  backdrop-filter: var(--nav-glass-filter);
 }
 
 /* The mobile menu sheet is `position: fixed`. A backdrop-filter makes the
@@ -7257,14 +7293,6 @@ tbody tr:hover {
 :root[data-theme='dark'] *::selection {
   background-color: var(--selection-bg);
   color: var(--ink);
-  text-shadow: none;
-}
-
-/* The profile page is dark chrome in BOTH themes, so its selected text needs
-   the same light ink even when data-theme is light. */
-.profile-page ::selection {
-  background-color: #2d4a48;
-  color: #e8f0ee;
   text-shadow: none;
 }
 
