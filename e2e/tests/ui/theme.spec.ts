@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures'
 import type { Page } from '@playwright/test'
+import { mockGetSessionNull } from '../../support/authMocks'
 
 /**
  * UI contract for the site theme: follows the OS on a first visit, remembers
@@ -47,6 +48,19 @@ async function toggleTheme(page: Page): Promise<void> {
 }
 
 test.describe('theme toggle', () => {
+  /**
+   * Signed out, deterministically. The account trigger only renders once the
+   * session lookup lands (the bar holds a muted skeleton until then), so an
+   * un-mocked run makes every test that opens the theme menu wait on a real
+   * /api/auth/get-session round trip - and how long the auth endpoint takes is
+   * not what this suite is testing. The shared mock answers instantly with the
+   * same signed-out session the un-mocked run gets, because the test context
+   * carries no session cookie.
+   */
+  test.beforeEach(async ({ page }) => {
+    await mockGetSessionNull(page)
+  })
+
   test('first visit follows the OS (light here), and the toggle persists', async ({ page }) => {
     await page.goto('/')
 
@@ -125,15 +139,31 @@ test.describe('theme toggle', () => {
     for (const channel of channelsOf(contactField.ink)) expect(channel).toBeGreaterThan(150)
   })
 
-  test('the bar is the same frosted glass at the top and scrolled, on every page', async ({
+  test('the bar is transparent at the top and a slab once scrolled, on every page', async ({
     page,
   }) => {
     /**
-     * The bar is ONE treatment in both themes at BOTH scroll positions
-     * (user-requested: no per-page colour change), so this reads the top state
-     * AND the scrolled state and asserts they agree, per page. A regression
-     * that reintroduced the old dark top-state tint would show up here as the
-     * two disagreeing.
+     * The legacy two-state bar (user-requested): TRANSPARENT while it sits over
+     * the hero - the transparency is the point, the banner reads through it -
+     * and a markedly denser slab once the page scrolls under it, which is the
+     * change the visitor sees on scroll.
+     *
+     * Three claims are asserted:
+     *   - ACROSS PAGES the bar must be identical (top AND scrolled), which is
+     *     the per-page regression this test was written for. The profile page
+     *     is the one deliberate exception: its top is the plain page surface,
+     *     so it starts in the scrolled treatment instead of the glass.
+     *   - ACROSS SCROLL it must NOT be identical: the top tint has to be
+     *     measurably more transparent than the scrolled one, in both themes.
+     *   - ACROSS THEMES the TOP is the SAME slab (one shared dark legacy tint,
+     *     as on the legacy site), so the light items and the transparent logo
+     *     are the right pairing there in either mode; only the SCROLLED slab is
+     *     per-theme, and its items follow it (ink on light's pale slab, light
+     *     on dark's ink slab).
+     *
+     * The glass layers are read separately (tint, sheen gradient, edge shadow)
+     * because that is what makes the bar GLASS rather than a tinted panel: a
+     * translucent fill, a blur, a top-edge highlight and an edge line.
      */
     const read = () =>
       page.evaluate(`(() => {
@@ -146,9 +176,80 @@ test.describe('theme toggle', () => {
           .filter((el) => getComputedStyle(el).display !== 'none')
           .map((el) => el.getAttribute('src'))
           .join(',')
-        return [cs.backdropFilter, cs.backgroundColor, link.color, logos].join('|')
+        return [cs.backdropFilter, cs.backgroundColor, link.color, logos, cs.backgroundImage, cs.boxShadow].join('|')
       })()`) as Promise<string>
 
+    /** The blur radius in px, so "a real blur" can be asserted without pinning
+        the exact radius a future design tweak may move. */
+    const blurRadius = (filter: string): number => Number(filter.match(/blur\((\d+)px\)/)?.[1] ?? 0)
+
+    /** The tint's alpha, so "more transparent" is a number, not a vibe. */
+    const alphaOf = (colour: string): number =>
+      Number(colour.match(/[\d.]+\)$/)?.[0]?.replace(')', ''))
+
+    /**
+     * nav#navbar transitions background-color over 0.5s, so a read taken right
+     * after a scroll or a theme flip catches the tint MID-FADE (an alpha of
+     * 0.537 instead of 0.6, say), and a strict equality check on the tint then
+     * fails for a reason that has nothing to do with the bar. Two consecutive
+     * identical reads mean the fade is over.
+     */
+    const readSettled = async (): Promise<string> => {
+      let previous = await read()
+      for (let attempt = 0; attempt < 20; attempt++) {
+        await page.waitForTimeout(200)
+        const current = await read()
+        if (current === previous) return current
+        previous = current
+      }
+      return previous
+    }
+
+    /** Scrolls to the scrolled state and waits for the class that paints it. */
+    const scrollIntoScrolledState = async (): Promise<void> => {
+      await expect
+        .poll(async () => {
+          await page.evaluate(`window.scrollTo(0, 400)`)
+          return page.evaluate(
+            `document.getElementById('navbar').classList.contains('navbar-scrolling')`,
+          )
+        })
+        .toBe(true)
+    }
+
+    /** Reads the bar on every page in both scroll states, once per theme. */
+    const readEveryPage = async (): Promise<{
+      top: Record<string, string>
+      scrolled: Record<string, string>
+    }> => {
+      const top: Record<string, string> = {}
+      const scrolled: Record<string, string> = {}
+      for (const route of pages) {
+        await page.goto(route)
+        await expect
+          .poll(async () => page.evaluate(`document.documentElement.dataset.hydrated`))
+          .toBe('true')
+        top[route] = await readSettled()
+        await scrollIntoScrolledState()
+        scrolled[route] = await readSettled()
+      }
+      return { top, scrolled }
+    }
+
+    // Hero pages and the sign-in screen carry the identical bar. The profile
+    // page is deliberately NOT in this list: it is the one page whose top is
+    // the plain page surface, so it starts in the SCROLLED treatment instead of
+    // the transparent glass (see navStartsSolid in src/lib/siteChrome.ts) - and
+    // signed out this harness cannot reach it anyway, because the server-side
+    // session check sends /profile to /login. The route below is what that
+    // redirect actually renders, and it is a real third surface to compare.
+    const pages = ['/', '/calculators', '/articles', '/login']
+    // The tints, pinned here so a stray re-declaration (or a scroll state
+    // swapping its value) fails the run rather than sliding through. The TOP
+    // one is shared by both themes - the legacy transparent glass.
+    const TOP_TINT = 'rgba(15, 15, 15, 0.1)'
+    const LIGHT_SCROLLED_TINT = 'rgba(240, 248, 255, 0.6)'
+    const DARK_SCROLLED_TINT = 'rgba(9, 13, 15, 0.75)'
     await page.goto('/')
     // Poll until hydrated: the pre-hydration paint is the server HTML, whose
     // link/logo colours are the old hardcoded ones.
@@ -156,85 +257,110 @@ test.describe('theme toggle', () => {
       .poll(async () => page.evaluate(`document.documentElement.dataset.hydrated`))
       .toBe('true')
 
-    // Hero pages, a plain-content page and the (light, hero-less) profile
-    // page all carry the identical bar.
-    const pages = ['/', '/calculators', '/articles', '/profile']
-    const topByPage: Record<string, string> = {}
+    const light = await readEveryPage()
+    // Identical on every page, at BOTH scroll states: the per-page change the
+    // user removed must not come back through either door.
     for (const route of pages) {
-      await page.goto(route)
-      await expect
-        .poll(async () => page.evaluate(`document.documentElement.dataset.hydrated`))
-        .toBe('true')
-      topByPage[route] = await read()
+      expect(light.top[route], `light top on ${route}`).toBe(light.top['/'])
+      expect(light.scrolled[route], `light scrolled on ${route}`).toBe(light.scrolled['/'])
     }
 
-    // Light: a pale, translucent tint with a real blur, dark ink links, the
-    // dark logo.
-    const [lightBackdrop, lightBg, lightLink, lightLogo] = topByPage['/'].split('|')
+    // Light: the TOP is the legacy transparent glass - a thin ink tint (a
+    // whisper on the light, hero-less profile page) with a real blur and the
+    // light items on it - and scrolled it becomes the light theme's pale slab
+    // with ink items.
+    const [lightBackdrop, lightTopBg, lightLink, lightLogo, lightSheen, lightEdge] =
+      light.top['/'].split('|')
+    const [, lightScrolledBg, , lightScrolledLogo] = light.scrolled['/'].split('|')
     expect(lightBackdrop).toContain('blur')
-    const lightAlpha = Number(lightBg.match(/[\d.]+\)$/)?.[0]?.replace(')', ''))
-    expect(lightAlpha).toBeGreaterThan(0.5)
-    expect(lightAlpha).toBeLessThan(1)
-    for (const channel of channelsOf(lightBg)) expect(channel).toBeGreaterThan(200)
-    expect(channelsOf(lightLink).every((channel) => channel < 100)).toBe(true)
-    expect(lightLogo).toBe('/images/Logo.png')
+    // The legacy recipe blurs 10px and adds saturation; a 2-3px smudge over a
+    // translucent fill would just look like a washed-out panel.
+    expect(blurRadius(lightBackdrop)).toBeGreaterThanOrEqual(8)
+    expect(lightBackdrop).toContain('saturate')
+    expect(lightTopBg).toBe(TOP_TINT)
+    expect(lightScrolledBg).toBe(LIGHT_SCROLLED_TINT)
+    const topAlpha = alphaOf(lightTopBg)
+    const lightScrolledAlpha = alphaOf(lightScrolledBg)
+    // "Transparent at the top, a slab once scrolled": the top tint is much the
+    // thinner of the two, which is the change the visitor sees on scroll.
+    expect(topAlpha).toBeLessThan(0.4)
+    expect(topAlpha).toBeLessThan(lightScrolledAlpha)
+    expect(lightScrolledAlpha).toBeGreaterThan(0.5)
+    expect(lightScrolledAlpha).toBeLessThan(1)
+    // The top slab is the shared dark one; the scrolled light slab is pale.
+    for (const channel of channelsOf(lightTopBg)) expect(channel).toBeLessThan(80)
+    for (const channel of channelsOf(lightScrolledBg)) expect(channel).toBeGreaterThan(200)
+    // The items follow the SLAB: light items on the dark transparent top, ink
+    // items and the dark logo once the pale slab is in.
+    expect(channelsOf(lightLink).every((channel) => channel > 150)).toBe(true)
+    expect(lightLogo).toBe('/images/Logo-T.png')
+    expect(lightScrolledLogo).toBe('/images/Logo.png')
+    // The top-edge highlight and the slab's own edge line.
+    expect(lightSheen).toContain('linear-gradient')
+    expect(lightEdge).toContain('inset')
 
-    // Identical on every page (this is the per-page change the user removed).
-    for (const route of pages) {
-      expect(topByPage[route], route).toBe(topByPage['/'])
-    }
-
-    // Scrolled must equal the top state, not merely resemble it.
+    // Dark: the SAME transparent top slab, and an ink slab once scrolled.
     await page.goto('/articles')
-    await expect
-      .poll(async () => {
-        await page.evaluate(`window.scrollTo(0, 400)`)
-        return page.evaluate(`document.getElementById('navbar').classList.contains('navbar-scrolling')`)
-      })
-      .toBe(true)
-    expect(await read()).toBe(topByPage['/'])
-
-    // Dark: the same bar in the dark tint, light ink links, light logo.
     await toggleTheme(page)
-    // Poll until the bar has actually PAINTED dark, not merely until
-    // data-theme flipped. Two reasons a straight read here is wrong:
-    //   - the light tint's alpha is ALSO 0.78, so the alpha assertions pass on
-    //     the still-light bar;
-    //   - nav#navbar transitions background-color over 0.5s and the links
-    //     transition over 0.5s, so the colours read mid-fade.
-    // The logo carries no transition, which is why it flips first and made this
-    // look like a token bug rather than a timing one.
-    await expect
-      .poll(async () => {
-        const bar = await read()
-        return bar.split('|')[1] === 'rgba(6, 10, 11, 0.78)'
-      })
-      .toBe(true)
-    const darkTop = await read()
-    const [darkBackdrop, darkBg, darkLink, darkLogo] = darkTop.split('|')
-    expect(darkBackdrop).toContain('blur')
-    const darkAlpha = Number(darkBg.match(/[\d.]+\)$/)?.[0]?.replace(')', ''))
-    expect(darkAlpha).toBeGreaterThan(0.5)
-    expect(darkAlpha).toBeLessThan(1)
-    expect(channelsOf(darkLink).every((channel) => channel > 150)).toBe(true)
-    expect(darkLogo).toBe('/images/Logo-T.png')
+    // Poll until the bar has actually PAINTED, not merely until data-theme
+    // flipped: nav#navbar transitions background-color over 0.5s and the links
+    // transition over 0.5s, so the colours read mid-fade. The logo carries no
+    // transition, which is why it flips first and made this look like a token
+    // bug rather than a timing one.
+    await expect.poll(async () => (await readSettled()).split('|')[1]).toBe(TOP_TINT)
+    const dark = await readEveryPage()
     for (const route of pages) {
-      await page.goto(route)
-      await expect
-        .poll(async () => page.evaluate(`document.documentElement.dataset.theme`))
-        .toBe('dark')
-      await expect
-        .poll(async () => page.evaluate(`document.documentElement.dataset.hydrated`))
-        .toBe('true')
-      // Same fade as above, on a fresh document load this time.
-      await expect
-        .poll(async () => {
-          const bar = await read()
-          return bar.split('|')[1] === 'rgba(6, 10, 11, 0.78)'
-        })
-        .toBe(true)
-      expect(await read(), route).toBe(darkTop)
+      expect(dark.top[route], `dark top on ${route}`).toBe(dark.top['/'])
+      expect(dark.scrolled[route], `dark scrolled on ${route}`).toBe(dark.scrolled['/'])
     }
+
+    const [darkBackdrop, darkTopBg, darkLink, darkLogo, darkSheen, darkEdge] =
+      dark.top['/'].split('|')
+    const [, darkScrolledBg, , darkScrolledLogo] = dark.scrolled['/'].split('|')
+    expect(darkScrolledBg).toBe(DARK_SCROLLED_TINT)
+    const darkScrolledAlpha = alphaOf(darkScrolledBg)
+    // The TOP is LITERALLY the same slab as in light mode (one shared legacy
+    // token), so the two themes cannot drift apart there; only the SCROLLED
+    // tint is per-theme. These four assertions are what fail first if a theme
+    // re-declares the top slab or any other layer of the chrome.
+    expect(darkTopBg).toBe(lightTopBg)
+    expect(darkBackdrop).toBe(lightBackdrop)
+    expect(darkSheen).toBe(lightSheen)
+    expect(darkEdge).toBe(lightEdge)
+    expect(darkTopBg).toBe(TOP_TINT)
+    expect(alphaOf(darkTopBg)).toBe(topAlpha)
+    // Same light items on the shared dark top, in dark mode too, with the
+    // transparent logo - and they STAY light scrolled, because the dark
+    // theme's scrolled slab is ink as well.
+    expect(darkLink).toBe(lightLink)
+    expect(darkLogo).toBe('/images/Logo-T.png')
+    expect(darkScrolledLogo).toBe(darkLogo)
+    // Both scrolled slabs are denser than the shared top, in either theme: that
+    // is the scroll change itself.
+    expect(darkScrolledAlpha).toBeLessThan(1)
+    expect(darkScrolledAlpha).toBeGreaterThan(topAlpha)
+    expect(darkScrolledBg).not.toBe(darkTopBg)
+    expect(lightScrolledBg).not.toBe(lightTopBg)
+    // Dark needs more of its own tint than light: dark glass over a dark page
+    // is legible mainly by its own tint.
+    expect(darkScrolledAlpha).toBeGreaterThan(lightScrolledAlpha)
+    for (const channel of channelsOf(darkScrolledBg)) expect(channel).toBeLessThan(80)
+    // The tint is the ONLY scroll-dependent chrome value: the blur, the sheen
+    // and the edge are identical at the top and scrolled, in either mode.
+    const [lightScrolledBackdrop, , , , lightScrolledSheen, lightScrolledEdge] =
+      light.scrolled['/'].split('|')
+    const [darkScrolledBackdrop, , , , darkScrolledSheen, darkScrolledEdge] =
+      dark.scrolled['/'].split('|')
+    for (const [where, backdrop, sheen, edge] of [
+      ['light scrolled', lightScrolledBackdrop, lightScrolledSheen, lightScrolledEdge],
+      ['dark scrolled', darkScrolledBackdrop, darkScrolledSheen, darkScrolledEdge],
+    ] as const) {
+      expect(backdrop, `${where} blur`).toBe(lightBackdrop)
+      expect(sheen, `${where} sheen`).toBe(lightSheen)
+      expect(edge, `${where} edge`).toBe(lightEdge)
+    }
+    expect(darkSheen).toContain('linear-gradient')
+    expect(darkEdge).toContain('inset')
   })
 
   test('dark text stays legible on the dark surfaces (contrast)', async ({ page }) => {

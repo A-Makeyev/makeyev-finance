@@ -27,6 +27,8 @@ export class WebAppPage {
   readonly navAccountLanguage: Locator
   readonly navAccountSignin: Locator
   readonly navAccountSignout: Locator
+  /** The bar's link row (nav items + social icons), for layout reads. */
+  readonly navLinkRow: Locator
 
   constructor(page: Page) {
     this.page = page
@@ -46,6 +48,41 @@ export class WebAppPage {
     this.navAccountLanguage = page.getByTestId('nav-account-language')
     this.navAccountSignin = page.getByTestId('nav-account-signin')
     this.navAccountSignout = page.getByTestId('nav-account-signout')
+    this.navLinkRow = page.locator('#nav-list')
+  }
+
+  /**
+   * The box of every control in the fixed bar that hangs off the bar's own
+   * padding - the logo column, each row link (nav items and socials) and the
+   * account control - read in viewport coordinates.
+   *
+   * The bar used to carry a scroll-state class that re-pinned that padding, so
+   * scrolling down dragged all of these sideways. A spec that reads this list
+   * before and after the scroll catches any return of that behaviour at every
+   * width, without pinning the actual positions (the layout may legitimately
+   * differ between the mobile, tablet and desktop tiers).
+   */
+  async navItemBoxes(): Promise<Array<{ label: string; x: number; y: number; width: number }>> {
+    return this.page.evaluate(`(() => {
+      const targets = [
+        ...document.querySelectorAll(
+          '[data-testid="navbar"] .logo, #nav-list a, [data-testid="nav-account"]',
+        ),
+      ]
+      return targets.map((el) => {
+        const box = el.getBoundingClientRect()
+        // Rounded to 0.01px so a sub-pixel difference in the reader itself
+        // cannot fail the comparison, while a padding step (percent-of-width,
+        // so whole pixels at any real width) still shows.
+        const round = (value) => Math.round(value * 100) / 100
+        return {
+          label: el.getAttribute('data-testid') ?? el.id ?? el.tagName,
+          x: round(box.x),
+          y: round(box.y),
+          width: round(box.width),
+        }
+      })
+    })()`) as Promise<Array<{ label: string; x: number; y: number; width: number }>>
   }
 
   /** The app-space path of the CURRENT page ("/services", "/en/services"). */
@@ -154,6 +191,35 @@ export class WebAppPage {
    */
   async waitForHydration(): Promise<void> {
     await expect(this.page.locator('html')).toHaveAttribute('data-hydrated', 'true')
+  }
+
+  /**
+   * Waits until the fixed bar has STOPPED moving on its own.
+   *
+   * Two things move it without the visitor scrolling: the Markets strip
+   * publishes its measured height as --markets-height when the first snapshot
+   * replaces the skeleton rows, and nav#navbar transitions its resulting
+   * margin over 0.25s. A geometry read taken across either reads as movement
+   * that has nothing to do with the scroll a spec is testing, so layout
+   * comparisons settle the bar's own box here instead of each spec sleeping
+   * long enough to miss it. Reads the RENDERED position rather than the CSS
+   * variable, because it is the position (variable plus transition) that has
+   * to be quiet.
+   */
+  async waitForBarPositionStable(): Promise<void> {
+    const read = () =>
+      this.page.evaluate(`(() => {
+        const bar = document.getElementById('navbar').getBoundingClientRect()
+        return Math.round(bar.top * 1000) / 1000
+      })()`) as Promise<number>
+    let previous = await read()
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await this.page.waitForTimeout(100)
+      const current = await read()
+      if (current === previous) return
+      previous = current
+    }
+    throw new Error('the navbar never stopped moving')
   }
 
   /** Wait until the Markets strip's published height variable settles. */

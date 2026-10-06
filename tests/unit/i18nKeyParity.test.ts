@@ -32,9 +32,35 @@ describe('translation key parity', () => {
   it('carries real copy for the password-reset resend action', () => {
     expect(he.translation.auth.resetResend).toBe('שליחת קוד חדש')
     expect(en.translation.auth.resetResend).toBe('Send a new code')
-    expect(he.translation.auth.resetResendSent).toBe('שלחנו קוד חדש. הקוד הקודם אינו תקף יותר.')
+    expect(he.translation.auth.resetResendSent).toBe('שלחנו קוד חדש. הקוד הקודם אינו תקף יותר')
     expect(en.translation.auth.resetResendSent).toBe(
-      'We sent a new code. The previous one is no longer valid.',
+      'We sent a new code. The previous one is no longer valid',
     )
+    // The auth card's lines carry no trailing period (user preference): a
+    // full stop sneaking back in fails here rather than on the page. The
+    // exception is the in-flight label, whose trailing dots are an ELLIPSIS
+    // ("שולח..." / "Sending..."), the loading convention, not a sentence stop.
+    for (const translation of [he.translation, en.translation]) {
+      const language = he.translation.auth === translation.auth ? 'he' : 'en'
+      for (const [key, value] of Object.entries(translation.auth)) {
+        if (typeof value === 'string' && key !== 'emails') {
+          expect(
+            value.endsWith('.') && !value.endsWith('...'),
+            `auth.${key} in ${language}`,
+          ).toBe(false)
+        }
+      }
+    }
+  })
+
+  it('carries the re-send cooldown and ceiling copy, with its placeholder', () => {
+    // The countdown interpolates the remaining seconds in both languages; a
+    // missing placeholder would render the raw "{{seconds}}" next to a
+    // disabled button.
+    expect(he.translation.auth.resetResendIn).toContain('{{seconds}}')
+    expect(en.translation.auth.resetResendIn).toContain('{{seconds}}')
+    // The ceiling message has to name the way out, not just refuse.
+    expect(he.translation.auth.resetResendExhausted).toContain('3')
+    expect(en.translation.auth.resetResendExhausted).toMatch(/sign-in/i)
   })
 })

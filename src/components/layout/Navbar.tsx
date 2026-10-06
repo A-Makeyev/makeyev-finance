@@ -16,11 +16,12 @@ import {
 import { socialLinks } from '@/config/siteConfig'
 import { cn } from '@/lib/cn'
 import { initialsFor } from '@/lib/avatar'
-import { useMediaQuery, useScrolled } from '@/hooks/useScrolled'
+import { useScrolled } from '@/hooks/useScrolled'
 import { useTheme } from '@/hooks/useTheme'
 import { Link, usePathname, useRouter } from '@/router'
 import { authClient } from '@/lib/auth-client'
 import { HOVER_CLOSE_DELAY_MS } from '@/lib/timings'
+import { navStartsSolid } from '@/lib/siteChrome'
 
 const NAV_ITEMS = [
   { to: '/', key: 'nav.home', id: 'home' },
@@ -62,23 +63,41 @@ export function Navbar({
   const pathname = usePathname()
   const router = useRouter()
   const scrolled = useScrolled()
-  const isDesktop770 = useMediaQuery('(min-width: 770px)')
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuChecked, setMenuChecked] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const accountRef = useRef<HTMLDivElement | null>(null)
   const accountCloseTimer = useRef<number | null>(null)
 
-  const solid = scrolled || menuOpen
-  // The bar is now ONE frosted glass treatment at every scroll position and on
-  // every page (user-requested: no per-page colour change), so the link / line
-  // colours follow the THEME and not the scroll: --ink, which is near-black in
-  // light and near-white in dark, stays legible on both tinted slabs. Applying
-  // this unconditionally is what lets nav#navbar paint one theme-tinted glass
-  // everywhere instead of the old dark top-state tint that only worked over a
-  // dark hero banner.
-  const linksDark = true
-  const linesDark = true
+  // The bar is the transparent legacy glass while it sits over a dark hero, and
+  // the solid slab once the page scrolls under it. The one page whose top is
+  // the plain page surface (profile) skips the glass entirely and STARTS solid,
+  // so the light items and the transparent logo never land on near-white - see
+  // navStartsSolid. It is a colours-only difference: the bar's box is identical
+  // in both states (nothing about the padding or the size changes on scroll).
+  const solid = scrolled || menuOpen || navStartsSolid(pathname)
+  const barIsInkSlab = !solid
+  const linksDark = !barIsInkSlab
+  const linesDark = !barIsInkSlab
+  // Two states, as in the legacy site: TRANSPARENT at the top, a slab once
+  // scrolled (--nav-glass-top / --nav-glass-scrolled, see :root). The item
+  // colours follow the SLAB, so they change with the scroll:
+  //   - at the top the slab is the shared legacy dark glass in BOTH themes, so
+  //     the links, the hamburger lines and the account glyphs are light there
+  //     (near-black ink on it would be unreadable), with the transparent logo;
+  //   - scrolled - and on the profile page from the very first paint - the slab
+  //     is the theme's own (pale in light, ink in dark) and so is the ink, with
+  //     the matching logo.
+  // The open mobile sheet also repaints the bar as a page-coloured surface,
+  // which carries ink in either theme, hence the `solid` arm below.
+
+  // Nothing about the bar's BOX changes with scroll at all. It used to carry
+  // .nav-scrolling-resize at >=770px, which re-pinned the padding (6% -> 5%,
+  // and 2% vertical padding -> 0), so scrolling down dragged the logo and the
+  // row a visible step to the left and resized the box the row was centred in:
+  // a sliding nav that never landed where it started. The padding is now the
+  // single resting value at every scroll position, so the bar's contents are
+  // pinned exactly where the visitor first met them.
 
   // Legacy stop-scrolling body lock while the panel is open.
   useEffect(() => {
@@ -234,10 +253,11 @@ export function Navbar({
         // it would otherwise become the containing block for the fixed sheet
         // and collapse it (see nav#navbar.menu-open in globals.css).
         menuOpen && 'menu-open',
-        solid && isDesktop770 && 'nav-scrolling-resize',
         indexesVisible && !menuOpen && 'adjust-nav',
         marketsVisible && !menuOpen && 'adjust-markets',
         marketsVisible && !menuOpen && indexesMissing && 'no-indexes',
+        // Only off the top slab: the items follow the slab (see the note
+        // above), and the top one is the shared dark glass in both themes.
         linksDark && 'links-dark',
         linesDark && 'lines-dark',
       )}

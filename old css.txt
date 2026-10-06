@@ -163,10 +163,9 @@ strong {
      `surface-*`/`ink`/`hairline` colors), never with raw white/black.
      --------------------------------------------------------------------- */
   --surface-page: var(--soft-white);
-  /* Clean white cards (the interim warm cream was too strong). */
   --surface-card: #ffffff;
-  /* Raised controls (secondary buttons) sit ON a card: the same white here, so
-     the light theme keeps its existing white-on-white button with a strong
+  /* Raised controls (secondary buttons) sit ON a card: same white here, so the
+     light theme keeps its existing white-on-white button with a strong
      border. The dark theme gives them a lighter fill below, because
      --surface-page is DARKER than --surface-card and a page-coloured button on
      a card read as a black slab. */
@@ -188,41 +187,10 @@ strong {
   --comment-line: rgba(15, 15, 15, 0.18);
   --danger: #bb3a3a;
   --danger-strong: #d32f2f;
-  /* Navbar glass, back to the legacy two-state look (user-requested):
-     TRANSPARENT at the top, a denser slab once the page scrolls under it.
-
-     - TOP: the legacy navigation.css treatment - an ink tint under a 10px blur
-       with saturate(140%) and a faint light film on top - but much thinner
-       than the original 30% (user-requested: at 30% it read as a grey panel
-       over the light, hero-less pages such as the profile page). At 0.1 the
-       tint is a whisper on a light page while the blur and the saturation do
-       the work over a hero, so the banner reads straight through the bar.
-       Because that slab is dark in BOTH themes, the top carries the light
-       items everywhere: white links, white hamburger lines, white account
-       glyph and the transparent logo (see nav#navbar.links-dark and the logo
-       rules below, both keyed off the `navbar-scrolling` state in
-       Navbar.tsx).
-     - SCROLLED: the theme's own slab - a pale blue-white glass in light with
-       the dark ink logo and ink items, an ink glass in dark with the light
-       ones - and it is deliberately much denser than the top, so the change
-       is unmistakable as you scroll.
-
-     The blur, the sheen and the edge are declared ONCE here and the dark
-     block does NOT re-declare them; the tint is what flips per theme, and
-     only for the SCROLLED slab (the top one is shared, like the legacy site).
-     Values come through these tokens, never a `[data-theme='dark']` override
-     on the nav rule itself - see the comment above nav#navbar.navbar-scrolling
-     for why that matters. */
-  --nav-glass-top: rgba(15, 15, 15, 0.1);
-  --nav-glass-scrolled: rgba(240, 248, 255, 0.6);
-  --nav-glass-filter: blur(10px) saturate(140%);
-  --nav-glass-sheen: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0) 70%
-  );
-  --nav-glass-edge: inset 0 -1px 0 rgba(255, 255, 255, 0.25),
-    0 8px 20px -10px rgba(0, 0, 0, 0.55);
+  /* Scrolled navbar: the legacy solid aliceblue bar in light. The dark block
+     below swaps in a frosted tint + blur over the same slot. */
+  --nav-glass-scrolled: var(--soft-white);
+  --nav-glass-filter: none;
 
   /* Calculator surfaces that used to be raw white/off-white literals.
      `--calc-input-bg` is the field fill: white here, a dim slate in dark
@@ -256,12 +224,16 @@ strong {
 =========================================================================== */
 html {
   scroll-behavior: smooth;
-  /* Legacy set no line-height: Tailwind preflight's 1.5 inflates every input,
-     label and button vs the original metrics. UA `normal` restores them. */
+  /* Legacy had no line-height rules - Tailwind preflight's 1.5 inflates
+     every input/label/button vs the original metrics (56px inputs, 62px
+     button). UA `normal` restores the legacy geometry site-wide. */
   line-height: normal;
-  /* The site never scrolls horizontally by design, but Windows font rendering
-     and zoom rounding can poke an element a fraction of a pixel past the
-     viewport and Chrome then shows a page-width scrollbar. Clip it. */
+  /* The site never scrolls horizontally by design, but Windows font
+     rendering and zoom rounding can poke an element a fraction of a pixel
+     past the viewport, and Chrome then shows a page-width horizontal
+     scrollbar at the bottom edge (mostly on hover). Clip it: vertical
+     scrolling is untouched, and anything displaced this slightly is not
+     reachable content anyway. */
   overflow-x: clip;
 }
 
@@ -488,16 +460,12 @@ img {
     url(/images/login-cover.jpg);
 }
 
-/* The profile page's backdrop. In LIGHT mode it is a normal page surface, so
-   the page follows the theme (user-requested; it used to be dark chrome in
-   both themes). DARK mode keeps the branded mixed-hue gradient (teal / blue /
-   green washes over a deep base), the same family as the hero and footer. The
-   cards on top keep their own theme surfaces for contrast in both modes. */
+/* The profile page's backdrop: a dark, mixed-hue gradient (teal / blue / green
+   brand washes over a deep base). Like the hero, footer and the Indexes strips
+   this is deliberately dark chrome, so it is NOT tokenized and stays dark in
+   both themes - the cards on top keep their own theme surfaces for contrast.
+   The title sits directly on the gradient, so it is always light. */
 .profile-page {
-  background-color: var(--surface-page);
-}
-
-:root[data-theme='dark'] .profile-page {
   background-color: #0b1220;
   background-image:
     radial-gradient(900px 520px at 12% -10%, rgba(8, 127, 120, 0.55), transparent 60%),
@@ -514,85 +482,17 @@ img {
    surface: it is a navigation shortcut rather than a write, so it stays the
    quieter of the two without looking like a different kind of label. It fills
    in on hover, so it still reads as pressable. */
-.calculate-button.my-mixes-trigger {
+.calculate-button.my-mixes-link {
   border: 1px solid var(--calc-line);
   color: var(--calc-ink);
   background: transparent;
   background-image: none;
-  white-space: nowrap;
-}
-
-.calculate-button.my-mixes-trigger:hover {
-  background: var(--calc-field);
-}
-
-.my-mixes-menu-wrap {
-  position: relative;
-  display: inline-flex;
-  min-width: 0;
-}
-
-.my-mixes-menu {
-  position: fixed;
-  z-index: 100;
-  inline-size: min(300px, calc(100vw - 24px));
-  padding: 6px;
-  border: 1px solid var(--calc-line);
-  border-radius: 6px;
-  background: var(--calc-field);
-  box-shadow: 0 10px 28px rgba(15, 15, 15, 0.18);
-}
-
-.my-mixes-menu-list {
-  display: grid;
-  gap: 2px;
-  max-block-size: min(45vh, 280px);
-  overflow-y: auto;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.my-mixes-menu-item,
-.my-mixes-menu-manage {
-  display: block;
-  inline-size: 100%;
-  min-inline-size: 0;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--calc-ink);
-  font: inherit;
-  font-size: 0.9rem;
-  text-align: start;
   text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
 }
 
-.my-mixes-menu-item:hover,
-.my-mixes-menu-item:focus-visible,
-.my-mixes-menu-manage:hover,
-.my-mixes-menu-manage:focus-visible {
-  outline: none;
-  background: var(--calc-soft);
-}
-
-.my-mixes-menu-manage {
-  margin-block-start: 5px;
-  border-block-start: 1px solid var(--calc-line);
-  border-radius: 0;
-  color: var(--calc-teal-dark);
-}
-
-.my-mixes-menu-message {
-  padding: 8px 10px;
-  color: var(--calc-muted);
-  font-size: 0.85rem;
-  text-align: start;
+.calculate-button.my-mixes-link:hover {
+  background: var(--calc-field);
 }
 
 /* The saved-mix card's two actions carry deliberately different weights, and
@@ -652,11 +552,11 @@ img {
 /* The card renders the calculator ring smaller, so its labels step down too -
    at full size they crowd the smaller circle. */
 .mix-donut.saved-mix-donut-chart .donut-center-label {
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .mix-donut.saved-mix-donut-chart .donut-center-value {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .mix-donut.saved-mix-donut-chart .donut-slice-label {
@@ -696,7 +596,6 @@ img {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   /* The spinner and the busy state already say "working"; the sweep is
      decoration, so it is dropped rather than slowed. */
   .btn-sheen::after {
@@ -901,7 +800,6 @@ img {
 }
 
 @keyframes scroll-cue-bounce {
-
   0%,
   100% {
     transform: translateY(0);
@@ -923,7 +821,6 @@ img {
    The smooth scrolling itself respects the OS preference separately in
    ScrollCue.tsx. */
 @media (prefers-reduced-motion: reduce) {
-
   .scroll-cue,
   .scroll-cue:hover svg {
     animation: none;
@@ -1300,16 +1197,6 @@ img {
    out of the dialog - keep it at 100% inside any dialog. */
 [role='dialog'] #submit-form {
   width: 100% !important;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-[role='dialog'][dir='rtl'] .modal-actions-reversed {
-  flex-direction: row-reverse;
 }
 
 .modal-body .contact-col {
@@ -1785,9 +1672,8 @@ img {
    so each block re-pins the Markets strip to match).
 
    Layout: five rows (ticker / price / signed change), no heading, no
-   links. Movement colors follow the Indexes strip's own convention
-   (user-requested): up red, down green, flat lightblue, so the two top
-   strips read alike.
+   links. Colors follow the international convention (+ green, - red),
+   unlike the Indexes strip's legacy + red convention.
 =========================================================================== */
 .markets {
   display: flex;
@@ -1967,7 +1853,7 @@ img {
 
 /* Price-movement flash (see usePriceFlash in MarketTracker): when a poll
    actually moves the displayed number, a pill fades out behind the whole
-   value pair - red when it moved up, green when it moved down, matching the
+   value pair - green when it moved up, red when it moved down, matching the
    movement colors above. One pill spans price + change: the percent is
    derived from the same move, so the pair lights up together as a single
    rectangle. A positioned child at z-index -1 paints above the strip's own
@@ -1984,16 +1870,15 @@ img {
   animation: market-tick-flash 1200ms ease-out forwards;
 }
 
-/* A tick paints a faint tint behind the whole value pair: red when it moved
-   up, green when it moved down, matching the movement colors above (the
-   Indexes strip's convention). Subtle enough to read as light rather than a
-   solid block. */
+/* A tick paints a faint tint behind the whole value pair: green when it
+   moved up, red when it moved down, matching the movement colors above.
+   Subtle enough to read as light rather than a solid block. */
 .markets-tick-up {
-  background-color: rgba(210, 60, 60, 0.14);
+  background-color: rgba(35, 210, 65, 0.14);
 }
 
 .markets-tick-down {
-  background-color: rgba(35, 210, 65, 0.14);
+  background-color: rgba(210, 60, 60, 0.14);
 }
 
 /* Opacity is the only animated property: compositor-friendly, and the end
@@ -2011,7 +1896,7 @@ img {
 
 @media (prefers-reduced-motion: reduce) {
 
-  /* The static red/green already carries the direction; skip the fade. */
+  /* The static green/red already carries the direction; skip the fade. */
   .markets-tick {
     display: none;
   }
@@ -2030,19 +1915,19 @@ img {
   font-variant-numeric: tabular-nums;
 }
 
-/* Movement colors: the EXACT Indexes strip palette tokens (user-requested,
-   so the two strips read alike) - the same hexes IndexesBar's TREND_COLORS
-   passes inline:
-   up rgb(210,60,60), down rgb(35,210,65), flat lightblue (same as the
+/* Movement colors: the EXACT Indexes strip palette tokens, mapped to the
+   user-set international convention (+ green, - red; the Indexes bar's own
+   legacy convention is + red, so the two hexes swap roles here):
+   up rgb(35,210,65), down rgb(210,60,60), flat lightblue (same as the
    Indexes' flat). Values colored at full brightness, names white. */
 .markets-row.market-change-up .markets-price,
 .markets-row.market-change-up .markets-change {
-  color: rgb(210, 60, 60);
+  color: rgb(35, 210, 65);
 }
 
 .markets-row.market-change-down .markets-price,
 .markets-row.market-change-down .markets-change {
-  color: rgb(35, 210, 65);
+  color: rgb(210, 60, 60);
 }
 
 .markets-row.market-change-flat .markets-price,
@@ -2065,11 +1950,6 @@ nav#navbar {
   direction: ltr;
   user-select: none;
   position: fixed;
-  /* The bar's ONE box: these paddings are not re-pinned when the page scrolls
-     (they used to be - see the note where .nav-scrolling-resize used to sit).
-     Because the logo column and the centred row both hang off this padding,
-     changing it per scroll position slid the whole contents sideways under
-     the visitor; keeping it constant is what pins the nav where it starts. */
   padding-top: 2%;
   padding-bottom: 2%;
   padding-left: 6%;
@@ -2082,35 +1962,19 @@ nav#navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* TRANSPARENT at the top, A SLAB once scrolled (user-requested, and the
-     legacy navigation.css behaviour): over the hero the bar is the legacy
-     glass - a thin ink tint under a 10px blur (see --nav-glass-top) - so the
-     banner reads straight through it, and nav#navbar.navbar-scrolling below
-     swaps in the theme's own, much denser slab, which is the change the
-     visitor sees on scroll.
-
-     That two-state split is why the LINK, LINE, GLYPH and LOGO colours are
-     keyed off the scroll state (nav#navbar.links-dark, the logo rules below),
-     not off the theme: the top slab is dark in BOTH themes and needs the light
-     items, while the scrolled slab is the theme's own (pale in light, ink in
-     dark) and needs that theme's ink.
-
-     Nothing but colour changes on scroll: no padding, no size, so the bar's
-     contents stay pinned where the visitor first met them.
-
-     The layers are split rather than collapsed into one `background`
-     shorthand so each role stays readable: `background-color` carries the
-     tint (and is what the theme spec reads), `background-image` carries the
-     sheen gradient on top of it. Browsers without backdrop-filter keep the
-     tint, so the bar stays a legible slab without the blur. */
-  background-color: var(--nav-glass-top);
-  background-image: var(--nav-glass-sheen);
-  -webkit-backdrop-filter: var(--nav-glass-filter);
-  backdrop-filter: var(--nav-glass-filter);
-  /* The slab's own edge: a hairline where the bar ends and a soft shadow
-     beneath it, so the bar reads as floating above the page instead of
-     painted into it (the old flat `0 5px 5px` shadow was hard-edged). */
-  box-shadow: var(--nav-glass-edge);
+  /* Frosted-glass default (user-requested deviation from the legacy parity
+     pass): translucent ink tint + blur over the dark hero banners (.header /
+     .sub-header are both dark images under a 50% black overlay), so the
+     white links + transparent logo stay readable while the cover bleeds
+     through blurred. A faint cool white lift keeps the slab lit rather than
+     smoked. Browsers without backdrop-filter keep the tint only. */
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)), rgba(15, 15, 15, 0.3);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  /* Faint light hairline along the slab's bottom edge; the scrolled state
+     swaps it for its own drop shadow. */
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.25);
   /* The nav (with the logo) slides up when the menu opens and back down to
      its place when it closes - instead of jumping. Colors keep their fade.
      backdrop-filter is deliberately NOT transitioned: animating the blur
@@ -2187,49 +2051,9 @@ nav#navbar.adjust-markets.no-indexes {
   margin-top: var(--markets-height, 35px);
 }
 
-/* No scroll-state padding override here any more. It used to sit in both this
-   slot and one below the `.lines-dark` rules: scrolling past the fold carried
-   .nav-scrolling-resize, which re-pinned the bar's padding (6% -> 5% inline,
-   2% block -> 0), so the logo and the row took a visible step sideways as you
-   scrolled down and the bar's content box resized under a centred row. The
-   padding above is now the bar's single value at every scroll position, which
-   is what keeps the contents pinned where the visitor first met them. */
-
-/* The two logo variants, swapped by CSS and never by JS (the server cannot
-   know the stored theme, so a JS-picked `src` was a hydration mismatch that
-   left the dark logo on the dark glass). The pairing follows the SLAB, not the
-   theme: the top of the page is one transparent dark slab in both themes, so
-   the light transparent logo is the one that reads there in either mode; once
-   scrolled, the bar takes the theme's own slab (pale in light, ink in dark)
-   and so does the logo (dark ink logo on the pale slab, light logo on the ink
-   one). `display` rather than visibility so only one occupies the box. */
-nav#navbar .logo-light {
-  display: none;
+nav#navbar.nav-scrolling-resize {
+  padding: 0 5%;
 }
-
-nav#navbar:not(.navbar-scrolling) .logo-light {
-  display: block;
-}
-
-nav#navbar:not(.navbar-scrolling) .logo-dark {
-  display: none;
-}
-
-/* DARK theme: its slab is ink at BOTH scroll positions, so it keeps the light
-   logo and never shows the dark one. The light theme scrolled simply falls
-   through to the dark logo on its pale slab. NOTE the `.logo-dark` rule has to
-   stay: that element carries Tailwind's `block` utility in the markup, so with
-   nothing hiding it the dark logo renders next to the light one (measured:
-   both srcs visible). */
-:root[data-theme='dark'] nav#navbar .logo-dark {
-  display: none;
-}
-
-:root[data-theme='dark'] nav#navbar .logo-light {
-  display: block;
-}
-
-
 
 .logo-image {
   content: url(/images/Logo.png);
@@ -2398,7 +2222,6 @@ nav#navbar.links-dark .nav-auth-skeleton {
 }
 
 @keyframes nav-auth-pulse {
-
   0%,
   100% {
     opacity: 0.22;
@@ -2698,17 +2521,18 @@ nav#navbar .menu-icon .line:hover {
 }
 
 /* Id-qualified on purpose: the glass lives on nav#navbar (an id rule), so a
-   plain class here would lose the cascade. This is also where the bar becomes
-   a DENSER slab than it is at the top (user-requested: transparent glass over
-   the hero, a tint once arbitrary content scrolls under it) and where the INK
-   link colour is pinned, which is what makes white-theme links legible on the
-   pale slab and dark-theme links legible on the ink one. It stays
-   id-qualified, and stays ABOVE nav#navbar.menu-open below, so the menu-open
-   rule cannot outrank it and put the blur back while the mobile sheet is open
-   (which collapses the sheet). */
+   plain class here would lose the cascade. Light scrolled paints the legacy
+   solid aliceblue bar again; dark keeps the top state's frosted glass, so the
+   slab still floats over the content it blurs. Both come through tokens
+   rather than a `[data-theme='dark']` override here, because that override
+   would outrank nav#navbar.menu-open below and put the blur back while the
+   mobile sheet is open (which collapses the sheet). */
 nav#navbar.navbar-scrolling {
   color: var(--ink);
-  background-color: var(--nav-glass-scrolled);
+  background: var(--nav-glass-scrolled);
+  box-shadow: 0 5px 5px 0 var(--soft-black-background);
+  -webkit-backdrop-filter: var(--nav-glass-filter);
+  backdrop-filter: var(--nav-glass-filter);
 }
 
 /* The mobile menu sheet is `position: fixed`. A backdrop-filter makes the
@@ -2734,6 +2558,10 @@ nav#navbar.links-dark #nav-list a {
 
 nav#navbar.lines-dark .menu-icon .line {
   background: var(--ink);
+}
+
+nav#navbar.nav-scrolling-resize {
+  padding: 0 5%;
 }
 
 .nav-link:hover {
@@ -2819,12 +2647,11 @@ nav#navbar .nav-bar-controls li {
 }
 
 @media screen and (max-width: 800px) {
-
   /* In the hamburger tier this width is always `links-dark` (the slide-down
      sheet is a light surface), which paints the controls ink. They sit on the
-     BAR here, though, so until the light slab scrolls in they must keep the
-     TOP slab's own colours - otherwise the login glyph is dark-on-dark on the
-     transparent glass and only appears once the light bar scrolls in. */
+     BAR here, though, so until the bar turns solid they must keep the bar's
+     own colours - otherwise the login glyph is dark-on-dark on the glass bar
+     and only appears once the light bar scrolls in. */
   /* Only the TRIGGER, not every button: the dropdown lives inside
      .nav-bar-controls too, and its items must keep the menu card's ink. */
   nav#navbar:not(.navbar-scrolling) .nav-bar-controls button[data-testid='nav-avatar'],
@@ -2868,10 +2695,6 @@ nav#navbar .nav-bar-controls li {
 .footer {
   width: 100%;
   padding: 10px 0;
-  /* Constant light hairline, NOT --line-strong: the footer is near-black in
-     BOTH themes, so a theme-aware border resolved to rgb(15,15,15) here in
-     light mode and vanished into the background it was meant to divide. */
-  border-top: 1px solid rgba(233, 241, 239, 0.3);
   user-select: none;
   text-align: center;
   color: var(--soft-white);
@@ -2938,9 +2761,11 @@ nav#navbar .nav-bar-controls li {
   color: var(--soft-green) !important;
 }
 
-/* The >=1980px band that used to re-pad the scrolled bar (1% block padding) is
-   gone with the rest of the scroll-state padding: the bar has one box at every
-   width and every scroll position now. */
+@media screen and (min-width: 1980px) {
+  nav#navbar.nav-scrolling-resize {
+    padding: 1% 5% 1%;
+  }
+}
 
 @media screen and (max-width: 1690px) {
   .adjust-nav {
@@ -3253,7 +3078,6 @@ nav#navbar .nav-bar-controls li {
 /* Reduced motion: keep the one-line layout but never animate it, and let the
    strip be scrolled by hand instead. */
 @media (prefers-reduced-motion: reduce) and (max-width: 1200px) {
-
   .indexes,
   .markets {
     overflow-x: auto;
@@ -3269,6 +3093,10 @@ nav#navbar .nav-bar-controls li {
 @media screen and (max-width: 1200px) {
   .navbar-scrolling {
     border-bottom: none;
+  }
+
+  nav#navbar.nav-scrolling-resize {
+    padding: 2% 5%;
   }
 
   nav#navbar #nav-list {
@@ -3999,7 +3827,7 @@ e #name,
      the banner image. */
   margin: 0 auto 80px;
   position: relative;
-  z-index: 1000;
+  z-index: 2;
 }
 
 .calculator-panel,
@@ -5370,50 +5198,6 @@ e #name,
 .calculate-button.save-mix-button:hover {
   background-position: 0% center;
   box-shadow: 0 8px 18px rgba(8, 127, 120, 0.16);
-}
-
-/* "New mix" is the secondary action in the row (the save control stays the
-   last, primary one), so it keeps the button shape but drops the teal fill. */
-.calculate-button.new-mix-button {
-  color: var(--calc-teal-dark);
-  background: transparent;
-  background-image: none;
-  border: 1px solid var(--calc-line);
-}
-
-/* The row's shared hover lift/glow still applies; only the outline deepens. */
-.calculate-button.new-mix-button:hover {
-  border-color: var(--calc-teal-dark);
-}
-
-/* Which saved mix is in the editor, under the panel heading. Sized between
-   the heading and the input labels so it reads as a caption, and it sits
-   inside the heading column so the logical order flips with the direction. */
-.panel-mix-title {
-  margin: 0;
-  color: var(--calc-muted);
-  font-size: 0.95rem;
-  font-weight: 500;
-}
-
-.panel-mix-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  margin: -14px 0 22px;
-}
-
-.panel-mix-actions .new-mix-button {
-  width: auto;
-  margin-top: 0;
-  padding: 8px 16px;
-  font-size: 0.9rem;
-}
-
-.panel-mix-title strong {
-  color: var(--calc-teal-dark);
-  font-weight: 600;
 }
 
 /* The action row lifts and glows less than the calculator's standalone CTAs:
@@ -7278,12 +7062,8 @@ tbody tr:hover {
   --danger-strong: #ff8f8f;
   /* The 0.5px legacy drop shadows were tuned for a light page. */
   --black-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.55);
-  /* Only the SCROLLED tint is per-theme. The TOP slab is the shared legacy
-     dark glass (see :root) and stays identical in both themes, and the blur,
-     the sheen and the edge are shared with the light theme too. The dark
-     scrolled slab is denser than the light one because dark glass over a dark
-     page is legible mainly by its own tint. */
-  --nav-glass-scrolled: rgba(9, 13, 15, 0.75);
+  --nav-glass-scrolled: rgba(6, 10, 11, 0.78);
+  --nav-glass-filter: blur(10px) saturate(140%);
 
   /* Calculator: same surface/ink/line roles, teal kept as the brand accent
      but brightened where it carries text or a chart label. */
@@ -7349,6 +7129,14 @@ tbody tr:hover {
 :root[data-theme='dark'] *::selection {
   background-color: var(--selection-bg);
   color: var(--ink);
+  text-shadow: none;
+}
+
+/* The profile page is dark chrome in BOTH themes, so its selected text needs
+   the same light ink even when data-theme is light. */
+.profile-page ::selection {
+  background-color: #2d4a48;
+  color: #e8f0ee;
   text-shadow: none;
 }
 
@@ -7441,10 +7229,12 @@ tbody tr:hover {
   text-decoration: underline;
 }
 
-/* Written with logical properties so a future direction change mirrors these
-   surfaces without a per-component override.
-   The list is wider than the prose measure: a card grid needs the room, four
-   cards settle as a balanced 2x2 instead of one long column. */
+/* The article surfaces are always LTR today (only the calculator goes RTL
+   for Hebrew), but the layout is written with logical properties so a future
+   direction rule change mirrors them without a per-component override.
+   The list is wider than the reading measure (.article-page keeps 820px for
+   prose): a card grid needs the room, four cards settle as a balanced 2x2
+   instead of one long column. */
 .articles-list,
 .article-page {
   inline-size: 90%;
@@ -7456,17 +7246,15 @@ tbody tr:hover {
   max-inline-size: 1080px;
 }
 
-/* The prose measure, shared with .article-comments: the thread is a SIBLING of
-   <article>, so it inherits nothing from .article-page and rendered full-bleed.
-   One rule for both stops it drifting when the measure changes. */
-.article-page,
-.article-comments {
+.article-page {
   max-inline-size: 820px;
 }
 
-/* .sub-header h1 is nowrap, which suits the short fixed page titles but
-   overflows a 360px phone once a title is a sentence. Article titles come from
-   content, so they opt into wrapping; specificity beats the base rule. */
+/* The shared sub-header keeps its h1 on one line (.sub-header h1 is
+   white-space: nowrap), which suits the short fixed page titles but overflows
+   a phone (360px) once a title is a sentence. Article titles come from
+   content, so the article pages opt into wrapping; higher specificity than
+   the base rules, so placement here is enough. */
 .sub-header.article-sub-header h1 {
   white-space: normal;
 }
@@ -7599,6 +7387,8 @@ tbody tr:hover {
   font-weight: 700;
 }
 
+/* The sign-in prompt reads as a quiet text action on the heading line, not a
+   bordered button; the middot before it is decorative separation. */
 .comments-heading-sep {
   color: var(--ink-muted);
 }
@@ -7611,10 +7401,9 @@ tbody tr:hover {
   font: inherit;
   font-size: 0.9rem;
   font-weight: 600;
+  text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
-  position: relative;
-  top: -2px;
 }
 
 .comment-sign-in-link:hover {
@@ -7627,21 +7416,20 @@ tbody tr:hover {
   border-radius: 4px;
 }
 
-/* Reader comments: a separate region on purpose, since it is not one of the
-   article's own content sections (the structural assertions count those). */
+/* Reader comments under an article. A separate region on purpose: it is not
+   one of the article's own content sections (the structural assertions count
+   those), so it carries its own class while sharing their heading treatment.
+   Logical properties keep it mirrored in RTL. */
 .article-comments {
-  /* Centred and measured like the article above it; logical properties so RTL
-     needs no override. The bottom margin is the gap to the footer, matching the
-     article's own 60px. */
-  inline-size: 90%;
-  margin-inline: auto;
-  margin-block: 34px 60px;
+  margin-block: 34px 8px;
 }
 
-/* Comment text keeps its OWN bidi base direction (dir="auto", so a Hebrew
-   sentence reads correctly on the English page) but is ALIGNED to the page's
-   direction, so it stays beside the author's name instead of jumping to the far
-   edge. `text-align: start` would follow dir="auto" and reproduce the bug. */
+/* Comment text keeps its OWN bidi base direction (dir="auto" on the element,
+   so a Hebrew sentence reads correctly even on the English page) but is
+   ALIGNED to the page's direction: a Hebrew comment on the LTR page then stays
+   beside the author's name instead of jumping to the far edge of the card, and
+   vice versa. The alignment therefore has to come from the document direction
+   - `text-align: start` would follow dir="auto" and reproduce the bug. */
 .comment-text {
   text-align: start;
 }
@@ -7654,7 +7442,8 @@ html[dir='rtl'] .comment-text {
   text-align: right;
 }
 
-/* The Reply glyph points the way the thread reads, so it mirrors under RTL. */
+/* The Reply glyph is an arrow that points the way the thread reads, so it is
+   mirrored under RTL; the Edit and Delete glyphs are direction-neutral. */
 :root[dir='rtl'] .comment-reply-icon {
   transform: scaleX(-1);
 }
@@ -7950,7 +7739,7 @@ html[dir='rtl'] .comment-text {
   /* Mirrors .calculator-shell: no pull-up into the full-viewport hero. */
   margin: 0 auto 80px;
   position: relative;
-  z-index: 1000;
+  z-index: 2;
 }
 
 /* Way back to the calculator (the page normally opens from there) - replaces
@@ -8498,23 +8287,4 @@ html[dir='rtl'] .comment-text {
   align-items: flex-start;
   gap: 18px;
   margin-bottom: 50px;
-}
-
-.starting-actions>.my-mixes-menu-wrap {
-  flex: 0 1 auto;
-}
-
-.starting-actions>.my-mixes-menu-wrap>.calculate-button {
-  flex: 0 1 auto;
-  width: auto;
-  height: 38px;
-  margin-top: 0;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  gap: 6px;
-}
-
-.starting-actions>.my-mixes-menu-wrap>.calculate-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(8, 127, 120, 0.14);
 }

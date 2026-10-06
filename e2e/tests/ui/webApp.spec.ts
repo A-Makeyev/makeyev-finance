@@ -111,9 +111,7 @@ test.describe('web app: theme', () => {
     expect(await app.themeAttr()).toBe('light')
   })
 
-  test('a dark-preferring visitor lands dark without touching the toggle', async ({
-    browser,
-  }) => {
+  test('a dark-preferring visitor lands dark without touching the toggle', async ({ browser }) => {
     const context = await browser.newContext({ colorScheme: 'dark' })
     const page = await context.newPage()
     const app = new WebAppPage(page)
@@ -176,7 +174,10 @@ test.describe('web app: navigation + chrome parity', () => {
     await page.locator('.article-card[href$="/articles/prepayment-penalties"]').click()
     await expect(app.page).toHaveURL(/\/articles\/prepayment-penalties$/)
     await expect(page.getByTestId('prepayment-penalty-article')).toHaveAttribute('dir', 'rtl')
-    await page.getByRole('link', { name: /מאמרים|לכל המאמרים|back/i }).first().click()
+    await page
+      .getByRole('link', { name: /מאמרים|לכל המאמרים|back/i })
+      .first()
+      .click()
     await expect(app.page).toHaveURL(/\/articles$/)
   })
 
@@ -234,7 +235,8 @@ test.describe('web app: navigation + chrome parity', () => {
     // Both logos are always in the DOM (the theme swap is CSS, so the server cannot
     // get it wrong), so `:visible` is what names the one a visitor actually
     // sees; a bare `img` selector matches both and is a strict-mode violation.
-    const logoOf = async () => (await page.locator('[data-testid="logo"] img:visible').boundingBox())!
+    const logoOf = async () =>
+      (await page.locator('[data-testid="logo"] img:visible').boundingBox())!
     const logo = await logoOf()
 
     // Hamburger in the left third, controls in the right third.
@@ -275,12 +277,46 @@ test.describe('web app: navigation + chrome parity', () => {
     // the 25% logo column and its 25% mirror margin, so it settles a hair
     // right of centre (~22px measured); wider viewports land exactly on 0.
     expect(Math.abs(listOffset), 'nav links centred on the bar').toBeLessThan(30)
-    // right: 5% on the bar - the same inset as the scrolled bar's padding.
+    // right: 5% on the bar - its own absolute inset, independent of the bar's
+    // padding (which is the same at every scroll position).
     const rightInset = 1280 - desktopControls.x - desktopControls.width
     expect(rightInset, 'controls pinned to the bar right edge').toBeLessThan(80)
   })
 
-  test('the mobile login icon is visible on the dark bar and opens the menu on tap', async ({
+  test('scrolling down does not move anything in the bar', async ({ page }) => {
+    // The bar used to carry a scroll-state class that re-pinned its padding
+    // (6% -> 5% inline, and the block padding dropped to 0 above 770px), so
+    // scrolling dragged the logo and the centred row a visible step to the
+    // left and resized the box the row was centred in. Nothing about the
+    // bar's box may depend on the scroll position any more.
+    for (const width of [1280, 900, 390]) {
+      await mockGetSessionNull(page)
+      await page.setViewportSize({ width, height: 900 })
+      const app = new WebAppPage(page)
+      await app.goto('/')
+      await app.waitForHydration()
+      // Measured only once the real account control has replaced the loading
+      // skeleton: that swap resizes the row, which would read as movement here
+      // for reasons that have nothing to do with scrolling. Same for the bar's
+      // own settling (the Markets strip's measured height moves its margin).
+      await expect(app.navAccount).toBeVisible()
+      await app.waitForBarPositionStable()
+
+      const before = await app.navItemBoxes()
+      // The logo, the nav items, the socials and the account control.
+      expect(before.length, `controls read at ${width}px`).toBeGreaterThan(5)
+
+      await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
+      await expect(app.navbar, `scrolled state at ${width}px`).toHaveClass(/navbar-scrolling/, {
+        timeout: 5000,
+      })
+
+      // Same boxes, same places: no sideways step, no vertical nudge.
+      expect(await app.navItemBoxes(), `bar contents at ${width}px`).toEqual(before)
+    }
+  })
+
+  test('the mobile login icon is visible on the transparent bar and opens the menu on tap', async ({
     browser,
   }) => {
     const context = await browser.newContext({
@@ -292,9 +328,9 @@ test.describe('web app: navigation + chrome parity', () => {
     await mockGetSessionNull(page)
     await page.goto('/')
 
-    // Light theme + the dark glass bar at the top of the page: the signed-out
-    // glyph must be the light nav colour, NOT the ink the mobile 'links-dark'
-    // tier paints for the (light) slide-down sheet.
+    // Light theme + the transparent bar over the hero: the top slab is the
+    // shared dark glass, so the signed-out glyph must be the light nav colour,
+    // NOT the ink the mobile 'links-dark' tier paints for the slide-down sheet.
     await expect(page.getByTestId('nav-avatar-empty')).toBeVisible()
     const glyphColour = () =>
       page.evaluate(
@@ -329,8 +365,8 @@ test.describe('web app: navigation + chrome parity', () => {
     expect(menuColors.icon).not.toBe(menuColors.card)
     expect(menuColors.text).not.toBe(menuColors.card)
 
-    // Once the solid light bar scrolls in the glyph flips to ink, like the
-    // links do.
+    // Once the bar scrolls into its paler slab the glyph flips to ink, like
+    // the links do.
     await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
     await expect(page.getByTestId('navbar')).toHaveClass(/navbar-scrolling/, { timeout: 5000 })
     expect(await glyphColour()).toBe('rgb(15, 15, 15)')
@@ -517,7 +553,9 @@ test.describe('web app: navigation + chrome parity', () => {
     await expect(app.navAccountMenu).toBeHidden()
   })
 
-  test('the signed-in account menu carries the identity line above both preference rows', async ({ page }) => {
+  test('the signed-in account menu carries the identity line above both preference rows', async ({
+    page,
+  }) => {
     await mockGetSessionUser(page)
     const app = new WebAppPage(page)
     await app.goto('/')
@@ -601,17 +639,19 @@ test.describe('web app: navigation + chrome parity', () => {
     await page.mouse.move(10, 400)
     await expect(app.navAccountMenu).toBeHidden()
 
-    // Same visual role as the other icon controls: the theme's ink on the
-    // glass, not the UA button colour. The bar is ONE tinted glass in both
-    // themes now, so ink (near-black in light) is correct at the top too.
+    // Same visual role as the other icon controls: the colour that matches the
+    // slab they sit on, not the UA button colour. At the top that slab is the
+    // shared transparent dark glass (--nav-glass-top), so on this LIGHT page
+    // the light colour is the correct role here - near-black on the dark
+    // transparent bar would be unreadable.
     const colours = (await page.evaluate(`(() => {
       const avatar = document.querySelector('[data-testid="nav-avatar"]')
       const link = document.querySelector('#nav-list a.nav-link')
       return { avatar: getComputedStyle(avatar).color, link: getComputedStyle(link).color }
     })()`)) as { avatar: string; link: string }
     expect(colours.avatar).toBe(colours.link)
-    // The ink role, not the UA button colour.
-    expect(colours.avatar).toBe('rgb(15, 15, 15)')
+    // The light role on the dark transparent slab, not the UA button colour.
+    expect(colours.avatar).toBe('rgb(240, 248, 255)')
   })
 
   test('name initials ignore punctuation, so a bracketed role is not an initial', async ({
@@ -649,8 +689,9 @@ test.describe('web app: navigation + chrome parity', () => {
     await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
     await expect(app.navbar).toHaveClass(/navbar-scrolling/, { timeout: 5000 })
 
-    // The initials must NOT stay white (invisible on the pale glass); they are
-    // on the ink role like the links are, at the top and scrolled alike.
+    // The initials must NOT stay white (invisible on the pale slab); scrolled,
+    // they take the ink role like the links do. (At the top the bar is the
+    // dark transparent glass, where the light role is the correct one.)
     const initialsColour = (await page.evaluate(`(() => {
       const el = document.querySelector('[data-testid="nav-avatar"] .nav-avatar-fallback')
       return getComputedStyle(el).color
@@ -687,7 +728,10 @@ test.describe('web app: navigation + chrome parity', () => {
 
     // The photo renders inside the avatar button (no initials/glyph fallback).
     await expect(app.navAvatarImg).toBeVisible()
-    await expect(app.navAvatarImg).toHaveAttribute('src', 'https://lh3.googleusercontent.com/a/test-photo')
+    await expect(app.navAvatarImg).toHaveAttribute(
+      'src',
+      'https://lh3.googleusercontent.com/a/test-photo',
+    )
     await expect(app.navAvatarEmpty).toHaveCount(0)
   })
 

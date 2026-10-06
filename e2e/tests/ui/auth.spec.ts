@@ -20,12 +20,13 @@ const ENGLISH_PAGE_TITLE = 'Sign in or register'
 const HEBREW_PASSWORD_MISMATCH = 'הסיסמאות אינן תואמות'
 const HEBREW_BAD_CREDENTIALS = 'כתובת הדוא״ל או הסיסמה שגויים'
 const HEBREW_PASSWORD_TOO_SHORT = 'הסיסמה חייבת להכיל לפחות 8 תווים'
-const HEBREW_VERIFY_SENT = 'שלחנו הודעת אימות לכתובת הדוא״ל. יש לאמת אותה לפני ההתחברות.'
+const HEBREW_VERIFY_SENT = 'שלחנו הודעת אימות לכתובת הדוא״ל. יש לאמת אותה לפני ההתחברות'
 const HEBREW_RESET_SENT = 'שלחנו קוד בן 4 ספרות לכתובת הזו:'
 const HEBREW_RESET_INVALID_CODE = 'הקוד שגוי או שפג תוקפו'
-const HEBREW_RESET_DONE = 'הסיסמה עודכנה. אפשר להתחבר עם הסיסמה החדשה.'
+const HEBREW_RESET_DONE = 'הסיסמה עודכנה. אפשר להתחבר עם הסיסמה החדשה'
 const HEBREW_RESET_RESEND = 'שליחת קוד חדש'
-const HEBREW_RESET_RESEND_SENT = 'שלחנו קוד חדש. הקוד הקודם אינו תקף יותר.'
+const HEBREW_RESET_RESEND_SENT = 'שלחנו קוד חדש. הקוד הקודם אינו תקף יותר'
+const HEBREW_RESET_RESEND_EXHAUSTED = 'נשלחו 3 קודים. אם אף אחד לא הגיע, בקשו קוד חדש מטופס ההתחברות'
 
 test.describe('auth pages', () => {
   test.beforeEach(async ({ mockedPage }) => {
@@ -289,9 +290,7 @@ test.describe('auth pages', () => {
     // The submit fill reacts to the pointer...
     const submitIdle = await style('auth-submit', 'backgroundColor')
     await auth.submit.hover()
-    await expect
-      .poll(() => style('auth-submit', 'backgroundColor'))
-      .not.toBe(submitIdle)
+    await expect.poll(() => style('auth-submit', 'backgroundColor')).not.toBe(submitIdle)
 
     // ...and so does an inactive tab (it takes the soft surface fill).
     const tabIdle = await style('auth-tab-signup', 'backgroundColor')
@@ -428,6 +427,9 @@ test.describe('password reset', () => {
   test('a lost or expired code can be re-requested without restarting the flow', async ({
     mockedPage,
   }) => {
+    // The cooldown reads the clock, so it is installed before navigation and
+    // advanced explicitly: a real 30s wait per test is not an option.
+    await mockedPage.clock.install()
     await mockRequestPasswordReset(mockedPage)
     const auth = new AuthPage(mockedPage)
 
@@ -435,10 +437,12 @@ test.describe('password reset', () => {
     await auth.openReset()
     await auth.requestResetCode('user@example.test')
 
-    // The escape hatch is there on the code step, in the Hebrew copy (no
-    // hardcoded English), and it is not the primary action.
+    // The escape hatch is there on the code step, and it is NOT free: a code
+    // just went out, so the action is locked and says so with a countdown
+    // instead of being a button that silently refuses clicks.
     await expect(auth.resetResend).toBeVisible()
-    await expect(auth.resetResend).toHaveText(HEBREW_RESET_RESEND)
+    await expect(auth.resetResend).toBeDisabled()
+    await expect(auth.resetResend).toHaveText(/\d/)
 
     // A code the user already typed must not survive: the re-sent code
     // REPLACES it server-side, so a stale set of digits that now cannot verify
@@ -458,6 +462,38 @@ test.describe('password reset', () => {
     await expect(auth.resetNewPassword).toHaveCount(0)
     await expect(auth.resetVerify).toBeDisabled()
     await expect(auth.resetHint).toContainText('user@example.test')
+    // And the same cooldown runs again after the send: still counting down, then
+    // the plain Hebrew label once it opens.
+    await expect(auth.resetResend).toBeDisabled()
+    await expect(auth.resetResend).toHaveText(/\d/)
+    await auth.waitOutResendCooldown()
+    await expect(auth.resetResend).toHaveText(HEBREW_RESET_RESEND)
+  })
+
+  test('the re-send action retires after three codes in one flow', async ({ mockedPage }) => {
+    // Three codes to one address is already one mailbox too many. Past that
+    // the action is gone and the copy names the way out (the sign-in form),
+    // rather than leaving a permanently dead control on the card.
+    await mockedPage.clock.install()
+    await mockRequestPasswordReset(mockedPage)
+    const auth = new AuthPage(mockedPage)
+
+    await auth.goto('/login')
+    await auth.openReset()
+    await auth.requestResetCode('user@example.test')
+
+    for (let send = 0; send < 3; send++) {
+      await auth.waitOutResendCooldown()
+      await auth.resetResend.click()
+      await expect(auth.resetResendSent, `after re-send ${send + 1}`).toBeVisible()
+    }
+
+    await expect(auth.resetResend).toHaveCount(0)
+    await expect(auth.resetResendExhausted).toHaveText(HEBREW_RESET_RESEND_EXHAUSTED)
+    // The flow itself is untouched: still on the code step, the boxes still
+    // there for a code that did arrive.
+    await expect(auth.resetCodeInputs).toHaveCount(4)
+    await expect(auth.resetNewPassword).toHaveCount(0)
   })
 
   test('the heading names the reset flow, not sign-in or register', async ({ mockedPage }) => {
@@ -648,7 +684,10 @@ test.describe('password reset', () => {
     await auth.requestResetCode('user@example.test')
 
     // Stage one: the boxes and the verify control.
-    await assertInside([...[0, 1, 2, 3].map((index) => auth.resetCodeInputs.nth(index)), auth.resetVerify])
+    await assertInside([
+      ...[0, 1, 2, 3].map((index) => auth.resetCodeInputs.nth(index)),
+      auth.resetVerify,
+    ])
 
     // Stage two: the two fields and the submit, which only exist after verify.
     await auth.verifyResetCode('1234')
@@ -667,7 +706,7 @@ test.describe('password reset', () => {
     await auth.submitResetCode('1234', 'password123')
 
     await expect(auth.resetDone).toHaveText(
-      'Your password has been updated. You can now sign in with the new password.',
+      'Your password has been updated. You can now sign in with the new password',
     )
   })
 
@@ -709,9 +748,9 @@ test.describe('password reset', () => {
     const button = (await auth.socialGoogle.boundingBox())!
     const field = (await auth.email.boundingBox())!
     expect(Math.abs(button.width - field.width)).toBeLessThanOrEqual(1)
-    expect(
-      Math.abs(button.x + button.width / 2 - (field.x + field.width / 2)),
-    ).toBeLessThanOrEqual(1)
+    expect(Math.abs(button.x + button.width / 2 - (field.x + field.width / 2))).toBeLessThanOrEqual(
+      1,
+    )
 
     // Same copy rule in Hebrew, asserted verbatim: the sign-up tab reads
     // "or sign up with email", never the sign-in wording.
@@ -772,9 +811,11 @@ test.describe('gated areas', () => {
   })
 
   test('a forged session cookie does not pass the server-side check', async ({ mockedPage }) => {
-    await mockedPage.context().addCookies([
-      { name: 'better-auth.session_token', value: 'forged', domain: 'localhost', path: '/' },
-    ])
+    await mockedPage
+      .context()
+      .addCookies([
+        { name: 'better-auth.session_token', value: 'forged', domain: 'localhost', path: '/' },
+      ])
 
     await mockedPage.goto('/advisor')
 

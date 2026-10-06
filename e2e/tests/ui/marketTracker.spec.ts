@@ -64,9 +64,14 @@ async function recordFlashes(page: Page): Promise<void> {
   )
 }
 
-/** The two movement tints, mirrored from the .markets-tick-* rules in globals.css. */
-const FLASH_GREEN = 'rgba(35, 210, 65, 0.14)'
-const FLASH_RED = 'rgba(210, 60, 60, 0.14)'
+/**
+ * The two movement tints, mirrored from the .markets-tick-* rules in
+ * globals.css: an UP tick is RED and a DOWN tick is GREEN, matching the CBS
+ * Indexes strip's own convention (up red, down green) - the two top strips
+ * read alike.
+ */
+const FLASH_UP = 'rgba(210, 60, 60, 0.14)'
+const FLASH_DOWN = 'rgba(35, 210, 65, 0.14)'
 
 interface RecordedFlash {
   tick: 'up' | 'down'
@@ -346,6 +351,38 @@ test.describe('Markets strip', () => {
     )
   })
 
+  test('movement colors are the Indexes strip palette (up red, down green, flat lightblue)', async ({
+    page,
+  }) => {
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await page.goto('/')
+    await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
+
+    // The two top strips must read alike (user-requested). The palette is the
+    // CBS Indexes strip's own TREND_COLORS (src/components/layout/IndexesBar
+    // .tsx): a rise is RED there and a fall is GREEN, so the tickers follow the
+    // same mapping instead of the international one. Asserted on the rendered
+    // colour of the whole value pair, which is what a visitor sees.
+    // Fixtures: bitcoin +1.24% (up), nasdaq -0.33% (down), sp500 0.00% (flat).
+    const colours = (await page.evaluate(`(() => {
+      const read = (id) => {
+        const row = document.querySelector('[data-testid="market-row-' + id + '"]')
+        return [
+          getComputedStyle(row.querySelector('.markets-price')).color,
+          getComputedStyle(row.querySelector('.markets-change')).color,
+        ]
+      }
+      return { up: read('bitcoin'), down: read('nasdaq'), flat: read('sp500') }
+    })()`)) as Record<'up' | 'down' | 'flat', string[]>
+
+    const INDEX_UP_RED = 'rgb(210, 60, 60)'
+    const INDEX_DOWN_GREEN = 'rgb(35, 210, 65)'
+    const INDEX_FLAT = 'rgb(173, 216, 230)' // computed `lightblue`
+    expect(colours.up).toEqual([INDEX_UP_RED, INDEX_UP_RED])
+    expect(colours.down).toEqual([INDEX_DOWN_GREEN, INDEX_DOWN_GREEN])
+    expect(colours.flat).toEqual([INDEX_FLAT, INDEX_FLAT])
+  })
+
   test('shows skeleton bars while loading and never blocks the nav', async ({ page }) => {
     // Hold the response open: the strip must hold its layout with skeletons
     // immediately, so the height the navbar offset reads is settled before
@@ -612,7 +649,7 @@ test.describe('Markets strip', () => {
       expect(flash).toEqual({
         tick: flash.tick,
         className: `markets-tick markets-tick-${flash.tick}`,
-        background: flash.tick === 'up' ? FLASH_GREEN : FLASH_RED,
+        background: flash.tick === 'up' ? FLASH_UP : FLASH_DOWN,
         display: 'block',
         width: expect.any(Number),
         height: expect.any(Number),

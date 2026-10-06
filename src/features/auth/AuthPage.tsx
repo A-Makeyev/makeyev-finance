@@ -1,13 +1,21 @@
 'use client'
 
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FaGoogle, FaSpinner } from 'react-icons/fa'
 import { authClient } from '@/lib/auth-client'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { FieldError } from '@/components/ui/FieldError'
 import { useRouter } from '@/router'
-import { applyOtpInput, emptyOtpSlots, isOtpComplete, OTP_LENGTH } from './otp'
+import { RESEND_COOLDOWN_MS } from '@/lib/timings'
+import {
+  applyOtpInput,
+  emptyOtpSlots,
+  isOtpComplete,
+  OTP_LENGTH,
+  resendAvailability,
+  resendSecondsLeft,
+} from './otp'
 
 /**
  * Sign in / register form, shared by both locale route segments.
@@ -88,8 +96,42 @@ export function AuthPage() {
   // with different rate limits, and their messages must not overwrite each
   // other's.
   const [resetResend, setResetResend] = useState<ResendState>('idle')
+  // The re-send policy for the code step: how many codes have been re-sent in
+  // this flow, and when the action unlocks again (the countdown reads from the
+  // clock, so the lock and the label cannot drift apart). See ./otp for the
+  // rules and lib/timings for the 30s cooldown.
+  const [resendSends, setResendSends] = useState(0)
+  const [resendReadyAt, setResendReadyAt] = useState<number | null>(null)
+  // Ticks once a second, only while a cooldown is running, so the button's
+  // countdown counts down without a timer per render.
+  const [now, setNow] = useState(() => Date.now())
+
+  /** Starts (or restarts) the cooldown on the re-send action. */
+  function lockResend() {
+    const sent = Date.now()
+    setNow(sent)
+    setResendReadyAt(sent + RESEND_COOLDOWN_MS)
+  }
+
+  // The countdown tick. Installed only while the action is actually locked,
+  // and it clears itself the moment the cooldown ends, so a settled panel
+  // stops re-rendering every second for the rest of the flow.
+  useEffect(() => {
+    if (resendReadyAt === null || resendReadyAt <= Date.now()) return
+    let timer = 0
+    timer = window.setInterval(() => {
+      const current = Date.now()
+      setNow(current)
+      if (current >= resendReadyAt) window.clearInterval(timer)
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [resendReadyAt])
 
   const isSignUp = mode === 'signup'
+
+  // Which of the three states the re-send action is in right now.
+  const resendState = resendAvailability(now, resendReadyAt, resendSends)
+  const resendSeconds = resendSecondsLeft(now, resendReadyAt)
 
   /** Maps a Better Auth error code to a localized message. */
   function describeError(code: string | undefined): string {
@@ -139,9 +181,13 @@ export function AuthPage() {
       setOtp(emptyOtpSlots())
     }
     // Leaving the reset step abandons any half-typed code and its resend
-    // confirmation, so returning to it starts from the first request again.
+    // confirmation, so returning to it starts from the first request again -
+    // including the re-send count and the cooldown, which belong to the flow,
+    // not to the component instance.
     if (next !== 'reset') {
       setResetResend('idle')
+      setResendSends(0)
+      setResendReadyAt(null)
     }
     // A fresh attempt always starts at stage 1, never at the password fields.
     setCodeVerified(false)
@@ -252,6 +298,10 @@ export function AuthPage() {
       // the form cannot be used to probe accounts.
       setResetSent(false)
       setResetResend('idle')
+      // The code is already on its way, so the re-send action starts its
+      // cooldown here rather than being free the instant the boxes appear.
+      setResendSends(0)
+      lockResend()
       setFlow('reset')
     } finally {
       setPending(false)
@@ -334,9 +384,16 @@ export function AuthPage() {
    * identifier), so the boxes are cleared here rather than left holding digits
    * that can no longer verify. Same 3/minute server-side limit and the same
    * no-enumeration answer as the first request.
+   *
+   * Two client-side rules stand in front of it (see ./otp): the 30s cooldown
+   * and the 3-re-send ceiling of this flow. Both are UX, not security - the
+   * server counts every request either way, and its 429 is the real limit.
    */
   async function onResendResetCode() {
     if (resetResend === 'sending') return
+    // Re-checked here, not only on the button's disabled state: the cooldown
+    // and the ceiling are the rule, and the button is only how it is shown.
+    if (resendAvailability(Date.now(), resendReadyAt, resendSends) !== 'ready') return
     setError(null)
     setResetResend('sending')
     try {
@@ -352,6 +409,8 @@ export function AuthPage() {
       }
       setOtp(emptyOtpSlots())
       setCodeVerified(false)
+      setResendSends((sent) => sent + 1)
+      lockResend()
       setResetResend('sent')
       otpRefs.current[0]?.focus()
     } finally {
@@ -400,8 +459,7 @@ export function AuthPage() {
   // colour is darker than the card, so a page-coloured button read as a hole.
   // The hover is an ink tint rather than the soft surface, so it tints the same
   // way in both themes instead of dropping to a darker fill in dark mode.
-  const secondaryButtonClass =
-    `rounded-lg border border-line-strong bg-surface-raised px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-ink/10 ${FOCUS_RING}`
+  const secondaryButtonClass = `rounded-lg border border-line-strong bg-surface-raised px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-ink/10 ${FOCUS_RING}`
 
   const submitButtonClass = `mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2.5 font-medium leading-5 text-surface-page transition-[background-color,transform] hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-soft-blue focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 ${
     pending ? 'btn-sheen' : ''
@@ -470,16 +528,14 @@ export function AuthPage() {
                 setError(null)
                 setResend('idle')
               }}
-              className={secondaryButtonClass}
+              className={`${secondaryButtonClass} self-center`}
             >
               {t('auth.backToSignIn')}
             </button>
           </div>
         ) : flow === 'forgot' ? (
           <div data-testid="auth-forgot-panel">
-            <p className="mb-4 text-center text-sm text-ink-muted">
-              {t('auth.resetRequestHint')}
-            </p>
+            <p className="mb-4 text-center text-sm text-ink-muted">{t('auth.resetRequestHint')}</p>
             <form onSubmit={onRequestReset} className="flex flex-col gap-4">
               <label className="flex flex-col gap-1 text-start">
                 <span className="text-sm text-ink-muted">{t('auth.emailLabel')}</span>
@@ -515,11 +571,15 @@ export function AuthPage() {
                   t('auth.resetRequestAction')
                 )}
               </button>
+              {/* Centered under the primary action it backs out of: every other
+                  control on the card is centred, and a start-aligned button in
+                  that column reads as mis-placed (the forms are flex columns,
+                  whose items stretch by default). */}
               <button
                 type="button"
                 data-testid="auth-back-to-signin"
                 onClick={() => switchFlow('credentials')}
-                className={secondaryButtonClass}
+                className={`${secondaryButtonClass} self-center`}
               >
                 {t('auth.backToSignIn')}
               </button>
@@ -577,12 +637,14 @@ export function AuthPage() {
                 </div>
                 {/* Centered under the boxes it describes: as a stretched flex item the
                     text would otherwise sit on the start edge. */}
-                <span className="text-center text-xs text-ink-muted">{t('auth.resetCodeHint')}</span>
+                <span className="text-center text-xs text-ink-muted">
+                  {t('auth.resetCodeHint')}
+                </span>
                 {resetResend === 'sent' && (
                   <p
                     role="status"
                     data-testid="auth-reset-resend-sent"
-                    className="rounded-lg bg-surface-soft px-3 py-2 text-sm text-ink"
+                    className="rounded-lg bg-surface-soft px-3 py-2 text-center text-sm text-ink"
                   >
                     {t('auth.resetResendSent')}
                   </p>
@@ -612,26 +674,47 @@ export function AuthPage() {
                 </button>
                 {/* Escape hatch for a code that never arrived, expired, or was
                     deleted: re-mail it without making the user abandon the
-                    flow and retype their address. Secondary, below the verify
-                    action, and only while the code is still being typed. */}
-                <button
-                  type="button"
-                  data-testid="auth-reset-resend"
-                  disabled={resetResend === 'sending'}
-                  aria-busy={resetResend === 'sending'}
-                  aria-label={
-                    resetResend === 'sending' ? t('auth.submitting') : undefined
-                  }
-                  onClick={onResendResetCode}
-                  className={`${secondaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70 ${
-                    resetResend === 'sending' ? 'btn-sheen' : ''
-                  }`}
-                >
-                  {resetResend === 'sending' && (
-                    <FaSpinner aria-hidden="true" className="animate-spin" />
-                  )}
-                  {t('auth.resetResend')}
-                </button>
+                    flow and retype their address.
+
+                    Deliberately a quiet text link, not a second button: this
+                    is the rare path, and the primary verify action above it
+                    should stay the only solid control on the card. While the
+                    cooldown runs it stays in place as a live countdown
+                    ("send a new code in 24s"), so the wait is explained
+                    instead of being a button that mysteriously refuses
+                    clicks; once the flow's re-sends are used up it is replaced
+                    by a line pointing at the sign-in form, which is the
+                    remaining way to get a code. */}
+                {resendState === 'exhausted' ? (
+                  <p
+                    role="status"
+                    data-testid="auth-reset-resend-exhausted"
+                    className="text-center text-sm text-ink-muted"
+                  >
+                    {t('auth.resetResendExhausted')}
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    data-testid="auth-reset-resend"
+                    disabled={resetResend === 'sending' || resendState === 'waiting'}
+                    aria-busy={resetResend === 'sending'}
+                    aria-label={resetResend === 'sending' ? t('auth.submitting') : undefined}
+                    onClick={onResendResetCode}
+                    // Inline-flex + gap-2: the spinner and the label get a real
+                    // 8px gap in BOTH directions (an inline margin on the icon
+                    // rides the bidi edge and can end up on the wrong side),
+                    // and the pair stays centred while the spinner is up.
+                    className="inline-flex items-center gap-2 self-center text-sm text-ink-muted underline-offset-2 transition-colors hover:text-ink hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
+                  >
+                    {resetResend === 'sending' && (
+                      <FaSpinner aria-hidden="true" className="inline-block animate-spin" />
+                    )}
+                    {resendState === 'waiting'
+                      ? t('auth.resetResendIn', { seconds: resendSeconds })
+                      : t('auth.resetResend')}
+                  </button>
+                )}
               </form>
             ) : (
               <form onSubmit={onResetPassword} className="flex flex-col gap-4">
@@ -682,14 +765,21 @@ export function AuthPage() {
             )}
             {/* Outside both stage forms, so it gets none of their gap-4, and a
                 primary action directly above it needs more air than that. */}
-            <button
-              type="button"
-              data-testid="auth-back-to-signin"
-              onClick={() => switchFlow('credentials')}
-              className={`${secondaryButtonClass} mt-6`}
-            >
-              {t('auth.backToSignIn')}
-            </button>
+            {/* Centered like the rest of the card's controls: this panel is a
+                plain block (not a flex column), so the button sits in its own
+                centered flex row - auto margins cannot centre an inline-level
+                button. The primary action above it needs more air than the
+                forms' gap, hence mt-6 on the row. */}
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                data-testid="auth-back-to-signin"
+                onClick={() => switchFlow('credentials')}
+                className={secondaryButtonClass}
+              >
+                {t('auth.backToSignIn')}
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -814,7 +904,6 @@ export function AuthPage() {
                   autoComplete={isSignUp ? 'new-password' : 'current-password'}
                   inputClassName={INPUT_CLASS}
                 />
-                
               </label>
 
               {isSignUp && (

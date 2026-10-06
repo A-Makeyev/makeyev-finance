@@ -11,6 +11,74 @@
 /** The reset code is 4 digits, one square input per digit. */
 export const OTP_LENGTH = 4
 
+/* ---------------------------------------------------------------------------
+   Re-sending the code
+
+   The escape hatch under the code boxes (a mail that never arrived, an expired
+   code) needs a policy of its own, or it becomes one click per second of mail
+   at a real inbox. Three rules, all pure and unit tested here so the arithmetic
+   (which of them applies at a given moment, and the countdown boundary) cannot
+   only be observed through a browser:
+
+     - a cooldown after every send, including the FIRST request that put the
+       code in the inbox (RESEND_COOLDOWN_MS, see lib/timings), so the action is
+       never available the instant a code went out;
+     - a ceiling on how many times the code may be re-sent in one flow, after
+       which the action is gone and the copy points back at starting over - the
+       user who genuinely lost three mails restarts the whole flow rather than
+       sitting in front of a dead button;
+     - a countdown that reads from the clock, so it cannot drift away from the
+       lock.
+   --------------------------------------------------------------------------- */
+
+/**
+ * Re-sends allowed per reset flow. Past this the action stops being offered:
+ * three codes to one address is already one mailbox too many, and the user
+ * still has the sign-in form to request a fresh one from.
+ */
+export const MAX_CODE_RESENDS = 3
+
+export type ResendAvailability =
+  /** The action can be used now. */
+  | 'ready'
+  /** A cooldown is still running; the label counts it down. */
+  | 'waiting'
+  /** The flow's re-send ceiling is reached; the action is gone. */
+  | 'exhausted'
+
+/**
+ * Which state the re-send action is in.
+ *
+ * @param now current time in ms
+ * @param readyAt when the cooldown ends (null when no send has been made yet,
+ *   or once it has passed)
+ * @param sends how many times the code has already been re-sent in this flow
+ *
+ * The order matters and is not just a code smell: the ceiling is checked
+ * before the cooldown, so a user who used up their re-sends never gets a
+ * "cooldown expired" moment and then sees the action offered again - it stays
+ * gone for the rest of the flow.
+ */
+export function resendAvailability(
+  now: number,
+  readyAt: number | null,
+  sends: number,
+): ResendAvailability {
+  if (sends >= MAX_CODE_RESENDS) return 'exhausted'
+  if (readyAt !== null && readyAt > now) return 'waiting'
+  return 'ready'
+}
+
+/**
+ * Whole seconds left on the cooldown, rounded UP, so a lock 1ms in the future
+ * still shows "1s" and never "0s" - a visible zero would read as "ready now"
+ * while the button is still disabled. Zero once the cooldown is over.
+ */
+export function resendSecondsLeft(now: number, readyAt: number | null): number {
+  if (readyAt === null) return 0
+  return Math.max(0, Math.ceil((readyAt - now) / 1000))
+}
+
 /**
  * True once every box holds one digit. The reset step reveals the password
  * fields at that point, so it is a completeness check, not a validity one:

@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test'
+import { RESEND_COOLDOWN_MS } from '../../src/lib/timings'
 
 /**
  * Page object for the auth surfaces: the login/register page, the navbar
@@ -27,7 +28,7 @@ export class AuthPage {
   readonly resendSent: Locator
   readonly backToSignIn: Locator
   readonly forgot: Locator
-  
+
   readonly forgotPanel: Locator
   readonly forgotEmail: Locator
   readonly sendCode: Locator
@@ -43,6 +44,8 @@ export class AuthPage {
   /** Re-sends the reset code while the code step is up (a lost/expired mail). */
   readonly resetResend: Locator
   readonly resetResendSent: Locator
+  /** Replaces the re-send action once the flow's re-send ceiling is reached. */
+  readonly resetResendExhausted: Locator
   readonly resetDone: Locator
   readonly footer: Locator
   readonly navLogin: Locator
@@ -86,7 +89,7 @@ export class AuthPage {
     this.resendSent = page.getByTestId('auth-resend-sent')
     this.backToSignIn = page.getByTestId('auth-back-to-signin')
     this.forgot = page.getByTestId('auth-forgot')
-    
+
     this.forgotPanel = page.getByTestId('auth-forgot-panel')
     this.forgotEmail = this.forgotPanel.getByTestId('auth-email')
     this.sendCode = page.getByTestId('auth-send-code')
@@ -100,6 +103,7 @@ export class AuthPage {
     this.resetVerify = page.getByTestId('auth-reset-verify')
     this.resetResend = page.getByTestId('auth-reset-resend')
     this.resetResendSent = page.getByTestId('auth-reset-resend-sent')
+    this.resetResendExhausted = page.getByTestId('auth-reset-resend-exhausted')
     this.resetDone = page.getByTestId('auth-reset-done')
     this.footer = page.locator('footer.footer')
     this.navLogin = page.getByTestId('nav-login')
@@ -203,11 +207,26 @@ export class AuthPage {
   }
 
   /**
-   * Asks for a fresh code from the code step. The typed boxes are cleared by
-   * the component (a re-sent code invalidates the old one), so this asserts
+   * Runs out the re-send cooldown on the virtual clock, so a spec can reach
+   * the unlocked state in milliseconds instead of sleeping RESEND_COOLDOWN_MS
+   * of real time. Installs the clock first if the page has not done it yet:
+   * the countdown reads Date.now(), which only moves on the faked clock once
+   * the clock is installed before navigation.
+   */
+  async waitOutResendCooldown(): Promise<void> {
+    await expect(this.resetResend).toBeDisabled()
+    await this.page.clock.fastForward(RESEND_COOLDOWN_MS)
+    await expect(this.resetResend).toBeEnabled()
+  }
+
+  /**
+   * Asks for a fresh code from the code step, waiting out the cooldown first
+   * (the action is locked right after any send). The typed boxes are cleared
+   * by the component (a re-sent code invalidates the old one), so this asserts
    * the confirmation rather than the clearing.
    */
   async resendResetCode(): Promise<void> {
+    await this.waitOutResendCooldown()
     await this.resetResend.click()
     await expect(this.resetResendSent).toBeVisible()
   }

@@ -45,10 +45,10 @@ const TREND_ARROWS: Record<'up' | 'down' | 'flat', string> = {
 }
 
 /**
- * Movement colors follow the international convention (+ green, - red),
- * unlike the CBS Indexes strip (legacy: + red in the Hebrew convention).
- * Same palette, same brightness, same rendering as the indexes: names
- * white, the price and the change share the row's movement color.
+ * Movement colors are the CBS Indexes strip's own convention (up red, down
+ * green, flat lightblue; the class names stay semantic and the mapping lives
+ * in globals.css), so the two top strips read alike: names white, the price
+ * and the change share the row's movement color.
  */
 const TREND_CLASS: Record<'up' | 'down' | 'flat', string> = {
   up: 'market-change-up',
