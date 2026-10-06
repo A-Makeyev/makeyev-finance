@@ -49,6 +49,10 @@ jobs:
   e2e:
     name: E2E (UI + API) with published results
     needs: [quality]
+    # Run even when quality failed: a skipped e2e job means that run number
+    # never reaches the report page (Run-73 disappeared when unit tests
+    # failed). Only a cancelled run has nothing worth publishing.
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
     # A throwaway Mongo for the auth e2e tests: the MongoDB adapter needs a
     # live database to validate sessions, and a service container keeps CI
@@ -109,6 +113,10 @@ jobs:
           fi
 
       - name: Download previous reports
+        # always(): the steps that push to gh-pages run even after a hard
+        # failure, and without the old reports they would publish a tree
+        # holding only this run - wiping the report page's history.
+        if: always()
         uses: actions/checkout@v5
         with:
           ref: gh-pages
@@ -137,6 +145,17 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./Results
+
+      # Last step on purpose: the report above must be published before the
+      # run is marked red, so the test step is allowed to fail itself
+      # (continue-on-error) and this step fails the job from its outcome.
+      # Without it the workflow reported success for runs 75-81 while every
+      # one of them had failing tests.
+      - name: Fail the run when tests failed
+        if: always() && steps.test-step.outcome != 'success'
+        run: |
+          echo "::error::Playwright outcome was '${{ steps.test-step.outcome }}'. Report published; failing the run."
+          exit 1
 
   deploy:
     needs: e2e
