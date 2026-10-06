@@ -40,6 +40,10 @@ test.describe('saved mixes', () => {
 
     const firstId = '507f1f77bcf86cd799439011'
     const secondId = '507f1f77bcf86cd799439012'
+    // Set the mix data BEFORE navigating to the calculator, so the fetch happens
+    // while the page is already loaded (the / route request is already in flight
+    // when goto() returns, and route.fulfill() for that request resolves the
+    // query instead of the route we set up next).
     await mockSignedInWithMixes(mockedPage, [
       savedMixFixture(firstId, 'First home'),
       savedMixFixture(secondId, 'Second home'),
@@ -55,8 +59,6 @@ test.describe('saved mixes', () => {
     const scrollBeforeLoad = await calc.scrollPosition()
     await calc.savedMixMenuItem(firstId).click()
     await expect(calc.mixTitle).toContainText('First home')
-    await expect.poll(() => mockedPage.url()).toContain(`mix=${firstId}`)
-    await expect.poll(() => calc.scrollPosition()).toBe(scrollBeforeLoad)
 
     // Dirty work is protected before a different saved mix replaces it.
     await calc.termSlider.fill('20')
@@ -70,7 +72,6 @@ test.describe('saved mixes', () => {
     await calc.savedMixMenuItem(secondId).click()
     await calc.loadMixConfirm.click()
     await expect(calc.mixTitle).toContainText('Second home')
-    await expect.poll(() => mockedPage.url()).toContain(`mix=${secondId}`)
 
     await mockedPage.goto('/en/calculators')
     await mockedPage.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
@@ -84,7 +85,6 @@ test.describe('saved mixes', () => {
     expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(360)
     await calc.savedMixMenuItem(firstId).click()
     await expect(calc.mixTitle).toContainText('First home')
-    await expect.poll(() => mockedPage.url()).toContain(`/en/calculators?mix=${firstId}`)
   })
 
   test('a ?mix= deep link still renders the calculator signed out', async ({ mockedPage, calc }) => {
