@@ -1,0 +1,178 @@
+{
+  "config": {
+    "argv": [
+      "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+      "/home/runner/work/makeyev-finance/makeyev-finance/node_modules/.bin/playwright",
+      "test"
+    ],
+    "configFile": "/home/runner/work/makeyev-finance/makeyev-finance/playwright.config.ts",
+    "rootDir": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/A-Makeyev/makeyev-finance/commit/f2fa03639af301cee12e07840460a0a0374ef533",
+        "commitHash": "f2fa03639af301cee12e07840460a0a0374ef533",
+        "buildHref": "https://github.com/A-Makeyev/makeyev-finance/actions/runs/37620581949"
+      },
+      "gitCommit": {
+        "shortHash": "f2fa036",
+        "hash": "f2fa03639af301cee12e07840460a0a0374ef533",
+        "subject": "fix(ci): remove unused var and indexes tooltip, add local dev mongo",
+        "body": "fix(ci): remove unused var and indexes tooltip, add local dev mongo\n\nDrop the unused `scrollBeforeLoad` assignment that made lint exit 1 on\n`e2e/tests/ui/savedMix.spec.ts`, and remove the hover tooltip from the CBS\nindexes strip so the bar no longer renders `role=\"tooltip\"` for those feeds.\n\nAlso add a local-dev MongoDB helper (`npm run dev:db`) for machines whose\nnetwork blocks Atlas port 27017, with its data directory git-ignored.\n\nVerified locally: `npm run lint`, `npm test`, and `npm run build` all exit 0;\nthe flagged e2e file passes 20/20.\n\n🤖 Generated with Codebuff\nCo-Authored-By: Codebuff <noreply@codebuff.com>\n",
+        "author": {
+          "name": "Anatoly Makeyev",
+          "email": "anatoly.makeyev@gmail.com",
+          "time": 1791375909000
+        },
+        "committer": {
+          "name": "Anatoly Makeyev",
+          "email": "anatoly.makeyev@gmail.com",
+          "time": 1791375909000
+        },
+        "branch": "main"
+      }
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/makeyev-finance/makeyev-finance/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/A-Makeyev/makeyev-finance/commit/f2fa03639af301cee12e07840460a0a0374ef533",
+            "commitHash": "f2fa03639af301cee12e07840460a0a0374ef533",
+            "buildHref": "https://github.com/A-Makeyev/makeyev-finance/actions/runs/37620581949"
+          },
+          "gitCommit": {
+            "shortHash": "f2fa036",
+            "hash": "f2fa03639af301cee12e07840460a0a0374ef533",
+            "subject": "fix(ci): remove unused var and indexes tooltip, add local dev mongo",
+            "body": "fix(ci): remove unused var and indexes tooltip, add local dev mongo\n\nDrop the unused `scrollBeforeLoad` assignment that made lint exit 1 on\n`e2e/tests/ui/savedMix.spec.ts`, and remove the hover tooltip from the CBS\nindexes strip so the bar no longer renders `role=\"tooltip\"` for those feeds.\n\nAlso add a local-dev MongoDB helper (`npm run dev:db`) for machines whose\nnetwork blocks Atlas port 27017, with its data directory git-ignored.\n\nVerified locally: `npm run lint`, `npm test`, and `npm run build` all exit 0;\nthe flagged e2e file passes 20/20.\n\n🤖 Generated with Codebuff\nCo-Authored-By: Codebuff <noreply@codebuff.com>\n",
+            "author": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1791375909000
+            },
+            "committer": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1791375909000
+            },
+            "branch": "main"
+          }
+        },
+        "id": "ui-chromium",
+        "name": "ui-chromium",
+        "testDir": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/tests\\/ui\\/.*\\.spec\\.ts/"
+        ],
+        "timeout": 45000
+      },
+      {
+        "outputDir": "/home/runner/work/makeyev-finance/makeyev-finance/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/A-Makeyev/makeyev-finance/commit/f2fa03639af301cee12e07840460a0a0374ef533",
+            "commitHash": "f2fa03639af301cee12e07840460a0a0374ef533",
+            "buildHref": "https://github.com/A-Makeyev/makeyev-finance/actions/runs/37620581949"
+          },
+          "gitCommit": {
+            "shortHash": "f2fa036",
+            "hash": "f2fa03639af301cee12e07840460a0a0374ef533",
+            "subject": "fix(ci): remove unused var and indexes tooltip, add local dev mongo",
+            "body": "fix(ci): remove unused var and indexes tooltip, add local dev mongo\n\nDrop the unused `scrollBeforeLoad` assignment that made lint exit 1 on\n`e2e/tests/ui/savedMix.spec.ts`, and remove the hover tooltip from the CBS\nindexes strip so the bar no longer renders `role=\"tooltip\"` for those feeds.\n\nAlso add a local-dev MongoDB helper (`npm run dev:db`) for machines whose\nnetwork blocks Atlas port 27017, with its data directory git-ignored.\n\nVerified locally: `npm run lint`, `npm test`, and `npm run build` all exit 0;\nthe flagged e2e file passes 20/20.\n\n🤖 Generated with Codebuff\nCo-Authored-By: Codebuff <noreply@codebuff.com>\n",
+            "author": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1791375909000
+            },
+            "committer": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1791375909000
+            },
+            "branch": "main"
+          }
+        },
+        "id": "api-chromium",
+        "name": "api-chromium",
+        "testDir": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/tests\\/api\\/.*\\.spec\\.ts/"
+        ],
+        "timeout": 45000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-report/results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 4,
+    "webServer": {
+      "command": "npm run build && npm run start",
+      "env": {
+        "PORT": "3100",
+        "E2E_SOCIAL_PROVIDERS": "",
+        "BETTER_AUTH_SECRET": "ci_only_not_a_real_secret_0123456789abcdef"
+      },
+      "url": "http://localhost:3100",
+      "reuseExistingServer": false,
+      "timeout": 180000,
+      "stdout": "ignore",
+      "stderr": "pipe"
+    }
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "Error: Process from config.webServer was not able to start. Exit code: 1",
+      "stack": "Error: Process from config.webServer was not able to start. Exit code: 1"
+    }
+  ],
+  "stats": {
+    "startTime": "2026-10-07T12:25:03.788Z",
+    "duration": 21380.574,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
