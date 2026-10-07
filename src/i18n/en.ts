@@ -903,11 +903,10 @@ export const en: { translation: Translation } = {
       errorEmailInUse: 'That email address is already registered',
       errorPasswordLength: 'The password must be at least 8 characters',
       errorGeneric: 'Something went wrong. Please try again',
-      verifySent: 'We sent a verification email. Please verify it before signing in',
+      verifySent: 'We sent a verification email',
       verifyRequired: 'Verify your email address before signing in',
       verifyTitle: 'Account created',
-      verifyHint:
-        'Once the address is verified, you can sign in with the email and password you chose',
+      verifyHint: 'Once the address is verified, you can sign in',
       resend: 'Resend the verification email',
       resendSent: 'We sent another verification email',
       backToSignIn: 'Back to sign in',

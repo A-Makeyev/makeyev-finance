@@ -2,7 +2,12 @@ import { betterAuth } from 'better-auth'
 import { mongodbAdapter } from 'better-auth/adapters/mongodb'
 import { nextCookies } from 'better-auth/next-js'
 import { emailOTP } from 'better-auth/plugins/email-otp'
-import { getAuthConfig, parseSocialProviders, buildBaseURLConfig } from './config'
+import {
+  getAuthConfig,
+  parseSocialProviders,
+  buildAccountLinkingConfig,
+  buildBaseURLConfig,
+} from './config'
 import { getDb } from './mongo'
 import { sendPasswordResetOtpEmail, sendVerificationEmail } from './email'
 import { DEFAULT_ROLE } from './roles'
@@ -87,6 +92,13 @@ async function createAuth() {
       sendVerificationEmail: async ({ user, url }, request) => {
         await sendVerificationEmail({ user, url, request })
       },
+    },
+    account: {
+      // One person is one user: signing in with Google joins the existing
+      // account that already carries that address instead of creating a second
+      // user for the same human. See `buildAccountLinkingConfig` for the
+      // verified-email guard that keeps this from being a takeover path.
+      accountLinking: buildAccountLinkingConfig(),
     },
     user: {
       additionalFields: {

@@ -97,6 +97,40 @@ export function buildBaseURLConfig(authUrl: string | undefined) {
   }
 }
 
+/**
+ * Account linking policy: one person is one user, whichever way they sign in.
+ *
+ * Google is the only trusted provider here, and that is a decision rather than
+ * a default: Google verifies the addresses it returns, so a Google sign-in may
+ * join the existing account carrying the same address instead of creating a
+ * second user for the same person. Any provider added later must be vetted for
+ * that property first, because a provider that hands over an unverified
+ * address would let it claim an account it does not own.
+ *
+ * `requireLocalEmailVerified` is pinned to true on purpose. It is what keeps
+ * the linking from being a takeover path: an email-created account that was
+ * never verified is NOT joined, so registering a stranger's address with a
+ * password does not hand that account over the moment the real owner signs in
+ * with Google. Setting it to false reopens exactly that path, so do not.
+ */
+export type AccountLinkingOptions = {
+  enabled: boolean
+  trustedProviders: SocialProviderId[]
+  updateUserInfoOnLink: boolean
+  requireLocalEmailVerified: boolean
+}
+
+export function buildAccountLinkingConfig(): AccountLinkingOptions {
+  return {
+    enabled: true,
+    trustedProviders: ['google'],
+    // Carry the fresh Google name and photo onto a newly linked user, the same
+    // policy the Google provider already applies on every sign-in.
+    updateUserInfoOnLink: true,
+    requireLocalEmailVerified: true,
+  }
+}
+
 function readRawEnv(): Record<string, string | undefined> {
   // Node/Next load .env into process.env. Deliberately not import.meta.env:
   // these must never reach the client bundle.
