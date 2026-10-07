@@ -5,8 +5,6 @@ import { fetchCbsIndex, type CbsFeedKind } from '@/services/cbs'
 import { formatIndexPercent, type CbsIndexPayload, type TrendDirection } from '@/lib/xml'
 import { useCalculatorStore } from '@/stores/calculatorStore'
 import { useMediaQuery } from '@/hooks/useScrolled'
-import { HoverTooltip } from '@/components/ui/HoverTooltip'
-
 /**
  * Live CBS index feeds (CPI + construction-input indexes).
  *
@@ -129,12 +127,9 @@ function FeedAnchor({ payload, compact, clone = false }: FeedAnchorProps) {
       tabIndex={clone ? -1 : undefined}
     >
       {/* Short localized name ("CPI" etc. in English); the raw Hebrew feed
-          name stays in the search deep link and the hover tooltip. The
-          compact tier keeps this name too - only the yearly change is
-          dropped. */}
-      <HoverTooltip content={payload.indexName}>
-        {t(`indexesBar.shortNames.${kindToShortNameKey(payload.searchQuery)}`)}
-      </HoverTooltip>{' '}
+          name stays in the search deep link only. The compact tier keeps
+          this name too - only the yearly change is dropped. */}
+      {t(`indexesBar.shortNames.${kindToShortNameKey(payload.searchQuery)}`)}{' '}
       <span style={{ color: TREND_COLORS[payload.monthDirection] }}>{month.value}</span>
       {/* Non-breaking space: a plain collapsible space next to the empty
           .line-break span collapses to zero width (measured in the probe),

@@ -18,6 +18,9 @@ Thumbs.db
 # Market snapshot disk cache (runtime data, never committed)
 .cache/
 
+# Local dev database (npm run dev:db), never committed
+.mongo/
+
 # Next.js app (root)
 .next/
 next-env.d.ts

@@ -56,7 +56,6 @@ test.describe('saved mixes', () => {
     await expect(calc.myMixesProfileLink).toHaveAttribute('href', '/profile#saved-mixes')
 
     // A clean calculator loads immediately, even though the URL stays on this page.
-    const scrollBeforeLoad = await calc.scrollPosition()
     await calc.savedMixMenuItem(firstId).click()
     await expect(calc.mixTitle).toContainText('First home')
 
