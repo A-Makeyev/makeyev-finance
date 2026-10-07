@@ -284,13 +284,10 @@ test.describe('Markets strip', () => {
     await expect(bar).toContainText('CPI')
     await expect(bar).toContainText('Monthly change')
     await expect(bar).not.toContainText('Yearly change')
-    // The full official feed name is still available on hover - the styled
-    // tooltip now, not a native title. Hovering the bar pauses the marquee,
-    // which is what makes the sliding name reachable.
+    // The full official feed name is reachable via the link's href (a Google
+    // search for the Hebrew feed name), not a hover tooltip — the indexes bar
+    // links are plain anchors, unlike the Markets rows below them.
     await bar.hover()
-    const firstName = bar.locator('[data-tooltip-anchor]').first()
-    await firstName.hover()
-    await expect(page.getByRole('tooltip')).toHaveText(/.+/)
 
     // The loop copy is hidden from assistive tech and kept out of the tab
     // order, so the strip does not read or tab twice.

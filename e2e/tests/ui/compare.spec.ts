@@ -23,14 +23,14 @@ test.describe('mortgage comparison - /compare', () => {
   }) => {
     // The calculator's ₪1,000,000 recommended mix at 15y shows ₪7,772 first
     // payment; the comparison prices the same mix into its own rows: the
-    // average payment (golden: total 1,451,762.66 / 180 = 8,065.35) and the
-    // recommended net income at the 33% ceiling (ceil(8065.35/0.33/500)·500).
+    // average payment (golden: total 1,442,081 / 180 = 8,011.56) and the
+    // recommended net income at the 33% ceiling (ceil(8011.56/0.33/500)·500).
     await calc.goto()
     await expect(calc.monthlyPayment).toHaveText(ils(7_772))
     await calc.page.getByTestId('open-comparison').click()
     await expect(calc.page.getByTestId('compare-shell')).toBeVisible()
     const avgCell = page.getByTestId('compare-row-avgPayment').locator('td').first()
-    await expect(avgCell).toContainText(ils(8_065))
+    await expect(avgCell).toContainText(ils(8_012))
     const incomeCell = page.getByTestId('compare-row-recommendedIncome').locator('td').first()
     await expect(incomeCell).toContainText(ils(24_500))
   })
