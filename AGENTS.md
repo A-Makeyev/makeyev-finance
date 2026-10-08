@@ -64,6 +64,7 @@ Do not write the em dash character (`—`, U+2014) anywhere in this project: not
 This matters more than usual here - auth and payments are coming, and mistakes in
 either are the kind that get exploited quietly rather than fail loudly.
 
+- Never read, print, or open `.env` or `.env.*` files (except `.env.example`). If you need to know which variables exist, read `.env.example` or ask me.
 - Never hand-roll auth, sessions, or crypto (password hashing, token signing). Use an established, maintained library and say which one and why - this is a dependency decision like any other, flagged not defaulted.
 - Never touch payment card data directly. Use a PCI-compliant processor (Stripe or equivalent) and its hosted fields/redirect flow - card numbers should never reach this app's own servers or logs.
 - Every input from the client is untrusted, full stop - validate and authorize on the server, even if the UI already prevents it. A disabled button or hidden field is not access control.
