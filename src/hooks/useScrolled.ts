@@ -23,9 +23,15 @@ export function useScrolled(): boolean {
  * client-only and never faced this), then tracks the query live. The one-
  * frame conservative false is exactly what useScrolled already shipped on
  * first paint, so the navbar behavior is unchanged.
+ *
+ * `initial` overrides that conservative false for callers whose MARKUP must
+ * match a CSS breakpoint from the very first paint (the marquee loop copies:
+ * the CSS animation runs before hydration, so the markup it animates has to be
+ * there already). The server and the first client render both use `initial`,
+ * so they still agree; the live query then corrects it after mount.
  */
-export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false)
+export function useMediaQuery(query: string, initial = false): boolean {
+  const [matches, setMatches] = useState(initial)
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(query)

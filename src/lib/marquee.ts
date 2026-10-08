@@ -16,5 +16,10 @@
  * The 120s animation duration in globals.css is coupled to this number: 3
  * groups per 120s cycle = one group per 40s, the speed the original 2-copy
  * track moved at. Change one, change both.
+ *
+ * The tracks must NOT flex-shrink below this content width (globals.css pins
+ * `flex: 0 0 auto`): the loop travel is a percentage of the track box, so a
+ * track squeezed to its min-content width wraps mid-group instead of on the
+ * third group, and the strip visibly snaps back every cycle.
  */
 export const MARQUEE_COPIES = 6

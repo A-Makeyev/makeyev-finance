@@ -75,6 +75,14 @@ export function MarketTracker({ hidden = false, atTop = false }: MarketTrackerPr
   // Below the hamburger breakpoint the strip slides on one line (see the
   // compact marquee block in globals.css) instead of wrapping onto 2-3 lines.
   const compact = useMediaQuery('(max-width: 1200px)')
+  // The loop copies assume the compact tier until the viewport is known: the
+  // CSS marquee animates the track from the FIRST paint, so the markup must
+  // already carry MARQUEE_COPIES groups or a compact viewport animates a
+  // single-group track that slides half its width and snaps back as soon as
+  // hydration adds the copies (the strip flickering and starting over). Above
+  // 1200px the extras are `display: none` (globals.css), so they are invisible
+  // there and this drops them once the real query lands.
+  const compactFirstPaint = useMediaQuery('(max-width: 1200px)', true)
 
   // The strip wraps on narrow screens, so its height is NOT the fixed 35px
   // the navbar offset math used to assume - at mid widths six rows flow onto
@@ -109,13 +117,13 @@ export function MarketTracker({ hidden = false, atTop = false }: MarketTrackerPr
   const loading = isPending
 
   // Above 1200px the wrappers dissolve (display: contents) and the rows stay
-  // direct flex items of .markets, exactly as before. In the compact tier the
-  // same group is rendered MARQUEE_COPIES times so the marquee loop is both
-  // seamless and still covering the screen at the loop point (with only two
-  // copies a group narrower than the viewport let blank space eat in from the
-  // right before the loop snapped back); see src/lib/marquee.ts. Copy 0 is
-  // the visible one; the loop copies are hidden from assistive tech and
-  // carry no test ids.
+  // direct flex items of .markets, exactly as before. In the compact tier (and
+  // until the viewport is known, see compactFirstPaint above) the same group
+  // is rendered MARQUEE_COPIES times so the marquee loop is both seamless and
+  // still covering the screen at the loop point (with only two copies a group
+  // narrower than the viewport let blank space eat in from the right before the
+  // loop snapped back); see src/lib/marquee.ts. Copy 0 is the visible one; the
+  // loop copies are hidden from assistive tech and carry no test ids.
   const group = (clone: boolean, copy: number) => (
     <div
       key={copy}
@@ -163,7 +171,7 @@ export function MarketTracker({ hidden = false, atTop = false }: MarketTrackerPr
       aria-hidden={hidden}
     >
       <div className="markets-track">
-        {Array.from({ length: compact ? MARQUEE_COPIES : 1 }, (_, copy) =>
+        {Array.from({ length: compactFirstPaint ? MARQUEE_COPIES : 1 }, (_, copy) =>
           group(copy > 0, copy),
         )}
       </div>

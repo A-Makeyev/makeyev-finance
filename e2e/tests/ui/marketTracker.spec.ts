@@ -92,37 +92,85 @@ function flashes(page: Page): Promise<RecordedFlash[]> {
 }
 
 /**
- * Jumps both marquee tracks to their loop point (half of the 120s cycle lands
- * exactly on the -50% keyframe, where the duplicate groups take over) and
- * asserts the track boxes still cover the viewport horizontally. This is the
- * no-blank-gap contract: with too few loop copies, a group narrower than the
- * screen let blank space eat in from the right before the loop snapped back.
+ * Jumps both marquee tracks to just before their loop point (the END of the
+ * 120s cycle, where the animation wraps from the -50% keyframe back to 0 and
+ * the duplicate groups take over) and asserts two things:
+ *
+ * 1. Both track boxes still cover the viewport horizontally. This is the
+ *    no-blank-gap contract: with too few loop copies, a group narrower than
+ *    the screen let blank space eat in from the right before the loop snapped
+ *    back. The loop point is the worst case, since the track has moved as far
+ *    as it ever moves.
+ * 2. The loop travel is a WHOLE number of groups. The loop shifts by half the
+ *    track, which only lands on a group boundary if the track really is
+ *    MARQUEE_COPIES groups wide - a flex-shrunk track (the Indexes anchors'
+ *    min-content used to win over the 6-group content) made -50% land ~1.18
+ *    groups in, so the strip slid then snapped back mid-group every cycle.
  */
 async function expectLoopToCoverViewport(page: Page, width: number): Promise<void> {
-  const boxes = (await page.evaluate(
+  interface TrackShape {
+    left: number
+    right: number
+    trackWidth: number
+    groups: number[]
+    /** Distance between two adjacent group boxes: one content period. */
+    period: number
+  }
+
+  // The markup carries the loop copies from the first paint (the CSS animation
+  // starts before hydration), so wait for the hydrated track rather than
+  // measuring whatever the server rendered.
+  await page.waitForFunction(`(() => {
+    const tracks = [...document.querySelectorAll('.indexes-track, .markets-track')]
+    return tracks.length > 0 && tracks.every((track) => track.children.length === ${MARQUEE_COPIES})
+  })()`)
+
+  const tracks = (await page.evaluate(
     `(() => {
       const tracks = [...document.querySelectorAll('.indexes-track, .markets-track')]
-      for (const track of tracks) track.style.animationDelay = '-60s'
-      return new Promise((resolve) =>
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() =>
-            resolve(
-              tracks.map((track) => {
-                const box = track.getBoundingClientRect()
-                return { left: Math.round(box.left), right: Math.round(box.right) }
-              }),
-            ),
-          ),
-        ),
-      )
+      // Freeze both tracks 10ms short of the end of the 120s cycle: the wrap
+      // point, without waiting two minutes for it. Pausing also keeps the
+      // measurement stable while the strips re-render.
+      for (const track of tracks) {
+        const animation = track.getAnimations()[0]
+        animation.pause()
+        animation.currentTime = 119990
+      }
+      return tracks.map((track) => {
+        // getBoundingClientRect forces the paused style to apply synchronously.
+        const box = track.getBoundingClientRect()
+        const groups = [...track.children].map((child) => child.getBoundingClientRect())
+        return {
+          left: Math.round(box.left),
+          right: Math.round(box.right),
+          trackWidth: box.width,
+          groups: groups.map((group) => group.width),
+          period: groups.length > 1 ? groups[1].left - groups[0].left : 0,
+        }
+      })
     })()`,
-  )) as Array<{ left: number; right: number }>
-  expect(boxes, 'both strips have a marquee track').toHaveLength(2)
-  boxes.forEach((box, index) => {
-    expect(box.left, `track ${index} reaches the left edge at ${width}px`).toBeLessThanOrEqual(0)
-    expect(box.right, `track ${index} reaches the right edge at ${width}px`).toBeGreaterThanOrEqual(
-      width,
-    )
+  )) as TrackShape[]
+
+  expect(tracks, 'both strips have a marquee track').toHaveLength(2)
+  tracks.forEach((track, index) => {
+    expect(track.left, `track ${index} reaches the left edge at ${width}px`).toBeLessThanOrEqual(0)
+    expect(
+      track.right,
+      `track ${index} reaches the right edge at ${width}px`,
+    ).toBeGreaterThanOrEqual(width)
+    expect(
+      track.trackWidth,
+      `track ${index} is not shrunk below its ${track.groups.length} groups at ${width}px`,
+    ).toBeGreaterThanOrEqual(track.groups.reduce((sum, group) => sum + group, 0) - 1)
+    // Identical groups are what make the half-track loop a true repeat.
+    expect(
+      Math.max(...track.groups) - Math.min(...track.groups),
+      `track ${index} groups are all the same width at ${width}px`,
+    ).toBeLessThan(1)
+    expect(
+      Math.abs(track.trackWidth / 2 - track.period * 3),
+      `track ${index} loops on a whole group at ${width}px`,
+    ).toBeLessThan(1)
   })
 }
 
@@ -319,10 +367,10 @@ test.describe('Markets strip', () => {
     // blank space eat in from the right as the loop ran, until the strip
     // visibly snapped back - it stopped and started over. The fix is enough
     // loop copies (MARQUEE_COPIES) that half the track always spans the
-    // screen; jumping the animation to its loop point (half of the 120s
-    // cycle lands exactly on the -50% keyframe) checks exactly that frame.
-    // Both strips, in both content states: the skeletons are the narrowest
-    // content the strips ever show.
+    // screen AND that the track keeps its full content width (no flex shrink),
+    // so the wrap point is exactly three whole groups. Both strips, in both
+    // content states: the skeletons are the narrowest content the strips ever
+    // show.
     for (const width of [360, 900, 1200]) {
       await page.setViewportSize({ width, height: 900 })
 

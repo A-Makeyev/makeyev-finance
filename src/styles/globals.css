@@ -1756,6 +1756,19 @@ img {
   display: contents;
 }
 
+/* The components render the loop copies from the first paint (see the marquee
+   tier hooks), because the CSS animation below starts before hydration and
+   must animate a full MARQUEE_COPIES track. Above the compact tier there is
+   nothing to morph into them, so hide the extras: no layout box, no focus,
+   no screen reader. (Higher specificity than the display: contents rule
+   above, so order does not matter.) */
+@media (min-width: 1201px) {
+  .indexes-group[data-marquee-clone],
+  .markets-group[data-marquee-clone] {
+    display: none;
+  }
+}
+
 /* One loading entry of the Indexes strip: the REAL localized name plus a
    shimmering value bar, inside a flex box so it lands in the same space the
    real anchor will take (the strip itself is a space-evenly flex row). Like
@@ -3209,6 +3222,16 @@ nav#navbar .nav-bar-controls li {
     display: flex;
     align-items: center;
     width: max-content;
+    /* flex-shrink MUST stay 0. The track is a flex item of the strip, so
+       without this the row shrinks it from its 6-group content width down to
+       its min-content width (the Indexes anchors are wrappable text, so the
+       track's box measured ~1_820px against ~4_600px of groups). The loop
+       travel is a PERCENTAGE of that box, so a shrunk track moved 910px (1.18
+       groups) per cycle instead of exactly 3 groups, then snapped back
+       mid-group - the strip flickered and started over. The Markets rows
+       happen to have a min-content as wide as their content, which is why
+       only the Indexes bar used to visibly jump. */
+    flex: 0 0 auto;
     will-change: transform;
     /* MARQUEE_COPIES (src/lib/marquee.ts) groups per track; the loop shifts
        by half the track (3 groups) per 120s cycle = one group per 40s, the

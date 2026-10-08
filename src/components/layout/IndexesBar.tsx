@@ -184,6 +184,16 @@ export function IndexesBar({ feeds, hidden = false }: IndexesBarProps) {
   // Below the hamburger breakpoint the strip slides on one line (see the
   // compact marquee block in globals.css) instead of wrapping onto 2-3 lines.
   const compact = useMediaQuery('(max-width: 1200px)')
+  // The loop copies assume the compact tier until the viewport is known. The
+  // CSS marquee animates the track from the FIRST paint, so the markup it
+  // animates must already carry MARQUEE_COPIES groups: with the conservative
+  // desktop default (one group) a compact viewport animated a single-group
+  // track that slid half its own width, then snapped back the moment
+  // hydration added the copies - the strip flickered and restarted on every
+  // load. Above 1200px the extra copies are `display: none` (globals.css), so
+  // they are invisible and inert there and this drops them from the DOM once
+  // the real query lands, keeping the wide-screen markup as light as before.
+  const compactFirstPaint = useMediaQuery('(max-width: 1200px)', true)
   const stripRef = useRef<HTMLDivElement | null>(null)
   const anySuccess = feeds.anySuccess
 
@@ -227,12 +237,13 @@ export function IndexesBar({ feeds, hidden = false }: IndexesBarProps) {
 
   // Above 1200px the wrappers dissolve (display: contents) and the anchors
   // are direct flex items of .indexes, exactly as before. In the compact tier
-  // the same group is rendered MARQUEE_COPIES times so the marquee loop is
-  // both seamless and still covering the screen at the loop point (with only
-  // two copies a group narrower than the viewport let blank space eat in from
-  // the right before the loop snapped back); see src/lib/marquee.ts. Copy 0
-  // is the visible, tabbable one; the loop copies are hidden from assistive
-  // tech and their links are not tabbable.
+  // (and until the viewport is known, see compactFirstPaint above) the same
+  // group is rendered MARQUEE_COPIES times so the marquee loop is both
+  // seamless and still covering the screen at the loop point (with only two
+  // copies a group narrower than the viewport let blank space eat in from the
+  // right before the loop snapped back); see src/lib/marquee.ts. Copy 0 is
+  // the visible, tabbable one; the loop copies are hidden from assistive tech
+  // and their links are not tabbable.
   const group = (clone: boolean, copy: number) => (
     <div
       key={copy}
@@ -261,7 +272,7 @@ export function IndexesBar({ feeds, hidden = false }: IndexesBarProps) {
       aria-hidden={hidden}
     >
       <div className="indexes-track">
-        {Array.from({ length: compact ? MARQUEE_COPIES : 1 }, (_, copy) =>
+        {Array.from({ length: compactFirstPaint ? MARQUEE_COPIES : 1 }, (_, copy) =>
           group(copy > 0, copy),
         )}
       </div>
