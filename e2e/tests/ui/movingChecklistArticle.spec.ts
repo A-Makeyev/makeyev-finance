@@ -51,16 +51,19 @@ for (const language of ['hebrew', 'english'] as const) {
       await expect(page).toHaveURL(/\/articles\/moving-checklist$/)
 
       // The article page rewrites the tag with its own description - a
-      // per-page value, not the list's carried over. The rewrite lands in a
-      // post-commit effect, just after the URL updates, so poll until it has
-      // happened instead of reading once at race-with-the-render timing.
+      // per-page value, not the list's carried over. The rewrite lands after
+      // the URL updates, so poll until it has happened instead of reading once
+      // at race-with-the-render timing. The budget is generous (25s vs the
+      // default 12s): this is a bounded wait for a post-navigation effect, and
+      // on a loaded CI runner the metadata swap is the slowest part of the
+      // navigation, which made this assertion flake.
       await expect
-        .poll(async () => (await readMetaDescription())?.trim() ?? '')
+        .poll(async () => (await readMetaDescription())?.trim() ?? '', { timeout: 25_000 })
         .not.toBe(listDescription?.trim() ?? '')
       // Next updates the <meta> on client navigation by swapping the tag, so
       // poll for the settled non-empty value rather than reading mid-swap.
       await expect
-        .poll(async () => (await readMetaDescription())?.trim() ?? '')
+        .poll(async () => (await readMetaDescription())?.trim() ?? '', { timeout: 25_000 })
         .not.toBe('')
 
       const article = page.getByTestId('moving-checklist-article')

@@ -230,16 +230,34 @@ test.describe('theme toggle', () => {
       return previous
     }
 
-    /** Scrolls to the scrolled state and waits for the class that paints it. */
-    const scrollIntoScrolledState = async (): Promise<void> => {
+    /**
+     * Scrolls into the scrolled state and waits for the class that paints it.
+     *
+     * Returns false when the page has nothing to scroll under the bar at all:
+     * the sign-in card is exactly one viewport tall whenever the deployment
+     * enables no social provider (its "nothing to scroll past" is deliberate -
+     * see shouldHideFooter in src/lib/siteChrome.ts). The bar is then
+     * correctly still in its TOP treatment, so the caller records no scrolled
+     * read for that route rather than waiting out a class that never comes.
+     */
+    const scrollIntoScrolledState = async (): Promise<boolean> => {
+      // Whether a page can scroll under the bar at all is a LAYOUT fact, read
+      // from scrollHeight vs the viewport - not from scrollY, which still
+      // reads 0 right after scrollTo because the site sets smooth
+      // scroll-behavior and animates instead of jumping.
+      const scrollable = (await page.evaluate(
+        `document.documentElement.scrollHeight - window.innerHeight > 1`,
+      )) as boolean
+      if (!scrollable) return false
       await expect
         .poll(async () => {
-          await page.evaluate(`window.scrollTo(0, 400)`)
+          await page.evaluate(`window.scrollTo(0, document.documentElement.scrollHeight)`)
           return page.evaluate(
             `document.getElementById('navbar').classList.contains('navbar-scrolling')`,
           )
         })
         .toBe(true)
+      return true
     }
 
     /** Reads the bar on every page in both scroll states, once per theme. */
@@ -255,8 +273,12 @@ test.describe('theme toggle', () => {
           .poll(async () => page.evaluate(`document.documentElement.dataset.hydrated`))
           .toBe('true')
         top[route] = await readSettled()
-        await scrollIntoScrolledState()
-        scrolled[route] = await readSettled()
+        if (await scrollIntoScrolledState()) {
+          scrolled[route] = await readSettled()
+        } else {
+          // Nothing to scroll under it: the bar stays in its top treatment.
+          expect(await readSettled(), `no scroll on ${route}`).toBe(top[route])
+        }
       }
       return { top, scrolled }
     }
@@ -268,6 +290,11 @@ test.describe('theme toggle', () => {
     // signed out this harness cannot reach it anyway, because the server-side
     // session check sends /profile to /login. The route below is what that
     // redirect actually renders, and it is a real third surface to compare.
+    //
+    // /login is a TOP-only surface: its single card is exactly one viewport
+    // tall when this deployment enables no social provider, so there is
+    // nothing to scroll under the bar and its scrolled read is skipped (see
+    // scrollIntoScrolledState).
     const pages = ['/', '/calculators', '/articles', '/login']
     // The tints, pinned here so a stray re-declaration (or a scroll state
     // swapping its value) fails the run rather than sliding through. The TOP
@@ -284,10 +311,14 @@ test.describe('theme toggle', () => {
 
     const light = await readEveryPage()
     // Identical on every page, at BOTH scroll states: the per-page change the
-    // user removed must not come back through either door.
+    // user removed must not come back through either door. A route with no
+    // scrolled read has nothing to scroll under the bar (see
+    // scrollIntoScrolledState), so it only contributes the top comparison.
     for (const route of pages) {
       expect(light.top[route], `light top on ${route}`).toBe(light.top['/'])
-      expect(light.scrolled[route], `light scrolled on ${route}`).toBe(light.scrolled['/'])
+      if (route in light.scrolled) {
+        expect(light.scrolled[route], `light scrolled on ${route}`).toBe(light.scrolled['/'])
+      }
     }
 
     // Light: the TOP is the legacy transparent glass - a thin ink tint (a
@@ -336,7 +367,9 @@ test.describe('theme toggle', () => {
     const dark = await readEveryPage()
     for (const route of pages) {
       expect(dark.top[route], `dark top on ${route}`).toBe(dark.top['/'])
-      expect(dark.scrolled[route], `dark scrolled on ${route}`).toBe(dark.scrolled['/'])
+      if (route in dark.scrolled) {
+        expect(dark.scrolled[route], `dark scrolled on ${route}`).toBe(dark.scrolled['/'])
+      }
     }
 
     const [darkBackdrop, darkTopBg, darkLink, darkLogo, darkSheen, darkEdge] =

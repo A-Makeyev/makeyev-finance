@@ -50,8 +50,7 @@ test.describe('saved mixes', () => {
     ])
     await calc.goto()
     await expect(calc.myMixesMenuTrigger).toBeVisible()
-    await calc.myMixesMenuTrigger.hover()
-    await expect(calc.savedMixesMenu).toBeVisible()
+    await calc.openSavedMixesMenu()
     await expect(calc.savedMixMenuItem(firstId)).toContainText('First home')
     await expect(calc.myMixesProfileLink).toHaveAttribute('href', '/profile#saved-mixes')
 
@@ -61,13 +60,13 @@ test.describe('saved mixes', () => {
 
     // Dirty work is protected before a different saved mix replaces it.
     await calc.termSlider.fill('20')
-    await calc.myMixesMenuTrigger.hover()
+    await calc.openSavedMixesMenu()
     await calc.savedMixMenuItem(secondId).click()
     await expect(calc.loadMixDialog).toBeVisible()
     await calc.loadMixCancel.click()
     await expect(calc.mixTitle).toContainText('First home')
 
-    await calc.myMixesMenuTrigger.hover()
+    await calc.openSavedMixesMenu()
     await calc.savedMixMenuItem(secondId).click()
     await calc.loadMixConfirm.click()
     await expect(calc.mixTitle).toContainText('Second home')

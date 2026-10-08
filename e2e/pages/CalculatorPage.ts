@@ -278,6 +278,21 @@ import { expect, type Locator, type Page } from '@playwright/test'
     return this.page.getByTestId(`saved-mix-menu-item-${id}`)
   }
 
+  /**
+   * Opens the saved-mix menu the way a visitor does - hover - but first parks
+   * the pointer away from the control. The menu opens on mouseenter, and a
+   * mouseenter is only delivered when the pointer MOVES onto an element: after
+   * an edit the layout shifts the trigger under a pointer that never moved,
+   * the browser sees no crossing, and a plain hover() then walks within the
+   * already-hovered element without reopening anything. Parking first makes
+   * every open a real crossing, so the reopen after an edit is deterministic.
+   */
+  async openSavedMixesMenu(): Promise<void> {
+    await this.page.mouse.move(0, 0)
+    await this.myMixesMenuTrigger.hover()
+    await expect(this.savedMixesMenu).toBeVisible()
+  }
+
   async documentDirection(): Promise<string> {
     return this.page.evaluate('document.documentElement.dir')
   }
