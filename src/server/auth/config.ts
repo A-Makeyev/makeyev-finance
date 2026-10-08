@@ -131,17 +131,29 @@ export function buildAccountLinkingConfig(): AccountLinkingOptions {
   }
 }
 
+/**
+ * Blank (empty or whitespace-only) means "not configured", not "configured to
+ * nothing". .env entries left as `KEY=` reach process.env as '', which fails
+ * the schema's .min(1)/.url() rules and turns every auth request into
+ * "Invalid auth configuration". Normalizing here (the raw read, not the schema)
+ * keeps parseAuthConfig's explicit-empty-MONGODB_URI rejection intact for
+ * callers that pass a truly empty value directly.
+ */
+function blankToUndefined(v: string | undefined) {
+  return v?.trim() ? v : undefined
+}
+
 function readRawEnv(): Record<string, string | undefined> {
   // Node/Next load .env into process.env. Deliberately not import.meta.env:
   // these must never reach the client bundle.
   return {
-    MONGODB_URI: process.env.MONGODB_URI,
-    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
-    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-    AUTH_EMAIL_FROM: process.env.AUTH_EMAIL_FROM,
-    RESEND_API_KEY: process.env.RESEND_API_KEY,
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    MONGODB_URI: blankToUndefined(process.env.MONGODB_URI),
+    BETTER_AUTH_SECRET: blankToUndefined(process.env.BETTER_AUTH_SECRET),
+    BETTER_AUTH_URL: blankToUndefined(process.env.BETTER_AUTH_URL),
+    AUTH_EMAIL_FROM: blankToUndefined(process.env.AUTH_EMAIL_FROM),
+    RESEND_API_KEY: blankToUndefined(process.env.RESEND_API_KEY),
+    GOOGLE_CLIENT_ID: blankToUndefined(process.env.GOOGLE_CLIENT_ID),
+    GOOGLE_CLIENT_SECRET: blankToUndefined(process.env.GOOGLE_CLIENT_SECRET),
   }
 }
 

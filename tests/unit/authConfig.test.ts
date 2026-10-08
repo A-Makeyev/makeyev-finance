@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest'
-import { buildBaseURLConfig, canSendAuthEmail, parseAuthConfig } from '@/server/auth/config'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  buildBaseURLConfig,
+  canSendAuthEmail,
+  getAuthConfig,
+  parseAuthConfig,
+} from '@/server/auth/config'
 
 describe('parseAuthConfig', () => {
   it('applies the default From address and keeps secrets optional (so next build works)', () => {
@@ -33,6 +38,33 @@ describe('parseAuthConfig', () => {
 
   it('rejects a malformed BETTER_AUTH_URL', () => {
     expect(() => parseAuthConfig({ BETTER_AUTH_URL: 'not-a-url' })).toThrow(/BETTER_AUTH_URL/)
+  })
+})
+
+describe('getAuthConfig', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('treats empty and whitespace-only env values as unset instead of throwing', () => {
+    // .env entries left as `KEY=` come through as empty strings (which fail
+    // .min(1)/.url() and turn every auth request into "Invalid auth
+    // configuration"). Blank means "not configured", same as absent.
+    vi.stubEnv('BETTER_AUTH_URL', '')
+    vi.stubEnv('RESEND_API_KEY', '')
+    vi.stubEnv('GOOGLE_CLIENT_ID', '')
+    vi.stubEnv('AUTH_EMAIL_FROM', '')
+    vi.stubEnv('GOOGLE_CLIENT_SECRET', '   ')
+
+    const config = getAuthConfig()
+    expect(config.BETTER_AUTH_URL).toBeUndefined()
+    expect(config.RESEND_API_KEY).toBeUndefined()
+    expect(config.GOOGLE_CLIENT_ID).toBeUndefined()
+    expect(config.GOOGLE_CLIENT_SECRET).toBeUndefined()
+    expect(config.AUTH_EMAIL_FROM).toBe('Makeyev Finance <onboarding@resend.dev>')
+  })
+
+  it('still throws for a too-short BETTER_AUTH_SECRET', () => {
+    vi.stubEnv('BETTER_AUTH_SECRET', 'too-short')
+    expect(() => getAuthConfig()).toThrow(/BETTER_AUTH_SECRET/)
   })
 })
 
