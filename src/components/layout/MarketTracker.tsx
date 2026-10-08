@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useMediaQuery } from '@/hooks/useScrolled'
 import { useMarketQuotes } from '@/services/market'
 import { HoverTooltip } from '@/components/ui/HoverTooltip'
+import { MARQUEE_COPIES } from '@/lib/marquee'
 import type { MarketAssetMeta, MarketQuote } from '@/services/marketTypes'
 import {
   formatMarketChangePercent,
@@ -45,10 +46,11 @@ const TREND_ARROWS: Record<'up' | 'down' | 'flat', string> = {
 }
 
 /**
- * Movement colors are the CBS Indexes strip's own convention (up red, down
- * green, flat lightblue; the class names stay semantic and the mapping lives
- * in globals.css), so the two top strips read alike: names white, the price
- * and the change share the row's movement color.
+ * Movement colors follow the international ticker convention (up green, down
+ * red, flat lightblue as the neutral) - deliberately UNLIKE the CBS Indexes
+ * strip above, which keeps the Israeli reading (up red, down green). The
+ * class names stay semantic and the mapping lives in globals.css: names
+ * white, the price and the change share the row's movement color.
  */
 const TREND_CLASS: Record<'up' | 'down' | 'flat', string> = {
   up: 'market-change-up',
@@ -108,10 +110,15 @@ export function MarketTracker({ hidden = false, atTop = false }: MarketTrackerPr
 
   // Above 1200px the wrappers dissolve (display: contents) and the rows stay
   // direct flex items of .markets, exactly as before. In the compact tier the
-  // same group is rendered twice so the marquee can loop seamlessly; the copy
-  // is hidden from assistive tech and carries no test ids.
-  const group = (clone: boolean) => (
+  // same group is rendered MARQUEE_COPIES times so the marquee loop is both
+  // seamless and still covering the screen at the loop point (with only two
+  // copies a group narrower than the viewport let blank space eat in from the
+  // right before the loop snapped back); see src/lib/marquee.ts. Copy 0 is
+  // the visible one; the loop copies are hidden from assistive tech and
+  // carry no test ids.
+  const group = (clone: boolean, copy: number) => (
     <div
+      key={copy}
       className="markets-group"
       data-marquee-clone={clone ? 'true' : undefined}
       aria-hidden={clone || undefined}
@@ -156,8 +163,9 @@ export function MarketTracker({ hidden = false, atTop = false }: MarketTrackerPr
       aria-hidden={hidden}
     >
       <div className="markets-track">
-        {group(false)}
-        {compact && group(true)}
+        {Array.from({ length: compact ? MARQUEE_COPIES : 1 }, (_, copy) =>
+          group(copy > 0, copy),
+        )}
       </div>
     </div>
   )

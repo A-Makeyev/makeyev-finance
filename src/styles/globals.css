@@ -1785,9 +1785,10 @@ img {
    so each block re-pins the Markets strip to match).
 
    Layout: five rows (ticker / price / signed change), no heading, no
-   links. Movement colors follow the Indexes strip's own convention
-   (user-requested): up red, down green, flat lightblue, so the two top
-   strips read alike.
+   links. Movement colors follow the international ticker convention
+   (user-requested): up green, down red, flat lightblue as the neutral -
+   deliberately UNLIKE the Indexes strip above, which keeps the Israeli
+   convention (up red, down green).
 =========================================================================== */
 .markets {
   display: flex;
@@ -1984,16 +1985,16 @@ img {
   animation: market-tick-flash 1200ms ease-out forwards;
 }
 
-/* A tick paints a faint tint behind the whole value pair: red when it moved
-   up, green when it moved down, matching the movement colors above (the
-   Indexes strip's convention). Subtle enough to read as light rather than a
-   solid block. */
+/* A tick paints a faint tint behind the whole value pair: green when it
+   moved up, red when it moved down, matching the movement colors above (the
+   international ticker convention, unlike the Indexes strip). Subtle enough
+   to read as light rather than a solid block. */
 .markets-tick-up {
-  background-color: rgba(210, 60, 60, 0.14);
+  background-color: rgba(35, 210, 65, 0.14);
 }
 
 .markets-tick-down {
-  background-color: rgba(35, 210, 65, 0.14);
+  background-color: rgba(210, 60, 60, 0.14);
 }
 
 /* Opacity is the only animated property: compositor-friendly, and the end
@@ -2030,19 +2031,20 @@ img {
   font-variant-numeric: tabular-nums;
 }
 
-/* Movement colors: the EXACT Indexes strip palette tokens (user-requested,
-   so the two strips read alike) - the same hexes IndexesBar's TREND_COLORS
-   passes inline:
-   up rgb(210,60,60), down rgb(35,210,65), flat lightblue (same as the
-   Indexes' flat). Values colored at full brightness, names white. */
+/* Movement colors: the international ticker convention (user-requested),
+   deliberately UNLIKE the Indexes strip, whose TREND_COLORS keep the Israeli
+   reading (up red, down green). Here a rise is GREEN and a fall is RED, the
+   same hexes the Indexes strip uses but with the mapping swapped; flat
+   lightblue is the shared neutral. Values colored at full brightness, names
+   white. */
 .markets-row.market-change-up .markets-price,
 .markets-row.market-change-up .markets-change {
-  color: rgb(210, 60, 60);
+  color: rgb(35, 210, 65);
 }
 
 .markets-row.market-change-down .markets-price,
 .markets-row.market-change-down .markets-change {
-  color: rgb(35, 210, 65);
+  color: rgb(210, 60, 60);
 }
 
 .markets-row.market-change-flat .markets-price,
@@ -3208,7 +3210,14 @@ nav#navbar .nav-bar-controls li {
     align-items: center;
     width: max-content;
     will-change: transform;
-    animation: strip-marquee 40s linear infinite;
+    /* MARQUEE_COPIES (src/lib/marquee.ts) groups per track; the loop shifts
+       by half the track (3 groups) per 120s cycle = one group per 40s, the
+       exact speed the old 2-copy/40s version moved at. The extra copies are
+       what make the loop SEAMLESS on wide viewports: with only two, a group
+       narrower than the screen (the indexes bar measures ~700px) let blank
+       space eat in from the right before the loop snapped back - the strip
+       visibly stopped and started over. */
+    animation: strip-marquee 120s linear infinite;
   }
 
   .indexes-group {
@@ -3216,7 +3225,7 @@ nav#navbar .nav-bar-controls li {
     align-items: center;
     flex: 0 0 auto;
     gap: 32px;
-    /* Matches the gap, so the seam between the two groups is even. */
+    /* Matches the gap, so the seam between adjacent groups is even. */
     padding-inline-end: 32px;
   }
 
@@ -3238,8 +3247,9 @@ nav#navbar .nav-bar-controls li {
   }
 }
 
-/* One group's width: exactly half the two-group track, so the loop restarts
-   on an identical frame with no jump. */
+/* Half the track: with MARQUEE_COPIES identical groups in it, the frame at
+   -50% is pixel-identical to the frame at 0, so the infinite loop restarts
+   with no jump. */
 @keyframes strip-marquee {
   from {
     transform: translateX(0);

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { MARQUEE_COPIES } from '../../../src/lib/marquee'
 import { MIXED_QUOTES, quoteOf, snapshotBody } from '../../data/marketQuotes'
 import { mockMarketQuotes } from '../../support/marketMocks'
 import { installExternalMocks } from '../../support/mocks'
@@ -66,12 +67,12 @@ async function recordFlashes(page: Page): Promise<void> {
 
 /**
  * The two movement tints, mirrored from the .markets-tick-* rules in
- * globals.css: an UP tick is RED and a DOWN tick is GREEN, matching the CBS
- * Indexes strip's own convention (up red, down green) - the two top strips
- * read alike.
+ * globals.css: an UP tick is GREEN and a DOWN tick is RED, the international
+ * ticker convention (user-requested) - deliberately unlike the CBS Indexes
+ * strip, whose own ticks keep the Israeli reading (up red, down green).
  */
-const FLASH_UP = 'rgba(210, 60, 60, 0.14)'
-const FLASH_DOWN = 'rgba(35, 210, 65, 0.14)'
+const FLASH_UP = 'rgba(35, 210, 65, 0.14)'
+const FLASH_DOWN = 'rgba(210, 60, 60, 0.14)'
 
 interface RecordedFlash {
   tick: 'up' | 'down'
@@ -88,6 +89,41 @@ interface RecordedFlash {
 
 function flashes(page: Page): Promise<RecordedFlash[]> {
   return page.evaluate(`window.__marketFlashes`) as Promise<RecordedFlash[]>
+}
+
+/**
+ * Jumps both marquee tracks to their loop point (half of the 120s cycle lands
+ * exactly on the -50% keyframe, where the duplicate groups take over) and
+ * asserts the track boxes still cover the viewport horizontally. This is the
+ * no-blank-gap contract: with too few loop copies, a group narrower than the
+ * screen let blank space eat in from the right before the loop snapped back.
+ */
+async function expectLoopToCoverViewport(page: Page, width: number): Promise<void> {
+  const boxes = (await page.evaluate(
+    `(() => {
+      const tracks = [...document.querySelectorAll('.indexes-track, .markets-track')]
+      for (const track of tracks) track.style.animationDelay = '-60s'
+      return new Promise((resolve) =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() =>
+            resolve(
+              tracks.map((track) => {
+                const box = track.getBoundingClientRect()
+                return { left: Math.round(box.left), right: Math.round(box.right) }
+              }),
+            ),
+          ),
+        ),
+      )
+    })()`,
+  )) as Array<{ left: number; right: number }>
+  expect(boxes, 'both strips have a marquee track').toHaveLength(2)
+  boxes.forEach((box, index) => {
+    expect(box.left, `track ${index} reaches the left edge at ${width}px`).toBeLessThanOrEqual(0)
+    expect(box.right, `track ${index} reaches the right edge at ${width}px`).toBeGreaterThanOrEqual(
+      width,
+    )
+  })
 }
 
 /**
@@ -195,18 +231,24 @@ test.describe('Markets strip', () => {
             rows: tops.length,
             lines: lines.map((line) => line.count),
             cloneHidden: clone ? clone.getAttribute('aria-hidden') : null,
+            groups: strip.querySelectorAll('.markets-group').length,
           }
         })()`,
-      )) as { rows: number; lines: number[]; cloneHidden: string | null }
+      )) as { rows: number; lines: number[]; cloneHidden: string | null; groups: number }
 
       // Every row on the same visual line at every width. That is the point
       // of the compact tier: at these widths the rows used to wrap onto two
       // or three lines and the whole strip (and navbar) grew with them.
       expect(shape.rows, `six rows at ${width}px`).toBe(6)
       expect(shape.lines, `one line at ${width}px`).toEqual([6])
-      // Below 1200px the second group is the seamless-loop copy: present and
-      // hidden from assistive tech. Above it there is no copy.
-      expect(shape.cloneHidden, `loop copy at ${width}px`).toBe(width <= 1200 ? 'true' : null)
+      // Below 1200px the loop is MARQUEE_COPIES identical groups (one visible
+      // plus the repeats that keep it seamless and covering the screen at the
+      // loop point, see src/lib/marquee.ts), all but the first hidden from
+      // assistive tech. Above it there is a single group and no copy.
+      expect(shape.groups, `loop copies at ${width}px`).toBe(width <= 1200 ? MARQUEE_COPIES : 1)
+      expect(shape.cloneHidden, `loop copy hidden at ${width}px`).toBe(
+        width <= 1200 ? 'true' : null,
+      )
     }
   })
 
@@ -269,6 +311,40 @@ test.describe('Markets strip', () => {
     }
   })
 
+  test('marquee loop point still covers the viewport with no blank gap', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
+    await installExternalMocks(page)
+
+    // With the old two-copy track, any group narrower than the viewport let
+    // blank space eat in from the right as the loop ran, until the strip
+    // visibly snapped back - it stopped and started over. The fix is enough
+    // loop copies (MARQUEE_COPIES) that half the track always spans the
+    // screen; jumping the animation to its loop point (half of the 120s
+    // cycle lands exactly on the -50% keyframe) checks exactly that frame.
+    // Both strips, in both content states: the skeletons are the narrowest
+    // content the strips ever show.
+    for (const width of [360, 900, 1200]) {
+      await page.setViewportSize({ width, height: 900 })
+
+      // Ready state: the strips carry their real (mocked) numbers.
+      await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+      await page.goto('/')
+      await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
+      await expect(page.getByTestId('indexes-bar')).toBeVisible()
+      await expectLoopToCoverViewport(page, width)
+
+      // Skeleton state: hold the quotes response open (registered after the
+      // mock, so it wins) and reload.
+      await page.route('**/api/market/quotes**', () => new Promise<void>(() => {}))
+      await page.goto('/')
+      await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'loading')
+      await expectLoopToCoverViewport(page, width)
+
+      // Drop both quotes handlers for the next width.
+      await page.unroute('**/api/market/quotes**')
+    }
+  })
+
   test('compact indexes line keeps the full names and drops the yearly change', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
     await installExternalMocks(page)
@@ -285,13 +361,13 @@ test.describe('Markets strip', () => {
     await expect(bar).toContainText('Monthly change')
     await expect(bar).not.toContainText('Yearly change')
     // The full official feed name is reachable via the link's href (a Google
-    // search for the Hebrew feed name), not a hover tooltip — the indexes bar
+    // search for the Hebrew feed name), not a hover tooltip - the indexes bar
     // links are plain anchors, unlike the Markets rows below them.
     await bar.hover()
 
-    // The loop copy is hidden from assistive tech and kept out of the tab
+    // The loop copies are hidden from assistive tech and kept out of the tab
     // order, so the strip does not read or tab twice.
-    const clone = bar.locator('[data-marquee-clone="true"]')
+    const clone = bar.locator('[data-marquee-clone="true"]').first()
     await expect(clone).toHaveAttribute('aria-hidden', 'true')
     await expect(clone.locator('a').first()).toHaveAttribute('tabindex', '-1')
   })
@@ -348,18 +424,19 @@ test.describe('Markets strip', () => {
     )
   })
 
-  test('movement colors are the Indexes strip palette (up red, down green, flat lightblue)', async ({
+  test('movement colors follow the international ticker convention (up green, down red, flat lightblue)', async ({
     page,
   }) => {
     await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')
     await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
 
-    // The two top strips must read alike (user-requested). The palette is the
-    // CBS Indexes strip's own TREND_COLORS (src/components/layout/IndexesBar
-    // .tsx): a rise is RED there and a fall is GREEN, so the tickers follow the
-    // same mapping instead of the international one. Asserted on the rendered
-    // colour of the whole value pair, which is what a visitor sees.
+    // The tickers deliberately use the OPPOSITE mapping of the CBS Indexes
+    // strip above them (user-requested): a rise is GREEN and a fall is RED
+    // here - the international ticker convention - while the indexes keep
+    // the Israeli reading (up red, down green) of the very same palette.
+    // Asserted on the rendered colour of the whole value pair, which is
+    // what a visitor sees.
     // Fixtures: bitcoin +1.24% (up), nasdaq -0.33% (down), sp500 0.00% (flat).
     const colours = (await page.evaluate(`(() => {
       const read = (id) => {
@@ -372,12 +449,12 @@ test.describe('Markets strip', () => {
       return { up: read('bitcoin'), down: read('nasdaq'), flat: read('sp500') }
     })()`)) as Record<'up' | 'down' | 'flat', string[]>
 
-    const INDEX_UP_RED = 'rgb(210, 60, 60)'
-    const INDEX_DOWN_GREEN = 'rgb(35, 210, 65)'
-    const INDEX_FLAT = 'rgb(173, 216, 230)' // computed `lightblue`
-    expect(colours.up).toEqual([INDEX_UP_RED, INDEX_UP_RED])
-    expect(colours.down).toEqual([INDEX_DOWN_GREEN, INDEX_DOWN_GREEN])
-    expect(colours.flat).toEqual([INDEX_FLAT, INDEX_FLAT])
+    const TICKER_UP_GREEN = 'rgb(35, 210, 65)'
+    const TICKER_DOWN_RED = 'rgb(210, 60, 60)'
+    const NEUTRAL_FLAT = 'rgb(173, 216, 230)' // computed `lightblue`
+    expect(colours.up).toEqual([TICKER_UP_GREEN, TICKER_UP_GREEN])
+    expect(colours.down).toEqual([TICKER_DOWN_RED, TICKER_DOWN_RED])
+    expect(colours.flat).toEqual([NEUTRAL_FLAT, NEUTRAL_FLAT])
   })
 
   test('shows skeleton bars while loading and never blocks the nav', async ({ page }) => {
