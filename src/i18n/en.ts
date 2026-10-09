@@ -811,6 +811,10 @@ export const en: { translation: Translation } = {
       edit: 'Edit',
       saveEdit: 'Save changes',
       edited: 'edited',
+      // A comment whose author's account has since been deleted keeps the name
+      // it was posted under and gains this beside it (the parentheses are added
+      // in the markup, like the "edited" marker).
+      deletedAuthor: 'deleted account',
       deleted: 'This comment was removed',
       delete: 'Delete',
       deleteConfirmTitle: 'Delete comment',
@@ -828,6 +832,9 @@ export const en: { translation: Translation } = {
       title: 'Replies to you',
       empty: 'No replies to your comments yet.',
       loadError: 'Loading the replies failed. Please try again.',
+      // Same rule as the article thread: a reply from an account that has since
+      // been deleted keeps its name and says so.
+      deletedAuthor: 'deleted account',
       view: 'View in the article',
     },
     savedMixes: {
@@ -903,10 +910,19 @@ export const en: { translation: Translation } = {
       errorEmailInUse: 'That email address is already registered',
       errorPasswordLength: 'The password must be at least 8 characters',
       errorGeneric: 'Something went wrong. Please try again',
-      verifySent: 'We sent a verification email',
+      errorAccountNotLinked:
+        'This address is already registered with a password that was not verified. Verify it, then sign in with Google',
+      errorSocialFailed: 'Google sign-in failed. Please try again',
+      errorSocialExpired: 'The sign-in attempt expired or was blocked. Please try again',
+      errorSocialLinkStuck:
+        'This Google account is linked to an account that no longer exists. Contact us to release the link',
+      errorDeleteSignInRequired:
+        'Sign in first to finish deleting the account, then open the link in the message again',
       verifyRequired: 'Verify your email address before signing in',
-      verifyTitle: 'Account created',
-      verifyHint: 'Once the address is verified, you can sign in',
+      // The panel never claims the account exists before the address is
+      // verified. It states only that the mail went out, and the sentence leads
+      // into the masked address shown as a chip beneath it (user-requested).
+      verifyTitle: 'The verification email has been sent to',
       resend: 'Resend the verification email',
       resendSent: 'We sent another verification email',
       backToSignIn: 'Back to sign in',
@@ -930,7 +946,6 @@ export const en: { translation: Translation } = {
       otpErrorTooManyRequests: 'Too many requests. Please wait a minute and try again',
       socialGoogle: 'Google',
       orEmail: 'or sign in with email',
-      orEmailSignUp: 'or sign up with email',
       signedInAs: 'Signed in as {{email}}',
       advisorTitle: 'Advisor area',
       advisorBody: 'This page is available to advisors and admins only',
@@ -949,6 +964,45 @@ export const en: { translation: Translation } = {
       profilePasswordChanged: 'Your password has been updated',
       profileErrorInvalidPassword: 'The current password is wrong',
       profileSignOutAll: 'Sign out of all devices',
+      // An account created through Google has no password at all, so the same
+      // button and modal set a first one instead of changing it.
+      profileSetPasswordTitle: 'Set a password',
+      profileSetPasswordHint:
+        'This account has no password, it signs in with Google. Once a password is set you can sign in with email and password too',
+      profileSetPasswordAction: 'Save the password',
+      profileSetPasswordDone: 'Password set. You can now sign in with email and password too',
+      profileSetPasswordHasPassword:
+        'This account already has a password. Use change password instead',
+      profileSetPasswordTooManyAttempts: 'Too many attempts. Please wait a minute and try again',
+      profileDeleteAccount: 'Delete account',
+      profileDeleteTitle: 'Delete account',
+      profileDeleteWarning:
+        'The account will be deleted permanently, including your saved mixes. Comments you already wrote stay on the articles, shown under the name you posted with and marked "(deleted account)". The account cannot be restored',
+      profileDeleteConfirmLabel: 'To confirm, type {{word}}',
+      profileDeleteConfirmWord: 'DELETE',
+      profileDeleteConfirmMismatch: 'The word you typed does not match',
+      // The password the account proves itself with. Better Auth checks it
+      // before the link is mailed, so a typo is answered rather than ignored.
+      profileDeletePasswordHint: 'The password is checked before the confirmation link is sent',
+      profileDeletePasswordRequired: 'Enter your password',
+      // The button sends the confirmation mail; the account goes when the link
+      // in that mail is opened and its own button is pressed.
+      profileDeleteAction: 'Delete',
+      profileDeleting: 'Deleting...',
+      profileDeleteClose: 'Close',
+      profileDeleteSessionExpired: 'This action needs a fresh sign-in. Sign in again and retry',
+      // The last step, on the page the mailed link opens: the address is
+      // already proved, and one press ends it.
+      profileDeleteMailConfirmHint:
+        'This link verified your email address. Pressing delete removes the account immediately, with no way back',
+      profileDeleteInvalidLink:
+        'The link is not valid or has expired. You can send a new one from the delete account button',
+      // Deletion is confirmed by a link mailed to the address, so the modal ends
+      // by naming that address (masked) rather than by deleting anything.
+      profileDeleteMailSent: 'A link to confirm the deletion was sent to',
+      profileDeleteMailHint:
+        'The account is deleted only after the link is opened and delete is pressed on the profile page, from this browser. Check the spam folder too. The link is valid for 24 hours',
+      profileDeleteTooManyAttempts: 'Too many requests. Please wait a minute and try again',
       emails: {
         subject: 'Verify your email address',
         heading: 'Verify your email address',
@@ -963,6 +1017,13 @@ export const en: { translation: Translation } = {
         otpExpiry: 'The code is valid for 5 minutes',
         otpIgnore:
           'If you did not ask to reset your password, you can ignore this message. Your password stays unchanged',
+        deleteSubject: 'Confirm deleting your account',
+        deleteHeading: 'Delete your account',
+        deleteBody:
+          'To delete the account permanently, open the link below and confirm the deletion on your profile page. The account and your saved mixes will be deleted. Comments you already wrote stay on the articles',
+        deleteCta: 'Open the deletion page',
+        deleteIgnore:
+          'If you did not ask to delete the account, you can ignore this message. The account will not be deleted',
         signature: 'Makeyev Finance',
       },
     },

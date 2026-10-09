@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "dev:db": "node scripts/dev-mongo.mjs",
     "seed": "node scripts/seed-dev.mjs",
+    "auth:doctor": "node --env-file-if-exists=.env scripts/auth-doctor.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

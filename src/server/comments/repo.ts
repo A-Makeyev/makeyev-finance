@@ -14,9 +14,20 @@ import { getDb } from '../auth/mongo'
  * a comment shows the name and avatar the author had WHEN THEY POSTED, and does
  * not retroactively change if they later rename themselves. That staleness is
  * the deliberate tradeoff for not joining on every list render.
+ *
+ * The one thing about the author that CANNOT be read off the document is
+ * whether the account still exists, so each list resolves that with a single
+ * extra lookup over the comment authors it is about to return (`authorDeleted`).
+ * A deleted author's comment stays, with the name it was posted under and a
+ * muted "(deleted account)" beside it (product decision, user-requested):
+ * deleting the person should not silently rewrite a thread other people were
+ * part of.
  */
 
 const COLLECTION = 'article_comments'
+
+/** Better Auth's own user collection, read here only to answer "does the author still exist". */
+const USER_COLLECTION = 'user'
 
 export interface CommentDoc {
   articleSlug: string
@@ -36,12 +47,49 @@ export interface CommentViewer {
   isAdmin: boolean
 }
 
+/**
+ * The authors among `userIds` that have no user row any more.
+ *
+ * Pure, so the rule is unit-tested instead of only being exercised against a
+ * live database. Ids are compared as strings because the comments store the
+ * session's string id while the user collection keys on an ObjectId.
+ */
+export function missingAuthorIds(userIds: string[], existingIds: Iterable<unknown>): Set<string> {
+  const known = new Set([...existingIds].map((id) => String(id).toLowerCase()))
+  return new Set(userIds.filter((id) => !known.has(String(id).toLowerCase())))
+}
+
+/**
+ * Which of these author ids still have an account. Both id forms are queried
+ * (`ObjectId` and string) because Better Auth's Mongo adapter uses whichever
+ * matches the user's `_id` shape, and this must never report a live account as
+ * deleted.
+ */
+async function existingAuthorIds(userIds: string[]): Promise<Set<string>> {
+  const unique = [...new Set(userIds.filter(Boolean))]
+  if (unique.length === 0) return new Set()
+  const db = await getDb()
+  const forms = unique.flatMap((id) => (ObjectId.isValid(id) ? [new ObjectId(id), id] : [id]))
+  const users = await db
+    .collection<{ _id: ObjectId | string }>(USER_COLLECTION)
+    .find({ _id: { $in: forms } }, { projection: { _id: 1 } })
+    .toArray()
+  return new Set(users.map((user) => String(user._id)))
+}
+
+/** The deleted-author ids for a batch of documents, resolved in one lookup. */
+async function deletedAuthorIds(userIds: string[]): Promise<Set<string>> {
+  return missingAuthorIds(userIds, await existingAuthorIds(userIds))
+}
+
 /** The client-facing comment. The author's user id is never included. */
 export interface ArticleComment {
   id: string
   parentId: string | null
   userName: string
   userImage: string | null
+  /** The author's account is gone; the name is the one they posted under. */
+  authorDeleted: boolean
   /** Empty string once the comment is soft-deleted. */
   body: string
   createdAt: Date
@@ -56,11 +104,16 @@ export interface ReplyToUser {
   articleSlug: string
   parentId: string | null
   userName: string
+  authorDeleted: boolean
   body: string
   createdAt: Date
 }
 
-function toComment(doc: WithId<CommentDoc>, viewer: CommentViewer): ArticleComment {
+function toComment(
+  doc: WithId<CommentDoc>,
+  viewer: CommentViewer,
+  deletedAuthors: ReadonlySet<string> = new Set(),
+): ArticleComment {
   const deleted = doc.deletedAt !== null
   const mine = doc.userId === viewer.userId
   return {
@@ -68,6 +121,9 @@ function toComment(doc: WithId<CommentDoc>, viewer: CommentViewer): ArticleComme
     parentId: doc.parentId ? doc.parentId.toHexString() : null,
     userName: doc.userName,
     userImage: doc.userImage,
+    // Never true for one's own comment: `mine` means the caller's session is
+    // live, so their account obviously exists.
+    authorDeleted: deletedAuthors.has(doc.userId),
     // A soft-deleted body is withheld from every client, admin included: the
     // deletion is a promise to the author, not a UI-level hide.
     body: deleted ? '' : doc.body,
@@ -113,7 +169,8 @@ export async function listComments(
     .find({ articleSlug })
     .sort({ createdAt: 1 })
     .toArray()
-  return docs.map((doc) => toComment(doc, viewer))
+  const deletedAuthors = await deletedAuthorIds(docs.map((doc) => doc.userId))
+  return docs.map((doc) => toComment(doc, viewer, deletedAuthors))
 }
 
 export type CreateCommentResult =
@@ -157,6 +214,8 @@ export async function createComment(
     deletedAt: null,
   }
   const result = await collection.insertOne(doc)
+  // Just posted by the caller, so the author is not a deleted account; the
+  // existence lookup is deliberately skipped on this path.
   return { ok: true, comment: toComment({ ...doc, _id: result.insertedId }, viewer) }
 }
 
@@ -212,11 +271,13 @@ export async function listRepliesToUser(userId: string, limit = 20): Promise<Rep
     .sort({ createdAt: -1 })
     .limit(limit)
     .toArray()
+  const deletedAuthors = await deletedAuthorIds(docs.map((doc) => doc.userId))
   return docs.map((doc) => ({
     id: doc._id.toHexString(),
     articleSlug: doc.articleSlug,
     parentId: doc.parentId ? doc.parentId.toHexString() : null,
     userName: doc.userName,
+    authorDeleted: deletedAuthors.has(doc.userId),
     body: doc.body,
     createdAt: doc.createdAt,
   }))

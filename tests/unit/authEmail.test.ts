@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildOtpEmail, buildVerificationEmail, pickEmailLanguage } from '@/server/auth/email'
+import {
+  buildDeleteAccountEmail,
+  buildOtpEmail,
+  buildVerificationEmail,
+  deleteConfirmationUrl,
+  pickEmailLanguage,
+} from '@/server/auth/email'
 import { he } from '@/i18n/he'
 import { en } from '@/i18n/en'
 
@@ -46,6 +52,62 @@ describe('buildVerificationEmail', () => {
   it('uses the generic greeting when no name is known', () => {
     const email = buildVerificationEmail('english', url, null)
     expect(email.html).toContain(en.translation.auth.emails.greetingGeneric)
+  })
+
+  it('renders the CTA as a full-width, centered block', () => {
+    // The one action in the mail spans the card with its label centered
+    // (user-requested), in both languages. border-box keeps the padding inside
+    // 100%, so the button never overflows the card.
+    for (const language of ['hebrew', 'english'] as const) {
+      const { html } = buildVerificationEmail(language, url, 'Dana')
+      const anchor = html.slice(html.indexOf('<a href'))
+      expect(anchor, language).toContain('display:block')
+      expect(anchor, language).toContain('width:100%')
+      expect(anchor, language).toContain('box-sizing:border-box')
+      expect(anchor, language).toContain('text-align:center')
+    }
+  })
+})
+
+describe('buildDeleteAccountEmail', () => {
+  const url = 'https://example.com/api/auth/delete-user/callback?token=abc&callbackURL=%2F'
+
+  it('renders Hebrew RTL with the Hebrew deletion copy', () => {
+    const email = buildDeleteAccountEmail('hebrew', url, 'Dana')
+    expect(email.subject).toBe(he.translation.auth.emails.deleteSubject)
+    expect(email.html).toContain('dir="rtl"')
+    expect(email.html).toContain(he.translation.auth.emails.deleteHeading)
+    expect(email.text).toContain(url)
+  })
+
+  it('renders English LTR with the English deletion copy', () => {
+    const email = buildDeleteAccountEmail('english', url, 'Dana')
+    expect(email.subject).toBe(en.translation.auth.emails.deleteSubject)
+    expect(email.html).toContain('dir="ltr"')
+    expect(email.html).toContain(en.translation.auth.emails.deleteCta)
+  })
+
+  it('shares the verification template, so direction and escaping cannot drift', () => {
+    const deletion = buildDeleteAccountEmail('english', 'https://x.test/?a=1&b=2', 'Dana')
+    expect(deletion.html).not.toContain('?a=1&b=2')
+    expect(deletion.html).toContain('?a=1&amp;b=2')
+    for (const language of ['hebrew', 'english'] as const) {
+      const anchor = buildDeleteAccountEmail(language, url, 'Dana').html.slice(
+        buildDeleteAccountEmail(language, url, 'Dana').html.indexOf('<a href'),
+      )
+      expect(anchor, language).toContain('display:block')
+      expect(anchor, language).toContain('box-sizing:border-box')
+      expect(anchor, language).toContain('text-align:center')
+    }
+  })
+
+  it('says the account is not deleted by asking, only by the link', () => {
+    // The request mails a link; the words in the mail are the last chance to
+    // stop an irreversible action, so the ignore line must be present.
+    for (const language of ['hebrew', 'english'] as const) {
+      const copy = language === 'hebrew' ? he.translation.auth.emails : en.translation.auth.emails
+      expect(buildDeleteAccountEmail(language, url, null).html).toContain(copy.deleteIgnore)
+    }
   })
 })
 
@@ -101,6 +163,36 @@ describe('buildOtpEmail', () => {
       expect(email.html, language).toContain('4567')
       expect(email.text, language).toContain('4567')
     }
+  })
+})
+
+describe('deleteConfirmationUrl', () => {
+  it('lands on the profile page of the mail\'s own language, with the token', () => {
+    expect(deleteConfirmationUrl('hebrew', 'https://app.test', 'tok123')).toBe(
+      'https://app.test/profile?delete=tok123',
+    )
+    expect(deleteConfirmationUrl('english', 'https://app.test', 'tok123')).toBe(
+      'https://app.test/en/profile?delete=tok123',
+    )
+  })
+
+  it('tolerates a trailing slash on the origin and encodes the token', () => {
+    expect(deleteConfirmationUrl('hebrew', 'https://app.test/', 'a b/c')).toBe(
+      'https://app.test/profile?delete=a%20b%2Fc',
+    )
+  })
+
+  it('is the link the deletion mail carries, not Better Auth\'s callback endpoint', () => {
+    // The callback endpoint deletes on GET; the product wants opening the link
+    // to land on the profile, where the last step is a button.
+    const { html, text } = buildDeleteAccountEmail(
+      'hebrew',
+      deleteConfirmationUrl('hebrew', 'https://app.test', 'tok123'),
+      'Dana',
+    )
+    expect(html).toContain('https://app.test/profile?delete=tok123')
+    expect(html).not.toContain('/api/auth/delete-user/callback')
+    expect(text).toContain('https://app.test/profile?delete=tok123')
   })
 })
 

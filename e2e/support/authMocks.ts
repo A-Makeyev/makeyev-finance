@@ -62,6 +62,19 @@ export function mockSignInSuccess(page: Page): Promise<void> {
     .then(() => undefined)
 }
 
+/** Sign-in refused because the address was never verified (Better Auth 403). */
+export function mockSignInUnverified(page: Page): Promise<void> {
+  return page
+    .route('**/api/auth/sign-in/email', (route) =>
+      route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'EMAIL_NOT_VERIFIED', message: 'Email not verified' }),
+      }),
+    )
+    .then(() => undefined)
+}
+
 export function mockSignInInvalid(page: Page): Promise<void> {
   return page
     .route('**/api/auth/sign-in/email', (route) =>
@@ -97,6 +110,28 @@ export function mockSignUpAutoSignedIn(page: Page): Promise<void> {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ token: 'test-session', user: { ...USER, emailVerified: true } }),
+      }),
+    )
+    .then(() => undefined)
+}
+
+/**
+ * Sign-up refused because the address already has a VERIFIED account. The app's
+ * duplicate-sign-up guard (src/server/auth) throws Better Auth's own 422
+ * USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL before its generic-success default can
+ * answer instead. An UNVERIFIED collision is not refused: it re-sends the
+ * verification mail and answers the generic success (mockSignUpSuccess).
+ */
+export function mockSignUpDuplicate(page: Page): Promise<void> {
+  return page
+    .route('**/api/auth/sign-up/email', (route) =>
+      route.fulfill({
+        status: 422,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL',
+          message: 'User already exists. Use another email.',
+        }),
       }),
     )
     .then(() => undefined)

@@ -33,6 +33,26 @@ export class ProfilePage {
   readonly error: Locator
   readonly signOut: Locator
   readonly signOutAll: Locator
+  readonly deleteAccount: Locator
+  readonly deleteModal: Locator
+  readonly deleteWarning: Locator
+  readonly deleteConfirm: Locator
+  readonly deleteConfirmHint: Locator
+  /** The password step: the account proves itself before the link is mailed. */
+  readonly deletePassword: Locator
+  readonly deleteSubmit: Locator
+  readonly deleteSpinner: Locator
+  /** The last step, on the page the mailed link opens. */
+  readonly deleteMailConfirm: Locator
+  readonly deleteCancel: Locator
+  readonly deleteError: Locator
+  /** The "a link was sent to" state the modal switches to. */
+  readonly deleteMailSent: Locator
+  readonly deleteMailTo: Locator
+  readonly deleteClose: Locator
+  /** The set-a-password flow (accounts created through Google). */
+  readonly openSetPassword: Locator
+  readonly setPasswordHint: Locator
 
   constructor(page: Page) {
     this.page = page
@@ -57,6 +77,22 @@ export class ProfilePage {
     this.error = page.getByTestId('profile-error')
     this.signOut = page.getByTestId('profile-sign-out')
     this.signOutAll = page.getByTestId('profile-sign-out-all')
+    this.deleteAccount = page.getByTestId('profile-delete-account')
+    this.deleteModal = page.getByTestId('delete-account-modal')
+    this.deleteWarning = page.getByTestId('delete-account-warning')
+    this.deleteConfirm = page.getByTestId('profile-delete-confirm')
+    this.deleteConfirmHint = page.getByTestId('delete-account-confirm-hint')
+    this.deletePassword = page.getByTestId('profile-delete-password')
+    this.deleteSubmit = page.getByTestId('profile-delete-submit')
+    this.deleteSpinner = page.getByTestId('delete-submit-spinner')
+    this.deleteMailConfirm = page.getByTestId('delete-account-mail-confirm')
+    this.deleteCancel = page.getByTestId('delete-account-cancel')
+    this.deleteError = page.getByTestId('profile-delete-error')
+    this.deleteMailSent = page.getByTestId('delete-account-sent')
+    this.deleteMailTo = page.getByTestId('delete-account-mail-to')
+    this.deleteClose = page.getByTestId('delete-account-close')
+    this.openSetPassword = page.getByTestId('open-set-password')
+    this.setPasswordHint = page.getByTestId('set-password-hint')
   }
 
   async goto(path = '/profile'): Promise<void> {

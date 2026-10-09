@@ -46,4 +46,26 @@ describe('formatRelativeTime', () => {
   it('treats now as the current second', () => {
     expect(formatRelativeTime(NOW, NOW, 'en')).toBe('now')
   })
+
+  it('drops Hebrew\'s definite article from the single unit back', () => {
+    // ICU returns 'השבוע שעבר' ("the week that passed"); the natural phrase is
+    // 'שבוע שעבר' (user-reported). The same for month and year.
+    expect(formatRelativeTime(at(7 * DAY), NOW, 'he')).toBe('שבוע שעבר')
+    expect(formatRelativeTime(at(31 * DAY), NOW, 'he')).toBe('חודש שעבר')
+    expect(formatRelativeTime(at(400 * DAY), NOW, 'he')).toBe('שנה שעברה')
+    // 'he-IL' takes the same path.
+    expect(formatRelativeTime(at(7 * DAY), NOW, 'he-IL')).toBe('שבוע שעבר')
+  })
+
+  it('leaves the Hebrew forms that already read correctly alone', () => {
+    // Plurals, "this week" and the future keep ICU's wording.
+    expect(formatRelativeTime(at(14 * DAY), NOW, 'he')).toBe('לפני שבועיים')
+    expect(formatRelativeTime(at(21 * DAY), NOW, 'he')).toBe('לפני 3 שבועות')
+    expect(formatRelativeTime(NOW - 2 * DAY, NOW, 'he')).toBe('שלשום')
+    expect(formatRelativeTime(NOW + 7 * DAY, NOW, 'he')).toBe('השבוע הבא')
+  })
+
+  it('keeps English untouched', () => {
+    expect(formatRelativeTime(at(7 * DAY), NOW, 'en')).toBe('last week')
+  })
 })

@@ -10,6 +10,30 @@
  * Pure, with `now` injected, so the bucket boundaries are unit-tested.
  */
 
+/**
+ * Hebrew's CLDR "auto" forms for the single unit back carry the definite
+ * article: ICU returns "השבוע שעבר" / "החודש שעבר" / "השנה שעברה", which reads as
+ * "the week that passed". The natural phrases are the bare idioms below
+ * (user-reported: a comment one week old said "השבוע שעבר").
+ *
+ * Only the -1 forms are overridden, and only for Hebrew: the plural forms
+ * ("לפני 3 שבועות"), "this week" ("השבוע") and the future forms ("השבוע הבא") all
+ * read correctly as ICU returns them, so post-processing the string would risk
+ * breaking the cases that are right.
+ */
+const PAST_SINGLE_FORM: Readonly<Record<string, Partial<Record<Intl.RelativeTimeFormatUnit, string>>>> = {
+  he: {
+    year: 'שנה שעברה',
+    month: 'חודש שעבר',
+    week: 'שבוע שעבר',
+  },
+}
+
+/** The language subtag, so 'he-IL' and 'he' behave the same. */
+function languageOf(locale: string): string {
+  return locale.toLowerCase().split('-')[0] ?? ''
+}
+
 const UNIT_SECONDS: ReadonlyArray<[Intl.RelativeTimeFormatUnit, number]> = [
   ['year', 31_536_000],
   ['month', 2_592_000],
@@ -27,9 +51,17 @@ export function formatRelativeTime(
   const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'long' })
   const diffSeconds = Math.round((timestampMs - nowMs) / 1000)
 
+  const overrides = PAST_SINGLE_FORM[languageOf(locale)]
   for (const [unit, seconds] of UNIT_SECONDS) {
     if (Math.abs(diffSeconds) >= seconds) {
-      return formatter.format(Math.round(diffSeconds / seconds), unit)
+      const value = Math.round(diffSeconds / seconds)
+      // numeric: 'auto' below means -1 is the phrase form, which is exactly the
+      // case the override table corrects.
+      if (value === -1) {
+        const phrase = overrides?.[unit]
+        if (phrase) return phrase
+      }
+      return formatter.format(value, unit)
     }
   }
   return formatter.format(diffSeconds, 'second')

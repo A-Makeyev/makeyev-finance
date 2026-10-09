@@ -69,6 +69,13 @@ export function RepliesSection() {
                 <span className="text-xs text-ink-muted" data-testid="reply-author">
                   {reply.userName}
                 </span>
+                {/* Same rule as the article thread: a reply from an account
+                    that has since been deleted keeps its name and says so. */}
+                {reply.authorDeleted && (
+                  <span className="text-xs text-ink-muted" data-testid="reply-author-deleted">
+                    ({t('replies.deletedAuthor')})
+                  </span>
+                )}
                 <time className="text-xs text-ink-muted" dateTime={reply.createdAt}>
                   {formatRelativeTime(Date.parse(reply.createdAt), Date.now(), i18n.language)}
                 </time>

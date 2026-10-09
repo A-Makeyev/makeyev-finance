@@ -40,8 +40,13 @@ export function proxy(request: NextRequest) {
   url.pathname = isEnglish ? '/en/login' : '/login'
   url.search = ''
   // `next` is the locale-STRIPPED app path, so the login page's router adapter
-  // can push it back into whichever locale the visitor is in.
-  url.searchParams.set('next', appPath)
+  // can push it back into whichever locale the visitor is in. The query comes
+  // with it: a protected link can carry state the page needs after the sign-in
+  // (the account-deletion link's token), and dropping it would silently lose
+  // it. The value is always path-relative ~ it starts with `/` and comes from
+  // this request's own path and query ~ so this cannot become an off-site
+  // redirect target.
+  url.searchParams.set('next', `${appPath}${request.nextUrl.search}`)
   return NextResponse.redirect(url)
 }
 

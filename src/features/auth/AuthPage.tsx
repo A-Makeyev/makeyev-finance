@@ -7,6 +7,9 @@ import { authClient } from '@/lib/auth-client'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { FieldError } from '@/components/ui/FieldError'
 import { useRouter } from '@/router'
+import { languageFromSegment, localePath } from '@/i18n'
+import { maskEmail } from '@/lib/mask'
+import { safeNextPath } from '@/lib/safeNextPath'
 import { RESEND_COOLDOWN_MS } from '@/lib/timings'
 import {
   applyOtpInput,
@@ -61,8 +64,37 @@ const ENABLED_SOCIAL_PROVIDERS = (process.env.AUTH_SOCIAL_PROVIDERS ?? '')
   .split(',')
   .filter(Boolean) as Array<'google'>
 
+/**
+ * The `?error=` code an auth redirect sends back, mapped onto copy: the OAuth
+ * callback codes, plus the one this app's own hooks produce (an account-deletion
+ * link opened while signed out, see src/server/auth/index.ts).
+ *
+ * Only the codes a user can act on get their own message:
+ * `account_not_linked` means the address already exists with a password and
+ * was never verified (verify it first), and the state codes mean the attempt
+ * did not survive the round trip (usually a dropped or stale cookie), where a
+ * straight retry is the fix. Everything else - a rejected code, a
+ * provider/user-info failure - reads as a failed attempt.
+ */
+const SOCIAL_ERROR_KEYS: Record<string, string> = {
+  account_not_linked: 'auth.errorAccountNotLinked',
+  email_not_verified: 'auth.verifyRequired',
+  state_mismatch: 'auth.errorSocialExpired',
+  state_not_found: 'auth.errorSocialExpired',
+  no_code: 'auth.errorSocialExpired',
+  // The Google account row exists but its owner is gone (or the link write
+  // failed): every later sign-in with that Google account hits this until the
+  // stale link is removed. See scripts/auth-doctor.mjs.
+  unable_to_link_account: 'auth.errorSocialLinkStuck',
+  // The account-deletion link is tied to the session that asked for it; opening
+  // it signed out lands here instead of on a raw JSON 404.
+  delete_sign_in_required: 'auth.errorDeleteSignInRequired',
+}
+
+const SOCIAL_ERROR_FALLBACK = 'auth.errorSocialFailed'
+
 export function AuthPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const router = useRouter()
 
   const [mode, setMode] = useState<Mode>('signin')
@@ -127,6 +159,27 @@ export function AuthPage() {
     return () => window.clearInterval(timer)
   }, [resendReadyAt])
 
+  /**
+   * Surfaces the reason a social sign-in came back without a session. The OAuth
+   * callback redirects here with `?error=<code>` (see onSocialSignIn); without
+   * this the return looked like "nothing happened". The code is deliberately
+   * LEFT in the address bar: it is the one piece of information that tells a
+   * cookie/state failure (`state_mismatch`) apart from a rejected token
+   * (`invalid_code`), and support cannot ask for it after a reload has wiped
+   * it.
+   */
+  const [socialErrorCode, setSocialErrorCode] = useState<string | null>(null)
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('error')
+    if (!code) return
+    setError(t(SOCIAL_ERROR_KEYS[code] ?? SOCIAL_ERROR_FALLBACK))
+    // Diagnostics only: an unmapped code is shown verbatim so the failure can
+    // be named precisely instead of guessed at (the callback's own codes are
+    // documented in Better Auth's oauth2/errors). Drop this line at launch if
+    // raw codes should not be visible; the URL keeps the code either way.
+    setSocialErrorCode(SOCIAL_ERROR_KEYS[code] ? null : code)
+  }, [t])
+
   const isSignUp = mode === 'signup'
 
   // Which of the three states the re-send action is in right now.
@@ -158,9 +211,28 @@ export function AuthPage() {
     }
   }
 
-  /** The `?next=` target set by the gate, defaulting to the home page. */
+  /**
+   * The `?next=` target set by the gate, defaulting to the home page. Run
+   * through `safeNextPath`: the value comes from the URL, so it is only
+   * followed when it is an in-app path (a bare `?next=https://evil.test` would
+   * otherwise make the sign-in page an open redirect).
+   */
   function nextTarget(): string {
-    return new URLSearchParams(window.location.search).get('next') ?? '/'
+    return safeNextPath(new URLSearchParams(window.location.search).get('next'))
+  }
+
+  /**
+   * A locale-prefixed in-app path. OAuth callbacks and verification links are
+   * followed by the browser as plain URLs (never through the router adapter),
+   * so an English visitor needs the /en prefix or they land on the Hebrew page.
+   */
+  function appUrl(to: string): string {
+    return localePath(to, languageFromSegment(i18n.language))
+  }
+
+  /** Where a verification link lands: the profile, flagged for the confetti. */
+  function verifiedProfileUrl(): string {
+    return `${appUrl('/profile')}?verified=1`
   }
 
   function switchMode(next: Mode) {
@@ -240,6 +312,9 @@ export function AuthPage() {
           name,
           email,
           password,
+          // The verification mail must land the new user on the profile, already
+          // signed in (see emailVerification.autoSignInAfterVerification).
+          callbackURL: verifiedProfileUrl(),
         })
         if (signUpError) {
           setError(describeError(signUpError.code))
@@ -261,6 +336,15 @@ export function AuthPage() {
       } else {
         const { error: signInError } = await authClient.signIn.email({ email, password })
         if (signInError) {
+          // An unverified account is not a dead end: the confirmation panel
+          // offers the resend, which is also the way to unblock a Google
+          // sign-in on the same address (account linking requires it verified).
+          if (signInError.code === 'EMAIL_NOT_VERIFIED') {
+            setVerifyEmail(email)
+            setResend('idle')
+            setPassword('')
+            return
+          }
           setError(describeError(signInError.code))
           return
         }
@@ -429,23 +513,24 @@ export function AuthPage() {
     setResend('sending')
     const { error: resendError } = await authClient.sendVerificationEmail({
       email: verifyEmail,
-      callbackURL: '/',
+      callbackURL: verifiedProfileUrl(),
     })
     setResend(resendError ? 'idle' : 'sent')
     if (resendError) setError(t('auth.errorGeneric'))
   }
 
   /** Social sign-in: a full-page redirect to the provider, then back. */
-  function onSocialSignIn(provider: 'google') {
+  async function onSocialSignIn(provider: 'google') {
     setError(null)
-    // The OAuth round trip ends at the callbackURL; errors land there too
-    // (errorCallbackURL defaults to the same place), where the session
-    // hook picks the new state up.
-    void authClient.signIn.social({
+    // The OAuth round trip ends at the callbackURL, which must be a locale-
+    // prefixed path the browser can follow on its own. A failure comes back
+    // here with `?error=<code>`, which the mount effect above turns into copy.
+    const { error: socialError } = await authClient.signIn.social({
       provider,
-      callbackURL: nextTarget(),
-      errorCallbackURL: `${window.location.pathname}?error=social`,
+      callbackURL: appUrl(nextTarget()),
+      errorCallbackURL: appUrl('/login'),
     })
+    if (socialError) setError(t(SOCIAL_ERROR_FALLBACK))
   }
 
   const tabClass = (active: boolean) =>
@@ -478,46 +563,59 @@ export function AuthPage() {
 
         {verifyEmail ? (
           <div className="flex flex-col gap-4" data-testid="auth-verify-panel">
-            <h2 className="text-center text-lg font-semibold text-ink">{t('auth.verifyTitle')}</h2>
+            {/* The address is NOT verified yet, so the panel must not announce a
+                created account (user-requested). It says only that the mail went
+                out; the masked address follows as the chip beneath it. */}
+            <h5
+              data-testid="auth-verify-heading"
+              className="text-center font-semibold text-ink"
+            >
+              {t('auth.verifyTitle')}
+            </h5>
+            {/* The address IS the confirmation: it stands on its own soft
+                surface with no sentence around it (user-requested), and only
+                half the local part is shown, so whoever is looking at the
+                screen reads which mailbox the mail went to without reading the
+                address itself. */}
             <p
               role="status"
               data-testid="auth-notice"
-              className="rounded-lg bg-surface-soft px-3 py-2 text-sm text-ink"
+              className="rounded-lg bg-surface-soft px-3 py-2.5 text-center text-sm font-medium text-ink"
             >
-              {t('auth.verifySent')}
+              <span data-testid="auth-verify-email" className="text-lg" dir="ltr">
+                {maskEmail(verifyEmail)}
+              </span>
             </p>
-            <p
-              className="text-center text-sm font-medium text-ink"
-              data-testid="auth-verify-email"
-              dir="ltr"
-            >
-              {verifyEmail}
-            </p>
-            <p className="text-sm text-ink-muted">{t('auth.verifyHint')}</p>
 
             {resend === 'sent' && (
               <p
                 role="status"
                 data-testid="auth-resend-sent"
-                className="rounded-lg bg-surface-soft px-3 py-2 text-sm text-ink"
+                className="text-center text-sm text-ink-muted"
               >
                 {t('auth.resendSent')}
               </p>
             )}
+            {/* A quiet text link, not a second button (user-requested): the
+                re-send is the fallback path, and the card should keep one solid
+                control. Same shape as the password-reset re-send, whose
+                comments carry the spinner-spacing rationale. */}
             <button
               type="button"
               data-testid="auth-resend"
               disabled={resend === 'sending'}
+              aria-busy={resend === 'sending'}
+              aria-label={resend === 'sending' ? t('auth.submitting') : undefined}
               onClick={onResend}
-              className={`inline-flex items-center justify-center gap-2 ${secondaryButtonClass} ${
-                resend === 'sending' ? 'btn-sheen' : ''
-              } disabled:cursor-not-allowed disabled:opacity-70`}
+              className="inline-flex items-center gap-2 self-center text-sm text-ink-muted underline-offset-2 transition-colors hover:text-ink hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
             >
-              {resend === 'sending' && <FaSpinner aria-hidden="true" className="animate-spin" />}
+              {resend === 'sending' && (
+                <FaSpinner aria-hidden="true" className="inline-block animate-spin" />
+              )}
               {t('auth.resend')}
             </button>
             {/* After the control that caused it: this panel has no fields, so
-                "below the inputs" is "below the resend button". */}
+                "below the inputs" is "below the resend link". */}
             {error && <FieldError message={error} testId="auth-error" />}
             <button
               type="button"
@@ -528,7 +626,7 @@ export function AuthPage() {
                 setError(null)
                 setResend('idle')
               }}
-              className={`${secondaryButtonClass} self-center`}
+              className={`${secondaryButtonClass} self-center mt-1`}
             >
               {t('auth.backToSignIn')}
             </button>
@@ -822,15 +920,21 @@ export function AuthPage() {
             {/* Social sign-in: one button per provider the server has
                 credentials for. Providers without credentials render nothing,
                 so the buttons can never advertise a flow that would fail at
-                the OAuth handshake. The Google button leads the card (styled
-                like the form's controls), and the "or ... with email" rule
-                sits BELOW it (user-requested), introducing the form. Its copy
-                follows the active tab, since it names the action the form
-                under it performs. The
-                brand name stays untranslated either way, and the icon keeps
-                the button's start edge: a fixed LTR row inside the (RTL)
-                Hebrew button, so the G never flips sides. */}
-            {ENABLED_SOCIAL_PROVIDERS.length > 0 && (
+                the OAuth handshake.
+
+                Google renders on the SIGN-IN tab only. A Google sign-in
+                creates the account when the address is new, so a separate
+                "register with Google" was the same call under a different
+                label; the sign-up tab is the email form, with no provider
+                button and no "or sign up with email" rule above it.
+
+                The button leads the card (styled like the form's controls),
+                and the "or sign in with email" rule sits BELOW it
+                (user-requested), introducing the form. The brand name stays
+                untranslated, and the icon keeps the button's start edge: a
+                fixed LTR row inside the (RTL) Hebrew button, so the G never
+                flips sides. */}
+            {!isSignUp && ENABLED_SOCIAL_PROVIDERS.length > 0 && (
               <>
                 {/* Google is the only social provider: one full-width button,
                     its label centered like the other buttons'. */}
@@ -855,9 +959,7 @@ export function AuthPage() {
                   data-testid="auth-or-email"
                 >
                   <span className="h-px flex-1 bg-line-soft" />
-                  <span className="text-xs text-ink-muted">
-                    {t(isSignUp ? 'auth.orEmailSignUp' : 'auth.orEmail')}
-                  </span>
+                  <span className="text-xs text-ink-muted">{t('auth.orEmail')}</span>
                   <span className="h-px flex-1 bg-line-soft" />
                 </div>
               </>
@@ -921,6 +1023,18 @@ export function AuthPage() {
               )}
 
               {error && <FieldError message={error} testId="auth-error" />}
+              {/* Diagnostics only: the raw OAuth callback code, when it is one
+                  the app does not have copy for. Drop at launch if raw codes
+                  should not be visible; the URL keeps the code either way. */}
+              {socialErrorCode && (
+                <p
+                  data-testid="auth-social-error-code"
+                  className="text-center text-xs text-ink-muted"
+                  dir="ltr"
+                >
+                  {socialErrorCode}
+                </p>
+              )}
 
               {/* While the request is in flight the label is replaced by the
                   spinner alone (plus the .btn-sheen sweep). leading-5 + the

@@ -91,8 +91,21 @@ const LOCAL_HOST_PATTERNS = ['localhost:*', '127.0.0.1:*', '[::1]:*']
 export function buildBaseURLConfig(authUrl: string | undefined) {
   const allowedHosts = [...LOCAL_HOST_PATTERNS]
   if (authUrl) allowedHosts.push(new URL(authUrl).host)
+  const https = authUrl ? new URL(authUrl).protocol === 'https:' : false
   return {
     allowedHosts,
+    /**
+     * The scheme Better Auth flags cookies for. Without it (a dynamic config
+     * with no `protocol`) the decision falls through to NODE_ENV, so a
+     * PRODUCTION build marks every cookie `Secure` - including the `state`
+     * cookie the Google round trip depends on. Served over http://localhost
+     * that cookie is dropped by strict browsers, and the callback then fails
+     * with `state_mismatch` (see the auth page's `?error=` copy). Local
+     * origins are http by definition; a configured public origin carries its
+     * own scheme (https on Render). This only sets cookie attributes for the
+     * local case - it never widens what a deployment trusts.
+     */
+    protocol: https ? ('https' as const) : ('http' as const),
     ...(authUrl ? { fallback: authUrl } : {}),
   }
 }

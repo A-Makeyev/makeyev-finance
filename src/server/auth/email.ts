@@ -45,6 +45,11 @@ interface AuthEmailCopy {
   otpBody: string
   otpExpiry: string
   otpIgnore: string
+  deleteSubject: string
+  deleteHeading: string
+  deleteBody: string
+  deleteCta: string
+  deleteIgnore: string
 }
 
 function authEmailCopy(language: Language): AuthEmailCopy {
@@ -65,18 +70,28 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
-/** Pure: renders the verification email in the requested language. */
-export function buildVerificationEmail(
-  language: Language,
-  url: string,
-  name?: string | null,
-): VerificationEmailContent {
-  const t = authEmailCopy(language)
+/** Everything an action email needs: a heading, a greeting, a body and ONE link. */
+interface ActionEmailCopy {
+  subject: string
+  heading: string
+  greeting: string
+  body: string
+  cta: string
+  ignore: string
+  signature: string
+  url: string
+}
+
+/**
+ * The one template behind every "press this link" mail (verify the address,
+ * confirm deleting the account). Sharing it is what keeps the two mail types
+ * from drifting apart in direction, RTL/LTR handling, escaping or the CTA
+ * treatment as the copy changes.
+ */
+function renderActionEmail(language: Language, copy: ActionEmailCopy): VerificationEmailContent {
   const dir = language === 'hebrew' ? 'rtl' : 'ltr'
   const lang = language === 'hebrew' ? 'he' : 'en'
-
-  const greeting = name ? `${t.greetingPrefix} ${name},` : t.greetingGeneric
-  const safeUrl = escapeHtml(url)
+  const safeUrl = escapeHtml(copy.url)
 
   const html = [
     `<!doctype html>`,
@@ -84,19 +99,83 @@ export function buildVerificationEmail(
     `<body style="margin:0;padding:24px;background:#f4f4f4;">`,
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;">`,
     `<tr><td style="padding:32px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;text-align:start;">`,
-    `<h1 style="margin:0 0 16px;font-size:20px;">${escapeHtml(t.heading)}</h1>`,
-    `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;">${escapeHtml(greeting)}</p>`,
-    `<p style="margin:0 0 24px;font-size:15px;line-height:1.6;">${escapeHtml(t.body)}</p>`,
-    `<p style="margin:0 0 24px;"><a href="${safeUrl}" style="display:inline-block;padding:12px 20px;background:#0f5c4b;color:#ffffff;border-radius:8px;text-decoration:none;font-size:15px;">${escapeHtml(t.cta)}</a></p>`,
-    `<p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#555555;">${escapeHtml(t.ignore)}</p>`,
-    `<p style="margin:0;font-size:13px;color:#777777;">${escapeHtml(t.signature)}</p>`,
+    `<h1 style="margin:0 0 16px;font-size:20px;">${escapeHtml(copy.heading)}</h1>`,
+    `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;">${escapeHtml(copy.greeting)}</p>`,
+    `<p style="margin:0 0 24px;font-size:15px;line-height:1.6;">${escapeHtml(copy.body)}</p>`,
+    // The CTA is the one action in the mail, so it spans the card as a block
+    // with centered text rather than hugging the start edge (user-requested).
+    // box-sizing:border-box keeps the 20px side padding inside 100%, so the
+    // button never overflows the 520px card in any client.
+    `<p style="margin:0 0 24px;"><a href="${safeUrl}" style="display:block;width:100%;box-sizing:border-box;padding:12px 20px;background:#0f5c4b;color:#ffffff;border-radius:8px;text-decoration:none;font-size:15px;text-align:center;">${escapeHtml(copy.cta)}</a></p>`,
+    `<p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#555555;">${escapeHtml(copy.ignore)}</p>`,
+    `<p style="margin:0;font-size:13px;color:#777777;">${escapeHtml(copy.signature)}</p>`,
     `</td></tr></table>`,
     `</body></html>`,
   ].join('')
 
-  const text = [t.heading, '', greeting, '', t.body, '', `${t.cta}: ${url}`, '', t.ignore, '', t.signature].join('\n')
+  const text = [
+    copy.heading,
+    '',
+    copy.greeting,
+    '',
+    copy.body,
+    '',
+    `${copy.cta}: ${copy.url}`,
+    '',
+    copy.ignore,
+    '',
+    copy.signature,
+  ].join('\n')
 
-  return { subject: t.subject, html, text }
+  return { subject: copy.subject, html, text }
+}
+
+/** The greeting both action emails share: the name when we have one. */
+function greetingFor(t: AuthEmailCopy, name?: string | null): string {
+  return name ? `${t.greetingPrefix} ${name},` : t.greetingGeneric
+}
+
+/** Pure: renders the verification email in the requested language. */
+export function buildVerificationEmail(
+  language: Language,
+  url: string,
+  name?: string | null,
+): VerificationEmailContent {
+  const t = authEmailCopy(language)
+  return renderActionEmail(language, {
+    subject: t.subject,
+    heading: t.heading,
+    greeting: greetingFor(t, name),
+    body: t.body,
+    cta: t.cta,
+    ignore: t.ignore,
+    signature: t.signature,
+    url,
+  })
+}
+
+/**
+ * Pure: renders the account-deletion email. The link is the proof that
+ * whoever is deleting the account also controls its address, and it is what
+ * finally deletes it: nothing happens until the profile page it lands on
+ * confirms with the token.
+ */
+export function buildDeleteAccountEmail(
+  language: Language,
+  url: string,
+  name?: string | null,
+): VerificationEmailContent {
+  const t = authEmailCopy(language)
+  return renderActionEmail(language, {
+    subject: t.deleteSubject,
+    heading: t.deleteHeading,
+    greeting: greetingFor(t, name),
+    body: t.deleteBody,
+    cta: t.deleteCta,
+    ignore: t.deleteIgnore,
+    signature: t.signature,
+    url,
+  })
 }
 
 export interface VerificationEmailArgs {
@@ -109,20 +188,30 @@ export interface VerificationEmailArgs {
 }
 
 /**
- * Sends the address-verification email through Resend.
+ * Sends one action email through Resend.
  *
- * Failures are logged and swallowed: the sign-up request itself succeeded, and
- * an error here must not disclose whether the address is already registered.
+ * Failures are logged and swallowed: the request that triggered it already
+ * succeeded, and an error here must not disclose whether an address is
+ * registered or whether an account exists.
+ *
+ * The `build` callback receives the resolved language, so the one URL that
+ * depends on the language (the deletion link, which lands on the profile page
+ * of the mail's own language) can be built from it. The URL carries a
+ * single-purpose token, so it is never logged; neither is the address.
  */
-export async function sendVerificationEmail(args: VerificationEmailArgs): Promise<void> {
+async function sendActionEmail(
+  args: { user: { name?: string | null; email: string }; request?: Request },
+  build: (language: Language) => VerificationEmailContent,
+  label: string,
+): Promise<void> {
   const config = getAuthConfig()
   if (!config.RESEND_API_KEY) {
-    console.warn('[auth] RESEND_API_KEY is not set; verification email not sent.')
+    console.warn(`[auth] RESEND_API_KEY is not set; ${label} not sent.`)
     return
   }
 
   const language = pickEmailLanguage(args.request?.headers.get('accept-language'))
-  const { subject, html, text } = buildVerificationEmail(language, args.url, args.user.name)
+  const { subject, html, text } = build(language)
 
   try {
     const result = await new Resend(config.RESEND_API_KEY).emails.send({
@@ -133,11 +222,81 @@ export async function sendVerificationEmail(args: VerificationEmailArgs): Promis
       text,
     })
     if (result.error) {
-      console.error(`[auth] verification email rejected: ${result.error.message}`)
+      console.error(`[auth] ${label} rejected: ${result.error.message}`)
     }
   } catch (error) {
-    console.error(`[auth] verification email failed: ${error instanceof Error ? error.message : 'unknown error'}`)
+    console.error(`[auth] ${label} failed: ${error instanceof Error ? error.message : 'unknown error'}`)
   }
+}
+
+/** Sends the address-verification email. */
+export async function sendVerificationEmail(args: VerificationEmailArgs): Promise<void> {
+  await sendActionEmail(
+    args,
+    (language) => buildVerificationEmail(language, args.url, args.user.name),
+    'verification email',
+  )
+}
+
+export interface DeleteAccountEmailArgs {
+  user: { name?: string | null; email: string }
+  /** Better Auth's single-use deletion token. Never logged. */
+  token: string
+  /** Used for the Accept-Language header and the link's origin. */
+  request?: Request
+}
+
+/**
+ * Where the deletion link lands: the profile page of the mail's own language,
+ * carrying the token. Better Auth builds its own `url` for this mail, but that
+ * one points at its callback endpoint, which deletes on GET. Opening the link
+ * is not the confirmation the product wants, so the link is rebuilt here to
+ * land on the profile page, where the last step is a button.
+ *
+ * Pure, so the URL shape is unit-tested instead of assumed.
+ */
+export function deleteConfirmationUrl(language: Language, origin: string, token: string): string {
+  const path = language === 'english' ? '/en/profile' : '/profile'
+  return `${origin.replace(/\/+$/, '')}${path}?delete=${encodeURIComponent(token)}`
+}
+
+/**
+ * The deployment's own origin, for a link that has to come back to this app.
+ * The request's origin first (that is where the user actually is), then the
+ * configured BETTER_AUTH_URL. Without one there is no link to send, and a mail
+ * with a broken link is worse than no mail.
+ */
+function appOrigin(request: Request | undefined, configured: string | undefined): string | null {
+  try {
+    if (request) return new URL(request.url).origin
+  } catch {
+    // Fall through to the configured origin.
+  }
+  if (!configured) return null
+  try {
+    return new URL(configured).origin
+  } catch {
+    return null
+  }
+}
+
+/** Sends the account-deletion email: a link to the profile page, where the deletion is confirmed. */
+export async function sendDeleteAccountEmail(args: DeleteAccountEmailArgs): Promise<void> {
+  const origin = appOrigin(args.request, getAuthConfig().BETTER_AUTH_URL)
+  if (!origin) {
+    console.warn('[auth] no app origin available; account-deletion email not sent.')
+    return
+  }
+  await sendActionEmail(
+    args,
+    (language) =>
+      buildDeleteAccountEmail(
+        language,
+        deleteConfirmationUrl(language, origin, args.token),
+        args.user.name,
+      ),
+    'account-deletion email',
+  )
 }
 
 export interface OtpEmailArgs {

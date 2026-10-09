@@ -92,9 +92,10 @@ function flashes(page: Page): Promise<RecordedFlash[]> {
 }
 
 /**
- * Jumps both marquee tracks to just before their loop point (the END of the
- * 120s cycle, where the animation wraps from the -50% keyframe back to 0 and
- * the duplicate groups take over) and asserts two things:
+ * Jumps both marquee tracks to just before their own loop point (the END of
+ * each track's cycle - the strips run at different speeds, see globals.css -
+ * where the animation wraps from the -50% keyframe back to 0 and the duplicate
+ * groups take over) and asserts two things:
  *
  * 1. Both track boxes still cover the viewport horizontally. This is the
  *    no-blank-gap contract: with too few loop copies, a group narrower than
@@ -128,13 +129,15 @@ async function expectLoopToCoverViewport(page: Page, width: number): Promise<voi
   const tracks = (await page.evaluate(
     `(() => {
       const tracks = [...document.querySelectorAll('.indexes-track, .markets-track')]
-      // Freeze both tracks 10ms short of the end of the 120s cycle: the wrap
-      // point, without waiting two minutes for it. Pausing also keeps the
-      // measurement stable while the strips re-render.
+      // Freeze each track 10ms short of the end of ITS OWN cycle: the wrap
+      // point, without waiting out a full duration. Read from the animation
+      // rather than hard-coded, because the Indexes track is twice as slow as
+      // the Markets one. Pausing also keeps the measurement stable while the
+      // strips re-render.
       for (const track of tracks) {
         const animation = track.getAnimations()[0]
         animation.pause()
-        animation.currentTime = 119990
+        animation.currentTime = Number(animation.effect.getTiming().duration) - 10
       }
       return tracks.map((track) => {
         // getBoundingClientRect forces the paused style to apply synchronously.
@@ -357,6 +360,37 @@ test.describe('Markets strip', () => {
       )
       expect(paused, `track pauses on hover at ${width}px`).toBe('paused')
     }
+  })
+
+  test('the Indexes strip slides slower than the Markets strip', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('site_language', 'english'))
+    await installExternalMocks(page)
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await page.setViewportSize({ width: 900, height: 900 })
+    await page.goto('/')
+    await expect(page.getByTestId('indexes-bar')).toBeVisible()
+    await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
+
+    const durations = (await page.evaluate(
+      `(() => {
+        const duration = (selector) =>
+          getComputedStyle(document.querySelector(selector)).animationDuration
+        return { indexes: duration('.indexes-track'), markets: duration('.markets-track') }
+      })()`,
+    )) as { indexes: string; markets: string }
+
+    const seconds = (value: string) => Number.parseFloat(value.replace('s', ''))
+    // The two strips are deliberately paced apart (user-requested): Indexes is
+    // the slower reference row, twice the Markets cycle for the same half-track
+    // travel, so half the speed. Both still run the same seamless keyframe.
+    expect(seconds(durations.markets)).toBe(120)
+    expect(seconds(durations.indexes)).toBe(240)
+    expect(seconds(durations.indexes)).toBeGreaterThan(seconds(durations.markets))
+    expect(
+      await page.evaluate(
+        `getComputedStyle(document.querySelector('.indexes-track')).animationName`,
+      ),
+    ).toBe('strip-marquee')
   })
 
   test('marquee loop point still covers the viewport with no blank gap', async ({ page }) => {

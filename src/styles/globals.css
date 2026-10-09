@@ -506,6 +506,73 @@ img {
     linear-gradient(160deg, #0b1220 0%, #101a2e 55%, #0c1524 100%);
 }
 
+/* One-shot confetti after the email address is verified (the profile page is
+   opened with ?verified=1). The layer is fixed and inert - pointer-events none,
+   aria-hidden in the markup - so it can never take a click or a focus ring. The
+   pieces are generated in the browser only (see Confetti.tsx), so there is
+   nothing here for the server render to disagree with.
+
+   Each piece drifts, sways and spins by its own inline custom properties; the
+   animation is short (about 1.5-2.4s per piece, auto-dismissed at 3.2s) and
+   ends on opacity 0, so cleanup is never visible. */
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -14px;
+  display: block;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation-fill-mode: forwards;
+  will-change: transform, opacity;
+}
+
+/* The midpoint is what makes the fall look like confetti rather than a curtain:
+   each piece is pushed sideways once on the way down (--confetti-sway) and is
+   already half-turned, so the pieces spread and cross instead of descending in
+   parallel lines. */
+@keyframes confetti-fall {
+  from {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 1;
+  }
+
+  50% {
+    transform: translate3d(
+        calc(var(--confetti-drift, 0px) * 0.35 + var(--confetti-sway, 0px)),
+        46vh,
+        0
+      )
+      rotate(calc(var(--confetti-spin, 540deg) * 0.45));
+    opacity: 1;
+  }
+
+  to {
+    transform: translate3d(var(--confetti-drift, 0px), 92vh, 0) rotate(var(--confetti-spin, 540deg));
+    opacity: 0;
+  }
+}
+
+/* A slight shimmer on the flat shapes only: on a circle it reads as a smudge. */
+.confetti-piece[data-shape='square'],
+.confetti-piece[data-shape='ribbon'] {
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.35);
+}
+
+/* The component already renders nothing under reduced motion; this is the CSS
+   half of the same promise, so a stale piece can never animate. */
+@media (prefers-reduced-motion: reduce) {
+  .confetti-layer {
+    display: none;
+  }
+}
+
 /* "My mixes" sits beside the save button it feeds, as a quiet text link with
    the running count in parentheses. Anchors need the underline suppressed,
    since the button family beside it has none. */
@@ -1980,14 +2047,14 @@ img {
 }
 
 /* Price-movement flash (see usePriceFlash in MarketTracker): when a poll
-   actually moves the displayed number, a pill fades out behind the whole
-   value pair - red when it moved up, green when it moved down, matching the
-   movement colors above. One pill spans price + change: the percent is
-   derived from the same move, so the pair lights up together as a single
-   rectangle. A positioned child at z-index -1 paints above the strip's own
-   background but under the digits, so the values' color is untouched and
-   the row never shifts. The element is re-keyed per tick in React, so two
-   moves in the same direction replay it. The strip is chrome that is
+   actually moves the displayed number, a pill fades out behind the digit
+   cells - red when it moved down, green when it moved up, matching the
+   movement colors above and the rest of the Markets strip. It only covers
+   the price + change cells (.markets-values), never the name, so the label
+   stays white. A positioned child at z-index -1 paints above the strip's
+   own background but under the digits, so the values' color is untouched
+   and the row never shifts. The element is re-keyed per tick in React, so
+   two moves in the same direction replay it. The strip is chrome that is
    deliberately dark in both themes, so these are literals, not tokens. */
 .markets-tick {
   position: absolute;
@@ -1998,10 +2065,14 @@ img {
   animation: market-tick-flash 1200ms ease-out forwards;
 }
 
-/* A tick paints a faint tint behind the whole value pair: green when it
-   moved up, red when it moved down, matching the movement colors above (the
+/* A tick paints a faint tint behind the value cells: green when it moved
+   up, red when it moved down, matching the movement colors above (the
    international ticker convention, unlike the Indexes strip). Subtle enough
-   to read as light rather than a solid block. */
+   to read as a light wash rather than a solid block, and never drawn across
+   the name. The tint uses the same hue as the row's static movement color,
+   so every ticker shows the same green (and the same red) - the only reason
+   a GOLD down row can look like it has its own green is the flash rectangle's
+   alpha wash over red text; the hue itself is identical to the row text. */
 .markets-tick-up {
   background-color: rgba(35, 210, 65, 0.14);
 }
@@ -3233,14 +3304,14 @@ nav#navbar .nav-bar-controls li {
        only the Indexes bar used to visibly jump. */
     flex: 0 0 auto;
     will-change: transform;
-    /* MARQUEE_COPIES (src/lib/marquee.ts) groups per track; the loop shifts
-       by half the track (3 groups) per 120s cycle = one group per 40s, the
-       exact speed the old 2-copy/40s version moved at. The extra copies are
-       what make the loop SEAMLESS on wide viewports: with only two, a group
-       narrower than the screen (the indexes bar measures ~700px) let blank
-       space eat in from the right before the loop snapped back - the strip
-       visibly stopped and started over. */
-    animation: strip-marquee 120s linear infinite;
+    /* MARQUEE_COPIES (src/lib/marquee.ts) groups per track. The loop shifts by
+       half the track (3 groups) per cycle, so the duration below sets the
+       speed: one group per (duration / 3). The extra copies are what make the
+       loop SEAMLESS on wide viewports: with only two, a group narrower than
+       the screen (the indexes bar measures ~700px) let blank space eat in from
+       the right before the loop snapped back - the strip visibly stopped and
+       started over. Per-track durations are set below (the two strips
+       deliberately run at different speeds). */
   }
 
   .indexes-group {
@@ -3258,6 +3329,18 @@ nav#navbar .nav-bar-controls li {
     flex: 0 0 auto;
     gap: 24px;
     padding-inline-end: 24px;
+  }
+
+  /* The two strips no longer share a speed (user-requested): the Indexes bar is
+     a slower reference row, the Markets bar a live ticker. The Indexes track
+     therefore takes twice the cycle for the same half-track travel - one group
+     per 80s instead of the Markets' one per 40s. */
+  .markets-track {
+    animation: strip-marquee 120s linear infinite;
+  }
+
+  .indexes-track {
+    animation: strip-marquee 240s linear infinite;
   }
 
   /* A moving target is hard to read (and the index names are focusable

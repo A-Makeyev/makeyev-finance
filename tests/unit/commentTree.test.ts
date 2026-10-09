@@ -13,6 +13,7 @@ function comment(id: string, parentId: string | null, createdAt: string): Commen
     parentId,
     userName: `user-${id}`,
     userImage: null,
+    authorDeleted: false,
     body: `body-${id}`,
     createdAt,
     editedAt: null,

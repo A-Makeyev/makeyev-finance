@@ -22,6 +22,8 @@ export class CommentsPage {
   readonly comments: Locator
   readonly bodies: Locator
   readonly authors: Locator
+  /** The "(deleted account)" note beside an author whose account is gone. */
+  readonly deletedAuthorMarks: Locator
   readonly replyButtons: Locator
   readonly editButtons: Locator
   readonly deleteButtons: Locator
@@ -55,6 +57,7 @@ export class CommentsPage {
     this.comments = page.getByTestId('comment')
     this.bodies = page.getByTestId('comment-body')
     this.authors = page.getByTestId('comment-author')
+    this.deletedAuthorMarks = page.getByTestId('comment-author-deleted')
     this.replyButtons = page.getByTestId('comment-reply')
     this.editButtons = page.getByTestId('comment-edit')
     this.deleteButtons = page.getByTestId('comment-delete')

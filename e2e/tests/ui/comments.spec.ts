@@ -448,4 +448,46 @@ test.describe('article comments', () => {
     await comments.toggleWithNoRailButton.click()
     await expect(comments.comments).toHaveCount(4)
   })
+
+  test('a comment from a deleted account keeps its name and says so', async ({ mockedPage }) => {
+    // The thread is a public record other people replied to, so deleting the
+    // person keeps the comment under the name it was posted with and marks it
+    // (user-requested). The server sets `authorDeleted`; here the feed is
+    // mocked, so this pins the rendering of both states.
+    const base = {
+      parentId: null,
+      userImage: null,
+      editedAt: null,
+      deleted: false,
+      mine: false,
+      canDelete: false,
+      createdAt: new Date().toISOString(),
+    }
+    const feed = [
+      { ...base, id: 'c1', userName: 'Dana', body: 'from a live account', authorDeleted: false },
+      { ...base, id: 'c2', userName: 'Gil', body: 'from a deleted account', authorDeleted: true },
+    ]
+    await mockedPage.route('**/api/articles/mortgage-decisions/comments', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ comments: feed }),
+      }),
+    )
+
+    const comments = new CommentsPage(mockedPage)
+    await comments.goto('/articles/mortgage-decisions')
+    await expect(comments.comments).toHaveCount(2)
+
+    // Name intact, marker on the deleted author only.
+    await expect(comments.authors).toHaveText(['Dana', 'Gil'])
+    await expect(comments.deletedAuthorMarks).toHaveCount(1)
+    await expect(comments.deletedAuthorMarks).toHaveText('(חשבון שנמחק)')
+    await expect(comments.commentById('c2')).toContainText('Gil')
+
+    // English keeps the same structure with its own copy.
+    await comments.goto('/en/articles/mortgage-decisions')
+    await expect(comments.deletedAuthorMarks).toHaveCount(1)
+    await expect(comments.deletedAuthorMarks).toHaveText('(deleted account)')
+  })
 })

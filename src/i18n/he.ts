@@ -798,6 +798,10 @@ export const he = {
       edit: 'עריכה',
       saveEdit: 'שמירת השינויים',
       edited: 'נערך',
+      // A comment whose author's account has since been deleted keeps the name
+      // it was posted under and gains this beside it (the parentheses are added
+      // in the markup, like the "edited" marker).
+      deletedAuthor: 'חשבון שנמחק',
       deleted: 'התגובה נמחקה',
       delete: 'מחיקה',
       deleteConfirmTitle: 'מחיקת תגובה',
@@ -815,6 +819,9 @@ export const he = {
       title: 'תגובות אליכם',
       empty: 'עדיין אין תגובות שמתייחסות אליכם.',
       loadError: 'טעינת התגובות נכשלה. נסו שוב.',
+      // Same rule as the article thread: a reply from an account that has since
+      // been deleted keeps its name and says so.
+      deletedAuthor: 'חשבון שנמחק',
       view: 'לצפייה בכתבה',
     },
     savedMixes: {
@@ -889,10 +896,19 @@ export const he = {
       errorEmailInUse: 'כתובת הדוא״ל הזו כבר רשומה',
       errorPasswordLength: 'הסיסמה חייבת להכיל לפחות 8 תווים',
       errorGeneric: 'משהו נכשל. נסו שוב',
-      verifySent: 'שלחנו הודעת אימות לכתובת הדוא״ל',
+      errorAccountNotLinked:
+        'הכתובת הזו כבר רשומה עם סיסמה ולא אומתה. יש לאמת את הכתובת ואז להתחבר עם Google',
+      errorSocialFailed: 'ההתחברות עם Google נכשלה. נסו שוב',
+      errorSocialExpired: 'ניסיון ההתחברות פג או נחסם. נסו שוב',
+      errorSocialLinkStuck:
+        'חשבון ה-Google הזה משויך לחשבון שכבר אינו קיים. פנו אלינו כדי לשחרר את השיוך',
+      errorDeleteSignInRequired:
+        'כדי למחוק את החשבון יש להתחבר קודם, ואז ללחוץ שוב על הקישור בהודעה',
       verifyRequired: 'יש לאמת את כתובת הדוא״ל לפני ההתחברות',
-      verifyTitle: 'החשבון נוצר',
-      verifyHint: 'אחרי אימות הכתובת תוכלו להתחבר',
+      // The panel never claims the account exists before the address is
+      // verified. It states only that the mail went out, and the sentence leads
+      // into the masked address shown as a chip beneath it (user-requested).
+      verifyTitle: 'הודעת האימות נשלחה לכתובת',
       resend: 'שליחה חוזרת של הודעת האימות',
       resendSent: 'שלחנו הודעת אימות נוספת',
       backToSignIn: 'חזרה להתחברות',
@@ -922,11 +938,9 @@ export const he = {
       resetTooManyAttempts: 'יותר מדי ניסיונות. בקשו קוד חדש ונסו שוב',
       otpErrorTooManyRequests: 'יותר מדי בקשות. המתינו דקה ונסו שוב',
       socialGoogle: 'Google',
+      // The social rule sits above the sign-in form only; the sign-up tab is
+      // the email form itself, so it needs no rule describing it.
       orEmail: 'או התחברות עם דוא״ל',
-      // The rule introduces the form UNDER it, so the sign-up tab needs its
-      // own copy: "or sign in with email" above a registration form misnames
-      // the action the person is about to take.
-      orEmailSignUp: 'או הרשמה עם דוא״ל',
       signedInAs: 'מחובר בתור {{email}}',
       advisorTitle: 'אזור יועצים',
       advisorBody: 'העמוד הזה זמין ליועצים ולמנהלים בלבד',
@@ -945,6 +959,44 @@ export const he = {
       profilePasswordChanged: 'הסיסמה עודכנה',
       profileErrorInvalidPassword: 'הסיסמה הנוכחית שגויה',
       profileSignOutAll: 'התנתקות מכל המכשירים',
+      // An account created through Google has no password at all, so the same
+      // button and modal set a first one instead of changing it.
+      profileSetPasswordTitle: 'קביעת סיסמה',
+      profileSetPasswordHint:
+        'לחשבון הזה אין סיסמה, הוא מתחבר עם Google. אחרי קביעת הסיסמה אפשר יהיה להתחבר גם עם דוא״ל וסיסמה',
+      profileSetPasswordAction: 'שמירת הסיסמה',
+      profileSetPasswordDone: 'הסיסמה נקבעה. מעכשיו אפשר להתחבר גם עם דוא״ל וסיסמה',
+      profileSetPasswordHasPassword:
+        'לחשבון הזה כבר יש סיסמה. אפשר לשנות אותה בעזרת שינוי הסיסמה',
+      profileSetPasswordTooManyAttempts: 'יותר מדי ניסיונות. המתינו דקה ונסו שוב',
+      profileDeleteAccount: 'מחיקת חשבון',
+      profileDeleteTitle: 'מחיקת חשבון',
+      profileDeleteWarning:
+        'החשבון יימחק לצמיתות, כולל התמהילים השמורים. תגובות שכבר כתבתם יישארו בכתבות ויוצגו עם השם שכתבתם בו ובציון ״חשבון שנמחק״. לא ניתן לשחזר את החשבון',
+      profileDeleteConfirmLabel: 'כדי לאשר, הקלידו {{word}}',
+      profileDeleteConfirmWord: 'מחיקה',
+      profileDeleteConfirmMismatch: 'המילה שהוקלדה אינה מתאימה',
+      // The password the account proves itself with. Better Auth checks it
+      // before the link is mailed, so a typo is answered rather than ignored.
+      profileDeletePasswordHint: 'הסיסמה נבדקת לפני שליחת קישור האישור',
+      profileDeletePasswordRequired: 'יש להזין סיסמה',
+      // The button sends the confirmation mail; the account goes when the link
+      // in that mail is opened and its own button is pressed.
+      profileDeleteAction: 'מחיקה',
+      profileDeleting: 'מוחק...',
+      profileDeleteClose: 'סגירה',
+      profileDeleteSessionExpired: 'הפעולה דורשת התחברות מחדש. יש להתחבר שוב ולנסות שוב',
+      // The last step, on the page the mailed link opens: the address is
+      // already proved, and one press ends it.
+      profileDeleteMailConfirmHint:
+        'הקישור הזה אימת את כתובת הדוא״ל. לחיצה על מחיקה תמחק את החשבון מיד, בלי אפשרות לשחזר',
+      profileDeleteInvalidLink: 'הקישור אינו תקף או שפג תוקפו. אפשר לשלוח קישור חדש מהכפתור מחיקת חשבון',
+      // Deletion is confirmed by a link mailed to the address, so the modal ends
+      // by naming that address (masked) rather than by deleting anything.
+      profileDeleteMailSent: 'קישור לאישור המחיקה נשלח לכתובת',
+      profileDeleteMailHint:
+        'החשבון יימחק רק אחרי פתיחת הקישור ולחיצה על מחיקה בדף הפרופיל, מהדפדפן הזה. יש לבדוק גם בתיקיית הספאם. הקישור תקף ל-24 שעות',
+      profileDeleteTooManyAttempts: 'יותר מדי בקשות. המתינו דקה ונסו שוב',
       emails: {
         subject: 'אימות כתובת הדוא״ל',
         heading: 'אימות כתובת הדוא״ל',
@@ -958,6 +1010,13 @@ export const he = {
         otpBody: 'יש להזין את הקוד הזה בטופס איפוס הסיסמה:',
         otpExpiry: 'הקוד תקף ל-5 דקות',
         otpIgnore: 'אם לא ביקשתם לאפס את הסיסמה, ניתן להתעלם מהודעה זו. הסיסמה לא תשתנה',
+        deleteSubject: 'אישור מחיקת חשבון',
+        deleteHeading: 'מחיקת חשבון',
+        deleteBody:
+          'כדי למחוק את החשבון לצמיתות יש לפתוח את הקישור למטה ולאשר את המחיקה בדף הפרופיל. החשבון והתמהילים השמורים יימחקו. תגובות שכבר כתבתם יישארו בכתבות',
+        deleteCta: 'מעבר לדף המחיקה',
+        deleteIgnore:
+          'אם לא ביקשתם למחוק את החשבון, אפשר להתעלם מהודעה זו. החשבון לא יימחק',
         signature: 'Makeyev Finance',
       },
     },

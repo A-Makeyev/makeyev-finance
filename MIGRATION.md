@@ -288,6 +288,34 @@ mail scanners before the user could click it. Implementation:
   contrast on the scrolled bar, and that no social buttons render without
   credentials.
 
+### Account lifecycle: deleting the account, and what a deleted author leaves behind
+
+- Deletion lives on the profile page behind a warning modal (danger-styled
+  button, `auth.profileDelete*` copy). Better Auth's own `delete-user` endpoint
+  does the work (`user.deleteUser` is enabled in `src/server/auth/index.ts`, and
+  `afterDelete` purges the account's private rows); nothing about the account is
+  deleted by the component. The submit stays disabled until the profile's own
+  word is typed (`src/lib/confirmWord.ts`) and, for an account that has a
+  password, that password is filled in. Whether a password is asked for at all
+  is decided server-side per request (`accountHasPassword`), because an account
+  created through Google has none to give; without a password Better Auth falls
+  back to its session-freshness rule (one day), and the modal explains that
+  refusal. `/delete-user` also carries a 10-per-minute rate rule, since it
+  verifies a password.
+- What is removed: the user row, its sessions, its linked account rows, its
+  saved mixes. What stays: the user's comments, which are part of a public
+  thread other people replied to. The thread keeps the name the comment was
+  posted under and marks it "(deleted account)" (`comments.deletedAuthor` /
+  `replies.deletedAuthor`); the marker comes from a per-list lookup of the
+  authors' accounts (`missingAuthorIds` in `src/server/comments/repo.ts`), not
+  from a join on every render.
+- Orphaned account rows (an `account` row whose user is gone) are released
+  automatically before a social sign-in starts, so a Google subject that was
+  linked once and whose owner row has since been deleted no longer dead-ends
+  every later Google sign-in with `?error=unable_to_link_account`
+  (`src/server/auth/orphanedAccounts.ts`, with the dashboard still available as
+  `npm run auth:doctor -- --repair`).
+
 ## Running the app
 
 ```bash

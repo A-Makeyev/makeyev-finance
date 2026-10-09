@@ -292,6 +292,15 @@ export function CommentsSection({ slug }: { slug: string }) {
               <span className="text-sm font-semibold text-ink" data-testid="comment-author">
                 {comment.userName}
               </span>
+              {/* The thread keeps a deleted author's comment, under the name it
+                  was posted with; this is the only signal that the account is
+                  gone. Sits inside the same baseline row as the time, so it
+                  wraps with the author line instead of stacking. */}
+              {comment.authorDeleted && (
+                <span className="text-xs text-ink-muted" data-testid="comment-author-deleted">
+                  ({t('comments.deletedAuthor')})
+                </span>
+              )}
               <time
                 className="text-xs text-ink-muted"
                 dateTime={comment.createdAt}

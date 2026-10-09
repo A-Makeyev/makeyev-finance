@@ -9,6 +9,8 @@ export interface CommentDto {
   parentId: string | null
   userName: string
   userImage: string | null
+  /** The author's account was deleted; the name is the one they posted under. */
+  authorDeleted: boolean
   /** Empty string once the comment has been soft-deleted. */
   body: string
   createdAt: string
@@ -25,6 +27,8 @@ export interface ReplyDto {
   articleSlug: string
   parentId: string | null
   userName: string
+  /** The author's account was deleted; the name is the one they posted under. */
+  authorDeleted: boolean
   body: string
   createdAt: string
 }

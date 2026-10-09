@@ -21,8 +21,11 @@ export class AuthPage {
   readonly submit: Locator
   readonly submitSpinner: Locator
   readonly error: Locator
+  /** Raw OAuth callback code, shown only when the app has no copy for it. */
+  readonly socialErrorCode: Locator
   readonly notice: Locator
   readonly verifyPanel: Locator
+  readonly verifyHeading: Locator
   readonly verifyEmail: Locator
   readonly resend: Locator
   readonly resendSent: Locator
@@ -82,8 +85,10 @@ export class AuthPage {
     this.submit = page.getByTestId('auth-submit')
     this.submitSpinner = page.getByTestId('auth-submit-spinner')
     this.error = page.getByTestId('auth-error')
+    this.socialErrorCode = page.getByTestId('auth-social-error-code')
     this.notice = page.getByTestId('auth-notice')
     this.verifyPanel = page.getByTestId('auth-verify-panel')
+    this.verifyHeading = page.getByTestId('auth-verify-heading')
     this.verifyEmail = page.getByTestId('auth-verify-email')
     this.resend = page.getByTestId('auth-resend')
     this.resendSent = page.getByTestId('auth-resend-sent')
@@ -143,6 +148,12 @@ export class AuthPage {
     await this.waitForHydration()
     await this.signUpTab.click()
     await expect(this.name).toBeVisible()
+  }
+
+  async switchToSignIn(): Promise<void> {
+    await this.waitForHydration()
+    await this.signInTab.click()
+    await expect(this.name).toHaveCount(0)
   }
 
   async signUp(name: string, email: string, password: string): Promise<void> {

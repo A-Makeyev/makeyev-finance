@@ -10,7 +10,9 @@ import {
   mockSignInInvalid,
   mockSignInSlow,
   mockSignInSuccess,
+  mockSignInUnverified,
   mockSignUpAutoSignedIn,
+  mockSignUpDuplicate,
   mockSignUpSuccess,
   mockVerifyResetCode,
 } from '../../support/authMocks'
@@ -20,7 +22,11 @@ const ENGLISH_PAGE_TITLE = 'Sign in or register'
 const HEBREW_PASSWORD_MISMATCH = 'הסיסמאות אינן תואמות'
 const HEBREW_BAD_CREDENTIALS = 'כתובת הדוא״ל או הסיסמה שגויים'
 const HEBREW_PASSWORD_TOO_SHORT = 'הסיסמה חייבת להכיל לפחות 8 תווים'
-const HEBREW_VERIFY_SENT = 'שלחנו הודעת אימות לכתובת הדוא״ל'
+const HEBREW_VERIFY_SENT_TO = 'הודעת האימות נשלחה לכתובת'
+const HEBREW_EMAIL_NOT_CREATED = 'החשבון נוצר'
+const HEBREW_EMAIL_IN_USE = 'כתובת הדוא״ל הזו כבר רשומה'
+// 'user@example.test' with half the local part hidden (see src/lib/mask).
+const MASKED_USER_EMAIL = 'us••@example.test'
 const HEBREW_RESET_SENT = 'שלחנו קוד בן 4 ספרות לכתובת הזו:'
 const HEBREW_RESET_INVALID_CODE = 'הקוד שגוי או שפג תוקפו'
 const HEBREW_RESET_DONE = 'הסיסמה עודכנה. אפשר להתחבר עם הסיסמה החדשה'
@@ -157,19 +163,154 @@ test.describe('auth pages', () => {
 
     await auth.goto('/login')
     await auth.switchToSignUp()
+    // The verification mail must carry the profile link (already signed in and
+    // flagged for the confetti), not Better Auth's default "/".
+    const signUpRequest = mockedPage.waitForRequest('**/api/auth/sign-up/email')
     await auth.signUp('Test User', 'user@example.test', 'password123')
+    expect((await signUpRequest).postDataJSON()).toMatchObject({
+      callbackURL: '/profile?verified=1',
+    })
 
-    await expect(auth.notice).toHaveText(HEBREW_VERIFY_SENT)
+    // The panel says where the mail went but never announces a created account
+    // (the address is not verified yet), and the address sits masked on its own
+    // soft chip instead of being printed under a sentence.
+    await expect(auth.verifyHeading).toHaveText(HEBREW_VERIFY_SENT_TO)
+    await expect(auth.verifyPanel).not.toContainText(HEBREW_EMAIL_NOT_CREATED)
+    await expect(auth.notice).toHaveText(MASKED_USER_EMAIL)
     await expect(auth.verifyPanel).toBeVisible()
-    // The address the mail went to is spelled out, and the form is gone, so
-    // the sign-up does not silently reset to an empty sign-in tab.
-    await expect(auth.verifyEmail).toHaveText('user@example.test')
+    // The form is gone, so the sign-up does not silently reset to an empty
+    // sign-in tab.
+    await expect(auth.verifyEmail).toHaveText(MASKED_USER_EMAIL)
     await expect(auth.submit).toHaveCount(0)
+
+    // The chip is centered on the card, and the old "once the address is
+    // verified you can sign in" line is gone (the link signs the user in).
+    const noticeAlign = await mockedPage.evaluate(
+      `getComputedStyle(document.querySelector('[data-testid="auth-notice"]')).textAlign`,
+    )
+    expect(noticeAlign).toBe('center')
+    await expect(auth.verifyPanel).not.toContainText('אחרי אימות הכתובת תוכלו להתחבר')
 
     // The confirmation offers a way back to the form.
     await auth.backToSignIn.click()
     await expect(auth.submit).toBeVisible()
     await expect(auth.verifyPanel).toHaveCount(0)
+  })
+
+  test('rejects a sign-up on an address that already has a verified account', async ({
+    mockedPage,
+  }) => {
+    // For a VERIFIED account the server answers an explicit 422 instead of
+    // Better Auth's generic success (which looks exactly like a real sign-up),
+    // so the form says the address is taken rather than showing the "we sent a
+    // verification email" panel and sending nothing. An UNVERIFIED collision
+    // takes the other branch: the server re-sends the verification mail and
+    // answers the generic success that mockSignUpSuccess models.
+    await mockSignUpDuplicate(mockedPage)
+    const auth = new AuthPage(mockedPage)
+
+    await auth.goto('/login')
+    await auth.switchToSignUp()
+    await auth.signUp('Test User', 'user@example.test', 'password123')
+
+    await expect(auth.error).toHaveText(HEBREW_EMAIL_IN_USE)
+    await expect(auth.verifyPanel).toHaveCount(0)
+    await expect(auth.submit).toBeVisible()
+  })
+
+  test('an unverified sign-in opens the confirmation panel with the resend', async ({
+    mockedPage,
+  }) => {
+    // An address registered but never verified is not a dead end: the same
+    // confirmation panel appears, so the user can re-send the verification
+    // mail (and, once verified, link a Google sign-in on the same address).
+    await mockSignInUnverified(mockedPage)
+    const auth = new AuthPage(mockedPage)
+
+    await auth.goto('/login')
+    await auth.signIn('user@example.test', 'password123')
+
+    await expect(auth.verifyPanel).toBeVisible()
+    await expect(auth.verifyHeading).toHaveText(HEBREW_VERIFY_SENT_TO)
+    await expect(auth.verifyEmail).toHaveText(MASKED_USER_EMAIL)
+    await expect(auth.resend).toBeVisible()
+    await expect(auth.error).toHaveCount(0)
+  })
+
+  test('the confirmation panel fits a 360px phone in both directions', async ({
+    mockedPage,
+  }) => {
+    await mockSignUpSuccess(mockedPage)
+    const auth = new AuthPage(mockedPage)
+    await mockedPage.setViewportSize({ width: 360, height: 800 })
+
+    // The chip, the quiet re-send link and the exit button all stay inside the
+    // narrow viewport; the masked address is short, so nothing may overflow.
+    const assertInside = async () => {
+      const overflow = (await mockedPage.evaluate(
+        'document.documentElement.scrollWidth - document.documentElement.clientWidth',
+      )) as number
+      expect(overflow, 'horizontal overflow').toBeLessThanOrEqual(1)
+      for (const control of [auth.notice, auth.resend, auth.backToSignIn]) {
+        const box = await control.boundingBox()
+        expect(box).not.toBeNull()
+        expect(box!.width).toBeGreaterThan(0)
+        expect(box!.x).toBeGreaterThanOrEqual(0)
+        expect(box!.x + box!.width).toBeLessThanOrEqual(360)
+      }
+    }
+
+    await auth.goto('/login')
+    await auth.switchToSignUp()
+    await auth.signUp('Test User', 'user@example.test', 'password123')
+    await assertInside()
+
+    // Same panel in the LTR locale: the mask and the chip must not push the
+    // layout either way.
+    await auth.goto('/en/login')
+    await auth.switchToSignUp()
+    await auth.signUp('Test User', 'user@example.test', 'password123')
+    await assertInside()
+  })
+
+  test('explains a failed Google round trip instead of failing silently', async ({ mockedPage }) => {
+    const auth = new AuthPage(mockedPage)
+
+    // The OAuth callback sends the browser back here with `?error=<code>`; each
+    // family of codes gets its own, actionable line.
+    await mockedPage.goto('/login?error=state_mismatch')
+    await auth.waitForHydration()
+    await expect(auth.error).toHaveText('ניסיון ההתחברות פג או נחסם. נסו שוב')
+
+    await mockedPage.goto('/login?error=invalid_code')
+    await auth.waitForHydration()
+    await expect(auth.error).toHaveText('ההתחברות עם Google נכשלה. נסו שוב')
+
+    await mockedPage.goto('/login?error=account_not_linked')
+    await auth.waitForHydration()
+    await expect(auth.error).toHaveText(
+      'הכתובת הזו כבר רשומה עם סיסמה ולא אומתה. יש לאמת את הכתובת ואז להתחבר עם Google',
+    )
+
+    // A Google account row whose owner is gone: every later sign-in with that
+    // account fails until the stale link is released (scripts/auth-doctor.mjs).
+    await mockedPage.goto('/login?error=unable_to_link_account')
+    await auth.waitForHydration()
+    await expect(auth.error).toHaveText(
+      'חשבון ה-Google הזה משויך לחשבון שכבר אינו קיים. פנו אלינו כדי לשחרר את השיוך',
+    )
+    await expect(auth.socialErrorCode).toHaveCount(0)
+
+    // An unrecognised code falls back to the generic line AND names itself, so
+    // a failure can be diagnosed without another round trip.
+    await mockedPage.goto('/login?error=unable_to_get_user_info')
+    await auth.waitForHydration()
+    await expect(auth.error).toHaveText('ההתחברות עם Google נכשלה. נסו שוב')
+    await expect(auth.socialErrorCode).toHaveText('unable_to_get_user_info')
+
+    // The code stays in the address bar: it is the only way to tell a cookie
+    // failure apart from a rejected token after the fact.
+    await expect(mockedPage).toHaveURL(/error=unable_to_get_user_info/)
   })
 
   test('re-sends the verification email from the confirmation state', async ({ mockedPage }) => {
@@ -737,11 +878,16 @@ test.describe('password reset', () => {
     const buttonBox = (await auth.socialGoogle.boundingBox())!
     expect(rule.y).toBeGreaterThanOrEqual(buttonBox.y + buttonBox.height)
 
-    // Its copy names the form UNDER it, so it follows the tab rather than
-    // describing sign-in above a registration form.
+    // The rule names the form UNDER it, and the provider button belongs to the
+    // sign-in tab alone: a Google sign-in already creates the account when the
+    // address is new, so the register tab is the email form with no social
+    // button and no "or ..." rule above it.
     await expect(auth.orEmail).toHaveText('or sign in with email')
     await auth.switchToSignUp()
-    await expect(auth.orEmail).toHaveText('or sign up with email')
+    await expect(auth.socialButtons).toHaveCount(0)
+    await expect(auth.orEmail).toHaveCount(0)
+    await auth.switchToSignIn()
+    await expect(auth.socialButtons).toHaveCount(1)
 
     // One button, laid out like the form's own full-width controls: it fills
     // the card and sits centered on it rather than hugging either side.
@@ -752,13 +898,15 @@ test.describe('password reset', () => {
       1,
     )
 
-    // Same copy rule in Hebrew, asserted verbatim: the sign-up tab reads
-    // "or sign up with email", never the sign-in wording.
+    // Same rule in Hebrew, asserted verbatim, and the same tab split: the
+    // sign-in tab keeps the rule and the button, the register tab has neither.
     await auth.goto('/login')
     await expect(auth.orEmail).toHaveText('או התחברות עם דוא״ל')
     await auth.switchToSignUp()
-    await expect(auth.orEmail).toHaveText('או הרשמה עם דוא״ל')
-    await auth.goto('/login')
+    await expect(auth.socialButtons).toHaveCount(0)
+    await expect(auth.orEmail).toHaveCount(0)
+    await auth.switchToSignIn()
+    await expect(auth.socialButtons).toHaveCount(1)
 
     // The icon keeps the button's start edge in both locales (the same LTR
     // row inside the button): the G sits LEFT of the word in Hebrew too.
