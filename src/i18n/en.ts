@@ -766,6 +766,21 @@ export const en: { translation: Translation } = {
         residentialConstruction: 'Residential input',
         commercialConstruction: 'Commercial input',
       },
+      // Hover-tooltip copy for each index row (see IndexesBar's FeedAnchor):
+      // what the index measures, then (below) how it reaches a mortgage.
+      descriptions: {
+        cpi: 'The consumer price index tracks how the prices households pay for a basket of goods and services change',
+        residentialConstruction:
+          'The residential construction input index tracks the cost of materials and labour for residential building',
+        commercialConstruction:
+          'The commercial and office construction input index tracks input costs for that sector',
+      },
+      // The tooltip's second clause: how each index reaches a mortgage or loan.
+      mortgageEffects: {
+        cpi: 'CPI is the index used to link mortgage tracks to inflation, so its rise grows the linked balance and the monthly payment',
+        residentialConstruction: 'It drives the cost of building a new home, so it feeds new-build prices rather than a mortgage payment',
+        commercialConstruction: 'It drives building costs for commercial and office property rather than a mortgage payment',
+      },
     },
     marketTracker: {
       ariaLabel: 'Market prices',

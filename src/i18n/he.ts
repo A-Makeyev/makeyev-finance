@@ -753,6 +753,19 @@ export const he = {
         residentialConstruction: 'מדד תשומה בבנייה למגורים',
         commercialConstruction: 'מדד תשומה בבנייה למבני מסחר ומשרדים',
       },
+      // Hover-tooltip copy for each index row (see IndexesBar's FeedAnchor):
+      // what the index measures, then (below) how it reaches a mortgage.
+      descriptions: {
+        cpi: 'מדד המחירים לצרכן עוקב אחר השינוי במחירים שמשקי הבית משלמים על סל מוצרים ושירותים',
+        residentialConstruction: 'מדד תשומה בבנייה למגורים עוקב אחר עלות החומרים והעבודה בבנייה למגורים',
+        commercialConstruction: 'מדד תשומה בבנייה למבני מסחר ומשרדים עוקב אחר עלות התשומות בענף',
+      },
+      // The tooltip's second clause: how each index reaches a mortgage or loan.
+      mortgageEffects: {
+        cpi: 'המדד שלפיו מוצמדים מסלולי משכנתא צמודים, ולכן עלייתו מגדילה את החוב הצמוד ואת ההחזר החודשי',
+        residentialConstruction: 'משפיע על עלות בניית דירה חדשה, ולכן על מחירי הדירות החדשות ולא ישירות על ההחזר במשכנתא',
+        commercialConstruction: 'משפיע על עלויות הבנייה של נכסים מסחריים ומשרדים, ולא ישירות על ההחזר במשכנתא',
+      },
     },
     marketTracker: {
       ariaLabel: 'מחירי שוק',

@@ -443,8 +443,8 @@ test.describe('Markets strip', () => {
     await expect(bar).toContainText('Monthly change')
     await expect(bar).not.toContainText('Yearly change')
     // The full official feed name is reachable via the link's href (a Google
-    // search for the Hebrew feed name), not a hover tooltip - the indexes bar
-    // links are plain anchors, unlike the Markets rows below them.
+    // search for the Hebrew feed name). The row's hover tooltip carries what
+    // the index measures plus how it reaches a mortgage, like the Markets rows.
     await bar.hover()
 
     // The loop copies are hidden from assistive tech and kept out of the tab
@@ -1075,10 +1075,11 @@ test.describe('Markets strip', () => {
     await expect(bar).toContainText('CPI')
     await expect(bar).toContainText('Monthly change')
     await expect(bar).toContainText('Yearly change')
-    // The Hebrew feed name is the hover tooltip's content now (it used to be
-    // the row's native title), so it lives in a visually-hidden span. Read the
-    // strip's VISIBLE text with those spans stripped to check the labels that
-    // actually paint.
+    // Each row's hover tooltip carries what the index measures and how it
+    // reaches a mortgage (a visually-hidden copy lives inside the anchor); the full
+    // official feed name stays in the link's href. Read the strip's VISIBLE
+    // text with the visually-hidden tooltip copy stripped, to check the labels
+    // that actually paint.
     const visibleText = (await page.evaluate(`(() => {
       const clone = document.querySelector('[data-testid="indexes-bar"]').cloneNode(true)
       clone.querySelectorAll('.visually-hidden').forEach((el) => el.remove())
@@ -1087,11 +1088,35 @@ test.describe('Markets strip', () => {
     expect(visibleText).not.toContain('מדד המחירים לצרכן')
     expect(visibleText).not.toContain('שינוי חודשי')
     expect(visibleText).not.toContain('שינוי שנתי')
+    // Hovering a row opens the styled panel (not a native title) with the
+    // description plus how it reaches a mortgage. The copy is also inside the
+    // anchor as visually-hidden text, so asserting on the live `tooltip` role
+    // proves the PANEL itself opened.
+    await bar.locator('a').first().hover()
+    await expect(page.getByRole('tooltip')).toContainText('consumer price index')
+    await expect(page.getByRole('tooltip')).toContainText('link mortgage tracks to inflation')
     // Default CPI fixture: monthly 0.4 (rising), yearly 3.5 - both trends
     // up, so both are red and carry '+'. The sign leads the percent and
     // the arrow trails it in English reading order.
     await expect(bar).toContainText('+0.4% ⭡')
     await expect(bar).toContainText('+3.5% ⭡')
+  })
+
+  test('indexes row tooltip renders the resolved Hebrew copy, not raw keys', async ({ page }) => {
+    // Hebrew is the default (unprefixed URLs). The panel must show the Hebrew
+    // description and mortgage effect; a raw `indexesBar.` string means the
+    // loaded translations do not carry the key (a stale i18n resource).
+    await installExternalMocks(page)
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await page.goto('/')
+
+    const bar = page.getByTestId('indexes-bar')
+    await expect(bar).toBeVisible()
+    await bar.locator('a').first().hover()
+    const tooltip = page.getByRole('tooltip')
+    await expect(tooltip).toContainText('מדד המחירים לצרכן')
+    await expect(tooltip).toContainText('מוצמדים')
+    await expect(tooltip).not.toContainText('indexesBar.')
   })
 
   for (const language of ['hebrew', 'english'] as const) {

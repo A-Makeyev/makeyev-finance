@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom'
 import { cn } from '@/lib/cn'
 import { HOVER_CLOSE_DELAY_MS, PANEL_EXIT_DURATION_MS } from '@/lib/timings'
 
-export interface HoverTooltipProps extends HTMLAttributes<HTMLSpanElement> {
+export interface HoverTooltipProps extends HTMLAttributes<HTMLElement> {
   /**
    * The hint text - what a native `title` used to carry (e.g. the full feed
    * name, an index-points note). Empty/undefined renders a plain element with
@@ -20,13 +20,22 @@ export interface HoverTooltipProps extends HTMLAttributes<HTMLSpanElement> {
    */
   content?: string
   children: ReactNode
-  /** The element to render; the tooltip wraps it rather than nesting inside. */
-  as?: 'span' | 'tr'
+  /**
+   * The element to render; the tooltip wraps it rather than nesting inside.
+   * `a` lets the anchor BE the link (the Indexes strip rows are anchors), so
+   * their class, `order` and flex position survive - a wrapper span would
+   * change the strip's layout.
+   */
+  as?: 'span' | 'tr' | 'a'
   /**
    * Whether to render the hint as visually-hidden text inside the element.
    * Off for a `<tr>`, which may only contain cells.
    */
   srText?: boolean
+  /** Anchor attributes; meaningful only when `as="a"`. */
+  href?: string
+  target?: string
+  rel?: string
 }
 
 /**

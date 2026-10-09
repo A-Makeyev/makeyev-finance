@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react'
+import type { TFunction } from 'i18next'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { HoverTooltip } from '@/components/ui/HoverTooltip'
 import { fetchCbsIndex, type CbsFeedKind } from '@/services/cbs'
 import { formatIndexPercent, type CbsIndexPayload, type TrendDirection } from '@/lib/xml'
 import { useCalculatorStore } from '@/stores/calculatorStore'
@@ -115,8 +117,14 @@ function FeedAnchor({ payload, compact, clone = false }: FeedAnchorProps) {
     const arrow = TREND_ARROWS[direction]
     return hebrew ? `${arrow} ${signed}` : `${signed} ${arrow}`
   }
+  const shortNameKey = kindToShortNameKey(payload.searchQuery)
+  // The hover tooltip explains what this index measures and how it reaches a
+  // mortgage or loan, mirroring the Markets rows. The full official feed name
+  // stays in the search deep link only.
+  const tooltip = indexesTooltipContent(t, shortNameKey)
   return (
-    <a
+    <HoverTooltip
+      as="a"
       href={`https://google.com/search?q=${payload.searchQuery}`}
       target="_blank"
       rel="noreferrer"
@@ -126,11 +134,12 @@ function FeedAnchor({ payload, compact, clone = false }: FeedAnchorProps) {
       // The clone repeats an already-focusable link; keep it out of the tab
       // order (its group is aria-hidden, so screen readers skip it entirely).
       tabIndex={clone ? -1 : undefined}
+      content={tooltip}
     >
       {/* Short localized name ("CPI" etc. in English); the raw Hebrew feed
           name stays in the search deep link only. The compact tier keeps
           this name too - only the yearly change is dropped. */}
-      {t(`indexesBar.shortNames.${kindToShortNameKey(payload.searchQuery)}`)}{' '}
+      {t(`indexesBar.shortNames.${shortNameKey}`)}{' '}
       <span style={{ color: TREND_COLORS[payload.monthDirection] }}>{month.value}</span>
       {/* Non-breaking space: a plain collapsible space next to the empty
           .line-break span collapses to zero width (measured in the probe),
@@ -149,7 +158,7 @@ function FeedAnchor({ payload, compact, clone = false }: FeedAnchorProps) {
           </span>
         </>
       )}
-    </a>
+    </HoverTooltip>
   )
 }
 
@@ -291,6 +300,16 @@ function kindToShortNameKey(
   if (searchQuery.includes('צרכן')) return 'cpi'
   if (searchQuery.includes('מגורים')) return 'residentialConstruction'
   return 'commercialConstruction'
+}
+
+/**
+ * The hover-tooltip text for one index row: what the index measures, then how
+ * it reaches a mortgage or loan. Pure, so the composition is unit-tested
+ * against the real translations rather than only rendered. The `kind` is both
+ * the short-name key and the feed kind.
+ */
+export function indexesTooltipContent(t: TFunction, kind: CbsFeedKind): string {
+  return `${t(`indexesBar.descriptions.${kind}`)} ~ ${t(`indexesBar.mortgageEffects.${kind}`)}`
 }
 
 /** Syncs the live CPI annual change into the calculator store (recalculates indexed tracks). */
