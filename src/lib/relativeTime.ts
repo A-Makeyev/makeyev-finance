@@ -19,7 +19,10 @@
  * Only the -1 forms are overridden, and only for Hebrew: the plural forms
  * ("לפני 3 שבועות"), "this week" ("השבוע") and the future forms ("השבוע הבא") all
  * read correctly as ICU returns them, so post-processing the string would risk
- * breaking the cases that are right.
+ * breaking the cases that are right. The one ICU auto form that does read
+ * awkwardly in Hebrew is the past dual ("2 weeks ago") — ICU emits
+ * "לפני שבועיים (2)", where the parenthetical is the numeric form of the
+ * same dual meaning, so it is stripped here.
  */
 const PAST_SINGLE_FORM: Readonly<Record<string, Partial<Record<Intl.RelativeTimeFormatUnit, string>>>> = {
   he: {
@@ -57,11 +60,19 @@ export function formatRelativeTime(
       const value = Math.round(diffSeconds / seconds)
       // numeric: 'auto' below means -1 is the phrase form, which is exactly the
       // case the override table corrects.
+      const formatted = formatter.format(value, unit)
+      const language = languageOf(locale)
+      // Hebrew CLDR auto form for the dual unit (exactly value === -2) emits
+      // the numeric parenthetical, e.g. "לפני שבועיים (2)". Strip it so the
+      // dual form reads cleanly.
+      if (language === 'he' && value === -2) {
+        return formatted.replace(/\s*\([\d]+\)$/, '')
+      }
       if (value === -1) {
         const phrase = overrides?.[unit]
         if (phrase) return phrase
       }
-      return formatter.format(value, unit)
+      return formatted
     }
   }
   return formatter.format(diffSeconds, 'second')
