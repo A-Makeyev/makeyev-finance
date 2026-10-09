@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  DEPLOY_ORIGINS,
   buildBaseURLConfig,
   canSendAuthEmail,
   getAuthConfig,
   parseAuthConfig,
+  publicOrigin,
 } from '@/server/auth/config'
 
 describe('parseAuthConfig', () => {
@@ -69,20 +71,29 @@ describe('getAuthConfig', () => {
 })
 
 describe('buildBaseURLConfig', () => {
-  it('accepts loopback on any port when no public origin is configured', () => {
-    // Zero env config locally: dev (3000) and e2e (3100) differ only by port.
+  it('accepts loopback on any port and the compiled deploy origin with no env var', () => {
+    // Zero env config: dev (3000) and e2e (3100) differ only by port, and the
+    // deployed host is compiled in so Render needs no BETTER_AUTH_URL.
     const config = buildBaseURLConfig(undefined)
-    expect(config.allowedHosts).toEqual(['localhost:*', '127.0.0.1:*', '[::1]:*'])
-    expect(config).not.toHaveProperty('fallback')
+    expect(config.allowedHosts).toContain('localhost:*')
+    expect(config.allowedHosts).toContain('127.0.0.1:*')
+    expect(config.allowedHosts).toContain('[::1]:*')
+    expect(config.allowedHosts).toContain('makeyev-finance.onrender.com')
+    // Scheme is derived per request, not pinned, so one build serves https on
+    // Render and http on loopback.
+    expect(config.protocol).toBe('auto')
+    expect(config.fallback).toBe('https://makeyev-finance.onrender.com')
   })
 
-  it("adds the deployment's own host and falls back to its origin", () => {
-    const config = buildBaseURLConfig('https://makeyev-finance.onrender.com')
+  it("adds an extra configured host and prefers it as the fallback", () => {
+    const config = buildBaseURLConfig('https://preview.example.com')
+    expect(config.allowedHosts).toContain('preview.example.com')
     expect(config.allowedHosts).toContain('makeyev-finance.onrender.com')
     // Still accepts localhost, so one build serves both dev and prod.
     expect(config.allowedHosts).toContain('localhost:*')
     // An unrecognised Host resolves to our origin instead of throwing, and
-    // never to the host in the request.    expect(config.fallback).toBe('https://makeyev-finance.onrender.com')
+    // never to the host in the request.
+    expect(config.fallback).toBe('https://preview.example.com')
   })
 
   it('keeps the port when the configured origin has one', () => {
@@ -90,6 +101,16 @@ describe('buildBaseURLConfig', () => {
     // reject a legitimate origin.
     const config = buildBaseURLConfig('http://localhost:8080')
     expect(config.allowedHosts).toContain('localhost:8080')
+  })
+})
+
+describe('publicOrigin', () => {
+  it('prefers an explicitly configured origin', () => {
+    expect(publicOrigin('https://preview.example.com')).toBe('https://preview.example.com')
+  })
+
+  it('falls back to the compiled deploy origin', () => {
+    expect(publicOrigin(undefined)).toBe(DEPLOY_ORIGINS[0])
   })
 })
 

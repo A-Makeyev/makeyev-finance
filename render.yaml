@@ -35,8 +35,8 @@ services:
         sync: false
       - key: AUTH_EMAIL_FROM
         sync: false
-      # This deployment's public origin (e.g. the onrender.com URL). Its host
-      # joins the redirect allowlist and it is the fallback origin. Required on
-      # deploys; local dev needs no value.
+      # Optional override. The public origin is compiled in (see DEPLOY_ORIGINS
+      # in src/server/auth/config.ts), so a deploy needs no value; set this only
+      # for an origin that list does not name (e.g. a preview deploy).
       - key: BETTER_AUTH_URL
         sync: false

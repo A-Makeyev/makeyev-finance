@@ -42,6 +42,23 @@ describe('auth base URL resolution', () => {
     ).toBe('http://localhost:3100/api/auth')
   })
 
+  it('resolves the public https origin with no BETTER_AUTH_URL (the Render case)', () => {
+    // Regression: with only loopback hosts allowed, this exact request threw a
+    // BetterAuthError and the deployed endpoint answered 500. The compiled
+    // deploy origin now matches, and `protocol: auto` takes https from
+    // x-forwarded-proto.
+    const request = new Request('http://10.0.0.7:10000/api/auth/sign-in/email', {
+      headers: {
+        host: '10.0.0.7:10000',
+        'x-forwarded-host': 'makeyev-finance.onrender.com',
+        'x-forwarded-proto': 'https',
+      },
+    })
+    expect(
+      resolveBaseURL(buildBaseURLConfig(undefined), BASE_PATH, request, undefined, true),
+    ).toBe('https://makeyev-finance.onrender.com/api/auth')
+  })
+
   it('resolves the public https origin through the proxy', () => {
     // What Render forwards: internal URL and Host, real origin in x-forwarded-*.
     const request = new Request('http://10.0.0.7:10000/api/auth/callback/google', {
@@ -67,20 +84,21 @@ describe('auth base URL resolution', () => {
     ).toBe('https://makeyev-finance.onrender.com/api/auth')
   })
 
-  it('rejects a spoofed Host header instead of reflecting it', () => {
-    // No configured origin means no fallback, so an unknown host must fail
-    // rather than be answered with the attacker's own origin.
-    expect(() =>
-      resolveBaseURL(
-        buildBaseURLConfig(undefined),
-        BASE_PATH,
-        new Request('http://evil.example/api/auth/session', {
-          headers: { host: 'evil.example' },
-        }),
-        undefined,
-        true,
-      ),
-    ).toThrow(/allowed hosts/i)
+  it('does not reflect a spoofed Host header', () => {
+    // There is always a fallback now (the compiled deploy origin), so an
+    // unknown host resolves to our own origin rather than being answered with
+    // the attacker's. The point is that evil.example is never reflected.
+    const resolved = resolveBaseURL(
+      buildBaseURLConfig(undefined),
+      BASE_PATH,
+      new Request('http://evil.example/api/auth/session', {
+        headers: { host: 'evil.example' },
+      }),
+      undefined,
+      true,
+    )
+    expect(resolved).toBe('https://makeyev-finance.onrender.com/api/auth')
+    expect(resolved).not.toContain('evil.example')
   })
 
   it('sends a spoofed x-forwarded-host to our origin, not the attacker', () => {

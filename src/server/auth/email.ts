@@ -2,7 +2,7 @@ import { Resend } from 'resend'
 import type { Language } from '@/i18n'
 import { he } from '@/i18n/he'
 import { en } from '@/i18n/en'
-import { getAuthConfig } from './config'
+import { getAuthConfig, publicOrigin } from './config'
 
 /**
  * Verification-email delivery.
@@ -263,8 +263,8 @@ export function deleteConfirmationUrl(language: Language, origin: string, token:
 /**
  * The deployment's own origin, for a link that has to come back to this app.
  * The request's origin first (that is where the user actually is), then the
- * configured BETTER_AUTH_URL. Without one there is no link to send, and a mail
- * with a broken link is worse than no mail.
+ * configured-or-compiled public origin (see `publicOrigin`). That fallback is
+ * always absolute, so a mail link is never built from an unrecognised host.
  */
 function appOrigin(request: Request | undefined, configured: string | undefined): string | null {
   try {
@@ -282,7 +282,7 @@ function appOrigin(request: Request | undefined, configured: string | undefined)
 
 /** Sends the account-deletion email: a link to the profile page, where the deletion is confirmed. */
 export async function sendDeleteAccountEmail(args: DeleteAccountEmailArgs): Promise<void> {
-  const origin = appOrigin(args.request, getAuthConfig().BETTER_AUTH_URL)
+  const origin = appOrigin(args.request, publicOrigin(getAuthConfig().BETTER_AUTH_URL))
   if (!origin) {
     console.warn('[auth] no app origin available; account-deletion email not sent.')
     return

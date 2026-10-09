@@ -82,31 +82,53 @@ export type AuthConfig = z.infer<typeof authConfigSchema>
 const LOCAL_HOST_PATTERNS = ['localhost:*', '127.0.0.1:*', '[::1]:*']
 
 /**
+ * Public origins this project is deployed to. Not secrets, so they live in the
+ * code instead of the environment: a deployment then needs no BETTER_AUTH_URL
+ * to be reachable. Without this, an env-less deployment allowed only loopback
+ * hosts, so every request to the public host threw and answered 500 ~ that is
+ * exactly what happened on Render.
+ *
+ * Exact hosts, not a wildcard: a forged Host header still cannot become an
+ * OAuth `redirect_uri`. Renaming the service or adding a custom domain is a
+ * code change; BETTER_AUTH_URL stays supported as an extra origin for anything
+ * this list does not name (e.g. a preview deploy).
+ */
+export const DEPLOY_ORIGINS = ['https://makeyev-finance.onrender.com'] as const
+
+/**
+ * The origin a mail link or fallback should point at: the explicitly configured
+ * BETTER_AUTH_URL when present, otherwise the compiled deploy origin. Always
+ * absolute.
+ */
+export function publicOrigin(authUrl: string | undefined): string {
+  return authUrl ?? DEPLOY_ORIGINS[0]
+}
+
+/**
  * Better Auth's dynamic `baseURL`: resolved per request instead of pinned, so
  * each environment need not know its own origin. `allowedHosts` is what makes
- * that safe - an unrecognised Host is rejected rather than used to build an
- * OAuth `redirect_uri`. Without a known origin there is no fallback, so a bad
- * Host fails loud.
+ * that safe - an unrecognised Host resolves to `fallback`, never to the host in
+ * the request.
  */
 export function buildBaseURLConfig(authUrl: string | undefined) {
-  const allowedHosts = [...LOCAL_HOST_PATTERNS]
-  if (authUrl) allowedHosts.push(new URL(authUrl).host)
-  const https = authUrl ? new URL(authUrl).protocol === 'https:' : false
+  const publicOrigins = authUrl ? [...DEPLOY_ORIGINS, authUrl] : [...DEPLOY_ORIGINS]
+  const allowedHosts = [
+    ...LOCAL_HOST_PATTERNS,
+    ...publicOrigins.map((origin) => new URL(origin).host),
+  ]
   return {
     allowedHosts,
     /**
-     * The scheme Better Auth flags cookies for. Without it (a dynamic config
-     * with no `protocol`) the decision falls through to NODE_ENV, so a
-     * PRODUCTION build marks every cookie `Secure` - including the `state`
-     * cookie the Google round trip depends on. Served over http://localhost
-     * that cookie is dropped by strict browsers, and the callback then fails
-     * with `state_mismatch` (see the auth page's `?error=` copy). Local
-     * origins are http by definition; a configured public origin carries its
-     * own scheme (https on Render). This only sets cookie attributes for the
-     * local case - it never widens what a deployment trusts.
+     * `auto`: the scheme is derived per request from `x-forwarded-proto`
+     * (trusted, because `advanced.trustedProxyHeaders` is on) and otherwise
+     * from the request URL. Render forwards `https`, so public requests
+     * resolve to https, and loopback requests resolve to http. Pinning a scheme
+     * here is what used to mark local cookies `Secure` and made the Google
+     * `state` cookie vanish over http://localhost (a `state_mismatch`), so it is
+     * deliberately not pinned.
      */
-    protocol: https ? ('https' as const) : ('http' as const),
-    ...(authUrl ? { fallback: authUrl } : {}),
+    protocol: 'auto' as const,
+    fallback: publicOrigin(authUrl),
   }
 }
 
