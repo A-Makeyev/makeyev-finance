@@ -9,7 +9,7 @@ describe('parseSocialProviders', () => {
   it('ignores unrelated env keys', () => {
     expect(
       parseSocialProviders({
-        RESEND_API_KEY: 're_test_key',
+        FINNHUB_API_KEY: 'fh_key',
         MONGODB_URI: 'mongodb://localhost:27017/makeyev',
       }),
     ).toEqual([])

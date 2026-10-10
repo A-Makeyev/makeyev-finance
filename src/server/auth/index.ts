@@ -14,6 +14,7 @@ import {
   buildBaseURLConfig,
 } from './config'
 import { getDb } from './mongo'
+import { canSendMail } from '@/server/mail/config'
 import { sendDeleteAccountEmail, sendPasswordResetOtpEmail, sendVerificationEmail } from './email'
 import { duplicateSignUpError, signUpCollision } from './duplicateSignUp'
 import { isSocialSignIn, releaseOrphanedAccounts } from './orphanedAccounts'
@@ -88,9 +89,10 @@ async function createAuth() {
     },
     emailAndPassword: {
       enabled: true,
-      // Only require verification when mail can actually be sent, so a local or
-      // CI run without Resend does not dead-end newly created accounts.
-      requireEmailVerification: Boolean(config.RESEND_API_KEY),
+      // Only require verification when mail can actually be sent, so a local
+      // or CI run without mail credentials does not dead-end newly created
+      // accounts. Keys off the same check every sender uses.
+      requireEmailVerification: canSendMail(),
       minPasswordLength: 8,
       maxPasswordLength: 128,
       // Better Auth leaves existing sessions alive after a reset unless this is

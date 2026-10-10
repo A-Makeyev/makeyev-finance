@@ -8,8 +8,8 @@ import { installExternalMocks } from '../../support/mocks'
  * UI contract tests for the Markets strip (MarketTracker). All market API
  * traffic is intercepted, so no test ever touches the real upstream APIs.
  *
- * The strip sits below the CBS Indexes bar; CBS/BOI/EmailJS are left unmocked
- * here (they fail silently offline, exactly like production CI).
+ * The strip sits below the CBS Indexes bar; CBS/BOI are left unmocked here
+ * (they fail silently offline, exactly like production CI).
  */
 
 /**

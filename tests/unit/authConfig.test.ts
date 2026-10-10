@@ -2,18 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   DEPLOY_ORIGINS,
   buildBaseURLConfig,
-  canSendAuthEmail,
   getAuthConfig,
   parseAuthConfig,
   publicOrigin,
 } from '@/server/auth/config'
 
 describe('parseAuthConfig', () => {
-  it('applies the default From address and keeps secrets optional (so next build works)', () => {
+  it('keeps every secret optional, so next build works without any', () => {
     const config = parseAuthConfig({})
-    expect(config.AUTH_EMAIL_FROM).toBe('Makeyev Finance <onboarding@resend.dev>')
     expect(config.MONGODB_URI).toBeUndefined()
-    expect(config.RESEND_API_KEY).toBeUndefined()
     expect(config.BETTER_AUTH_SECRET).toBeUndefined()
     expect(config.BETTER_AUTH_URL).toBeUndefined()
   })
@@ -21,12 +18,10 @@ describe('parseAuthConfig', () => {
   it('reads the values it is given', () => {
     const config = parseAuthConfig({
       MONGODB_URI: 'mongodb://localhost:27017/makeyev',
-      RESEND_API_KEY: 're_test_key',
       BETTER_AUTH_SECRET: 'x'.repeat(32),
       BETTER_AUTH_URL: 'https://example.com',
     })
     expect(config.MONGODB_URI).toBe('mongodb://localhost:27017/makeyev')
-    expect(config.RESEND_API_KEY).toBe('re_test_key')
     expect(config.BETTER_AUTH_URL).toBe('https://example.com')
   })
 
@@ -51,17 +46,13 @@ describe('getAuthConfig', () => {
     // .min(1)/.url() and turn every auth request into "Invalid auth
     // configuration"). Blank means "not configured", same as absent.
     vi.stubEnv('BETTER_AUTH_URL', '')
-    vi.stubEnv('RESEND_API_KEY', '')
     vi.stubEnv('GOOGLE_CLIENT_ID', '')
-    vi.stubEnv('AUTH_EMAIL_FROM', '')
     vi.stubEnv('GOOGLE_CLIENT_SECRET', '   ')
 
     const config = getAuthConfig()
     expect(config.BETTER_AUTH_URL).toBeUndefined()
-    expect(config.RESEND_API_KEY).toBeUndefined()
     expect(config.GOOGLE_CLIENT_ID).toBeUndefined()
     expect(config.GOOGLE_CLIENT_SECRET).toBeUndefined()
-    expect(config.AUTH_EMAIL_FROM).toBe('Makeyev Finance <onboarding@resend.dev>')
   })
 
   it('still throws for a too-short BETTER_AUTH_SECRET', () => {
@@ -111,12 +102,5 @@ describe('publicOrigin', () => {
 
   it('falls back to the compiled deploy origin', () => {
     expect(publicOrigin(undefined)).toBe(DEPLOY_ORIGINS[0])
-  })
-})
-
-describe('canSendAuthEmail', () => {
-  it('reflects the presence of the Resend key', () => {
-    expect(canSendAuthEmail(parseAuthConfig({}))).toBe(false)
-    expect(canSendAuthEmail(parseAuthConfig({ RESEND_API_KEY: 're_test_key' }))).toBe(true)
   })
 })

@@ -353,7 +353,7 @@ export const en: { translation: Translation } = {
         failureBodyPrefix:
           'there seems to be a problem with your internet connection, feel free to reach us at ~ ',
         failureBodySuffix: '',
-        blockedDevice: 'Something on this device is blocking us from sending messages',
+        tooMany: 'Too many messages were sent. Please try again later',
         emailNotProvided: 'Was not included',
         defaultAdviceMessage: 'I would like some advice',
         backHome: 'Home',

@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures'
-import { EMAILJS_MARKERS, VALID_CONTACT } from '../../data/contactForm'
+import { CONTACT_MARKERS, VALID_CONTACT } from '../../data/contactForm'
 
 test.describe('contact form - validation states', () => {
   test('submit starts disabled and stays disabled while invalid', async ({ contact }) => {
@@ -59,33 +59,35 @@ test.describe('contact form - validation states', () => {
     await expect(contact.modal).toBeHidden()
   })
 
-  test('EmailJS failure surfaces the failure modal with the API text', async ({ contact }) => {
+  test('a server-side send failure stays generic ~ no code reaches the user', async ({
+    contact,
+  }) => {
     await contact.goto()
-    await contact.fill({ ...VALID_CONTACT, message: EMAILJS_MARKERS.forceFailure + ' please' })
+    await contact.fill({ ...VALID_CONTACT, message: CONTACT_MARKERS.forceFailure + ' please' })
     await contact.submitButton.click()
 
     await expect(contact.modal).toBeVisible()
     await expect(contact.modalTitle).toHaveText('ההודעה לא נשלחה')
-    await expect(contact.modalDetail).toHaveText('smtp relay unavailable')
+    // The 502 carries a code, not a message: the modal shows its own fallback
+    // line, with no detail block and no trace of the server's wording.
+    await expect(contact.modalDetail).toHaveCount(0)
+    await expect(contact.modal).not.toContainText('send_failed')
   })
 
-  test('deadlock-victim responses are retried transparently', async ({
-    contact,
-    emailjsRequests,
-  }) => {
+  test('a rate-limited submission says too many messages were sent', async ({ contact }) => {
     await contact.goto()
-    await contact.fill({ ...VALID_CONTACT, message: EMAILJS_MARKERS.deadlockOnce + ' trigger' })
+    await contact.fill({ ...VALID_CONTACT, message: CONTACT_MARKERS.rateLimited + ' trigger' })
     await contact.submitButton.click()
 
     await expect(contact.modal).toBeVisible()
-    await expect(contact.modalTitle).toHaveText('ההודעה נשלחה')
-    expect(emailjsRequests.length).toBe(2)
+    await expect(contact.modalTitle).toHaveText('ההודעה לא נשלחה')
+    await expect(contact.modalDetail).toHaveText('שלחתם יותר מדי הודעות. נסו שוב מאוחר יותר')
   })
 
   test('offline submission shows the failure modal without network calls', async ({
     contact,
     context,
-    emailjsRequests,
+    contactRequests,
   }) => {
     await contact.goto()
 
@@ -95,7 +97,7 @@ test.describe('contact form - validation states', () => {
 
     await expect(contact.modal).toBeVisible()
     await expect(contact.modalDetail).toHaveText('אין חיבור לרשת')
-    expect(emailjsRequests.length).toBe(0)
+    expect(contactRequests.length).toBe(0)
   })
 })
 

@@ -21,7 +21,7 @@ application; the legacy Vite/Express app was removed in phase 3.
 | i18n             | react-i18next - Hebrew default, per-locale instance, document RTL on the Hebrew calculator/compare routes        |
 | UI primitives    | Radix Dialog (focus trap / Escape / overlay), native `select` and `range` preserved; Tailwind CSS               |
 | Icons            | react-icons (Font Awesome set)                                                                                  |
-| Email            | @emailjs/browser (credentials via env only)                                                                     |
+| Email            | Resend (server-only, via `/api/contact`; no client credentials)                                                                     |
 | Deploy           | Render (`render.yaml`), one service                                                                             |
 
 ## Getting started
@@ -55,17 +55,20 @@ src/
     (he)/            Hebrew routes, unprefixed (locale root layout)
     (en)/en/         English routes, /en-prefixed (locale root layout)
     api/market/      GET /api/market/quotes route handler
+    api/contact/     POST /api/contact route handler (sends the contact mail)
   components/        layout chrome (Navbar, IndexesBar, MarketTracker, Footer)
                      ui primitives (MoneyInput, TermSlider, AppModal)
   features/
     calculator/      Page · TrackForm · PresetSelector · ResultsCards · ScheduleSection
     compare/         ComparePage · computeScenario
-    contact/         ContactForm · MessageModal · emailjsClient (deadlock-retry)
+    contact/         ContactForm · MessageModal · contactClient (posts to /api/contact)
   i18n/              he.ts · en.ts · per-locale instance + direction policy
   lib/               amortization.ts (pure mortgage math + BoI rules) · format.ts
                      charts.ts · xml.ts (CBS parser) · marketFormat.ts
   server/market/     Finnhub + Frankfurter + Yahoo providers, service, cache,
                      persistence, asset registry (server-only; keys never ship)
+  server/mail/       Resend transport + contact template (server-only)
+  server/contact/    contact POST validation (zod, honeypot, client IP)
   services/          boi.ts · cbs.ts · market.ts (typed fetch wrappers)
   stores/            calculatorStore · comparisonStore · questionWishlistStore
   theme/             theme store + pre-paint scripts (theme, language, direction)

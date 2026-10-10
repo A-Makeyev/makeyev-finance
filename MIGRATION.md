@@ -316,6 +316,65 @@ mail scanners before the user could click it. Implementation:
   (`src/server/auth/orphanedAccounts.ts`, with the dashboard still available as
   `npm run auth:doctor -- --repair`).
 
+### Mail: one server-side Resend module; EmailJS removed
+
+Decision: the contact form's message now leaves the server, not the browser,
+and both mail paths share one client on Resend (the provider the auth mail
+already used). Reason: the contact email needed a credential, and a credential
+cannot ship in the bundle; once it had to be server-side, one provider and one
+module cover everything. `@emailjs/browser` is gone; `resend` stays.
+
+What landed:
+
+- `src/server/mail/`: `config.ts` (`RESEND_API_KEY` + `AUTH_EMAIL_FROM` +
+  `CONTACT_TO_EMAIL`, `canSendMail`, `parseFromAddress`), `client.ts` (one
+  `sendMail`, injectable transport, failure codes only in the logs), `html.ts`
+  (shared `escapeHtml`) and `contact.ts` (`buildContactEmail`, a pure port of
+  the EmailJS template with `dir="auto"` value cells and a text alternative).
+- `src/app/api/contact/route.ts` + `src/server/contact/request.ts`: a new
+  public POST. It validates with zod, drops honeypot hits silently, rate limits
+  per IP (5/hour), and answers generic codes (400/429/502). The raw provider
+  text the old failure modal showed is gone.
+- Contact submissions are addressed to `CONTACT_TO_EMAIL`, defaulting to the
+  address the site already publishes (`DEFAULT_CONTACT_TO_EMAIL` =
+  `SITE.emailMain`). The old EmailJS template had the destination baked into
+  the account, so nothing was configurable; the default keeps that behaviour
+  (mail to the business inbox) without a required variable. It deliberately does
+  NOT fall back to the sender: under the test sender that would address the mail
+  to `onboarding@resend.dev`, which cannot receive anything.
+- `src/features/contact/contactClient.ts` replaces `emailjsClient.ts` with a
+  `fetch('/api/contact')` call returning the same result shape; the deadlock
+  retry and the ad-blocker `isEmailjsAvailable` branch went with it, and
+  `contact.modal.blockedDevice` is replaced by `contact.modal.tooMany`.
+- `src/server/auth/*` now sends through the shared module; `AUTH_EMAIL_FROM`
+  moved to the mail config, where it keeps a Resend onboarding default when
+  unset, and `requireEmailVerification` keys off `canSendMail`.
+- `scripts/mail-doctor.mjs` (`npm run mail:doctor`) reports whether mail can
+  actually leave the box: key presence, the resolved sender and its domain,
+  whether Resend verified that domain, and where contact mail goes. Presence and
+  domains only, never the key ~ the same rule as `auth:doctor`.
+
+**Sender rule, learned the hard way:** Resend only sends from a domain verified
+on the account, and a consumer domain (`gmail.com`, ...) can never be verified.
+Setting `AUTH_EMAIL_FROM` to a Gmail address makes EVERY send fail with
+`validation_error` (HTTP 403) at once: verification mail, password resets,
+account deletion and the contact form. Before this change there was no visible
+symptom, because the sender default was `onboarding@resend.dev`; the code
+silently switched to the configured address. The transport now spells the fix
+out in its log line, and `mail:doctor` names it in one command.
+- Removed: `@emailjs/browser`, every `EMAILJS_*` env (`.env.example`,
+  `render.yaml`, CI, `src/config/env.ts`, `next.config.ts`).
+
+Note: the identifiers named `resend` in the auth UI (`RESEND_COOLDOWN_MS`,
+`resendAvailability`, `auth.resetResend*`) are the unrelated "re-send a code"
+feature and were deliberately left alone.
+
+Caveat: Resend only delivers from a domain verified on the account.
+`onboarding@resend.dev` is test-only (it delivers solely to the Resend account
+owner), so a real deployment needs a verified domain and a matching
+`AUTH_EMAIL_FROM`; an unverified sender fails with Resend's error name
+(`invalid_from_address`).
+
 ## Running the app
 
 ```bash

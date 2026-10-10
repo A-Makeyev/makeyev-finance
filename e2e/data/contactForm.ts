@@ -1,6 +1,6 @@
 /**
  * Shared fixture data for the contact form and the action-form modal.
- * Both flows submit through EmailJS; the specs assert on the exact values
+ * Both flows post to `/api/contact`; the specs assert on the exact values
  * echoed back in the success modal, so the payload lives in one place.
  */
 
@@ -12,11 +12,10 @@ export const VALID_CONTACT = {
 } as const
 
 /**
- * Message markers the EmailJS mock reacts to (see support/mocks.ts):
- * FORCE_FAILURE forces an SMTP 500, DEADLOCK_ONCE returns the legacy
- * deadlock body on the first call.
+ * Message markers the `/api/contact` mock reacts to (see support/mocks.ts):
+ * FORCE_FAILURE forces a generic 502, RATE_LIMIT forces a 429.
  */
-export const EMAILJS_MARKERS = {
+export const CONTACT_MARKERS = {
   forceFailure: 'FORCE_FAILURE',
-  deadlockOnce: 'DEADLOCK_ONCE',
+  rateLimited: 'RATE_LIMIT',
 } as const

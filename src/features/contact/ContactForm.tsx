@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FaPaperPlane, FaTimes } from 'react-icons/fa'
 import { EMAIL_REGEX, NAME_REGEX, PHONE_REGEX } from './validation'
-import { isEmailjsAvailable, sendContactEmail, type EmailSendResult } from './emailjsClient'
+import { sendContactEmail, type EmailSendResult } from './contactClient'
 import type { TFunction } from 'i18next'
 import {
   clearWishlist,
@@ -108,6 +108,8 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     message: '',
   })
   const [selectedTimes, setSelectedTimes] = useState<CallbackTime[]>([])
+  // Anti-spam honeypot: hidden, never filled by a real visitor.
+  const [website, setWebsite] = useState('')
   const wishlistItems = useQuestionWishlist((s) => s.items)
   // Titles and summaries follow the live language, so a saved question is
   // re-translated when the site switches Hebrew ⇄ English.
@@ -154,6 +156,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     clearTimers()
     setValues({ name: '', phone: '', email: '', message: '' })
     setSelectedTimes([])
+    setWebsite('')
     resetLabels()
     setSending(false)
     setDots(0)
@@ -185,19 +188,14 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
   }
 
   const sendEmail = async () => {
-    if (!isEmailjsAvailable()) {
-      onOutcome({ status: 'failure', detail: t('contact.modal.blockedDevice') })
-      resetFormOnError()
-      return
-    }
     let result: EmailSendResult
     try {
-      // The Message cell holds only the user's own text (its <pre> keeps the
+      // The Message row holds only the user's own text (its <pre> keeps the
       // newlines). The callback windows, the calculator scenario and the
-      // saved questions travel as separate template params - callback /
-      // calculator / topic_N - one table row each in the EmailJS template
-      // (all with static English labels), so they keep a clean layout and
-      // stay hidden when absent.
+      // saved topics travel as separate fields - callback / calculator /
+      // topics - one table row each in the server-rendered template (all with
+      // static English labels), so they keep a clean layout and stay hidden
+      // when absent.
       const selectedTimesList = CALLBACK_TIMES.filter((id) => selectedTimes.includes(id))
       const baseMessage =
         values.message.trim() === '' ? t('contact.modal.defaultAdviceMessage') : values.message
@@ -214,12 +212,12 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
         // bullet markers, one line per data point.
         questionParams.calculator = snapshot
       }
-      wishlistTopics.forEach(({ title, summary }, index) => {
-        // Plain-text rows: a '~' separator (matching the calculator
-        // snapshot lines) and a trailing '.' is dropped, so the rows read
-        // cleanly inside the email's <pre> cells.
-        questionParams[`topic_${index + 1}`] = `${title} ~ ${summary}`.replace(/\.$/, '')
-      })
+      const topics = wishlistTopics.map(
+        // Plain-text rows: a '~' separator (matching the calculator snapshot
+        // lines) and a trailing '.' is dropped, so the rows read cleanly
+        // inside the email's <pre> cells.
+        ({ title, summary }) => `${title} ~ ${summary}`.replace(/\.$/, ''),
+      )
       result = await sendContactEmail({
         name: values.name,
         phone: values.phone,
@@ -228,15 +226,23 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
             ? values.email
             : t('contact.modal.emailNotProvided'),
         message: baseMessage,
-        questions: questionParams,
+        ...(questionParams.callback ? { callback: questionParams.callback } : {}),
+        ...(questionParams.calculator ? { calculator: questionParams.calculator } : {}),
+        topics,
+        website,
       })
-    } catch (error) {
-      onOutcome({ status: 'failure', detail: String(error) })
+    } catch {
+      onOutcome({ status: 'failure' })
       resetFormOnError()
       return
     }
     if (!result.ok) {
-      onOutcome({ status: 'failure', detail: result.text })
+      // Never surface server or provider text: the modal shows its own line,
+      // and a rate-limited send gets a distinct wording.
+      onOutcome({
+        status: 'failure',
+        detail: result.status === 429 ? t('contact.modal.tooMany') : undefined,
+      })
       resetFormOnError()
       return
     }
@@ -430,6 +436,21 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
           </span>
         )}
       </button>
+
+      {/* Honeypot: hidden from users and from assistive tech, and skipped by
+          the keyboard (tabIndex -1). A bot that autofills every input trips
+          it, and the server then drops the message without sending. */}
+      <input
+        type="text"
+        name="website"
+        data-testid={`${variant}-website`}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="sr-only"
+        value={website}
+        onChange={(event) => setWebsite(event.target.value)}
+      />
     </form>
   )
 }

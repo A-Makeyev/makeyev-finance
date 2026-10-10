@@ -5,20 +5,16 @@ import { parseSocialProviders } from './src/server/auth/config'
  * Client-side env vars under their clean (non-prefixed) names.
  *
  * Next only inlines NEXT_PUBLIC_* automatically; anything else read in
- * browser code would be `undefined` in the production bundle. These five are
+ * browser code would be `undefined` in the production bundle. These are
  * public-by-design (they ship in the client bundle either way), so `env`
  * inlining is the supported way to expose the clean spellings. All values
  * here MUST come from server-side env only - never hardcode them.
  *
+ * Mail has no client variables: it is called from the server.
+ *
  * src/config/env.ts is the validation/fallback layer on top of these.
  */
 const clientEnv = {
-  EMAILJS_SERVICE_ID:
-    process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID ?? process.env.EMAILJS_SERVICE_ID,
-  EMAILJS_TEMPLATE_ID:
-    process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID ?? process.env.EMAILJS_TEMPLATE_ID,
-  EMAILJS_PUBLIC_KEY:
-    process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY ?? process.env.EMAILJS_PUBLIC_KEY,
   BOI_INTEREST_URL: process.env.NEXT_PUBLIC_BOI_INTEREST_URL ?? process.env.BOI_INTEREST_URL,
   CBS_API_BASE: process.env.NEXT_PUBLIC_CBS_API_BASE ?? process.env.CBS_API_BASE,
   /**

@@ -1,8 +1,10 @@
-import { Resend } from 'resend'
 import type { Language } from '@/i18n'
 import { he } from '@/i18n/he'
 import { en } from '@/i18n/en'
 import { getAuthConfig, publicOrigin } from './config'
+import { sendMail, MailSendError } from '@/server/mail/client'
+import { canSendMail } from '@/server/mail/config'
+import { escapeHtml } from '@/server/mail/html'
 
 /**
  * Verification-email delivery.
@@ -54,20 +56,6 @@ interface AuthEmailCopy {
 
 function authEmailCopy(language: Language): AuthEmailCopy {
   return language === 'english' ? en.translation.auth.emails : he.translation.auth.emails
-}
-
-/**
- * Escapes a value for interpolation into HTML. The URL comes from Better Auth
- * and the name from our own store, but escaping keeps the template safe if
- * either ever carries user-controlled text.
- */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
 }
 
 /** Everything an action email needs: a heading, a greeting, a body and ONE link. */
@@ -187,6 +175,26 @@ export interface VerificationEmailArgs {
   request?: Request
 }
 
+let warnedAboutDelivery = false
+
+/**
+ * Logs an auth-mail failure. The mail client already logged the Resend error
+ * name; this adds the auth context. The first failure gets the actionable
+ * version (check the API key and sender), so a misconfigured sender does not
+ * print the same paragraph on every sign-up.
+ */
+function logAuthMailFailure(label: string, error: unknown): void {
+  const code = error instanceof MailSendError ? error.code : 'unknown'
+  if (!warnedAboutDelivery) {
+    warnedAboutDelivery = true
+    console.error(
+      `[auth] ${label} could not be delivered (${code}). Check the Resend API key and the sender address.`,
+    )
+    return
+  }
+  console.error(`[auth] ${label} failed (${code}).`)
+}
+
 /**
  * Sends one action email through Resend.
  *
@@ -204,9 +212,8 @@ async function sendActionEmail(
   build: (language: Language) => VerificationEmailContent,
   label: string,
 ): Promise<void> {
-  const config = getAuthConfig()
-  if (!config.RESEND_API_KEY) {
-    console.warn(`[auth] RESEND_API_KEY is not set; ${label} not sent.`)
+  if (!canSendMail()) {
+    console.warn(`[mail] not configured; ${label} not sent.`)
     return
   }
 
@@ -214,18 +221,12 @@ async function sendActionEmail(
   const { subject, html, text } = build(language)
 
   try {
-    const result = await new Resend(config.RESEND_API_KEY).emails.send({
-      from: config.AUTH_EMAIL_FROM,
-      to: args.user.email,
-      subject,
-      html,
-      text,
-    })
-    if (result.error) {
-      console.error(`[auth] ${label} rejected: ${result.error.message}`)
-    }
+    await sendMail({ to: args.user.email, subject, html, text })
   } catch (error) {
-    console.error(`[auth] ${label} failed: ${error instanceof Error ? error.message : 'unknown error'}`)
+    // Swallow: the request that triggered this already succeeded, and an error
+    // here must not disclose whether an address is registered or whether an
+    // account exists.
+    logAuthMailFailure(label, error)
   }
 }
 
@@ -316,9 +317,8 @@ export interface OtpEmailArgs {
  * Never logs the address or the code itself.
  */
 export async function sendPasswordResetOtpEmail(args: OtpEmailArgs): Promise<void> {
-  const config = getAuthConfig()
-  if (!config.RESEND_API_KEY) {
-    console.warn('[auth] RESEND_API_KEY is not set; password-reset OTP not sent.')
+  if (!canSendMail()) {
+    console.warn('[mail] not configured; password-reset OTP not sent.')
     return
   }
 
@@ -326,20 +326,11 @@ export async function sendPasswordResetOtpEmail(args: OtpEmailArgs): Promise<voi
   const { subject, html, text } = buildOtpEmail(language, args.otp)
 
   try {
-    const result = await new Resend(config.RESEND_API_KEY).emails.send({
-      from: config.AUTH_EMAIL_FROM,
-      to: args.email,
-      subject,
-      html,
-      text,
-    })
-    if (result.error) {
-      console.error(`[auth] password-reset OTP email rejected: ${result.error.message}`)
-    }
+    await sendMail({ to: args.email, subject, html, text })
   } catch (error) {
     // Same policy as verification mail: a failure is logged and swallowed so
     // the request cannot disclose account existence or crash the flow.
-    console.error(`[auth] password-reset OTP email failed: ${error instanceof Error ? error.message : 'unknown error'}`)
+    logAuthMailFailure('password-reset OTP email', error)
   }
 }
 

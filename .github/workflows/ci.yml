@@ -10,14 +10,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Dummy EmailJS credentials for build/e2e - tests mock the network, so no
-  # real secrets are ever required (or present) in CI. Real credentials are
-  # scoped to deployment environments only; see SECURITY.md. The clean names
-  # are inlined into the client bundle via next.config.ts (NEXT_PUBLIC_* is
-  # also accepted).
-  EMAILJS_SERVICE_ID: service_dummy_ci
-  EMAILJS_TEMPLATE_ID: template_dummy_ci
-  EMAILJS_PUBLIC_KEY: dummy_public_key_ci
+  # CI needs no mail credentials: the e2e suite intercepts the browser call to
+  # /api/contact, so the server route never runs and no mail leaves the runner.
+  # Real credentials are scoped to deployment environments only; see SECURITY.md.
   # Better Auth refuses to boot in production without a secret. This is a
   # throwaway CI value, never a deployment credential.
   BETTER_AUTH_SECRET: ci_only_not_a_real_secret_0123456789abcdef

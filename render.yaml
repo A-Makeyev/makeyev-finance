@@ -13,13 +13,6 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22
-      # Public-by-design (baked into the client bundle); same values as .env.example.
-      - key: EMAILJS_SERVICE_ID
-        value: service_k2c0eve
-      - key: EMAILJS_TEMPLATE_ID
-        value: template_kmxsnuc
-      - key: EMAILJS_PUBLIC_KEY
-        value: 2y064p5z9qRvVxOHN
       # Server-only secret (the market API). Set in the Render dashboard.
       - key: FINNHUB_API_KEY
         sync: false
@@ -30,10 +23,20 @@ services:
       # Mongo connection string, database name included. Set in the dashboard.
       - key: MONGODB_URI
         sync: false
-      # Resend API key + the From address for verification emails.
+      # Mail (Resend), all server-only. Render only prompts for `sync: false`
+      # values when the Blueprint is first created, so type these into the
+      # dashboard by hand afterwards.
       - key: RESEND_API_KEY
         sync: false
+      # From address for every outgoing mail: MUST be on a domain verified at
+      # https://resend.com/domains. A consumer domain (gmail.com, ...) can never
+      # be verified, and every send from one is rejected (validation_error, 403);
+      # leaving this empty falls back to Resend's test sender, which delivers
+      # only to the Resend account owner. `npm run mail:doctor` checks it.
       - key: AUTH_EMAIL_FROM
+        sync: false
+      # Where contact-form submissions go (defaults to the site's own inbox).
+      - key: CONTACT_TO_EMAIL
         sync: false
       # Optional override. The public origin is compiled in (see DEPLOY_ORIGINS
       # in src/server/auth/config.ts), so a deploy needs no value; set this only

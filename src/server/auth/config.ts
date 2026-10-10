@@ -4,9 +4,10 @@ import { z } from 'zod'
  * Server-only auth configuration. Only this module reads auth-related
  * environment variables; everything else takes values from here.
  *
- * Security: MONGODB_URI, BETTER_AUTH_SECRET and RESEND_API_KEY are server-only
- * secrets. They live in the git-ignored .env, are never prefixed
- * NEXT_PUBLIC_, and are never imported by client code (see SECURITY.md).
+ * Security: MONGODB_URI and BETTER_AUTH_SECRET are server-only secrets. They
+ * live in the git-ignored .env, are never prefixed NEXT_PUBLIC_, and are never
+ * imported by client code (see SECURITY.md). The mail credentials live in
+ * `src/server/mail/config.ts`; this module does not read them.
  *
  * Everything is OPTIONAL in the schema and validated at first use instead of
  * at module load: `next build` imports this module while collecting route
@@ -32,18 +33,6 @@ const authConfigSchema = z.object({
    * local run needs no value.
    */
   BETTER_AUTH_URL: z.string().url().optional(),
-  /**
-   * From address for verification emails. The default is Resend's onboarding
-   * sender, which only delivers to the account owner's address - a verified
-   * domain must be substituted for real users.
-   */
-  AUTH_EMAIL_FROM: z.string().min(1).default('Makeyev Finance <onboarding@resend.dev>'),
-  /**
-   * Resend API key. Missing = verification email sending is disabled and the
-   * requirement is relaxed, so the app still runs locally and in CI without
-   * any real secret.
-   */
-  RESEND_API_KEY: z.string().min(1).optional(),
   /**
    * Social sign-in client id/secret (Google, the only provider). The pair
    * enables it: missing = the provider is not registered with Better Auth and
@@ -185,8 +174,6 @@ function readRawEnv(): Record<string, string | undefined> {
     MONGODB_URI: blankToUndefined(process.env.MONGODB_URI),
     BETTER_AUTH_SECRET: blankToUndefined(process.env.BETTER_AUTH_SECRET),
     BETTER_AUTH_URL: blankToUndefined(process.env.BETTER_AUTH_URL),
-    AUTH_EMAIL_FROM: blankToUndefined(process.env.AUTH_EMAIL_FROM),
-    RESEND_API_KEY: blankToUndefined(process.env.RESEND_API_KEY),
     GOOGLE_CLIENT_ID: blankToUndefined(process.env.GOOGLE_CLIENT_ID),
     GOOGLE_CLIENT_SECRET: blankToUndefined(process.env.GOOGLE_CLIENT_SECRET),
   }
@@ -209,9 +196,4 @@ export function parseAuthConfig(raw: Record<string, string | undefined>): AuthCo
 /** Reads and validates the current process env. Never cached, so tests can vary it. */
 export function getAuthConfig(): AuthConfig {
   return parseAuthConfig(readRawEnv())
-}
-
-/** True when verification emails can actually be delivered. */
-export function canSendAuthEmail(config: AuthConfig = getAuthConfig()): boolean {
-  return Boolean(config.RESEND_API_KEY)
 }

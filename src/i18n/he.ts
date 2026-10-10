@@ -345,7 +345,7 @@ export const he = {
         failureTitle: 'ההודעה לא נשלחה',
         failureBodyPrefix: 'הייתה תקלה בשליחת ההודעה, אפשר ליצור איתנו קשר במספר',
         failureBodySuffix: 'ונדאג לחזור אליכם בהקדם',
-        blockedDevice: 'משהו על המכשיר שלכם חוסם  אותנו מלשלוח הודעות',
+        tooMany: 'שלחתם יותר מדי הודעות. נסו שוב מאוחר יותר',
         emailNotProvided: 'לא צויין',
         defaultAdviceMessage: 'אשמח לייעוץ כללי',
         backHome: 'ראשי',

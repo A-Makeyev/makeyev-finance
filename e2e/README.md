@@ -33,11 +33,11 @@ is unchanged.
 
 | Fixture           | Gives you                                                        |
 | ----------------- | ---------------------------------------------------------------- |
-| `mockedPage`      | The default `page` with BOI/CBS/EmailJS intercepts installed     |
+| `mockedPage`      | The default `page` with BOI/CBS/`/api/contact` intercepts         |
 | `calc`            | `CalculatorPage` wired to `mockedPage` (navigate it yourself)    |
 | `contact`         | `ContactFormPage` wired to `mockedPage`                          |
 | `actionModal`     | `ActionFormModalPage` wired to `mockedPage`                      |
-| `emailjsRequests` | URLs of every EmailJS POST the mocks observed (assert with this) |
+| `contactRequests` | URLs of every contact POST the mocks observed (assert with this) |
 | `externalMocks`   | Suite-level mock options; `test.use({ externalMocks: {...} })`   |
 | `languagePage`    | Page with the `language` option pre-seeded in localStorage       |
 | `localizedCalc`   | `languagePage` + `CalculatorPage`                                |
@@ -65,8 +65,8 @@ not every test.
 quotes, contact payloads, storage keys) live here so a fixture change
 happens once. Single-suite values can stay local to their spec.
 
-**Route mocks** (`support/`): `mocks.ts` owns the external BOI/CBS/EmailJS
-intercepts; `marketMocks.ts` owns the `/api/market/quotes` responder. New
+**Route mocks** (`support/`): `mocks.ts` owns the external BOI/CBS
+intercepts plus the same-origin `/api/contact` responder; `marketMocks.ts` owns the `/api/market/quotes` responder. New
 mocked endpoints belong there, not inline in specs.
 
 ## Evaluating in the page

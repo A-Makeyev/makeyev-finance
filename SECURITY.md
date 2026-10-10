@@ -9,9 +9,9 @@ directly in source. Disposition during this migration:
 | -------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mainSmtpToken` = `b52b8a29-…`         | `src/index.js:6`                       | **Dead config** - referenced nowhere in any legacy file. Not carried into the new codebase at all. ⚠️ Treat as compromised regardless (it was pushed to a public-ish repo): revoke/rotate on the SMTP provider. |
 | `companySmtpToken` = `88263185-…`      | `src/index.js:7`                       | Same as above - dead, removed, rotate recommended.                                                                                                                                                              |
-| EmailJS service id `service_k2c0eve`   | `src/contact.js:406`                   | Moved to `EMAILJS_SERVICE_ID` (.env).                                                                                                                                                                            |
-| EmailJS template id `template_kmxsnuc` | `src/contact.js:407`                   | Moved to `EMAILJS_TEMPLATE_ID` (.env).                                                                                                                                                                           |
-| EmailJS public key `2y064p5z9qRvVxOHN` | inline `<script>` in every legacy page | Moved to `EMAILJS_PUBLIC_KEY` (.env). Public keys are public-by-design, but they are configuration, not code.                                                                                                     |
+| EmailJS service id `service_k2c0eve`   | `src/contact.js:406`                   | Removed with EmailJS (was `EMAILJS_SERVICE_ID`); the contact mail is sent server-side now.                                                                                                                        |
+| EmailJS template id `template_kmxsnuc` | `src/contact.js:407`                   | Removed with EmailJS (was `EMAILJS_TEMPLATE_ID`); its layout lives in `src/server/mail/contact.ts`.                                                                                                               |
+| EmailJS public key `2y064p5z9qRvVxOHN` | inline `<script>` in every legacy page | Removed with EmailJS (was `EMAILJS_PUBLIC_KEY`); the contact form no longer talks to a third party from the browser.                                                                                              |
 | Font Awesome kit URL (`4f48855ba9`)    | every legacy page                      | Eliminated entirely - replaced with `react-icons`; no per-account dependency remains.                                                                                                                           |
 
 ## What stays in source (intentionally NOT secrets)
@@ -22,16 +22,17 @@ live in `src/config/siteConfig.ts` as typed constants.
 
 ## Environment variable rules
 
-- Client variables use the clean (non-prefixed) names (`EMAILJS_*`,
-  `BOI_INTEREST_URL`, `CBS_API_BASE`), inlined into the browser bundle via the
-  `env` block in `next.config.ts`; `NEXT_PUBLIC_*` spellings are also accepted
-  and preferred. (The legacy `VITE_*` fallback was removed once nothing set
-  it; the adapter in `src/config/env.ts` reads only `NEXT_PUBLIC_*` and the
-  bare names.) **Anything client-side is
-  public.** Never place server-only credentials in client variables.
+- Client variables use the clean (non-prefixed) names (`BOI_INTEREST_URL`,
+  `CBS_API_BASE`), inlined into the browser bundle via the `env` block in
+  `next.config.ts`; `NEXT_PUBLIC_*` spellings are also accepted and preferred.
+  (The legacy `VITE_*` fallback was removed once nothing set it; the adapter in
+  `src/config/env.ts` reads only `NEXT_PUBLIC_*` and the bare names.) **Anything
+  client-side is public.** Never place server-only credentials in client
+  variables. Mail has no client variables at all: the browser calls our own
+  `/api/contact`, and Resend is only reached from the server.
 - Server-only variables carry no prefix and are reachable only from server
   code: `FINNHUB_API_KEY`, `MONGODB_URI`, `BETTER_AUTH_SECRET`,
-  `RESEND_API_KEY`, `AUTH_EMAIL_FROM`.
+  `RESEND_API_KEY`, `AUTH_EMAIL_FROM`, `CONTACT_TO_EMAIL`.
 - `.env` is git-ignored; `.env.example` documents the required shape.
 - `src/config/env.ts` validates the CLIENT variables through a Zod schema at
   startup. Server-only config is validated lazily at first use
@@ -68,10 +69,12 @@ live in `src/config/siteConfig.ts` as typed constants.
   address has an account, so the endpoint cannot enumerate users.
   `revokeSessionsOnPasswordReset` is on: a session stolen before the reset
   does not survive it, which is the usual reason the password is being changed.
-- **Email verification**: required when `RESEND_API_KEY` is set; the token and
-  verification URL are generated by Better Auth, only the rendered message is
-  ours (`src/server/auth/email.ts`, localized from the i18n files). The OAuth
-  / app code never touches card data.
+- **Email verification**: required when mail can actually be delivered
+  (`canSendMail` ~ a Resend API key, see `src/server/mail/config.ts`), so a
+  deployment with no mailer cannot dead-end new accounts. The token and
+  verification URL are generated by Better Auth; only the rendered message is
+  ours (`src/server/auth/email.ts`, localized from the i18n files). The OAuth /
+  app code never touches card data.
 - **Secrets**: `MONGODB_URI`, `BETTER_AUTH_SECRET` and `RESEND_API_KEY` are
   server-only, live in the git-ignored `.env`, and are never exposed as
   `NEXT_PUBLIC_*`. `BETTER_AUTH_SECRET` must be a random 32+ character value
@@ -85,11 +88,43 @@ live in `src/config/siteConfig.ts` as typed constants.
   dedicated `dev`/`qa`/`production` environments ~ never repo-wide. CI itself
   stays secret-free (a throwaway Mongo service container plus dummy values).
 
+## Mail (Resend)
+
+- **One server-side module** (`src/server/mail/`) owns every send: the auth
+  mails (verification, password-reset code, account deletion) and the
+  contact-form notification. The browser never holds the API key; the form
+  posts to `/api/contact` and the server does the sending.
+- **Credentials** are `RESEND_API_KEY` plus the configured sender (server-only).
+  The transport logs only a short failure code (Resend's own stable error name,
+  or `ENOCONFIG` / `ECONNECTION`) and never a recipient, message body, OTP, link
+  or credential.
+- **Contact submissions go to the site's own published inbox** by default
+  (`CONTACT_TO_EMAIL` overrides it). The address is the one already printed on
+  the contact page, so the default leaks nothing new, and it is server-side only
+  ~ like every other mail setting.
+- **The sender must be deliverable.** Resend refuses to send from a domain that
+  is not verified on the account, and a consumer domain (gmail.com,
+  outlook.com, ...) can never be verified ~ every send from one is rejected with
+  `validation_error` (HTTP 403). That failure is loud in the logs (the code, plus
+  a hint naming https://resend.com/domains) but silent in the UI, which reports
+  only the generic code, so `npm run mail:doctor` exists to check it in one step
+  and prints presence and domains only, never the key. Unset `AUTH_EMAIL_FROM`
+  falls back to Resend's test sender, which needs no verification but delivers
+  only to the Resend account owner's address.
+- **The contact route is hostile input**: it is public and unauthenticated, so
+  the body is validated and length-capped with zod (unknown keys rejected), a
+  hidden honeypot silently absorbs bots, and it is rate limited per client IP
+  (5/hour, tighter than any auth endpoint) through the shared Mongo limiter.
+  Failures return a generic code (400/429/502); provider text never reaches the
+  browser.
+- **No auto-retry** of a send: a retry on a timeout would double an already-slow
+  request, and nothing here is idempotent on the provider side.
+
 ## CI
 
-The pipeline runs fully mocked: e2e tests intercept the BOI/CBS/EmailJS
-endpoints, so CI requires **zero** real secrets (dummy values are exported in
-the workflow). If real deployment credentials are introduced later (e.g. a
+The pipeline runs fully mocked: e2e tests intercept the BOI/CBS feeds and the
+browser's `/api/contact` call, so CI requires **zero** real secrets (and the
+server route never runs). If real deployment credentials are introduced later (e.g. a
 deploy job), store them as GitHub **environment secrets** scoped to dedicated
 `dev` / `qa` / `production` environments - never as repository-wide secrets,
 and never printed in logs.

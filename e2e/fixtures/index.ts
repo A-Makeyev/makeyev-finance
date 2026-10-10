@@ -17,7 +17,7 @@ import { seedLanguage, seedTheme } from './seed'
  *
  * Fixtures:
  * - externalMocks: per-suite opt-in { boiKeyRate, cpi } + `mockedPage` with
- *   the intercepts installed + `emailjsRequests` recorder + page objects
+ *   the intercepts installed + `contactRequests` recorder + page objects
  *   (`calc`, `contact`, `actionModal`) wired to the mocked page.
  * - locale/theme: pre-boot localStorage seeding (`localePage`, `themedPage`).
  * - seed: imperative helpers for tests whose language varies per iteration.
@@ -32,10 +32,10 @@ export interface ExternalMocksFixtures {
   /** The default `page` with the external intercepts installed before use. */
   mockedPage: Page
   /**
-   * URLs of every EmailJS POST that the mocks observed. Fresh per test, so a
+   * URLs of every contact POST that the mocks observed. Fresh per test, so a
    * spec can assert on submissions without wiring its own onRequest.
    */
-  emailjsRequests: URL[]
+  contactRequests: URL[]
   /** Calculator page object wired to the mocked page (not yet navigated). */
   calc: CalculatorPage
   /** Contact form page object wired to the mocked page (navigate it yourself). */
@@ -64,11 +64,11 @@ export type AppFixtures = ExternalMocksFixtures & LocaleFixtures & ThemeFixtures
 export const test = base.extend<AppFixtures>({
   externalMocks: [{ boiKeyRate: 4.5 }, { option: true }],
 
-  mockedPage: async ({ page, externalMocks, emailjsRequests }, use) => {
+  mockedPage: async ({ page, externalMocks, contactRequests }, use) => {
     const options: ExternalMocksOptions = {
       ...externalMocks,
       onRequest: (url: URL) => {
-        if (url.host.includes('emailjs')) emailjsRequests.push(url)
+        if (url.pathname === '/api/contact') contactRequests.push(url)
         externalMocks.onRequest?.(url)
       },
     }
@@ -81,7 +81,7 @@ export const test = base.extend<AppFixtures>({
   // leak into later count assertions (the contact-count flakes). The wrapper
   // function gives each test its own fresh array.
   // eslint-disable-next-line no-empty-pattern -- Playwright requires a destructured first arg even when the fixture reads nothing
-  emailjsRequests: async ({}, use) => {
+  contactRequests: async ({}, use) => {
     await use([])
   },
 

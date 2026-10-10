@@ -2,7 +2,7 @@ import type { Page, Route } from '@playwright/test'
 
 /**
  * Deterministic network mocks for the external integrations
- * (Bank of Israel prime rate, CBS index feeds, EmailJS).
+ * (Bank of Israel prime rate, CBS index feeds) and the contact endpoint.
  *
  * Cross-origin fulfilled responses MUST carry CORS headers - otherwise the
  * browser blocks the app from reading them and fetch() rejects, which is
@@ -72,7 +72,7 @@ export interface InstallExternalMocksOptions {
   boiKeyRate?: number | null
   /** CPI fixture options; null simulates CBS failure for all feeds. */
   cpi?: CbsFixtureOptions | null
-  /** Track observed requests (e.g. EmailJS POSTs). */
+  /** Track observed requests (e.g. contact POSTs). */
   onRequest?: (url: URL) => void
 }
 
@@ -114,39 +114,35 @@ export async function installExternalMocks(
     })
   }
 
-  let emailjsCalls = 0
-  await page.route(/api\.emailjs\.com/, (route) => {
-    const pf = preflight(route)
-    if (pf) return pf
+  // Our own contact route. It is same-origin, so no CORS headers or
+  // preflight handling are needed here.
+  await page.route('**/api/contact', (route) => {
     const request = route.request()
     onRequest?.(new URL(request.url()))
     if (request.method() !== 'POST') {
-      return fulfillCors(route, { status: 404, contentType: 'text/plain', bodyText: '' })
+      return route.fulfill({ status: 405, contentType: 'text/plain', body: '' })
     }
-    emailjsCalls++
     const bodyText = request.postData() ?? ''
-    // Deadlock simulation: first call returns the transient SMTP failure.
-    if (bodyText.includes('DEADLOCK_ONCE') && emailjsCalls === 1) {
-      return fulfillCors(route, {
-        status: 200,
+    if (bodyText.includes('RATE_LIMIT')) {
+      // The server's per-IP limiter answered; the form must say so distinctly.
+      return route.fulfill({
+        status: 429,
         contentType: 'application/json',
-        // Legacy-era SMTP deadlocks surfaced a 200 response whose body
-        // contained the marker - matched verbatim by the client.
-        bodyText: 'deadlock victim of process 12345, resending email…',
+        body: JSON.stringify({ ok: false, error: 'rate_limited' }),
       })
     }
     if (bodyText.includes('FORCE_FAILURE')) {
-      // Real EmailJS failures arrive as HTTP errors with a plain-text body.
-      return fulfillCors(route, {
-        status: 500,
-        contentType: 'text/plain',
-        bodyText: 'smtp relay unavailable',
+      // A send failure the server reports as a generic 502.
+      return route.fulfill({
+        status: 502,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: false, error: 'send_failed' }),
       })
     }
-    return fulfillCors(route, {
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      bodyText: JSON.stringify({ status: 200, text: 'OK' }),
+      body: JSON.stringify({ ok: true }),
     })
   })
 }
