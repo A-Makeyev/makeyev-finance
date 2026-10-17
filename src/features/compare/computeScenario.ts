@@ -14,6 +14,7 @@
  * tracks are priced against derives from it.
  */
 import {
+  combineSchedules,
   DEFAULT_LAWYER_PERCENT,
   DEFAULT_REALTOR_PERCENT,
   FALLBACK_INFLATION,
@@ -83,6 +84,19 @@ export interface ScenarioResult {
    * Null while there is nothing to advise on (empty scenario).
    */
   recommendedIncome: number | null
+  /** Chart data: average monthly payment per year (payment goes DOWN over time for spitzer) */
+  paymentTrend: Array<{ year: number; payment: number }>
+  /** Chart data: cumulative total payments (goes UP over time) */
+  cumulativePayments: Array<{ year: number; cumulativePayment: number }>
+  /** Chart data: remaining principal (balance) at the end of each year (goes DOWN to 0) */
+  balanceTrend: Array<{ year: number; balance: number }>
+  /** The combined yearly schedule the chart and the payments table both read. */
+  schedule: Array<{ year: number; paid: number; principal: number; interest: number; closing: number }>
+  /**
+   * Track-mix composition, grouped by track type (a mix can repeat a type):
+   * each slice's principal and its share of the loan. Drives the donut.
+   */
+  mixShares: Array<{ type: string; amount: number; percent: number }>
 }
 
 export interface SharedBuyerInputs {
@@ -178,6 +192,11 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     loanAmount: 0,
     avgMonthlyPayment: 0,
     recommendedIncome: null,
+    paymentTrend: [],
+    cumulativePayments: [],
+    balanceTrend: [],
+    schedule: [],
+    mixShares: [],
   }
   if (enteredIndexes.length === 0) return emptyResult
 
@@ -225,6 +244,49 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     capitalForLoan,
     inputs.purpose,
   )
+  // Build chart data from combined schedule
+  const schedule = combineSchedules(validResults)
+  // Average monthly payment for each year: the year's total paid over its
+  // 12 months (the yearly schedule aggregates whole years, so this is exact
+  // for level-payment tracks and the year's average for equal-principal ones).
+  const paymentTrend = schedule.map((row) => ({
+    year: row.year,
+    payment: row.paid / 12,
+  }))
+  // Cumulative payments: running total of all payments up to each year
+  let cumulative = 0
+  const cumulativePayments = schedule.map((row) => {
+    cumulative += row.paid
+    return { year: row.year, cumulativePayment: cumulative }
+  })
+  // Remaining principal after each year (the "what is left to pay" story).
+  const balanceTrend = schedule.map((row) => ({
+    year: row.year,
+    balance: row.closing,
+  }))
+  // The yearly rows the payments table renders (opening balance is derivable
+  // from the previous closing, so it is dropped here).
+  const scheduleRows = schedule.map((row) => ({
+    year: row.year,
+    paid: row.paid,
+    principal: row.principal,
+    interest: row.interest,
+    closing: row.closing,
+  }))
+  // Track-mix composition for the donut: sum each type's principal, then rank
+  // the slices largest-first. A mix may repeat a type, so this groups by type.
+  const amountByType = new Map<string, number>()
+  for (const result of validResults) {
+    amountByType.set(result.type, (amountByType.get(result.type) ?? 0) + result.principal)
+  }
+  const mixShares = [...amountByType.entries()]
+    .map(([type, amount]) => ({
+      type,
+      amount,
+      percent: totalPrincipal > 0 ? (amount / totalPrincipal) * 100 : 0,
+    }))
+    .sort((left, right) => right.amount - left.amount)
+
   const maxYears = Math.max(...validResults.map((result) => result.years))
   // Average payment over the full term in months (the "typical" month between
   // first and highest), then the recommended net income that carries it at
@@ -264,6 +326,11 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     loanAmount: totalPrincipal,
     avgMonthlyPayment,
     recommendedIncome,
+    paymentTrend,
+    cumulativePayments,
+    balanceTrend,
+    schedule: scheduleRows,
+    mixShares,
   }
 }
 

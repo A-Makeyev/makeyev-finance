@@ -9,6 +9,7 @@ import {
   MAX_TRACKS,
   MAX_YEARS,
   TRACK_TYPES,
+  isVariableType,
   type AmortizationMethod,
   type PropertyPurpose,
 } from '@/lib/amortization'
@@ -26,16 +27,23 @@ import { TermSlider } from '@/components/ui/TermSlider'
 import { useMediaQuery } from '@/hooks/useScrolled'
 import { useComparisonStore } from '@/stores/comparisonStore'
 import { sharedInputSuggestions, type ScenarioResult } from './computeScenario'
+import { CompareTrendChart, type TrendSeries } from './CompareTrendChart'
+import { ScheduleTable } from './ScheduleTable'
 
 /**
  * Side-by-side mortgage scenario comparison (/compare).
  *
  * Layout (confirmed with the user):
- * - Desktop: one table, scenarios as columns, metrics as rows, best value
- *   per row highlighted - the tradeoffs read straight off the table.
- * - Mobile (~360px): the same data re-renders as one stacked card per
- *   scenario with a scenario switcher (tabs), not a horizontally scrolled
- *   table that breaks down at narrow widths.
+ * - Every scenario is one result card, in the SAME columns as its editor, so
+ *   the results read directly under the mix that produced them. Each card
+ *   carries its metrics (best-per-metric highlighted), compliance status and
+ *   yearly payments table.
+ * - Below the cards sit four comparison charts (two per row), one per metric -
+ *   monthly payment, remaining debt, cumulative interest, total paid - each
+ *   plotting every mix as its own line/area so the differences read at a
+ *   glance. Payment and total are lines; debt and interest are filled areas.
+ * - Mobile (~360px): the same cards, switched by a scenario switcher (tabs)
+ *   rather than a long stack.
  *
  * Every number comes from the comparison store, which calls the same pure
  * amortization.ts functions as the main calculator - no re-implemented math.
@@ -257,6 +265,22 @@ export function ComparePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results, t])
 
+  /**
+   * The combined chart's series: one line per PRICED mix (empty and
+   * error-gated scenarios have no schedule to draw). The label is the mix's
+   * own name, matching its result card.
+   */
+  const trendSeries = useMemo<TrendSeries[]>(
+    () =>
+      results.flatMap((result, index) => {
+        if (result.isEmpty || result.error) return []
+        const label =
+          scenarios[index]?.label.trim() || t('compare.scenarioUntitle', { index: index + 1 })
+        return [{ label, schedule: result.schedule }]
+      }),
+    [results, scenarios, t],
+  )
+
   /** Regulatory status summary for one scenario, as short pass/fail lines. */
   const statusLines = (result: ScenarioResult): Array<{ ok: boolean | null; text: string }> => {
     if (result.error === 'positive') {
@@ -301,6 +325,10 @@ export function ComparePage() {
   const renderScenarioEditor = (scenarioIndex: number) => {
     const scenario = scenarios[scenarioIndex]
     if (!scenario) return null
+    // The Bank of Israel 2/3 variable cap is caused by the variable tracks'
+    // share, so flag THOSE rows red (like the calculator's flagged tracks)
+    // instead of tinting the whole result card.
+    const variableCap = results[scenarioIndex]?.error === 'variableCap'
     return (
       <div
         className="compare-scenario-editor"
@@ -392,7 +420,11 @@ export function ComparePage() {
         {scenario.tracks.map((track, trackIndex) => (
           <fieldset
             key={track.id}
-            className="mortgage-track compare-track"
+            className={
+              variableCap && isVariableType(track.type)
+                ? 'mortgage-track compare-track variable-limit-flag'
+                : 'mortgage-track compare-track'
+            }
             data-testid={`compare-track-${scenarioIndex + 1}-${trackIndex + 1}`}
           >
             <legend>{t('compare.trackLegend', { index: trackIndex + 1 })}</legend>
@@ -494,6 +526,57 @@ export function ComparePage() {
       {ok === true ? '✔️' : ok === false ? '❌' : 'ℹ️'} {text}
     </span>
   )
+
+  /**
+   * One scenario's results as a card - the desktop grid and the mobile
+   * single-card view render the exact same markup (only the test id differs:
+   * the mobile view keeps `compare-card`, desktop cards carry
+   * `compare-result-card-<n>`). Metric rows carry `compare-metric-<key>-<n>`
+   * and keep the `best` highlight, so the comparison stays as clear as the
+   * old table without the sideways-scrolling table.
+   */
+  const renderResultCard = (index: number, testId: string) => {
+    const result = results[index]
+    const scenario = scenarios[index]
+    if (!result || !scenario) return null
+    const label = scenario.label.trim() || t('compare.scenarioUntitle', { index: index + 1 })
+    const hasFigures = !result.isEmpty && !result.error
+    return (
+      <article
+        key={scenario.id}
+        className="compare-result-card"
+        data-testid={testId}
+      >
+        <h2>{label}</h2>
+        <dl className="compare-card-metrics">
+          {metrics.map((metric) => {
+            const isBest = bestIndexes.get(metric.key)?.has(index) ?? false
+            return (
+              <div
+                key={metric.key}
+                data-testid={`compare-metric-${metric.key}-${index + 1}`}
+                className={isBest ? 'best' : undefined}
+              >
+                <dt>{metric.label(maxTerm)}</dt>
+                <dd>
+                  {metric.value(result)}
+                  {isBest && <span className="compare-best-badge">{t('compare.bestBadge')}</span>}
+                </dd>
+              </div>
+            )
+          })}
+        </dl>
+        <div className="compare-status-list">
+          {statusLines(result).map((line, lineIndex) => (
+            <StatusChip key={lineIndex} ok={line.ok} text={line.text} />
+          ))}
+        </div>
+        {hasFigures && (
+          <ScheduleTable rows={result.schedule} testIdPrefix={`compare-schedule-${index + 1}`} />
+        )}
+      </article>
+    )
+  }
 
   return (
     <>
@@ -739,95 +822,37 @@ export function ComparePage() {
           )}
         </section>
 
-        {/* Desktop: comparison table. Scenarios as columns, metrics as rows. */}
-        {isDesktop && (
-          <section className="compare-table-wrap" data-testid="compare-table">
-            <table className="compare-table">
-              <thead>
-                <tr>
-                  <th scope="col" className="metric-col" />
-                  {scenarios.map((scenario, index) => (
-                    <th scope="col" key={scenario.id}>
-                      {scenario.label.trim() || t('compare.scenarioUntitle', { index: index + 1 })}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {metrics.map((metric) => (
-                  <tr key={metric.key} data-testid={`compare-row-${metric.key}`}>
-                    <th scope="row">{metric.label(maxTerm)}</th>
-                    {results.map((result, index) => (
-                      <td
-                        key={scenarios[index]?.id ?? index}
-                        className={bestIndexes.get(metric.key)?.has(index) ? 'best' : undefined}
-                      >
-                        {metric.value(result)}
-                        {bestIndexes.get(metric.key)?.has(index) && (
-                          <span className="compare-best-badge">{t('compare.bestBadge')}</span>
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-                <tr data-testid="compare-row-status">
-                  <th scope="row">{t('compare.statusHeading')}</th>
-                  {results.map((result, index) => (
-                    <td key={scenarios[index]?.id ?? index}>
-                      <div className="compare-status-list">
-                        {statusLines(result).map((line, lineIndex) => (
-                          <StatusChip key={lineIndex} ok={line.ok} text={line.text} />
-                        ))}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
+        {/* Results: one card per scenario, in the same grid as the editors, so
+            the comparison reads across matching cards instead of a table. */}
+        {isDesktop ? (
+          <section className="compare-results" data-testid="compare-results">
+            <div className="compare-results-grid">
+              {scenarios.map((_, index) =>
+                renderResultCard(index, `compare-result-card-${index + 1}`),
+              )}
+            </div>
+          </section>
+        ) : (
+          /* Mobile: the active scenario's result card, switched by the tabs
+             above (same card markup as desktop). */
+          <section className="compare-results compare-results-mobile">
+            <div className="compare-results-grid">
+              {renderResultCard(clampedMobileIndex, 'compare-card')}
+            </div>
           </section>
         )}
 
-        {/* Mobile: one stacked card per scenario, switched by tabs. */}
-        {!isDesktop && (
-          <section className="compare-card" data-testid="compare-card">
-            {(() => {
-              const result = results[clampedMobileIndex]
-              const scenario = scenarios[clampedMobileIndex]
-              if (!result || !scenario) return null
-              return (
-                <>
-                  <h2>
-                    {scenario.label.trim() ||
-                      t('compare.scenarioUntitle', { index: clampedMobileIndex + 1 })}
-                  </h2>
-                  <dl className="compare-card-metrics">
-                    {metrics.map((metric) => (
-                      <div
-                        key={metric.key}
-                        className={
-                          bestIndexes.get(metric.key)?.has(clampedMobileIndex) ? 'best' : undefined
-                        }
-                      >
-                        <dt>{metric.label(maxTerm)}</dt>
-                        <dd>
-                          {metric.value(result)}
-                          {bestIndexes.get(metric.key)?.has(clampedMobileIndex) && (
-                            <span className="compare-best-badge">{t('compare.bestBadge')}</span>
-                          )}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                  <div className="compare-status-list">
-                    {statusLines(result).map((line, lineIndex) => (
-                      <StatusChip key={lineIndex} ok={line.ok} text={line.text} />
-                    ))}
-                  </div>
-                </>
-              )
-            })()}
-          </section>
-        )}
+        {/* Comparison charts: one per metric, two per row, each drawing every
+            priced mix so they can be read against each other (payment as the
+            calculator's stacked columns). Lives below the cards, full width. */}
+        <section
+          className="compare-trends"
+          data-testid="compare-trends"
+          aria-label={t('compare.chartsHeading')}
+        >
+          <h2>{t('compare.chartsHeading')}</h2>
+          <CompareTrendChart series={trendSeries} />
+        </section>
 
         <p className="compare-disclaimer">{t('compare.disclaimer')}</p>
       </main>

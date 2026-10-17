@@ -52,7 +52,7 @@ export function ActionFormModal({ open, onOpenChange }: ActionFormModalProps) {
         // The blue accent comes from tone="blue"; keep it (do not override
         // the border here) so the form modal reads as the same control
         // family as the valid fields and the send button.
-        contentClassName="max-w-[500px] !rounded-2xl !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
+        contentClassName="no-scrollbar max-w-[500px] !rounded-2xl !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
       >
         <div className="p-6 pb-5" dir={isHebrew ? 'rtl' : 'ltr'}>
           {/* Header */}

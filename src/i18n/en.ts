@@ -752,6 +752,18 @@ export const en: { translation: Translation } = {
       // Mobile stacked view.
       scenarioSwitcherAria: 'Switch between mixes',
       bestBadge: 'Best',
+      chartsHeading: 'Payments over time',
+      paymentTrendTitle: 'Monthly payment over time',
+      totalPaymentsTitle: 'Total payments accumulated',
+      remainingBalanceTitle: 'Remaining balance over time',
+      cumulativeInterestTitle: 'Cumulative interest over time',
+      chartAria: '{{mode}} chart by year',
+      chartsEmpty: 'Add tracks to see charts',
+      trendLegendAria: 'Mixes',
+      trendSeriesLine: '{{label}}: from {{from}} to {{to}}',
+      axisTotalPaid: 'Total paid',
+      axisCumulativeInterest: 'Cumulative interest',
+      scheduleTitle: 'Payments schedule',
       disclaimer:
         'This comparison uses the same calculations as the main calculator and is a general estimate only - not an offer or loan approval.',
     },
@@ -786,7 +798,7 @@ export const en: { translation: Translation } = {
       ariaLabel: 'Market prices',
       proxyOf: 'Tracks {{proxy}}',
       indexPoints: 'Index level in points',
-      futuresNote: 'COMEX front-month futures, above the spot price',
+      futuresNote: 'COMEX front-month futures',
       staleTooltip: 'Cached data, may be out of date',
       assets: {
         sp500: 'SPY',

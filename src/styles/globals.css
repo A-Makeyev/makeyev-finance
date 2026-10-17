@@ -249,6 +249,19 @@ strong {
   --chart-balance: #111111;
   --cost-donut-principal: #087f78;
   --cost-donut-interest: #e0a63c;
+  /* Comparison chart: one color per mix (up to MAX_TRACKS scenarios), picked to
+     stay distinct and readable on the card surface in this theme. */
+  --series-1: #0f766e;
+  --series-2: #c2701c;
+  --series-3: #2f5fd0;
+  --series-4: #9333c4;
+  /* A lighter, still-saturated tint per series, used as the top (ריבית)
+     segment of the stacked payment bars so the two halves read as shades of
+     the same mix color rather than grey. */
+  --series-1-soft: #6fc6bc;
+  --series-2-soft: #e3a866;
+  --series-3-soft: #8fadea;
+  --series-4-soft: #c28edb;
 }
 
 /* ===========================================================================
@@ -279,6 +292,18 @@ body {
 *::selection {
   color: var(--soft-black);
   text-shadow: 5px 5px 5px var(--soft-blue);
+}
+
+/* Deliberately-dark chrome (the hero, the Indexes/Markets strips, the footer)
+   keeps LIGHT selected text even in light theme, where the default selection
+   ink above is near-black and disappears against these surfaces. */
+.sub-header ::selection,
+.indexes ::selection,
+.markets ::selection,
+.footer ::selection {
+  background-color: #2d4a48;
+  color: #eef5f3;
+  text-shadow: none;
 }
 
 *::-webkit-scrollbar {
@@ -601,7 +626,7 @@ img {
 
 .my-mixes-menu {
   position: fixed;
-  z-index: 100;
+  z-index: 1200;
   inline-size: min(300px, calc(100vw - 24px));
   padding: 6px;
   border: 1px solid var(--calc-line);
@@ -1767,6 +1792,31 @@ img {
    navigation.css (verbatim)
 =========================================================================== */
 
+/* ---------------------------------------------------------------------------
+   STACKING BANDS (fixed chrome wins over page content)
+
+   The site's fixed chrome and the page shells each used to claim their own
+   z-index (strips 98/99, navbar 99, page shells 1000), so the shells painted
+   OVER the strips and navbar as content scrolled under them. The bands below
+   are ordered so chrome always sits on top, and no page shell competes with it:
+
+     60   confetti (transient, decorative)
+     100  offline banner
+     1090 markets strip
+     1100 indexes strip
+     1110 nav#navbar (above both strips)
+     1120 nav logo
+     1121 hamburger / account control (above the sliding menu sheet)
+     1122 account dropdown
+     1200 tooltips / portaled menus (above chrome)
+     9999 modals
+
+   Page shells (.calculator-shell, .compare-shell) carry NO z-index now - only
+   position: relative, which they keep as the anchor for their absolute
+   children (chart tooltips, help tooltips). Without a z-index they no longer
+   create a stacking context, so their tooltip children are pulled into the
+   1200 band to stay above the nav.
+--------------------------------------------------------------------------- */
 .indexes {
   display: flex;
   flex-direction: row;
@@ -1775,7 +1825,7 @@ img {
   position: fixed;
   height: 35px;
   padding: 5px;
-  z-index: 99;
+  z-index: 1100;
   right: 0;
   left: 0;
   top: 0;
@@ -1892,7 +1942,7 @@ img {
      text kisses the nav. Counts toward --markets-height (offsetHeight), so
      widening it pushes the navbar down with it. */
   padding: 5px 10px 13px;
-  z-index: 98;
+  z-index: 1090;
   right: 0;
   left: 0;
   scrollbar-width: none;
@@ -2161,7 +2211,7 @@ nav#navbar {
   padding-left: 6%;
   padding-right: 6%;
   height: 100px;
-  z-index: 99;
+  z-index: 1110;
   right: 0;
   left: 0;
   top: 0;
@@ -2216,9 +2266,10 @@ nav#navbar .logo {
   align-items: center;
   height: 100%;
   width: 25%;
-  /* Keep the logo visible above the sliding menu sheet (legacy z-index 999). */
+  /* Keep the logo visible above the sliding menu sheet (band 1120, above the
+     nav's own 1110). */
   position: relative;
-  z-index: 1000;
+  z-index: 1120;
 }
 
 .nav-center {
@@ -2335,9 +2386,10 @@ nav#navbar .logo {
   align-items: center;
   height: 100%;
   width: 25%;
-  /* Keep the logo visible above the sliding menu sheet (legacy z-index 999). */
+  /* Keep the logo visible above the sliding menu sheet (band 1120, above the
+     nav's own 1110). */
   position: relative;
-  z-index: 1000;
+  z-index: 1120;
 }
 
 nav#navbar #nav-list {
@@ -2587,7 +2639,7 @@ nav#navbar .nav-account-menu {
   visibility: hidden;
   transform: translateY(-4px);
   transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s linear 0.18s;
-  z-index: 120;
+  z-index: 1122;
   text-align: start;
 }
 
@@ -2767,7 +2819,7 @@ nav#navbar .menu-icon {
   transition: all ease-in-out 0.5s;
   cursor: pointer;
   /* Stay above the sliding menu sheet so the close (✕) stays tappable. */
-  z-index: 1001;
+  z-index: 1121;
 }
 
 nav#navbar .menu-icon .line {
@@ -2894,8 +2946,8 @@ nav#navbar .nav-bar-controls {
   top: 50%;
   right: 5%;
   transform: translateY(-50%);
-  /* Above the logo (z-index 1000) and the sheet, like the hamburger. */
-  z-index: 1001;
+  /* Above the logo (z-index 1120) and the sheet, like the hamburger. */
+  z-index: 1121;
   margin: 0;
   padding: 0;
 }
@@ -3459,8 +3511,8 @@ nav#navbar .nav-bar-controls li {
     right: 5%;
     transform: translateY(-50%);
     margin-left: 0;
-    /* Above the logo (z-index 1000) and the sheet, like the hamburger. */
-    z-index: 1001;
+    /* Above the logo (z-index 1120) and the sheet, like the hamburger. */
+    z-index: 1121;
   }
 
   nav#navbar :checked~.nav-center #nav-list {
@@ -4114,8 +4166,10 @@ e #name,
      home page), so an overlap would paint the calculator panel on top of
      the banner image. */
   margin: 0 auto 80px;
+  /* No z-index: the shell must NOT compete with the fixed chrome (see the
+     STACKING BANDS note). position: relative stays as the anchor for the
+     shell's absolute children (help tooltips, chart tooltips). */
   position: relative;
-  z-index: 1000;
 }
 
 .calculator-panel,
@@ -5144,7 +5198,7 @@ e #name,
   /* Positioned by physical `left` + translate, like the chart tooltips; the
      component shifts this transform to clamp inside the viewport. */
   transform: translateX(-50%);
-  z-index: 30;
+  z-index: 1200;
   width: max-content;
   max-width: min(320px, calc(100vw - 24px));
   padding: 9px 12px;
@@ -5248,7 +5302,7 @@ e #name,
    .help-tooltip-panel (same tokens/keyframes) so both read as one family. */
 .hover-tooltip-panel {
   position: fixed;
-  z-index: 200;
+  z-index: 1200;
   display: block;
   width: max-content;
   max-width: min(320px, calc(100vw - 24px));
@@ -7428,6 +7482,17 @@ tbody tr:hover {
   --chart-balance: #cfe3e0;
   --cost-donut-principal: #12b3a5;
   --cost-donut-interest: #f0b95c;
+  /* Comparison chart series brighten a step so a thin line stays legible on the
+     dark card surface. */
+  --series-1: #2cd4c6;
+  --series-2: #e79a4a;
+  --series-3: #7aa8ff;
+  --series-4: #c489ef;
+  /* Darker shade of each series for the stacked bars' top (ריבית) segment. */
+  --series-1-soft: #1f8d86;
+  --series-2-soft: #a86a2e;
+  --series-3-soft: #3f66a8;
+  --series-4-soft: #8a55a8;
 }
 
 /* The over-limit track outline is a 60%-alpha red tuned for a light page;
@@ -8065,8 +8130,10 @@ html[dir='rtl'] .comment-text {
   width: min(1240px, calc(100% - 40px));
   /* Mirrors .calculator-shell: no pull-up into the full-viewport hero. */
   margin: 0 auto 80px;
+  /* No z-index: the shell must NOT compete with the fixed chrome (see the
+     STACKING BANDS note). position: relative stays as the anchor for the
+     shell's absolute children (help tooltips, chart tooltips). */
   position: relative;
-  z-index: 1000;
 }
 
 /* Way back to the calculator (the page normally opens from there) - replaces
@@ -8180,7 +8247,9 @@ html[dir='rtl'] .comment-text {
 
 .compare-editors-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  /* Three mixes per row on a desktop shell; the compact payments table fits the
+     narrower card. `min(100%, 360px)` lets a single column shrink on phones. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
   gap: 20px;
 }
 
@@ -8385,53 +8454,44 @@ html[dir='rtl'] .comment-text {
   background: var(--calc-soft);
 }
 
-/* Comparison table: scenarios as columns, metrics as rows. */
-.compare-table-wrap {
+/* Results: one card per scenario, stacked full width. Each card is
+   self-contained (metrics, composition donut, its own chart and payments
+   table), so the mix reads top to bottom; the best-per-metric highlight is
+   kept per metric row. */
+.compare-results {
+  margin-bottom: 26px;
+}
+
+.compare-results-grid {
+  display: grid;
+  /* Three mixes per row on a desktop shell, matching the editors grid, so the
+     cards stay under their mix. `min(100%, 360px)` shrinks a single column on
+     phone-width shells. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 20px;
+}
+
+.compare-result-card {
   background: var(--calc-paper);
   border: 1px solid rgba(8, 127, 120, 0.14);
   box-shadow: 0 20px 55px rgba(22, 50, 53, 0.1);
-  padding: 10px 18px 18px;
-  overflow-x: auto;
-}
-
-.compare-table {
-  width: 100%;
-  border-collapse: collapse;
+  padding: 20px 22px;
   color: var(--calc-ink);
+  height: 100%;
+  /* Let the card shrink to its grid track so the payments table scrolls inside
+     `.payments-table-scroll` instead of widening the whole results grid. */
+  min-width: 0;
+  /* Column flex so the payments table can be pinned to the card's bottom
+     (`margin-top: auto` below): every card's table then starts at the same
+     height even when the metrics/status above differ. */
+  display: flex;
+  flex-direction: column;
 }
 
-.compare-table th,
-.compare-table td {
-  text-align: start;
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--calc-line);
-  vertical-align: top;
-  /* The bare `table` rule above keeps every table on one nowrap line, which
-     suits the schedule tables but is what pushed this one wider than its card
-     (metric names, currency values, the mix line and the status chips all
-     refused to wrap). This table opts back into wrapping. */
-  white-space: normal;
-}
-
-.compare-table thead th {
-  font-size: 1.05rem;
+.compare-result-card h2 {
+  margin: 0 0 14px;
+  font-size: 1.2rem;
   color: var(--calc-teal-dark);
-}
-
-.compare-table tbody th {
-  color: var(--calc-muted);
-  font-weight: 600;
-}
-
-.compare-table td {
-  font-variant-numeric: tabular-nums;
-  /* A long word in a narrow column breaks instead of widening the table. */
-  overflow-wrap: break-word;
-}
-
-.compare-table td.best {
-  color: var(--calc-teal-dark);
-  font-weight: 700;
 }
 
 .compare-best-badge {
@@ -8470,18 +8530,286 @@ html[dir='rtl'] .comment-text {
   color: var(--calc-muted);
 }
 
-.compare-card {
+/* Comparison trend charts: one line chart per metric, two per row, each
+   plotting every priced mix so the differences read at a glance. One shared
+   legend, one color per mix. */
+.compare-trends {
+  margin-bottom: 26px;
+}
+
+.compare-trends h2 {
+  margin: 0 0 14px;
+  font-size: 1.25rem;
+  color: var(--calc-teal-dark);
+}
+
+.compare-trend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+/* Phone widths: a single column, so a chart never squeezes below ~320px. */
+@media (max-width: 720px) {
+  .compare-trend-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.compare-trend {
+  min-width: 0;
   background: var(--calc-paper);
   border: 1px solid rgba(8, 127, 120, 0.14);
   box-shadow: 0 20px 55px rgba(22, 50, 53, 0.1);
-  padding: 20px 22px;
-  color: var(--calc-ink);
+  padding: 16px 18px 10px;
 }
 
-.compare-card h2 {
-  margin: 0 0 14px;
-  font-size: 1.2rem;
+.compare-trend-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--calc-teal-dark);
+}
+
+/* Reserved row under every panel title (empty for the line metrics) so the
+   plots stay aligned across a row. Filled only by the stacked payment chart to
+   name its two segments. */
+.compare-trend-inline-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 18px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--calc-muted);
+}
+
+.compare-trend-inline-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.compare-trend-legend {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--calc-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.compare-trend-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.compare-trend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.compare-trend-plot {
+  position: relative;
+  min-height: 240px;
+}
+
+.compare-trend-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.compare-trend-gridline {
+  stroke: var(--calc-line);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.compare-trend-tick {
+  fill: var(--calc-ink);
+  font-weight: 700;
+  font-size: 13px;
+  text-anchor: middle;
+}
+
+.compare-trend-axis-title {
+  fill: var(--calc-teal-dark);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* Area metrics: a per-mix gradient under the line (color fading to
+   transparent), so overlapping mixes stay colorful instead of blending grey. */
+.compare-trend-area {
+  stroke: none;
+}
+
+/* Payment metric: stacked columns (see the bar rules below). */
+.compare-trend-bar {
+  stroke: none;
+}
+
+.compare-trend-tick-end {
+  text-anchor: end;
+}
+
+.compare-trend-line {
+  fill: none;
+  stroke-width: 2.75;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.compare-trend-dot {
+  fill: var(--calc-paper);
+  stroke-width: 2.5;
+}
+
+.compare-trend-guide {
+  stroke: var(--calc-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.6;
+}
+
+.compare-trend-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 3px;
+  background: var(--calc-paper);
+  border: 1px solid var(--calc-line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--calc-ink);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.compare-trend-tooltip strong {
+  font-weight: 700;
+}
+
+.compare-trend-tooltip-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  color: var(--calc-teal-dark);
+}
+
+.compare-trend-empty {
+  background: var(--calc-paper);
+  border: 1px dashed var(--calc-line);
+  border-radius: 8px;
+  padding: 28px 22px;
+  color: var(--calc-muted);
+  text-align: center;
+}
+
+.payments-table-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: var(--calc-teal-dark);
+}
+
+/* Yearly payments table, scrollable with an invisible scrollbar. Every card's
+   table gets the same fixed height (a whole number of rows) so the tables line
+   up across cards and no row is ever clipped mid-height. */
+.payments-table-block {
+  --payments-row-h: 34px;
+  /* Pinned to the card's bottom (the card is a column flex): every table lines
+     up across cards regardless of how much sits above it. */
+  margin-top: auto;
+  padding-top: 18px;
+  min-width: 0;
+}
+
+.payments-table-scroll {
+  height: calc(var(--payments-row-h) * 9);
+  overflow: auto;
+  border: 1px solid var(--calc-line);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.payments-table-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Scrollable but with an invisible scrollbar (content scrolls, the thumb never
+   shows) - shared by the payments table and the "השאירו פרטים" contact modal. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.payments-table th,
+.payments-table td {
+  height: var(--payments-row-h);
+  box-sizing: border-box;
+  padding: 0 5px;
+  vertical-align: middle;
+  text-align: end;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--calc-line);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The year column only ever holds "שנה"/1-30: hug that content instead of
+   letting it absorb the table's spare width. */
+.payments-table thead th:first-child,
+.payments-table tbody th {
+  width: 1%;
+  padding-inline: 8px 4px;
+}
+
+.payments-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--calc-soft);
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+}
+
+.payments-table tbody th {
+  font-weight: 700;
+  color: var(--calc-ink);
+  text-align: start;
+}
+
+.payments-table tbody tr:hover {
+  background: var(--calc-soft);
 }
 
 .compare-card-metrics {
@@ -8491,9 +8819,13 @@ html[dir='rtl'] .comment-text {
 .compare-card-metrics>div {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
-  padding: 8px 0;
+  /* Fixed row height so a "best" badge on one card never makes its rows (and
+     everything below them) sit taller than a card without one - the cards stay
+     row-for-row aligned. */
+  min-height: 40px;
+  padding: 6px 0;
   border-bottom: 1px solid var(--calc-line);
 }
 

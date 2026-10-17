@@ -739,6 +739,18 @@ export const he = {
       // Mobile stacked view.
       scenarioSwitcherAria: 'מעבר בין תמהילים',
       bestBadge: 'הטוב ביותר',
+      chartsHeading: 'תשלומים לאורך זמן',
+      paymentTrendTitle: 'תשלום חודשי לאורך זמן',
+      totalPaymentsTitle: 'סך כל התשלומים',
+      remainingBalanceTitle: 'יתרת קרן לאורך זמן',
+      cumulativeInterestTitle: 'ריבית מצטברת לאורך זמן',
+      chartAria: 'גרף {{mode}} לפי שנה',
+      chartsEmpty: 'הזינו מסלולים כדי לראות גרפים',
+      trendLegendAria: 'מקרא תמהילים',
+      trendSeriesLine: '{{label}}: מ-{{from}} ל-{{to}}',
+      axisTotalPaid: 'סה"כ שולם',
+      axisCumulativeInterest: 'ריבית מצטברת',
+      scheduleTitle: 'טבלת תשלומים',
       disclaimer:
         'ההשוואה מבוססת על אותם חישובים כמו המחשבון הראשי והיא הערכה כללית בלבד - אינה הצעה או אישור הלוואה.',
     },
@@ -771,7 +783,7 @@ export const he = {
       ariaLabel: 'מחירי שוק',
       proxyOf: 'עוקב אחרי {{proxy}}',
       indexPoints: 'רמת המדד בנקודות',
-      futuresNote: 'חוזה עתידי (COMEX), גבוה ממחיר הספוט',
+      futuresNote: 'חוזה עתידי (COMEX)',
       staleTooltip: 'הנתונים מהמטמון ועשויים להיות לא עדכניים',
       assets: {
         sp500: 'SPY',

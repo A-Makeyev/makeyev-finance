@@ -143,6 +143,78 @@ describe('computeScenario - golden values', () => {
   })
 })
 
+describe('computeScenario - chart series', () => {
+  it('builds monthly-payment, cumulative, and balance series from the schedule', () => {
+    const result = computeScenario([track()], baseInputs)
+    const single = computeTrackResult({
+      principal: 1_000_000,
+      years: 15,
+      annualRatePercent: 4.5,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    // One point per year of the term, years 1..15.
+    expect(result.paymentTrend.map((point) => point.year)).toEqual(
+      Array.from({ length: 15 }, (_, index) => index + 1),
+    )
+    expect(result.cumulativePayments).toHaveLength(15)
+    expect(result.balanceTrend).toHaveLength(15)
+    // Monthly payment per year = that year's annual paid / 12. For a spitzer
+    // (level-payment) track the yearly average equals the first payment.
+    expect(result.paymentTrend[0].payment).toBeCloseTo(single.yearlyRows[0].paid / 12, 6)
+    expect(result.paymentTrend[0].payment).toBeCloseTo(result.totals.firstPayment, 2)
+    // Cumulative payments reach the scenario's total paid at the final year.
+    expect(result.cumulativePayments[14].cumulativePayment).toBeCloseTo(result.totals.totalPaid, 4)
+    // Remaining balance mirrors the schedule's closing balance and pays off.
+    expect(result.balanceTrend[0].balance).toBeCloseTo(single.yearlyRows[0].closing, 4)
+    expect(result.balanceTrend[14].balance).toBeCloseTo(0, 4)
+    // The debt only ever falls.
+    for (let i = 1; i < result.balanceTrend.length; i += 1) {
+      expect(result.balanceTrend[i].balance).toBeLessThan(result.balanceTrend[i - 1].balance)
+    }
+  })
+
+  it('builds the yearly schedule rows the table and charts read', () => {
+    const result = computeScenario([track()], baseInputs)
+    expect(result.schedule).toHaveLength(15)
+    // Each row reconciles: principal + interest = the year's paid.
+    for (const row of result.schedule) {
+      expect(row.principal + row.interest).toBeCloseTo(row.paid, 6)
+    }
+    // The first year's principal reduces the opening balance by exactly that
+    // principal (opening = the loan), and the loan is clear by the last year.
+    expect(result.schedule[0].closing).toBeCloseTo(result.loanAmount - result.schedule[0].principal, 4)
+    expect(result.schedule[14].closing).toBeCloseTo(0, 4)
+  })
+
+  it('groups the mix shares by track type and ranks them largest first', () => {
+    // Prime repeated twice (200k + 100k) must collapse into one 300k slice.
+    const primeA = track({ id: 'a', type: 'prime', amountText: '200,000', rateText: '5.75' })
+    const primeB = track({ id: 'b', type: 'prime', amountText: '100,000', rateText: '5.75' })
+    const fixed = track({ id: 'c', amountText: '700,000' })
+    const result = computeScenario([primeA, primeB, fixed], baseInputs)
+    expect(result.mixShares).toEqual([
+      { type: 'fixed', amount: 700_000, percent: 70 },
+      { type: 'prime', amount: 300_000, percent: 30 },
+    ])
+    expect(result.mixShares.reduce((sum, share) => sum + share.percent, 0)).toBeCloseTo(100, 6)
+  })
+
+  it('shows equal-principal payments falling where spitzer stays level', () => {
+    const spitzer = computeScenario([track({ method: 'spitzer' })], baseInputs)
+    const equal = computeScenario([track({ method: 'equalPrincipal' })], baseInputs)
+    // Spitzer holds the monthly payment flat over the term (level annuity).
+    expect(spitzer.paymentTrend[0].payment).toBeCloseTo(spitzer.paymentTrend[14].payment, 2)
+    // Equal principal repays a fixed principal slice, so the interest part
+    // shrinks and the last year's average payment falls below the first.
+    expect(equal.paymentTrend[14].payment).toBeLessThan(equal.paymentTrend[0].payment)
+    // Same principal: equal principal opens higher (bigger first payment) but
+    // amortizes faster, so its total interest is lower.
+    expect(equal.totals.firstPayment).toBeGreaterThan(spitzer.totals.firstPayment)
+    expect(equal.totals.totalInterest).toBeLessThan(spitzer.totals.totalInterest)
+  })
+})
+
 describe('computeScenario - errors and caps', () => {
   it('flags an invalid term (0 years) with no numbers', () => {
     const result = computeScenario([track({ yearsText: '0' })], baseInputs)
