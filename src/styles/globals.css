@@ -269,6 +269,10 @@ strong {
 =========================================================================== */
 html {
   scroll-behavior: smooth;
+  /* A page that shrinks past the viewport (folding a long comment thread, for
+     one) would otherwise lose its vertical scrollbar and shift the whole
+     centred layout sideways. Reserving the gutter keeps every page still. */
+  scrollbar-gutter: stable;
   /* Legacy set no line-height: Tailwind preflight's 1.5 inflates every input,
      label and button vs the original metrics. UA `normal` restores them. */
   line-height: normal;
@@ -2870,6 +2874,13 @@ nav#navbar.links-dark #nav-list a {
   color: var(--ink);
 }
 
+/* Off the top slab the bar is light in light mode, so the hover rule under a
+   nav item follows the ink (dark there, light in the dark theme) instead of
+   the top slab's always-white line. */
+nav#navbar.links-dark #nav-list a::after {
+  background: var(--ink);
+}
+
 nav#navbar.lines-dark .menu-icon .line {
   background: var(--ink);
 }
@@ -4161,7 +4172,10 @@ e #name,
 }
 
 .calculator-shell {
-  width: min(1120px, calc(100% - 40px));
+  /* Standard content width: the old 1120px frame plus a little (the content
+     stays readable on a wide screen and the charts do not balloon with the
+     viewport). The compare page keeps its own 1280px frame. */
+  width: min(1160px, calc(100% - 40px));
   /* No pull-up into the hero: the hero covers the full viewport (like the
      home page), so an overlap would paint the calculator panel on top of
      the banner image. */
@@ -7856,6 +7870,15 @@ html[dir='rtl'] .comment-text {
   padding-inline-start: 0;
 }
 
+/* Collapsing a comment folds its replies only. Disabling scroll anchoring here
+   stops the browser from choosing an anchor inside the folded subtree and
+   adjusting the page scroll to keep it - which used to shift everything above
+   the toggle. With the anchor suppressed the toggle (and all upper elements)
+   stay exactly put; only the replies below move. */
+.comment-thread {
+  overflow-anchor: none;
+}
+
 .comment-children {
   position: relative;
   margin-inline-start: 0.25rem;
@@ -8127,7 +8150,9 @@ html[dir='rtl'] .comment-text {
    only) and switches table -> stacked cards at 768px via useMediaQuery.
 =========================================================================== */
 .compare-shell {
-  width: min(1240px, calc(100% - 40px));
+  /* Its original 1240px frame plus a little: wide enough for a two-card row and
+     the payments tables, without the full-width stretch. */
+  width: min(1280px, calc(100% - 40px));
   /* Mirrors .calculator-shell: no pull-up into the full-viewport hero. */
   margin: 0 auto 80px;
   /* No z-index: the shell must NOT compete with the fixed chrome (see the
@@ -8220,25 +8245,97 @@ html[dir='rtl'] .comment-text {
   margin-bottom: 50px;
 }
 
-/* auto-fit with a 300px floor rather than a fixed 4 columns: the widest purpose
-   option ("דירה להשקעה (50% מימון)" / "Investment property (50% financing)")
-   needs ~295px of field, so the old 4-column row clipped it to half words
-   between 900 and 1100px and the select's own value at 1024px. The grid now
-   breaks to fewer columns (3 up on the widest shell, 2 down to ~750px, 1 on
-   phones) instead of squeezing a select below its text. */
+/* Seven fields (purpose, loan, property, capital, income, then the fixed
+   monthly/one-time expense pair). A twelve-column base grid holds two tidy
+   rows: purpose / loan / property, three even cells (span 4), then
+   capital / income / monthly / one-time, four even cells (span 3) - so the
+   expense pair sits on income's own row, right after it. Below 1100px the same
+   six columns carry rows of 2, 2, 3 (income folds in with the pair). */
 .compare-shared-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 18px;
 }
 
-/* Other-expense rows in the shared card: the calculator's block (same row
-   markup and styles), separated from the buyer-input grid above by a
-   hairline so it reads as its own group. */
-.compare-expenses {
+/* Row 1: purpose / loan / property, three even cells. */
+.compare-shared-grid>.input-group:nth-child(1),
+.compare-shared-grid>.input-group:nth-child(2),
+.compare-shared-grid>.input-group:nth-child(3) {
+  grid-column: span 4;
+}
+
+/* Row 2: capital / income / monthly / one-time, four even cells. */
+.compare-shared-grid>.input-group:nth-child(n + 4) {
+  grid-column: span 3;
+}
+
+@media (max-width: 1100px) {
+
+  .compare-shared-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  /* Rows of 2, 2, 3: the first four pair up, the last three share one row
+     (income + the two expense amounts). */
+  .compare-shared-grid>.input-group:nth-child(n + 5) {
+    grid-column: span 2;
+  }
+
+  .compare-shared-grid>.input-group:nth-child(-n + 4) {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 640px) {
+  .compare-shared-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-shared-grid>.input-group {
+    grid-column: auto;
+  }
+}
+
+/* Transaction-cost fields in the shared card: the calculator's costs row
+   (realtor/lawyer percents + ₪ pairs, appraiser fee, renovation budget),
+   separated from the buyer-input grid above by a hairline so it reads as its
+   own group. Same column widths as the calculator's costs row: the paired
+   realtor/lawyer get the wider columns, the single-amount fields the narrower
+   ones. */
+.compare-fees {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
   margin-block-start: 20px;
   padding-block-start: 16px;
   border-block-start: 1px dashed var(--calc-line);
+}
+
+.compare-fees .input-wrap {
+  margin-top: 7px;
+}
+
+/* The paired realtor/lawyer inputs sit in one .fee-inputs grid whose own top
+   margin already spaces it from the label - zero the children's so the pair
+   lines up with the single-amount fields beside it (calculator parity). */
+.compare-fees .fee-inputs .input-wrap {
+  margin-top: 0;
+}
+
+.compare-fees .fee-vat-note-row {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1100px) {
+  .compare-fees {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .compare-fees {
+    grid-template-columns: 1fr;
+  }
 }
 
 .compare-editors {
@@ -8378,26 +8475,31 @@ html[dir='rtl'] .comment-text {
    column) also match this fieldset: with a two-column grid their spans pushed
    the grid into implicit columns, so the specificity has to win regardless of
    the two blocks' order in this file. */
+/* Every field is one equal cell: [type | amount] over [rate | method], two
+   even inputs per row instead of full-width fields above a split row. Compact
+   padding/gap because four half-width fields read smaller than the old
+   full-width type/amount did. */
 .compare-shell .compare-track {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 14px;
-  --track-pad-inline: 16px;
-  padding: 24px var(--track-pad-inline) 16px;
-  margin-bottom: 14px;
+  gap: 10px 12px;
+  --track-pad-inline: 12px;
+  padding: 20px var(--track-pad-inline) 12px;
+  margin-bottom: 12px;
 }
 
-.compare-shell .compare-track .input-group:nth-of-type(1),
-.compare-shell .compare-track .input-group:nth-of-type(2) {
-  grid-column: 1 / -1;
+/* Neutralize the calculator's own field spans (its ≤1000px 6-column track
+   layout) that otherwise leak onto these fieldsets - here every field just
+   flows into the next of the two equal columns. */
+.compare-shell .compare-track .input-group {
+  grid-column: auto;
 }
 
-/* 3 = ריבית, 4 = לוח סילוקין: the method reads directly after the rate. */
-.compare-shell .compare-track .input-group:nth-of-type(3) {
-  grid-column: 1 / 2;
-}
-
-.compare-shell .compare-track .input-group:nth-of-type(4) {
-  grid-column: 2 / 3;
+/* The long track-type label needs the full row on a phone, where two equal
+   columns would clip it (calculator parity: its own track stacks there too). */
+@media (max-width: 650px) {
+  .compare-shell .compare-track {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* The seeded default mix puts the long type label (English "Variable indexed
@@ -8469,6 +8571,16 @@ html[dir='rtl'] .comment-text {
      phone-width shells. */
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
   gap: 20px;
+}
+
+/* Below the wide layout each scenario gets the whole row: a card halved into
+   ~550px was the point where the mix summary and the payments table started
+   squeezing. One per row keeps everything readable. */
+@media (max-width: 1160px) {
+  .compare-results-grid,
+  .compare-editors-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .compare-result-card {
@@ -8545,6 +8657,7 @@ html[dir='rtl'] .comment-text {
 
 .compare-trend-grid {
   display: grid;
+  /* Two charts per row, always (the four panels make a 2×2 grid). */
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
@@ -8590,6 +8703,34 @@ html[dir='rtl'] .comment-text {
   align-items: center;
   gap: 6px;
 }
+
+/* קרן is a solid fill, ריבית the same fill with diagonal stripes - the swatches
+   describe the encoding, so they are not tied to one mix's color. */
+.compare-trend-swatch-principal {
+  background: var(--calc-ink);
+}
+
+.compare-trend-swatch-interest {
+  background-color: var(--calc-soft);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--calc-ink) 0 1.5px,
+    transparent 1.5px 4.5px
+  );
+}
+
+/* One visual language per metric so the four panels never read as copies:
+   balance is a filled area, cumulative paid a line with year dots, cumulative
+   interest a dashed line. */
+.compare-trend-line-dashed {
+  stroke-dasharray: 7 5;
+}
+
+.compare-trend-point {
+  fill: var(--calc-paper);
+  stroke-width: 2.5;
+}
+
 
 .compare-trend-legend {
   grid-column: 1 / -1;
@@ -8713,6 +8854,69 @@ html[dir='rtl'] .comment-text {
   color: var(--calc-teal-dark);
 }
 
+/* Track-mix donut above the payments table. The calculator's donut keeps its
+   side-by-side legend transform for the schedule band; inside a result card it
+   is centered and the legend becomes a plain stacked list under the ring. */
+.compare-mix-block {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--calc-line);
+}
+
+.compare-mix-title {
+  justify-self: center;
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--calc-teal-dark);
+}
+
+.mix-donut.compare-mix-donut-chart {
+  justify-items: center;
+  width: 100%;
+  gap: 10px;
+}
+
+.mix-donut.compare-mix-donut-chart svg {
+  width: 240px;
+  max-width: 100%;
+}
+
+/* Both overrides beat the calculator's own `.mix-legend` rules, including the
+   `:root[dir='ltr']` transform that shifts the legend beside the ring. The
+   legend block is centered under the ring, while each row is a two-column
+   grid so every color box sits on one vertical line and the text starts after
+   it. */
+.compare-mix-block .mix-legend,
+:root[dir='ltr'] .compare-mix-block .mix-legend {
+  direction: inherit;
+  transform: none;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.compare-mix-block .mix-legend-item {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  text-align: start;
+}
+
+.compare-mix-block .mix-legend-text {
+  text-align: start;
+}
+
+/* One-click repair under a scenario's error chip. */
+.compare-autofix {
+  justify-self: start;
+  margin-top: 10px;
+}
+
 .compare-trend-empty {
   background: var(--calc-paper);
   border: 1px dashed var(--calc-line);
@@ -8734,9 +8938,13 @@ html[dir='rtl'] .comment-text {
 .payments-table-block {
   --payments-row-h: 34px;
   /* Pinned to the card's bottom (the card is a column flex): every table lines
-     up across cards regardless of how much sits above it. */
+     up across cards regardless of how much sits above it. The side gutters come
+     from the card's own 22px padding, so the bottom padding is 2px: 2 + the
+     card's 20px lands on the same 22px as the space beside the table. */
   margin-top: auto;
-  padding-top: 18px;
+  /* 2px bottom + the card's 20px = the 22px side gutter, so the space under
+     the table matches the space beside it. */
+  padding: 28px 0 2px;
   min-width: 0;
 }
 
@@ -8770,27 +8978,44 @@ html[dir='rtl'] .comment-text {
 .payments-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
 }
 
+/* Figures start at the reading edge of their own column (right in Hebrew,
+   left in English), so a column's numbers sit directly under their label
+   instead of floating at the far side of an over-wide cell. This is what used
+   to leave a blank gap between the year and the payment column in RTL. */
 .payments-table th,
 .payments-table td {
   height: var(--payments-row-h);
   box-sizing: border-box;
-  padding: 0 5px;
+  /* Figures sit on the reading edge, so the column gap reads as one rhythm
+     instead of a ragged blank strip. 3px per side (not 4) keeps the tight
+     3-across card fitting now that the year column carries a wider gap. */
+  padding: 0 3px;
   vertical-align: middle;
-  text-align: end;
+  text-align: start;
   white-space: nowrap;
   border-bottom: 1px solid var(--calc-line);
   font-variant-numeric: tabular-nums;
 }
 
 /* The year column only ever holds "שנה"/1-30: hug that content instead of
-   letting it absorb the table's spare width. */
+   letting it absorb the table's spare width. The inline-end padding is the gap
+   to the monthly-payment column, which asked for more breathing room. */
 .payments-table thead th:first-child,
 .payments-table tbody th {
   width: 1%;
-  padding-inline: 8px 4px;
+  padding-inline: 9px 20px;
+}
+
+/* 360px phones cannot carry the wider gap in five columns without the table
+   scrolling sideways; there the year column goes back to the snug gap. */
+@media (max-width: 374px) {
+  .payments-table thead th:first-child,
+  .payments-table tbody th {
+    padding-inline-end: 6px;
+  }
 }
 
 .payments-table thead th {
@@ -8800,6 +9025,11 @@ html[dir='rtl'] .comment-text {
   background: var(--calc-soft);
   color: var(--calc-teal-dark);
   font-weight: 700;
+  /* Header labels share the figures' reading edge (right in RTL). */
+  text-align: start;
+  /* A stronger rule under the header row, so it reads as a header band rather
+     than one more striped row. */
+  border-bottom-color: var(--calc-teal);
 }
 
 .payments-table tbody th {
@@ -8843,6 +9073,20 @@ html[dir='rtl'] .comment-text {
   margin: 0;
   font-variant-numeric: tabular-nums;
   text-align: end;
+}
+
+/* The תמהיל summary can hold three long type names. It is allowed to wrap to a
+   second line, and EVERY card reserves that second line, so a long mix never
+   pushes one card's rows below its neighbours'. The full text stays visible. */
+.compare-card-metrics > div.compare-metric-mix {
+  min-height: 58px;
+}
+
+.compare-card-metrics > div.compare-metric-mix dd {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .compare-switcher {
@@ -8936,6 +9180,12 @@ html[dir='rtl'] .comment-text {
      share a row instead of squeezing: wrap under the label when tight. */
   .compare-card-metrics>div {
     flex-wrap: wrap;
+  }
+
+  /* The תמהיל summary wraps under its label on a phone; its reserved two-line
+     height keeps the cards aligned there too. */
+  .compare-card-metrics>div.compare-metric-mix {
+    min-height: 0;
   }
 }
 

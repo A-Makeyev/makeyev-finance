@@ -476,6 +476,24 @@ describe('one-time expenses through the store', () => {
     expect(s.snapshot.upfrontTotal).toBe(expected)
   })
 
+  it('eats the down-payment equity like renovations, growing the loan', () => {
+    useCalculatorStore.getState().setPropertyValue('1,200,000', null)
+    useCalculatorStore.getState().setCapital('300,000', null)
+    // 25% equity: loan = 1,200,000 - 300,000 = 900,000, on the 75% limit.
+    expect(useCalculatorStore.getState().startingAmountText).toBe('900,000')
+    expect(useCalculatorStore.getState().snapshot.ltv).toBeNull()
+    expect(useCalculatorStore.getState().snapshot.capitalAssessment?.percent).toBe(25)
+
+    // A 123,333 one-time cost is paid from the same savings: equity 176,667,
+    // loan 1,023,333 → financing 85.3% (over the limit) and equity 15%.
+    const id = useCalculatorStore.getState().otherExpenses[0].id
+    useCalculatorStore.getState().updateOtherExpenseOneTimeAmount(id, '123,333', null)
+    const s = useCalculatorStore.getState()
+    expect(s.startingAmountText).toBe('1,023,333')
+    expect(s.snapshot.ltv?.percentRounded).toBe(85)
+    expect(s.snapshot.capitalAssessment?.percent).toBe(15)
+  })
+
   it('a monthly expense still feeds PTI while a one-time one does not', () => {
     useCalculatorStore.getState().setIncome('20,000', null)
     const id = useCalculatorStore.getState().otherExpenses[0].id

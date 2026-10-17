@@ -160,6 +160,20 @@ export class WebAppPage {
     await this.page.waitForLoadState('load')
   }
 
+  /** A bar link by nav item id ("services", "articles", ...). */
+  navLink(id: string): Locator {
+    return this.page.getByTestId(`nav-link-${id}`)
+  }
+
+  /** The hover underline (the link's ::after) of a bar link, by nav item id. */
+  async navLinkUnderline(id: string): Promise<{ background: string; width: number }> {
+    return this.page.evaluate(`(() => {
+      const el = document.querySelector('[data-testid="nav-link-${id}"]')
+      const after = getComputedStyle(el, '::after')
+      return { background: after.backgroundColor, width: parseFloat(after.width) }
+    })()`) as Promise<{ background: string; width: number }>
+  }
+
   /** The hamburger label that toggles the mobile nav panel. */
   hamburger(): Locator {
     return this.page.getByTestId('hamburger')

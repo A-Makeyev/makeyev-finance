@@ -218,9 +218,17 @@ export function useCalculatorViewModel() {
   // show the same message as a green ✔️ positive line).
   const propertyValue = parseAmountText(propertyValueText)
   const capital = parseAmountText(capitalText)
-  // Renovations (שיפוצים) eat into the capital - the down-payment equity left
-  // is what the LTV ratio reflects, mirroring the store's loan derivation.
-  const capitalForLoan = Math.max(0, capital - parseAmountText(renovationText))
+  // Renovations (שיפוצים) and one-time expenses eat into the capital - the
+  // down-payment equity left is what the LTV ratio reflects, mirroring the
+  // store's loan derivation.
+  const oneTimeExpenses = otherExpenses.reduce(
+    (sum, expense) => sum + parseAmountText(expense.oneTimeAmountText),
+    0,
+  )
+  const capitalForLoan = Math.max(
+    0,
+    capital - parseAmountText(renovationText) - oneTimeExpenses,
+  )
   const loanAmount = tracks.reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
   const effectiveValue = propertyValue > 0 ? propertyValue : loanAmount + capitalForLoan
 

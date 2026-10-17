@@ -147,6 +147,8 @@ export function CalculatorPage() {
       purpose: useCalculatorStore.getState().purpose,
       realtorPercentText: useCalculatorStore.getState().realtorPercentText,
       lawyerPercentText: useCalculatorStore.getState().lawyerPercentText,
+      realtorAmountText: useCalculatorStore.getState().realtorAmountText,
+      lawyerAmountText: useCalculatorStore.getState().lawyerAmountText,
       appraiserFeeText: useCalculatorStore.getState().appraiserFeeText,
       renovationAmountText: useCalculatorStore.getState().renovationAmountText,
       otherExpenses: useCalculatorStore.getState().otherExpenses,

@@ -206,6 +206,12 @@ export function CommentsSection({ slug }: { slug: string }) {
   }
 
   function toggleCollapsed(id: string) {
+    // Folding the replies only changes height BELOW the toggle, so nothing
+    // above the comment shifts; the toggle itself keeps its document position
+    // and its place on screen. We deliberately do NOT scroll: the thread sets
+    // `overflow-anchor: none` (see .comment-thread) so the browser's own scroll
+    // anchoring cannot latch onto a reply inside the folded subtree and jerk the
+    // whole page - which is what used to drag the upper elements around.
     setCollapsedIds((current) => {
       const next = new Set(current)
       if (next.has(id)) next.delete(id)

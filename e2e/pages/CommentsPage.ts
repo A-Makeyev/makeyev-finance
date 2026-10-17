@@ -83,6 +83,18 @@ export class CommentsPage {
     return this.page.locator(`#comment-${id}`)
   }
 
+  /**
+   * Scrolls so the first fold toggle sits at `y` in the viewport, with the
+   * document's smooth-scroll behavior off so the read that follows is final.
+   */
+  async placeFirstToggleAt(y: number): Promise<void> {
+    await this.page.evaluate(`(() => {
+      document.documentElement.style.scrollBehavior = 'auto'
+      const toggle = document.querySelector('[data-testid="comment-collapse"]')
+      window.scrollTo(0, window.scrollY + toggle.getBoundingClientRect().top - ${y})
+    })()`)
+  }
+
   async goto(path: string): Promise<void> {
     await this.page.goto(path)
   }

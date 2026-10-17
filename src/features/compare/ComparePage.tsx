@@ -5,13 +5,15 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@/router'
 import { ScrollCue } from '@/components/layout/ScrollCue'
 import {
-  MAX_OTHER_EXPENSES,
+  LAWYER_MINIMUM_FEE,
   MAX_TRACKS,
   MAX_YEARS,
   TRACK_TYPES,
+  VAT_RATE,
   isVariableType,
   type AmortizationMethod,
   type PropertyPurpose,
+  type TrackType,
 } from '@/lib/amortization'
 import {
   formatCurrency,
@@ -26,6 +28,7 @@ import { FlipSelect } from '@/components/ui/FlipSelect'
 import { TermSlider } from '@/components/ui/TermSlider'
 import { useMediaQuery } from '@/hooks/useScrolled'
 import { useComparisonStore } from '@/stores/comparisonStore'
+import { TrackMixDonut } from '@/features/calculator/TrackMixDonut'
 import { sharedInputSuggestions, type ScenarioResult } from './computeScenario'
 import { CompareTrendChart, type TrendSeries } from './CompareTrendChart'
 import { ScheduleTable } from './ScheduleTable'
@@ -38,10 +41,10 @@ import { ScheduleTable } from './ScheduleTable'
  *   the results read directly under the mix that produced them. Each card
  *   carries its metrics (best-per-metric highlighted), compliance status and
  *   yearly payments table.
- * - Below the cards sit four comparison charts (two per row), one per metric -
- *   monthly payment, remaining debt, cumulative interest, total paid - each
- *   plotting every mix as its own line/area so the differences read at a
- *   glance. Payment and total are lines; debt and interest are filled areas.
+ * - Below the cards sit three comparison charts (remaining debt, total paid,
+ *   cumulative interest), each plotting every mix as its own line/area so the
+ *   differences read at a glance, plus a full-width stacked קרן/ריבית
+ *   composition chart (the monthly-payment line duplicated its story).
  * - Mobile (~360px): the same cards, switched by a scenario switcher (tabs)
  *   rather than a long stack.
  *
@@ -62,6 +65,9 @@ interface MetricDef {
   isCurrency?: boolean
 }
 
+/** The lawyer floor, VAT-inclusive, shown in the floor note (calculator parity). */
+const LAWYER_FLOOR_WITH_VAT = formatGroupedNumber(Math.round(LAWYER_MINIMUM_FEE * (1 + VAT_RATE)))
+
 export function ComparePage() {
   const { t } = useTranslation()
   const isDesktop = useMediaQuery('(min-width: 768px)')
@@ -71,6 +77,10 @@ export function ComparePage() {
   const scenarios = useComparisonStore((s) => s.scenarios)
   const shared = useComparisonStore((s) => s.shared)
   const results = useComparisonStore((s) => s.results)
+  const fee = useComparisonStore((s) => s.fee)
+  // The single fixed expense row (monthly + one-time): the page keeps exactly
+  // one, so index 0 is always present (default inputs and reset both seed it).
+  const expense = shared.otherExpenses[0]
   // Select each action individually (stable references) - a single selector
   // returning a fresh object would re-render forever in Zustand v5.
   const actions = {
@@ -82,11 +92,14 @@ export function ComparePage() {
     commitCapitalBlur: useComparisonStore((s) => s.commitCapitalBlur),
     commitIncomeBlur: useComparisonStore((s) => s.commitIncomeBlur),
     setPurpose: useComparisonStore((s) => s.setPurpose),
-    addSharedExpense: useComparisonStore((s) => s.addSharedExpense),
-    updateSharedExpenseLabel: useComparisonStore((s) => s.updateSharedExpenseLabel),
+    updateRealtorPercent: useComparisonStore((s) => s.updateRealtorPercent),
+    updateLawyerPercent: useComparisonStore((s) => s.updateLawyerPercent),
+    updateRealtorAmount: useComparisonStore((s) => s.updateRealtorAmount),
+    updateLawyerAmount: useComparisonStore((s) => s.updateLawyerAmount),
+    updateAppraiserFee: useComparisonStore((s) => s.updateAppraiserFee),
+    updateRenovationAmount: useComparisonStore((s) => s.updateRenovationAmount),
     updateSharedExpenseMonthly: useComparisonStore((s) => s.updateSharedExpenseMonthly),
     updateSharedExpenseOneTime: useComparisonStore((s) => s.updateSharedExpenseOneTime),
-    removeSharedExpense: useComparisonStore((s) => s.removeSharedExpense),
     addScenario: useComparisonStore((s) => s.addScenario),
     duplicateScenario: useComparisonStore((s) => s.duplicateScenario),
     removeScenario: useComparisonStore((s) => s.removeScenario),
@@ -100,6 +113,7 @@ export function ComparePage() {
     changeTrackMethod: useComparisonStore((s) => s.changeTrackMethod),
     setScenarioTermYears: useComparisonStore((s) => s.setScenarioTermYears),
     setMortgageSum: useComparisonStore((s) => s.setMortgageSum),
+    fixScenario: useComparisonStore((s) => s.fixScenario),
     loadScenarioPreset: useComparisonStore((s) => s.loadScenarioPreset),
   }
 
@@ -123,6 +137,13 @@ export function ComparePage() {
     [shared.otherExpenses],
   )
 
+  /** Shared one-time expense total - drawn from savings like renovations. */
+  const oneTimeExpenses = useMemo(
+    () =>
+      shared.otherExpenses.reduce((sum, expense) => sum + parseAmountText(expense.oneTimeText), 0),
+    [shared.otherExpenses],
+  )
+
   /**
    * Hints for the blank shared buyer inputs (calculator parity: the calculator
    * shows the same advice as placeholders). The values come from the scenarios
@@ -138,11 +159,12 @@ export function ComparePage() {
         capitalText: shared.capitalText,
         incomeText: shared.incomeText,
         purpose: shared.purpose,
-        renovations: shared.renovations,
+        renovations: parseAmountText(shared.renovationAmountText),
+        oneTimeExpenses,
         otherMonthly,
         ptiThresholdPercent: shared.ptiThresholdPercent,
       }),
-    [results, shared, otherMonthly],
+    [results, shared, oneTimeExpenses, otherMonthly],
   )
 
   /** Hint text for a blank field: grouped digits, no currency symbol (the
@@ -555,10 +577,14 @@ export function ComparePage() {
               <div
                 key={metric.key}
                 data-testid={`compare-metric-${metric.key}-${index + 1}`}
-                className={isBest ? 'best' : undefined}
+                className={
+                  [isBest ? 'best' : '', metric.key === 'mix' ? 'compare-metric-mix' : '']
+                    .filter(Boolean)
+                    .join(' ') || undefined
+                }
               >
                 <dt>{metric.label(maxTerm)}</dt>
-                <dd>
+                <dd title={metric.key === 'mix' ? metric.value(result) : undefined}>
                   {metric.value(result)}
                   {isBest && <span className="compare-best-badge">{t('compare.bestBadge')}</span>}
                 </dd>
@@ -571,8 +597,41 @@ export function ComparePage() {
             <StatusChip key={lineIndex} ok={line.ok} text={line.text} />
           ))}
         </div>
+        {/* One-click repair, only when the scenario is in an error state: the
+            ⅔ variable cap is trimmed (calculator parity) and invalid terms or
+            amounts are normalised against the shared loan. */}
+        {result.error && (
+          <button
+            type="button"
+            className="autofix-button compare-autofix"
+            data-testid={`compare-autofix-${index + 1}`}
+            onClick={() => actions.fixScenario(scenario.id)}
+          >
+            {t('calculator.autofix')}
+          </button>
+        )}
         {hasFigures && (
-          <ScheduleTable rows={result.schedule} testIdPrefix={`compare-schedule-${index + 1}`} />
+          <>
+            {/* Composition donut, directly above the payments table: the ring
+                answers "what does this mix consist of" and the legend under
+                it is the table/text equivalent of the chart (never chart-only). */}
+            <div
+              className="compare-mix-block"
+              data-testid={`compare-mix-donut-${index + 1}`}
+            >
+              <h3 className="compare-mix-title">{t('compare.mixDonutTitle')}</h3>
+              <TrackMixDonut
+                shares={result.mixShares.map((share, shareIndex) => ({
+                  trackId: `${share.type}-${shareIndex}`,
+                  type: share.type as TrackType,
+                  amount: share.amount,
+                }))}
+                size={240}
+                className="compare-mix-donut-chart"
+              />
+            </div>
+            <ScheduleTable rows={result.schedule} testIdPrefix={`compare-schedule-${index + 1}`} />
+          </>
         )}
       </article>
     )
@@ -681,41 +740,14 @@ export function ComparePage() {
                 testId="compare-income"
               />
             </label>
-          </div>
-
-          {/* Other expenses (calculator parity): the monthly amounts fold
-              into every scenario's payment-to-income check and the one-time
-              amounts join the upfront cash total. They describe the buyer,
-              not the scenario, so they sit with the shared inputs; the rows
-              reuse the calculator's .expense-row rhythm and vocabulary. */}
-          <div className="compare-expenses" data-testid="compare-expenses">
-            {shared.otherExpenses.map((expense) => (
-              <div key={expense.id} className="expense-row">
-                <button
-                  type="button"
-                  className="expense-remove-button"
-                  onClick={() => actions.removeSharedExpense(expense.id)}
-                  aria-label={t('calculator.expenseRemove')}
-                  data-testid={`compare-expense-remove-${expense.id}`}
-                >
-                  ×
-                </button>
-                <label className="input-group expense-label-group">
-                  {t('calculator.expenseLabel')}
-                  <div className="input-wrap expense-label-wrap">
-                    <input
-                      type="text"
-                      value={expense.label}
-                      onChange={(event) =>
-                        actions.updateSharedExpenseLabel(expense.id, event.target.value)
-                      }
-                      aria-label={t('calculator.expenseLabelAria')}
-                      name={`compare-expense-label-${expense.id}`}
-                      data-testid={`compare-expense-label-${expense.id}`}
-                    />
-                  </div>
-                </label>
-                <label className="input-group expense-amount-group">
+            {/* Other expenses (calculator parity): one fixed pair, no
+                add/remove. The monthly amount folds into every scenario's
+                payment-to-income check; the one-time amount joins the upfront
+                cash total (and eats the equity, like renovations). It describes
+                the buyer, not the scenario, so it sits with the shared inputs. */}
+            {expense && (
+              <>
+                <label className="input-group">
                   {t('calculator.expenseAmountLabel')}
                   <MoneyInput
                     value={expense.monthlyText}
@@ -727,7 +759,7 @@ export function ComparePage() {
                     testId={`compare-expense-amount-${expense.id}`}
                   />
                 </label>
-                <label className="input-group expense-onetime-group">
+                <label className="input-group">
                   {t('calculator.expenseOneTimeAmountLabel')}
                   <MoneyInput
                     value={expense.oneTimeText}
@@ -739,36 +771,110 @@ export function ComparePage() {
                     testId={`compare-expense-onetime-${expense.id}`}
                   />
                 </label>
-              </div>
-            ))}
-            {/* The add control trails the rows (or stands alone when empty),
-                start-aligned exactly like the calculator's block. */}
-            {shared.otherExpenses.length === 0 ? (
-              <div className="expense-row expense-add-row">
-                <button
-                  type="button"
-                  className="expense-add-button"
-                  onClick={() => actions.addSharedExpense()}
-                  data-testid="compare-add-expense"
-                >
-                  {t('calculator.otherExpensesAdd')} +
-                </button>
-              </div>
-            ) : (
-              shared.otherExpenses.length < MAX_OTHER_EXPENSES && (
-                <div className="expense-row expense-add-under-last">
-                  <button
-                    type="button"
-                    className="expense-add-button"
-                    onClick={() => actions.addSharedExpense()}
-                    data-testid="compare-add-expense"
-                  >
-                    {t('calculator.otherExpensesAdd')} +
-                  </button>
-                </div>
-              )
+              </>
             )}
           </div>
+
+          {/* Transaction costs (calculator parity): one-time costs that join
+              every scenario's upfront total. Realtor/lawyer pair a percent with
+              an editable ₪ mirror (percent canonical, blank falls back to the
+              market norm); the appraiser fee and the renovation budget are flat
+              ₪ amounts. Renovations also reduce the capital the shared loan
+              derives from, exactly like the calculator. They describe the
+              buyer, not the scenario, so they sit here. */}
+          <div className="compare-fees" data-testid="compare-fees">
+            <label className="input-group fee-group">
+              {t('calculator.realtorPercentLabel')}
+              <span className={`fee-inputs${fee.amountsVisible ? '' : ' percent-only'}`}>
+                <span className="input-wrap percent-wrap">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={shared.realtorPercentText}
+                    onChange={(event) => actions.updateRealtorPercent(event.target.value)}
+                    placeholder={fee.realtorPercentHint ?? undefined}
+                    aria-label={t('calculator.realtorPercentLabel')}
+                    name="compare-realtor-percent"
+                    data-testid="compare-realtor-percent"
+                  />
+                  <span aria-hidden="true">%</span>
+                </span>
+                {fee.amountsVisible && (
+                  <MoneyInput
+                    className="fee-amount-wrap"
+                    value={shared.realtorAmountText}
+                    onChange={(raw, caret) => actions.updateRealtorAmount(raw, caret)}
+                    suffix="₪"
+                    placeholder={fee.realtorAmountHint ?? undefined}
+                    ariaLabel={t('calculator.realtorAmountLabel')}
+                    testId="compare-realtor-amount"
+                  />
+                )}
+              </span>
+            </label>
+            <label className="input-group fee-group">
+              {t('calculator.lawyerPercentLabel')}
+              <span className={`fee-inputs${fee.amountsVisible ? '' : ' percent-only'}`}>
+                <span className="input-wrap percent-wrap">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={shared.lawyerPercentText}
+                    onChange={(event) => actions.updateLawyerPercent(event.target.value)}
+                    placeholder={fee.lawyerPercentHint ?? undefined}
+                    aria-label={t('calculator.lawyerPercentLabel')}
+                    name="compare-lawyer-percent"
+                    data-testid="compare-lawyer-percent"
+                  />
+                  <span aria-hidden="true">%</span>
+                </span>
+                {fee.amountsVisible && (
+                  <MoneyInput
+                    className="fee-amount-wrap"
+                    value={shared.lawyerAmountText}
+                    onChange={(raw, caret) => actions.updateLawyerAmount(raw, caret)}
+                    suffix="₪"
+                    placeholder={fee.lawyerAmountHint ?? undefined}
+                    ariaLabel={t('calculator.lawyerAmountLabel')}
+                    testId="compare-lawyer-amount"
+                  />
+                )}
+              </span>
+              {fee.lawyerFloorApplied && (
+                <small className="fee-floor-note" data-testid="compare-lawyer-floor-note">
+                  {t('calculator.lawyerFloorNote', { amount: LAWYER_FLOOR_WITH_VAT })}
+                </small>
+              )}
+            </label>
+            <label className="input-group">
+              {t('calculator.appraiserFeeLabel')}
+              <MoneyInput
+                value={shared.appraiserFeeText}
+                onChange={(raw, caret) => actions.updateAppraiserFee(raw, caret)}
+                suffix="₪"
+                ariaLabel={t('calculator.appraiserFeeLabel')}
+                testId="compare-appraiser-fee"
+              />
+            </label>
+            <label className="input-group">
+              {t('calculator.renovationsLabel')}
+              <MoneyInput
+                value={shared.renovationAmountText}
+                onChange={(raw, caret) => actions.updateRenovationAmount(raw, caret)}
+                suffix="₪"
+                ariaLabel={t('calculator.renovationsLabel')}
+                testId="compare-renovations"
+              />
+            </label>
+            {fee.amountsVisible && (
+              <span className="fee-vat-note fee-vat-note-row">{t('calculator.feeVatIncluded')}</span>
+            )}
+          </div>
+
         </section>
 
         {/* Scenario editors: table columns on desktop, the active scenario's

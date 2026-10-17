@@ -704,6 +704,28 @@ test.describe('web app: navigation + chrome parity', () => {
     expect(initialsColour).toBe('rgb(15, 15, 15)')
   })
 
+  test('the nav hover underline follows the ink on the scrolled light bar', async ({ page }) => {
+    await mockGetSessionUser(page, { image: null, name: 'Anatoly Makeyev' })
+    const app = new WebAppPage(page)
+    await app.goto('/')
+    await app.waitForHydration()
+
+    // The top slab is the shared dark glass, where the white underline is the
+    // correct role; off it the bar turns light in the light theme, and the
+    // white line used to vanish. Scroll so the bar carries links-dark.
+    await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
+    await expect(app.navbar).toHaveClass(/navbar-scrolling/, { timeout: 5000 })
+    await app.navLink('services').hover()
+
+    // The underline animates its width over 0.5s; poll until it has opened,
+    // then read the colour from the link's ::after.
+    await expect
+      .poll(async () => (await app.navLinkUnderline('services')).width, { timeout: 5000 })
+      .toBeGreaterThan(10)
+    const underline = await app.navLinkUnderline('services')
+    expect(underline.background).toBe('rgb(15, 15, 15)')
+  })
+
   test('a quiet skeleton holds the account slot while the session loads', async ({ page }) => {
     // Never resolve get-session: the pending state is observable for as long
     // as the test needs it.

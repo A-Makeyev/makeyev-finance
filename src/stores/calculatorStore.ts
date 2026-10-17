@@ -604,13 +604,25 @@ function effectiveLawyerPercent(s: CalculatorData): number {
   return parsePercentText(text)
 }
 
+/** Sum of the named one-time expenses (furniture, moving, ...) - paid once. */
+function oneTimeExpensesTotal(s: CalculatorData): number {
+  return s.otherExpenses.reduce((sum, expense) => sum + parseAmountText(expense.oneTimeAmountText), 0)
+}
+
 /**
  * Capital actually left for the down payment after the planned renovations
- * (שיפוצים) eat into it - the renovation budget is paid from savings, so the
- * equity available shrinks and the loan grows accordingly. Never negative.
+ * (שיפוצים) and any one-time expenses eat into it - both are paid from
+ * savings, so the equity available shrinks and the loan grows accordingly.
+ * Monthly expenses do NOT reduce equity (they recur and live in the PTI
+ * check). Never negative.
  */
 function effectiveCapital(s: CalculatorData): number {
-  return Math.max(0, parseAmountText(s.capitalText) - parseAmountText(s.renovationAmountText))
+  return Math.max(
+    0,
+    parseAmountText(s.capitalText) -
+      parseAmountText(s.renovationAmountText) -
+      oneTimeExpensesTotal(s),
+  )
 }
 
 /**
@@ -818,11 +830,13 @@ function recalculate(s: CalculatorState): void {
   const property = parseAmountText(s.propertyValueText)
   const capital = parseAmountText(s.capitalText)
   const income = parseAmountText(s.incomeText)
-  // Renovations (שיפוצים) are paid from savings, so they shrink the equity
-  // actually available for the down payment - every capital-based figure
-  // below (loan, capital share, LTV, closing costs) sees the reduced amount.
+  // Renovations (שיפוצים) and one-time expenses are paid from savings, so
+  // they shrink the equity actually available for the down payment - every
+  // capital-based figure below (loan, capital share, LTV, closing costs) sees
+  // the reduced amount, exactly as effectiveCapital does.
   const renovations = parseAmountText(s.renovationAmountText)
-  const capitalForLoan = Math.max(0, capital - renovations)
+  const oneTimeTotal = oneTimeExpensesTotal(s)
+  const capitalForLoan = Math.max(0, capital - renovations - oneTimeTotal)
 
   // Shared derived figures, identical in both branches so the equity row
   // behaves the same with and without entered tracks.
@@ -898,12 +912,9 @@ function recalculate(s: CalculatorState): void {
     0,
   )
   // One-time expenses (furniture, moving costs, etc.) are cash paid once -
-  // they draw from savings but never recur, so they join the upfront cash
-  // total and stay out of the monthly payment-to-income checks.
-  const oneTimeExpensesTotal = s.otherExpenses.reduce(
-    (sum, expense) => sum + parseAmountText(expense.oneTimeAmountText),
-    0,
-  )
+  // they draw from savings (see capitalForLoan above) and join the upfront
+  // cash total, but never recur, so they stay out of the monthly
+  // payment-to-income checks.
   const ptiThreshold = clampPtiThreshold(s.ptiThresholdPercent)
 
   const invalidTerm = s.tracks.some((track) => {
@@ -961,7 +972,7 @@ function recalculate(s: CalculatorState): void {
       capitalShortfall: capitalForLoan > 0 && suggested !== null && suggested > capitalForLoan,
       closingCosts: closing,
       transactionCosts,
-      upfrontTotal: totalUpfrontCash(suggested, closing, transactionCosts, oneTimeExpensesTotal),
+      upfrontTotal: totalUpfrontCash(suggested, closing, transactionCosts, oneTimeTotal),
       avgInterestRate: 0,
       weightedAvgInterestRate: 0,
       avgPaybackRatio: 0,
@@ -1061,7 +1072,7 @@ function recalculate(s: CalculatorState): void {
     capitalShortfall: capitalForLoan > 0 && suggested !== null && suggested > capitalForLoan,
     closingCosts: closingCosts,
     transactionCosts,
-    upfrontTotal: totalUpfrontCash(suggested, closingCosts, transactionCosts, oneTimeExpensesTotal),
+    upfrontTotal: totalUpfrontCash(suggested, closingCosts, transactionCosts, oneTimeTotal),
     pti: assessPti(firstMonthPayment + otherMonthly, income, ptiThreshold),
     avgInterestRate: averageInterestRate(validResults),
     weightedAvgInterestRate: calculateWeightedAvgInterestRate(validResults),
@@ -1417,6 +1428,11 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         const expense = s.otherExpenses.find((entry) => entry.id === id)
         if (expense) expense.oneTimeAmountText = formatted.text
+        // A one-time expense is paid from savings like the renovation budget,
+        // so it eats the down-payment equity and the loan re-derives - same
+        // path a renovation edit takes (syncStartingFromProperty + fill).
+        syncStartingFromProperty(s)
+        fillTracksFromLoanInput(s)
         recalculate(s)
       })
       return formatted
@@ -1425,6 +1441,10 @@ export const useCalculatorStore = create<CalculatorStore>()(
     removeOtherExpense: (id) => {
       set((s) => {
         s.otherExpenses = s.otherExpenses.filter((entry) => entry.id !== id)
+        // Removing a row can restore equity (if it carried a one-time amount),
+        // so re-derive the loan exactly like an edit does.
+        syncStartingFromProperty(s)
+        fillTracksFromLoanInput(s)
         recalculate(s)
       })
     },

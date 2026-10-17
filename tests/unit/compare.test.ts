@@ -5,7 +5,12 @@ import {
   sharedInputSuggestions,
   type SharedBuyerInputs,
 } from '@/features/compare/computeScenario'
-import { DEFAULT_TERM_YEARS, computeTrackResult, type PropertyPurpose } from '@/lib/amortization'
+import {
+  DEFAULT_TERM_YEARS,
+  MAX_OTHER_EXPENSES,
+  computeTrackResult,
+  type PropertyPurpose,
+} from '@/lib/amortization'
 import { parseAmountText } from '@/lib/format'
 import { useComparisonStore, seedFromCalculator } from '@/stores/comparisonStore'
 import type { TrackState } from '@/stores/calculatorStore'
@@ -129,18 +134,6 @@ describe('computeScenario - golden values', () => {
     expect(result.recommendedIncome).toBe(12_500)
   })
 
-  it('folds the shared monthly expenses into the recommended income', () => {
-    // Single 15y fixed track: average = first = 7,649.9329. A ₪1,000/month
-    // shared expense lifts the obligation to 8,649.9329 → ceil/0.33/500·500.
-    const result = computeScenario([track()], {
-      ...baseInputs,
-      otherMonthly: 1_000,
-    })
-    expect(result.avgMonthlyPayment).toBeCloseTo(7_649.9329, 3)
-    expect(result.recommendedIncome).toBe(26_500)
-    // Without the expense: ceil(7649.93/0.33/500)·500 = 23,500.
-    expect(computeScenario([track()], baseInputs).recommendedIncome).toBe(23_500)
-  })
 })
 
 describe('computeScenario - chart series', () => {
@@ -306,25 +299,6 @@ describe('computeScenario - shared inputs', () => {
     expect(typed.appraiserFee).toBe(2_500)
   })
 
-  it('folds other monthly and one-time expenses into PTI and upfront', () => {
-    // The shared buyer expenses describe the buyer, not the scenario: the
-    // monthly amount joins the payment-to-income obligation, the one-time
-    // amount joins the upfront cash. Golden values: first payment 7,649.9329
-    // + 1,000 monthly = 8,649.9329 → minIncome ceil(8649.93/0.33/500)·500 =
-    // 26,500. Upfront on the 1.2M property: 300,000 suggested capital +
-    // 28,320 realtor VAT + 7,080 lawyer VAT + 5,000 one-time.
-    const result = computeScenario([track()], {
-      ...baseInputs,
-      incomeText: '20,000',
-      otherMonthly: 1_000,
-      oneTimeExpenses: 5_000,
-    })
-    expect(result.pti).not.toBeNull()
-    expect(result.pti!.payment).toBeCloseTo(8_649.9329, 3)
-    expect(result.pti!.minIncome).toBe(26_500)
-    expect(result.upfrontTotal).toBe(300_000 + 28_320 + 7_080 + 5_000)
-  })
-
   it('upfront total = suggested capital + purchase tax + fees', () => {
     // Property 1.2M first home: purchase tax = 0 (under the exemption).
     // Suggested capital = 25% of 1.2M = 300,000.
@@ -448,6 +422,124 @@ describe('comparisonStore', () => {
     expect(useComparisonStore.getState().scenarios[1].tracks).toHaveLength(2)
   })
 
+  it('a new track in a blank scenario is funded from the shared loan', () => {
+    // Scenario 2 opens with one blank track and the shared sum is ₪1,000,000;
+    // adding a track fills both halves of the loan instead of leaving a blank
+    // 0-size track next to a 0-size one.
+    const store = useComparisonStore.getState()
+    const blank = store.scenarios[1]
+    expect(blank.tracks[0].amountText).toBe('')
+    store.addTrack(blank.id)
+    const state = useComparisonStore.getState()
+    expect(state.scenarios[1].tracks.map((entry) => entry.amountText)).toEqual([
+      '500,000',
+      '500,000',
+    ])
+    expect(state.results[1].loanAmount).toBe(1_000_000)
+    expect(state.results[1].isEmpty).toBe(false)
+    // Type/rate keep the blank track's defaults: the loan only supplies amounts.
+    expect(state.scenarios[1].tracks[1].type).toBe('fixed')
+    expect(state.scenarios[1].tracks[1].rateText).toBe('4.5')
+  })
+
+  it('the split keeps the mix exactly on the shared loan (odd shekel in the last track)', () => {
+    const store = useComparisonStore.getState()
+    const blank = store.scenarios[1]
+    store.setMortgageSum('1,000,001', null)
+    // A typed sum already fills the scenario's single track with the loan.
+    expect(useComparisonStore.getState().scenarios[1].tracks[0].amountText).toBe('1,000,001')
+    useComparisonStore.getState().addTrack(blank.id)
+    const state = useComparisonStore.getState()
+    const amounts = state.scenarios[1].tracks.map((entry) => parseAmountText(entry.amountText))
+    expect(amounts.reduce((sum, amount) => sum + amount, 0)).toBe(1_000_001)
+    expect(amounts).toEqual([500_000, 500_001])
+    expect(state.results[1].loanAmount).toBe(1_000_001)
+  })
+
+  it('adding a track to a preset mix splits the largest amount and keeps the loan total', () => {
+    const store = useComparisonStore.getState()
+    const scenario = store.scenarios[1]
+    store.loadScenarioPreset(scenario.id, 'basket2')
+    // תמהיל 2 allocates the ₪1,000,000 loan in half: 500k + 500k.
+    expect(useComparisonStore.getState().scenarios[1].tracks.map((entry) => entry.amountText)).toEqual([
+      '500,000',
+      '500,000',
+    ])
+    useComparisonStore.getState().addTrack(scenario.id)
+    const state = useComparisonStore.getState()
+    // Half of the largest 500k moves to the new track; the total stays the loan.
+    expect(state.scenarios[1].tracks.map((entry) => entry.amountText)).toEqual([
+      '250,000',
+      '500,000',
+      '250,000',
+    ])
+    expect(state.results[1].loanAmount).toBe(1_000_000)
+  })
+
+  it('auto-fix trims a variable-cap breach and keeps the mix on the shared loan', () => {
+    const store = useComparisonStore.getState()
+    const scenario = store.scenarios[1]
+    store.loadScenarioPreset(scenario.id, 'basket2')
+    // 500k fixed + 500k prime, then shrink the fixed half: the prime side is
+    // rebalanced to 800k, i.e. 80% variable - over the ⅔ cap.
+    const fixedTrack = useComparisonStore.getState().scenarios[1].tracks[0]
+    useComparisonStore
+      .getState()
+      .updateTrackAmount(scenario.id, fixedTrack.id, '200,000', null)
+    const broken = useComparisonStore.getState()
+    expect(broken.results[1].error).toBe('variableCap')
+    expect(broken.scenarios[1].tracks.map((entry) => entry.amountText)).toEqual([
+      '200,000',
+      '800,000',
+    ])
+
+    broken.fixScenario(broken.scenarios[1].id)
+    const fixed = useComparisonStore.getState()
+    expect(fixed.results[1].error).toBeNull()
+    // The variable side is trimmed to 400k (2× the 200k fixed side) and the
+    // trimmed 400k returns to the fixed track, so the shared ₪1M loan stays.
+    expect(fixed.scenarios[1].tracks.map((entry) => entry.amountText)).toEqual([
+      '600,000',
+      '400,000',
+    ])
+    expect(fixed.results[1].loanAmount).toBe(1_000_000)
+    expect(fixed.results[1].variableSharePercent).toBeCloseTo(40, 6)
+  })
+
+  it('auto-fix converts one track to fixed when the whole mix is variable', () => {
+    const store = useComparisonStore.getState()
+    const scenario = store.scenarios[1]
+    store.loadScenarioPreset(scenario.id, 'basket2')
+    const fixedTrack = useComparisonStore.getState().scenarios[1].tracks[0]
+    useComparisonStore.getState().changeTrackType(scenario.id, fixedTrack.id, 'prime')
+    expect(useComparisonStore.getState().results[1].error).toBe('variableCap')
+
+    useComparisonStore.getState().fixScenario(scenario.id)
+    const fixed = useComparisonStore.getState()
+    expect(fixed.results[1].error).toBeNull()
+    // The last track holding money anchors the fixed share.
+    expect(fixed.scenarios[1].tracks.map((entry) => entry.type)).toEqual(['prime', 'fixed'])
+    expect(fixed.scenarios[1].tracks.map((entry) => entry.amountText)).toEqual([
+      '500,000',
+      '500,000',
+    ])
+    expect(fixed.results[1].loanAmount).toBe(1_000_000)
+  })
+
+  it('auto-fix rebuilds a zero-amount scenario from the shared loan', () => {
+    const store = useComparisonStore.getState()
+    const scenario = store.scenarios[1]
+    // A typed "0" counts as an entered track, so pricing it fails as positive.
+    useComparisonStore.getState().updateTrackAmount(scenario.id, scenario.tracks[0].id, '0', null)
+    expect(useComparisonStore.getState().results[1].error).toBe('positive')
+
+    useComparisonStore.getState().fixScenario(scenario.id)
+    const fixed = useComparisonStore.getState()
+    expect(fixed.results[1].error).toBeNull()
+    expect(fixed.scenarios[1].tracks[0].amountText).toBe('1,000,000')
+    expect(fixed.results[1].loanAmount).toBe(1_000_000)
+  })
+
   it('recomputes a scenario when its tracks change', () => {
     const store = useComparisonStore.getState()
     // Scenario 2's single blank track: a clean one-track repricing (scenario 1
@@ -509,9 +601,11 @@ describe('comparisonStore', () => {
       purpose: 'upgrade',
       realtorPercentText: '',
       lawyerPercentText: '',
+      realtorAmountText: '',
+      lawyerAmountText: '',
       appraiserFeeText: '',
       renovationAmountText: '',
-      otherExpenses: [{ label: 'מס דירה', amountText: '1,000', oneTimeAmountText: '5,000' }],
+      otherExpenses: [{ label: 'רכב', amountText: '1,500', oneTimeAmountText: '0' }],
       ptiThresholdPercent: 33,
       termYears: 20,
       mortgageSumText: '800,000',
@@ -525,12 +619,15 @@ describe('comparisonStore', () => {
     const state = useComparisonStore.getState()
     expect(state.shared.propertyValueText).toBe('1,500,000')
     expect(state.shared.purpose).toBe('upgrade')
-    // The calculator's expense rows arrive as editable rows (fresh ids), not
-    // as pre-summed numbers - the sums derive at recompute time.
+    // The fee profile arrives as editable text (blank falls back to the norm).
+    expect(state.shared.realtorPercentText).toBe('')
+    expect(state.shared.appraiserFeeText).toBe('')
+    // The page keeps exactly ONE expense row, so the calculator's rows collapse
+    // into a single pair by summing the monthly and one-time amounts (the name
+    // field is dropped). A zero one-time sum reads as blank, not "0".
     expect(state.shared.otherExpenses).toHaveLength(1)
-    expect(state.shared.otherExpenses[0].label).toBe('מס דירה')
-    expect(state.shared.otherExpenses[0].monthlyText).toBe('1,000')
-    expect(state.shared.otherExpenses[0].oneTimeText).toBe('5,000')
+    expect(state.shared.otherExpenses[0].monthlyText).toBe('1,500')
+    expect(state.shared.otherExpenses[0].oneTimeText).toBe('')
     expect(state.scenarios).toHaveLength(2)
     expect(state.scenarios[0].tracks[0].amountText).toBe('800,000')
     expect(state.scenarios[0].termYears).toBe(20)
@@ -683,52 +780,136 @@ describe('comparisonStore', () => {
     expect(after.results[0].loanAmount).toBe(1_000_000)
   })
 
-  it('shared expense rows reprice the PTI check and the upfront total', () => {
+  it('shared fee inputs reprice the PTI check and the upfront total', () => {
     // Scenario 1's opening mix: first payment 7,718.13. Income 20,000 →
     // over the 33% ceiling; minIncome ceil(7718.13/0.33/500)·500 = 23,500.
     useComparisonStore.getState().setIncome('20,000', null)
-    let pti = useComparisonStore.getState().results[0].pti
+    const pti = useComparisonStore.getState().results[0].pti
     expect(pti).not.toBeNull()
     expect(pti!.minIncome).toBe(23_500)
-
-    // A ₪1,000/month expense lifts the obligation to 8,718.13 → 26,500.
-    useComparisonStore.getState().addSharedExpense()
-    const rows = useComparisonStore.getState().shared.otherExpenses
-    expect(rows).toHaveLength(2)
-    useComparisonStore.getState().updateSharedExpenseMonthly(rows[1].id, '1,000', null)
-    pti = useComparisonStore.getState().results[0].pti
-    expect(pti!.payment).toBeCloseTo(8_718.13, 2)
-    expect(pti!.minIncome).toBe(26_500)
-    // The boundary itself: at the reported minimum the warning clears.
-    useComparisonStore.getState().setIncome('26,500', null)
+    // The check grades the mortgage payment alone: at the reported minimum
+    // the warning clears.
+    useComparisonStore.getState().setIncome('23,500', null)
     expect(useComparisonStore.getState().results[0].pti).toBeNull()
 
-    // The one-time amount joins the upfront cash: property 1.2M, capital
-    // 200k → suggested 300,000 + fees 35,400, +5,000 one-time.
+    // Transaction costs join the upfront total: property 1.2M, capital 200k →
+    // suggested 300,000 + default fees 35,400 (2% realtor VAT + 0.5% lawyer
+    // VAT). A typed 3% realtor replaces the default: 42,480 + 7,080.
     useComparisonStore.getState().setIncome('', null)
-    useComparisonStore.getState().updateSharedExpenseLabel(rows[1].id, 'מס ביטוח לאומי')
-    useComparisonStore.getState().updateSharedExpenseOneTime(rows[1].id, '5,000', null)
     useComparisonStore.getState().setPropertyValue('1,200,000', null)
     useComparisonStore.getState().setCapital('200,000', null)
-    expect(useComparisonStore.getState().shared.otherExpenses[1].label).toBe('מס ביטוח לאומי')
-    expect(useComparisonStore.getState().results[0].upfrontTotal).toBe(300_000 + 28_320 + 7_080 + 5_000)
-
-    // Removing the row reprices everything back down.
-    useComparisonStore.getState().removeSharedExpense(rows[1].id)
-    const cleared = useComparisonStore.getState()
-    expect(cleared.shared.otherExpenses).toHaveLength(1)
-    expect(cleared.results[0].upfrontTotal).toBe(300_000 + 28_320 + 7_080)
+    expect(useComparisonStore.getState().results[0].upfrontTotal).toBe(300_000 + 28_320 + 7_080)
+    useComparisonStore.getState().updateRealtorPercent('3')
+    expect(useComparisonStore.getState().results[0].upfrontTotal).toBe(300_000 + 42_480 + 7_080)
   })
 
-  it('caps shared expense rows at MAX_OTHER_EXPENSES (3)', () => {
-    // Opens with one blank row (calculator parity: the calculator opens with
-    // one as well).
-    expect(useComparisonStore.getState().shared.otherExpenses).toHaveLength(1)
+  it('realtor percent and ₪ amount stay in step (calculator parity)', () => {
+    useComparisonStore.getState().setPropertyValue('1,200,000', null)
+    useComparisonStore.getState().setCapital('200,000', null)
+    // A typed ₪ realtor fee converts to the equivalent percent (canonical) and
+    // the ₪ mirror re-derives from it: 30,000 / 1.18 / 1,200,000 = 2.12%.
+    useComparisonStore.getState().updateRealtorAmount('30,000', null)
+    let state = useComparisonStore.getState()
+    expect(state.shared.realtorPercentText).toBe('2.12')
+    expect(state.shared.realtorAmountText).toBe('30,019')
+    // The ₪ half renders whenever there is a fee basis.
+    expect(state.fee.amountsVisible).toBe(true)
+
+    // Clearing the percent blanks its ₪ mirror and advertises the market norm
+    // (2% of 1.2M, VAT-inclusive = 28,320) as hints instead of refilling.
+    useComparisonStore.getState().updateRealtorPercent('')
+    state = useComparisonStore.getState()
+    expect(state.shared.realtorAmountText).toBe('')
+    expect(state.fee.realtorPercentHint).toBe('2')
+    expect(state.fee.realtorAmountHint).toBe('28,320')
+  })
+
+  it('lawyer floor flags and keeps a typed ₪ amount below the minimum', () => {
+    useComparisonStore.getState().setPropertyValue('1,000,000', null)
+    useComparisonStore.getState().setCapital('0', null)
+    // A typed ₪3,000 (under the ₪6,000 pre-VAT floor) converts to 0.25%, which
+    // the floor then overrides - so it's flagged and the typed text stays shown
+    // while the percent mirrors the converted 0.25%.
+    useComparisonStore.getState().updateLawyerAmount('3,000', null)
+    const state = useComparisonStore.getState()
+    expect(state.shared.lawyerPercentText).toBe('0.25')
+    expect(state.shared.lawyerAmountText).toBe('3,000')
+    expect(state.fee.lawyerFloorApplied).toBe(true)
+  })
+
+  it('renovations reduce the capital the shared loan derives from', () => {
+    useComparisonStore.getState().setPropertyValue('1,200,000', null)
+    useComparisonStore.getState().setCapital('300,000', null)
+    // Without renovations: loan = 1,200,000 - 300,000 = 900,000.
+    expect(useComparisonStore.getState().results[0].loanAmount).toBe(900_000)
+    // Renovations eat into the capital: effective 200,000 → loan 1,000,000.
+    useComparisonStore.getState().updateRenovationAmount('100,000', null)
+    expect(useComparisonStore.getState().results[0].loanAmount).toBe(1_000_000)
+  })
+
+  it('one-time expenses eat the shared equity like renovations, flipping the LTV', () => {
+    useComparisonStore.getState().setPropertyValue('1,200,000', null)
+    useComparisonStore.getState().setCapital('300,000', null)
+    // 25% equity: loan 900,000, exactly the 75% first-home limit.
+    expect(useComparisonStore.getState().shared.mortgageSumText).toBe('900,000')
+    expect(useComparisonStore.getState().results[0].ltv).toBeNull()
+
+    // A 123,333 one-time cost draws from the same savings: equity 176,667,
+    // loan 1,023,333 → financing 85.3%, over the 75% limit, and equity 15%.
+    const id = useComparisonStore.getState().shared.otherExpenses[0].id
+    useComparisonStore.getState().updateSharedExpenseOneTime(id, '123,333', null)
+    const after = useComparisonStore.getState()
+    expect(after.shared.mortgageSumText).toBe('1,023,333')
+    expect(after.results[0].ltv?.percentRounded).toBe(85)
+    expect(after.results[0].capitalAssessment?.percent).toBe(15)
+
+    // Removing the row restores the 25% equity and the 900,000 loan.
+    useComparisonStore.getState().removeSharedExpense(id)
+    expect(useComparisonStore.getState().shared.mortgageSumText).toBe('900,000')
+    expect(useComparisonStore.getState().results[0].ltv).toBeNull()
+  })
+
+  it('monthly expenses fold into the PTI check; one-time expenses into the upfront total', () => {
+    useComparisonStore.getState().setPropertyValue('1,200,000', null)
+    useComparisonStore.getState().setCapital('200,000', null)
+    const expenseId = useComparisonStore.getState().shared.otherExpenses[0].id
+
+    // Opening mix first payment 7,718.13; at ₪23,500 income the mortgage alone
+    // sits exactly on the 33% ceiling, so the check clears.
+    useComparisonStore.getState().setIncome('23,500', null)
+    expect(useComparisonStore.getState().results[0].pti).toBeNull()
+    // A ₪2,000 monthly liability raises the graded payment: the ceiling income
+    // becomes ceil((7,718.13 + 2,000)/0.33/500)·500 = 29,500, and the same
+    // income now warns.
+    useComparisonStore.getState().updateSharedExpenseMonthly(expenseId, '2,000', null)
+    const pti = useComparisonStore.getState().results[0].pti
+    expect(pti).not.toBeNull()
+    expect(pti!.minIncome).toBe(29_500)
+
+    // One-time expenses join the upfront total (suggested capital 300,000 +
+    // default fees 28,320 + 7,080) without touching the payment.
+    expect(useComparisonStore.getState().results[0].upfrontTotal).toBe(300_000 + 28_320 + 7_080)
+    useComparisonStore.getState().updateSharedExpenseOneTime(expenseId, '5,000', null)
+    expect(useComparisonStore.getState().results[0].upfrontTotal).toBe(
+      300_000 + 28_320 + 7_080 + 5_000,
+    )
+  })
+
+  it('adds, caps and removes expense rows', () => {
+    const store = useComparisonStore.getState()
+    // The opening state carries one blank row.
+    expect(store.shared.otherExpenses).toHaveLength(1)
+    store.addSharedExpense()
+    store.addSharedExpense()
+    expect(useComparisonStore.getState().shared.otherExpenses).toHaveLength(MAX_OTHER_EXPENSES)
+    // The cap holds: a fourth add is ignored.
     useComparisonStore.getState().addSharedExpense()
-    useComparisonStore.getState().addSharedExpense()
-    expect(useComparisonStore.getState().shared.otherExpenses).toHaveLength(3)
-    useComparisonStore.getState().addSharedExpense()
-    expect(useComparisonStore.getState().shared.otherExpenses).toHaveLength(3)
+    expect(useComparisonStore.getState().shared.otherExpenses).toHaveLength(MAX_OTHER_EXPENSES)
+    const firstId = useComparisonStore.getState().shared.otherExpenses[0].id
+    useComparisonStore.getState().removeSharedExpense(firstId)
+    const after = useComparisonStore.getState().shared.otherExpenses
+    expect(after).toHaveLength(MAX_OTHER_EXPENSES - 1)
+    expect(after.some((expense) => expense.id === firstId)).toBe(false)
   })
 
   it('seedFromCalculator surfaces the variable-cap error for a lone prime mix (parity)', () => {
@@ -739,6 +920,8 @@ describe('comparisonStore', () => {
       purpose: 'first',
       realtorPercentText: '',
       lawyerPercentText: '',
+      realtorAmountText: '',
+      lawyerAmountText: '',
       appraiserFeeText: '',
       renovationAmountText: '',
       otherExpenses: [],
@@ -762,6 +945,7 @@ describe('sharedInputSuggestions (calculator-parity hints)', () => {
     incomeText: '',
     purpose: 'first' as PropertyPurpose,
     renovations: 0,
+    oneTimeExpenses: 0,
     otherMonthly: 0,
     ptiThresholdPercent: 33,
   }
@@ -785,6 +969,15 @@ describe('sharedInputSuggestions (calculator-parity hints)', () => {
     // הכנסה נטו: the income whose 33% allowance covers the 7,649.96 payment
     // (7,649.96 / 0.33 = 23,181.7 → ceil to the ₪500 step).
     expect(suggestions.income).toBe(23_500)
+  })
+
+  it('lifts the income hint by the shared monthly expenses', () => {
+    const result = computeScenario([track()], blankBuyer)
+    // Mortgage alone: 7,649.96 / 0.33 = 23,181.7 → 23,500.
+    expect(sharedInputSuggestions([result], hintInputs).income).toBe(23_500)
+    // A ₪1,500 monthly liability: (7,649.96 + 1,500) / 0.33 = 27,727.2 → 28,000.
+    const withExpenses = sharedInputSuggestions([result], { ...hintInputs, otherMonthly: 1_500 })
+    expect(withExpenses.income).toBe(28_000)
   })
 
   it('hints from the binding (largest) scenario when several are priced', () => {
@@ -833,16 +1026,6 @@ describe('sharedInputSuggestions (calculator-parity hints)', () => {
       incomeText: '30,000',
     })
     expect(typedIncome.income).toBeNull()
-  })
-
-  it('folds shared monthly expenses into the income hint', () => {
-    const result = computeScenario([track()], blankBuyer)
-    const suggestions = sharedInputSuggestions([result], {
-      ...hintInputs,
-      otherMonthly: 1_000,
-    })
-    // (7,649.96 + 1,000) / 0.33 = 26,212 → ceil to the ₪500 step.
-    expect(suggestions.income).toBe(26_500)
   })
 
   it('hints nothing while nothing is priced or an error gates the numbers', () => {

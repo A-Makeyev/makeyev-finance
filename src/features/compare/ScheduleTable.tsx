@@ -37,7 +37,7 @@ export function ScheduleTable({
           <thead>
             <tr>
               <th scope="col">{t('calculator.schedule.yearHeader')}</th>
-              <th scope="col">{t('calculator.charts.axisMonthlyPayment')}</th>
+              <th scope="col">{t('calculator.schedule.paymentHeader')}</th>
               <th scope="col">{t('calculator.schedule.principalHeader')}</th>
               <th scope="col">{t('calculator.schedule.interestHeader')}</th>
               <th scope="col">{t('calculator.schedule.balanceHeader')}</th>

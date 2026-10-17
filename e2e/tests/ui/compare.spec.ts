@@ -172,6 +172,20 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(page.getByTestId('compare-mortgage-sum')).toHaveValue('1,000,000')
   })
 
+  test('adding a track auto-fills its amount from the shared mortgage sum', async ({ page }) => {
+    await page.goto('/compare')
+    // Scenario 2 opens blank while the shared sum is ₪1,000,000. Adding a track
+    // funds the new mix from that loan (500k + 500k) instead of leaving two
+    // empty amount fields, and the column is priced right away.
+    await expect(page.getByTestId('compare-track-amount-2-1')).toHaveValue('')
+    await page.getByTestId('compare-track-add-2').click()
+    await expect(page.getByTestId('compare-track-amount-2-1')).toHaveValue('500,000')
+    await expect(page.getByTestId('compare-track-amount-2-2')).toHaveValue('500,000')
+    await expect(page.getByTestId('compare-metric-loan-2')).toContainText(ils(1_000_000))
+    // The scenario now has figures, so its result card and payments table appear.
+    await expect(page.getByTestId('compare-schedule-2')).toBeVisible()
+  })
+
   test('shared inputs reprice every scenario; LTV status flips to a violation', async ({
     calc,
     page,
@@ -185,6 +199,48 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(page.getByTestId('compare-result-card-1')).toContainText('חריגה מתקרת המימון')
     // Upfront metric shows the recommended cash figure for the shared deal.
     await expect(page.getByTestId('compare-metric-upfront-1')).toContainText(ils(335_400))
+  })
+
+  test('PTI grades the payment, and typed fees join the upfront cash', async ({ page }) => {
+    await page.goto('/compare')
+    // Income 24,000: the opening mix's 7,718.13 first payment is 32.2% of it,
+    // under the 33% ceiling - no PTI warning in the priced card.
+    await page.getByTestId('compare-income').fill('24,000')
+    const card1 = page.getByTestId('compare-result-card-1')
+    await expect(card1).toContainText('החזר בתקרה המומלצת')
+    // The recommended-income metric reports the average-based advice:
+    // ceil(8011.56/0.33/500)·500 = 24,500 at the default inputs.
+    await expect(page.getByTestId('compare-metric-recommendedIncome-1').locator('dd')).toHaveText(
+      ils(24_500),
+    )
+
+    // Drop income below the first payment's ceiling: 7,718.13 / 23,000 = 33.6%.
+    await page.getByTestId('compare-income').fill('23,000')
+    await expect(card1).toContainText('מעל תקרת החזר')
+    // The warning clears exactly at the reported minimum income
+    // (7,718.13 / 23,500 = 32.8%): the boundary itself, not just past it.
+    await page.getByTestId('compare-income').fill('23,500')
+    await expect(card1).toContainText('החזר בתקרה המומלצת')
+    // The metric stays the average-based advice, unaffected by the hourly rate.
+    await expect(page.getByTestId('compare-metric-recommendedIncome-1').locator('dd')).toHaveText(
+      ils(24_500),
+    )
+
+    // The typed transaction costs join the recommended upfront cash: 300,000
+    // suggested capital + 35,400 default fees on the 1.2M deal.
+    await page.getByTestId('compare-property-value').fill('1,200,000')
+    await page.getByTestId('compare-capital').fill('200,000')
+    await expect(page.getByTestId('compare-metric-upfront-1')).toContainText(ils(335_400))
+    // A typed 3% realtor replaces the 2% default: 36,000 → 42,480 VAT, so the
+    // upfront total rises by the 14,160 difference to 349,560.
+    await page.getByTestId('compare-realtor-percent').fill('3')
+    await expect(page.getByTestId('compare-metric-upfront-1')).toContainText(ils(349_560))
+    // The realtor fee pairs the percent with an editable ₪ mirror (calculator
+    // parity): 3% of 1.2M → 42,480 VAT-included.
+    await expect(page.getByTestId('compare-realtor-amount')).toHaveValue('42,480')
+    // Editing the ₪ side sets the equivalent percent (percent stays canonical).
+    await page.getByTestId('compare-realtor-amount').fill('30,000')
+    await expect(page.getByTestId('compare-realtor-percent')).toHaveValue('2.12')
   })
 
   test('other expenses fold into PTI, the boundary, and the upfront cash', async ({ page }) => {
@@ -225,9 +281,11 @@ test.describe('mortgage comparison - /compare', () => {
     await page.locator('[data-testid^="compare-expense-onetime-"]').fill('5,000')
     await expect(page.getByTestId('compare-metric-upfront-1')).toContainText(ils(340_400))
 
-    // Removing the row reprices both figures back down.
-    await page.locator('[data-testid^="compare-expense-remove-"]').click()
-    await expect(page.locator('[data-testid^="compare-expense-amount-"]')).toHaveCount(0)
+    // The single fixed pair has no remove button; clearing both amounts reprices
+    // everything back down.
+    await expect(page.locator('[data-testid^="compare-expense-remove-"]')).toHaveCount(0)
+    await page.locator('[data-testid^="compare-expense-onetime-"]').fill('')
+    await page.locator('[data-testid^="compare-expense-amount-"]').fill('')
     await expect(page.getByTestId('compare-metric-upfront-1')).toContainText(ils(335_400))
     await expect(card1).toContainText('החזר בתקרה המומלצת')
   })
@@ -269,9 +327,12 @@ test.describe('mortgage comparison - /compare', () => {
   test('four trend charts below the cards, each comparing every priced mix', async ({ page }) => {
     await page.goto('/compare')
     // Card 1 is seeded with the calculator mix; card 2 is blank. The charts live
-    // in their own section below the cards: one chart per metric, two per row.
+    // in their own section below the cards: the payment composition chart first,
+    // then the three line charts (the monthly-payment line duplicated its story
+    // and was removed).
     await expect(page.getByTestId('compare-trend')).toBeVisible()
     await expect(page.getByTestId('compare-trends')).toContainText('תשלומים לאורך זמן')
+    await expect(page.getByTestId('compare-trend-payment')).toHaveCount(0)
 
     // Regression: the SVG gridline class once shared the grid container's class
     // name, so the container inherited `opacity: 0.6` and dimmed every chart's
@@ -281,7 +342,7 @@ test.describe('mortgage comparison - /compare', () => {
     )) as string
     expect(opacity).toBe('1')
 
-    const lineMetrics = ['balance', 'interest', 'total']
+    const lineMetrics = ['balance', 'total', 'interest']
     for (const metric of lineMetrics) {
       const panel = page.getByTestId(`compare-trend-${metric}`)
       await expect(panel).toBeVisible()
@@ -289,23 +350,41 @@ test.describe('mortgage comparison - /compare', () => {
       await expect(panel.locator('.compare-trend-line')).toHaveCount(1)
     }
 
-    // The payment panel mirrors the calculator's combined chart: stacked
-    // קרן/ריבית columns (bars) rather than a line, with a two-shade legend.
-    const paymentPanel = page.getByTestId('compare-trend-payment')
-    await expect(paymentPanel).toBeVisible()
-    await expect(paymentPanel.locator('.compare-trend-line')).toHaveCount(0)
-    await expect(paymentPanel.locator('.compare-trend-bar').first()).toBeVisible()
-    await expect(paymentPanel.locator('.compare-trend-inline-legend')).toContainText('קרן')
-    const oneMixBars = await paymentPanel.locator('.compare-trend-bar').count()
+    // The composition panel mirrors the calculator's combined chart: stacked
+    // קרן/ריבית columns (bars), with a two-shade legend.
+    const compositionPanel = page.getByTestId('compare-trend-composition')
+    await expect(compositionPanel).toBeVisible()
+    await expect(compositionPanel).toContainText('הרכב התשלום החודשי')
+    await expect(compositionPanel.locator('.compare-trend-line')).toHaveCount(0)
+    await expect(compositionPanel.locator('.compare-trend-bar').first()).toBeVisible()
+    await expect(compositionPanel.locator('.compare-trend-inline-legend')).toContainText('קרן')
+    await expect(compositionPanel.locator('.compare-trend-inline-legend')).not.toContainText(
+      'compare.',
+    )
+    const oneMixBars = await compositionPanel.locator('.compare-trend-bar').count()
 
-    // Two per row, then the next row below.
+    // The other three panels each have their own visual language, so they do
+    // not read as copies: balance is a filled area, total carries a dot per
+    // year, interest is a dashed line.
+    await expect(page.getByTestId('compare-trend-balance').locator('.compare-trend-area')).toHaveCount(1)
+    await expect(page.getByTestId('compare-trend-interest').locator('.compare-trend-line-dashed')).toHaveCount(1)
+    expect(
+      await page.getByTestId('compare-trend-total').locator('.compare-trend-point').count(),
+    ).toBeGreaterThan(0)
+
+    // Two charts per row, composition first: composition + balance, then total
+    // + interest. All four are equal-width half-row panels.
     const box = async (metric: string) =>
       (await page.getByTestId(`compare-trend-${metric}`).boundingBox())!
-    const payment = await box('payment')
     const balance = await box('balance')
+    const total = await box('total')
     const interest = await box('interest')
-    expect(Math.abs(payment.y - balance.y)).toBeLessThan(4)
-    expect(interest.y).toBeGreaterThan(balance.y + balance.height / 2)
+    const composition = await box('composition')
+    expect(Math.abs(composition.y - balance.y)).toBeLessThan(4)
+    expect(Math.abs(total.y - interest.y)).toBeLessThan(4)
+    expect(total.y).toBeGreaterThan(balance.y + balance.height / 2)
+    expect(Math.abs(composition.width - balance.width)).toBeLessThan(4)
+    expect(Math.abs(total.width - interest.width)).toBeLessThan(4)
 
     // One legend entry for the one priced mix.
     await expect(page.getByTestId('compare-trend-legend').locator('li')).toHaveCount(1)
@@ -319,23 +398,161 @@ test.describe('mortgage comparison - /compare', () => {
       await expect(page.getByTestId(`compare-trend-${metric}`).locator('.compare-trend-line')).toHaveCount(2)
     }
     // The second mix stacks its own bars alongside the first.
-    expect(await paymentPanel.locator('.compare-trend-bar').count()).toBeGreaterThan(oneMixBars)
+    expect(await compositionPanel.locator('.compare-trend-bar').count()).toBeGreaterThan(oneMixBars)
   })
 
-  test('each priced card shows its yearly payments table (always open, no thumb)', async ({
-    page,
-  }) => {
+  test('a mix that ends early drops to the axis on the interest chart only', async ({ page }) => {
+    await page.goto('/compare')
+    // Two priced mixes, terms 10 and 20.
+    await page.getByTestId('compare-preset-2-basket4').click()
+    await page.getByTestId('compare-term-1').fill('10')
+    await page.getByTestId('compare-term-2').fill('20')
+
+    const readLines = async (metric: string) =>
+      (await page.getByTestId(`compare-trend-${metric}`).evaluate((node) => {
+        return Array.from(node.querySelectorAll('.compare-trend-line')).map((path) => {
+          const tokens = (path.getAttribute('d') ?? '').trim().split(/\s+/)
+          const points: { x: number; y: number }[] = []
+          for (let index = 0; index + 2 < tokens.length; index += 3) {
+            points.push({ x: Number(tokens[index + 1]), y: Number(tokens[index + 2]) })
+          }
+          return points
+        })
+      })) as { x: number; y: number }[][]
+
+    // The 10-year mix is drawn to year 10 and no further on balance and total:
+    // 10 points against the 20-year mix's 20, and no vertical closing segment.
+    for (const metric of ['balance', 'total']) {
+      const lines = await readLines(metric)
+      expect(lines, metric).toHaveLength(2)
+      expect(lines.map((line) => line.length).sort((a, b) => a - b), metric).toEqual([10, 20])
+      for (const line of lines) {
+        expect(
+          line[line.length - 1].x,
+          `${metric} ends on a year step, not a vertical drop`,
+        ).not.toBe(line[line.length - 2].x)
+      }
+    }
+
+    // Cumulative interest closes the finished mix with a vertical drop to the
+    // chart's baseline at year 10: 10 real years plus the terminator.
+    const interest = await readLines('interest')
+    expect(interest).toHaveLength(2)
+    expect(interest.map((line) => line.length).sort((a, b) => a - b)).toEqual([11, 20])
+    const short = interest.find((line) => line.length === 11)!
+    const long = interest.find((line) => line.length === 20)!
+    const previous = short[short.length - 2]
+    const last = short[short.length - 1]
+    expect(last.x).toBe(previous.x)
+    expect(last.y).toBeGreaterThan(previous.y)
+    // The drop is at year 10 (the long mix's tenth yearly point) and lands on
+    // the lowest y of the plot, i.e. the zero axis.
+    expect(last.x).toBe(long[9].x)
+    expect(last.y).toBe(Math.max(...interest.flat().map((point) => point.y)))
+    // The running mix still ends on a year step, with no drop of its own.
+    expect(long[long.length - 1].x).not.toBe(long[long.length - 2].x)
+  })
+
+  test('each priced card shows its mix donut above the yearly payments table', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('site_language', 'hebrew'))
     await page.goto('/compare')
     const table = page.getByTestId('compare-schedule-1')
     await expect(table).toBeVisible()
     await expect(page.getByTestId('compare-schedule-1-scroll')).toBeVisible()
+
+    // The composition donut sits directly above the table and carries the same
+    // data as text in its legend (never chart-only): the seeded basket4 mix is
+    // three slices, each with a type name, amount and share.
+    const donut = page.getByTestId('compare-mix-donut-1')
+    await expect(donut).toBeVisible()
+    await expect(donut).toContainText('הרכב התמהיל')
+    await expect(donut.locator('svg')).toBeVisible()
+    await expect(donut.locator('.mix-legend li')).toHaveCount(3)
+    await expect(donut.locator('.mix-legend li').first()).toContainText('%')
+    const donutBox = (await donut.boundingBox())!
+    const tableBox = (await table.boundingBox())!
+    expect(donutBox.y + donutBox.height).toBeLessThanOrEqual(tableBox.y + 1)
+
     // The scroll container hides its scrollbar but stays scrollable.
     const hidden = (await page.getByTestId('compare-schedule-1-scroll').evaluate(
       (node) => getComputedStyle(node).scrollbarWidth,
     )) as string
     expect(hidden).toBe('none')
-    // The blank card has no table.
+    // The blank card has neither a table nor a donut.
     await expect(page.getByTestId('compare-schedule-2')).toHaveCount(0)
+    await expect(page.getByTestId('compare-mix-donut-2')).toHaveCount(0)
+  })
+
+  test('payments table headers and figures share the RTL reading edge', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('site_language', 'hebrew'))
+    await page.goto('/compare')
+    await expect(page.getByTestId('compare-schedule-1')).toBeVisible()
+
+    // Headers and figures both start at each column's right edge (the reading
+    // edge in RTL), so a label sits above its own numbers.
+    const layout = await page.evaluate(() => {
+      const table = document.querySelector('[data-testid="compare-schedule-1"] .payments-table')!
+      const headers = Array.from(table.querySelectorAll('thead th'))
+      const figures = Array.from(table.querySelectorAll('tbody tr:first-child > *'))
+      return {
+        headers: headers.map((cell) => ({
+          align: getComputedStyle(cell).textAlign,
+          width: cell.getBoundingClientRect().width,
+        })),
+        figures: figures.map((cell) => ({
+          align: getComputedStyle(cell).textAlign,
+          width: cell.getBoundingClientRect().width,
+        })),
+      }
+    })
+    for (const header of layout.headers) expect(header.align).toBe('start')
+    for (const figure of layout.figures) expect(figure.align).toBe('start')
+    // Year column: a 2-digit year plus "שנה" only, well under the numeric columns.
+    expect(layout.headers[0].width).toBeLessThan(layout.headers[1].width)
+    expect(layout.figures[0].width).toBeLessThan(layout.figures[1].width)
+
+    // The space under the bordered table matches the card's side gutter (the
+    // table used to sit 8px higher than the right/left padding asked for).
+    const gaps = (await page.evaluate(`(() => {
+      const card = document.querySelector('[data-testid="compare-result-card-1"]')
+      const scroller = document.querySelector('[data-testid="compare-schedule-1-scroll"]')
+      const c = card.getBoundingClientRect()
+      const s = scroller.getBoundingClientRect()
+      const border = parseFloat(getComputedStyle(card).borderTopWidth) || 0
+      return {
+        bottom: c.bottom - s.bottom - border,
+        side: Math.min(s.left - c.left, c.right - s.right) - border,
+      }
+    })()`)) as { bottom: number; side: number }
+    expect(Math.abs(gaps.bottom - gaps.side)).toBeLessThanOrEqual(1)
+  })
+
+  test('an error scenario offers a one-click auto-fix', async ({ page }) => {
+    await page.goto('/compare')
+    await expect(page.getByTestId('compare-shell')).toBeVisible()
+    const card = page.getByTestId('compare-result-card-1')
+    // Turning the opening mix's fixed track variable puts 100% on variable
+    // tracks, over the Bank of Israel ⅔ ceiling. A freshly hydrated page can
+    // replace the select right after the first change, so retry until the
+    // controlled value sticks instead of assuming the first shot landed.
+    const typeSelect = page.getByTestId('compare-track-type-1-2')
+    await expect(typeSelect).toHaveValue('fixed')
+    await expect(async () => {
+      await typeSelect.selectOption('prime')
+      await expect(typeSelect).toHaveValue('prime')
+    }).toPass()
+    await expect(card).toContainText('חריגה מתקרת הריבית המשתנה')
+
+    const fix = page.getByTestId('compare-autofix-1')
+    await expect(fix).toBeVisible()
+    await expect(fix).toContainText('תיקון תמהיל אוטומטית')
+    await fix.click()
+
+    // The repair clears the violation and keeps the scenario priced at the
+    // same shared loan (the excess moves to the fixed side).
+    await expect(card).not.toContainText('חריגה מתקרת הריבית המשתנה')
+    await expect(page.getByTestId('compare-metric-loan-1')).toContainText(ils(1_000_000))
+    await expect(fix).toHaveCount(0)
   })
 
   test('the payments tables line up across cards and fit without sideways scroll', async ({
@@ -513,10 +730,13 @@ const LAYOUT_PROBLEMS = `(() => {
           problems.push(where + ' remove button overlaps its legend')
         }
       }
-      // The remove button belongs on the fieldset's chevron column (the same
-      // spot it keeps in the calculator), above the fields - not floating in
-      // the card's corner.
-      const chevron = track.querySelector('.select-chevron')
+      // The remove button belongs on the fieldset's inline-end chevron column
+      // (the same spot it keeps in the calculator), above the fields - not
+      // floating in the card's corner. The two-equal-column track puts the last
+      // field (method, a select) on the inline-end, so its chevron is the one
+      // the absolutely positioned button lines up with.
+      const chevrons = track.querySelectorAll('.select-chevron')
+      const chevron = chevrons[chevrons.length - 1]
       if (remove && chevron) {
         const a = remove.getBoundingClientRect()
         const b = chevron.getBoundingClientRect()
@@ -547,8 +767,8 @@ const LAYOUT_PROBLEMS = `(() => {
   return problems
 })()`
 
-/** Desktop widths, from the 768px results-grid switch up to the 1240px shell. */
-const EDITOR_WIDTHS = [768, 900, 1024, 1280, 1600]
+/** Desktop widths, from the 768px results-grid switch up to the 1280px shell. */
+const EDITOR_WIDTHS = [768, 900, 1024, 1160, 1280, 1600]
 
 for (const language of ['hebrew', 'english'] as const) {
   test(`scenario editors stay inside their cards at every width - ${language}`, async ({

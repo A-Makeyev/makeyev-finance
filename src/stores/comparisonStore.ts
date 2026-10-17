@@ -2,22 +2,31 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import {
   allocatePreset,
+  autoFixVariableMix,
+  DEFAULT_LAWYER_PERCENT,
+  DEFAULT_REALTOR_PERCENT,
   DEFAULT_TERM_YEARS,
   deriveLoanAmount,
   distributeEqually,
+  isVariableType,
+  LAWYER_MINIMUM_FEE,
+  lawyerFee,
   MAX_HOME_VALUE,
   MAX_OTHER_EXPENSES,
   MAX_TRACKS,
+  MAX_YEARS,
   PRESETS,
   redistributeTrackAmounts,
   scaleTrackAmounts,
   splitLargestForNewTrack,
+  VAT_RATE,
   type PresetId,
   type PropertyPurpose,
 } from '@/lib/amortization'
 import { formatAmountWithCaret, formatGroupedNumber, parseAmountText } from '@/lib/format'
 import {
   computeScenario,
+  sharedFeeProfileFromTexts,
   type ScenarioResult,
   type SharedBuyerInputs,
 } from '@/features/compare/computeScenario'
@@ -50,10 +59,10 @@ export interface ComparisonScenario {
 }
 
 /** One repeatable shared expense row: a recurring monthly amount plus an
-    optional one-time amount (the calculator's OtherExpense, compare copy). */
+    optional one-time amount. Unlike the calculator's rows these carry no
+    name/description - the compare page keeps just the two amounts. */
 export interface SharedExpense {
   id: string
-  label: string
   monthlyText: string
   oneTimeText: string
 }
@@ -73,11 +82,21 @@ export interface ComparisonSharedInputs {
   mortgageSumText: string
   /** Loan memory for the sum-field mirror when the property is cleared. */
   derivedLoanMemory: number
-  /** Fee profile (seeded from the calculator; priced into every upfront total). */
-  realtorPercent: number
-  lawyerPercent: number
-  appraiserFee: number
-  renovations: number
+  /**
+   * Transaction costs (calculator parity): realtor/lawyer as percent text
+   * (blank falls back to the market norm, like the calculator), appraiser as
+   * a flat ₪ fee, and the planned renovation budget. All are one-time costs;
+   * renovations also eat into the capital the loan derives from.
+   */
+  realtorPercentText: string
+  lawyerPercentText: string
+  /** The ₪-inclusive mirror of the realtor/lawyer percents (calculator
+      parity): the percent stays canonical, the ₪ side converts back into it.
+      Both derive at recompute time, so these hold the mirrored display text. */
+  realtorAmountText: string
+  lawyerAmountText: string
+  appraiserFeeText: string
+  renovationAmountText: string
   /** Repeatable expense rows (calculator parity): the monthly amounts fold
       into the payment-to-income check, the one-time amounts join the upfront
       cash total. Sums derive at recompute time - no cached copies. */
@@ -85,10 +104,25 @@ export interface ComparisonSharedInputs {
   ptiThresholdPercent: number
 }
 
+/**
+ * Derived fee-field UX (calculator parity): the market-norm hints shown on a
+ * cleared pair, whether the ₪ mirrors have a basis to render against, and the
+ * lawyer-floor flag the note under the pair explains.
+ */
+export interface ComparisonFeeHints {
+  amountsVisible: boolean
+  realtorPercentHint: string | null
+  lawyerPercentHint: string | null
+  realtorAmountHint: string | null
+  lawyerAmountHint: string | null
+  lawyerFloorApplied: boolean
+}
+
 export interface ComparisonState {
   scenarios: ComparisonScenario[]
   shared: ComparisonSharedInputs
   results: ScenarioResult[]
+  fee: ComparisonFeeHints
 }
 
 export interface ComparisonActions {
@@ -101,8 +135,25 @@ export interface ComparisonActions {
   commitCapitalBlur(): void
   commitIncomeBlur(): void
   setPurpose(purpose: PropertyPurpose): void
+  updateRealtorPercent(raw: string): string
+  updateLawyerPercent(raw: string): string
+  updateRealtorAmount(
+    raw: string,
+    caret: number | null,
+  ): { text: string; caret: number | null }
+  updateLawyerAmount(
+    raw: string,
+    caret: number | null,
+  ): { text: string; caret: number | null }
+  updateAppraiserFee(
+    raw: string,
+    caret: number | null,
+  ): { text: string; caret: number | null }
+  updateRenovationAmount(
+    raw: string,
+    caret: number | null,
+  ): { text: string; caret: number | null }
   addSharedExpense(): void
-  updateSharedExpenseLabel(id: string, label: string): void
   updateSharedExpenseMonthly(
     id: string,
     raw: string,
@@ -132,6 +183,13 @@ export interface ComparisonActions {
   changeTrackMethod(scenarioId: string, trackId: string, method: TrackState['method']): void
   setScenarioTermYears(scenarioId: string, years: number): void
   setMortgageSum(raw: string, caret: number | null): { text: string; caret: number | null }
+  /**
+   * One-click repair of a scenario's error state: trims an over-cap variable
+   * mix back under the Bank of Israel 2/3 ceiling (the calculator's own
+   * autofix rule, topped back up to the shared loan on the fixed side), and
+   * normalises invalid terms/amounts against the shared loan.
+   */
+  fixScenario(scenarioId: string): void
   loadScenarioPreset(scenarioId: string, presetId: PresetId): void
   reset(): void
 }
@@ -140,15 +198,6 @@ export type ComparisonStore = ComparisonState & ComparisonActions
 
 let nextScenarioId = 1
 let nextTrackId = 1
-
-function makeScenarioId(): string {
-  return `scenario-${nextScenarioId++}`
-}
-
-function makeTrackId(): string {
-  return `ctrack-${nextTrackId++}`
-}
-
 let nextExpenseId = 1
 
 function makeExpenseId(): string {
@@ -157,7 +206,15 @@ function makeExpenseId(): string {
 
 /** A blank shared expense row - the calculator opens with one as well. */
 function blankExpense(): SharedExpense {
-  return { id: makeExpenseId(), label: '', monthlyText: '', oneTimeText: '' }
+  return { id: makeExpenseId(), monthlyText: '', oneTimeText: '' }
+}
+
+function makeScenarioId(): string {
+  return `scenario-${nextScenarioId++}`
+}
+
+function makeTrackId(): string {
+  return `ctrack-${nextTrackId++}`
 }
 
 /**
@@ -217,25 +274,47 @@ function defaultSharedInputs(): ComparisonSharedInputs {
     // mix's total (the calculator's startingAmountText prefill).
     mortgageSumText: '1,000,000',
     derivedLoanMemory: 0,
-    realtorPercent: 2,
-    lawyerPercent: 0.5,
-    appraiserFee: 0,
-    renovations: 0,
+    // Blank is deliberate: the fee profile resolves to the market norm
+    // (2% realtor / 0.5% lawyer) only when the fields look untouched, and a
+    // blank field reads as "not entered" rather than a typed 0.
+    realtorPercentText: '',
+    lawyerPercentText: '',
+    realtorAmountText: '',
+    lawyerAmountText: '',
+    appraiserFeeText: '',
+    renovationAmountText: '',
     otherExpenses: [blankExpense()],
     ptiThresholdPercent: 33,
   }
 }
 
+/** A resting fee-hints block (no basis, cleared pair). recompute refines it. */
+function defaultFeeHints(): ComparisonFeeHints {
+  return {
+    amountsVisible: false,
+    realtorPercentHint: String(DEFAULT_REALTOR_PERCENT),
+    lawyerPercentHint: String(DEFAULT_LAWYER_PERCENT),
+    realtorAmountHint: null,
+    lawyerAmountHint: null,
+    lawyerFloorApplied: false,
+  }
+}
+
 function toComputeInputs(shared: ComparisonSharedInputs): SharedBuyerInputs {
+  const profile = sharedFeeProfileFromTexts({
+    realtorPercentText: shared.realtorPercentText,
+    lawyerPercentText: shared.lawyerPercentText,
+    appraiserFeeText: shared.appraiserFeeText,
+  })
   return {
     propertyValueText: shared.propertyValueText,
     capitalText: shared.capitalText,
     incomeText: shared.incomeText,
     purpose: shared.purpose,
-    realtorPercent: shared.realtorPercent,
-    lawyerPercent: shared.lawyerPercent,
-    appraiserFee: shared.appraiserFee,
-    renovations: shared.renovations,
+    realtorPercent: profile.realtorPercent,
+    lawyerPercent: profile.lawyerPercent,
+    appraiserFee: profile.appraiserFee,
+    renovations: parseAmountText(shared.renovationAmountText),
     // Sums derive from the rows at recompute time, so an edited row can
     // never leave a stale total behind.
     otherMonthly: shared.otherExpenses.reduce(
@@ -252,6 +331,7 @@ function toComputeInputs(shared: ComparisonSharedInputs): SharedBuyerInputs {
 
 /** Re-runs every scenario's numbers against the (possibly changed) shared inputs. */
 function recompute(s: ComparisonState): void {
+  syncFeeDialogue(s)
   s.results = s.scenarios.map((scenario) =>
     computeScenario(scenario.tracks, toComputeInputs(s.shared)),
   )
@@ -292,9 +372,28 @@ function displayAmountText(amount: number): string {
   return amount > 0 ? Math.round(amount).toLocaleString('en-US') : ''
 }
 
-/** Capital left for the loan after renovations eat into it (calculator parity). */
+/** Sum of formatted amount texts as grouped shekels, blank when the sum is 0. */
+function sumAmountsText(texts: string[]): string {
+  const sum = texts.reduce((total, text) => total + parseAmountText(text), 0)
+  return sum > 0 ? formatGroupedNumber(sum) : ''
+}
+
+/**
+ * Capital left for the loan after renovations AND one-time expenses eat into
+ * it (calculator parity): both are paid from savings, so the down-payment
+ * equity - and the loan derived from it - shrinks. Monthly expenses do not.
+ */
 function capitalForLoan(s: ComparisonState): number {
-  return Math.max(0, parseAmountText(s.shared.capitalText) - s.shared.renovations)
+  const oneTime = s.shared.otherExpenses.reduce(
+    (sum, expense) => sum + parseAmountText(expense.oneTimeText),
+    0,
+  )
+  return Math.max(
+    0,
+    parseAmountText(s.shared.capitalText) -
+      parseAmountText(s.shared.renovationAmountText) -
+      oneTime,
+  )
 }
 
 /**
@@ -311,6 +410,85 @@ function loanAmount(s: ComparisonState): number {
     parseAmountText(s.shared.mortgageSumText),
     capitalForLoan(s),
   )
+}
+
+/** Percent text ('', '2', '2.5') to a non-negative finite number. */
+function parsePercentText(text: string): number {
+  const value = Number(text.replace(',', '.'))
+  return Number.isFinite(value) && value > 0 ? value : 0
+}
+
+/** Cleared realtor percent rests on the market norm (calculator parity). */
+function effectiveRealtorPercent(s: ComparisonState): number {
+  const text = s.shared.realtorPercentText.trim()
+  return text === '' ? DEFAULT_REALTOR_PERCENT : parsePercentText(text)
+}
+
+/** Cleared lawyer percent rests on the market norm (calculator parity). */
+function effectiveLawyerPercent(s: ComparisonState): number {
+  const text = s.shared.lawyerPercentText.trim()
+  return text === '' ? DEFAULT_LAWYER_PERCENT : parsePercentText(text)
+}
+
+/**
+ * Fee basis for the percent <-> ₪ conversion (calculator parity): the property
+ * value, or the shared loan + post-cost capital when no property is entered.
+ * One shared basis keeps the pair consistent across scenarios - the fees
+ * describe the buyer, not the mix.
+ */
+function feeBasisOf(s: ComparisonState): number {
+  const property = parseAmountText(s.shared.propertyValueText)
+  if (property > 0) return property
+  return loanAmount(s) + capitalForLoan(s)
+}
+
+/**
+ * Percent text derived from an entered ₪ amount. Kept precise (2 decimals,
+ * trailing zeros trimmed) so the mirrored ₪ round-trips from the percent.
+ */
+function percentTextFromAmount(percent: number): string {
+  if (!Number.isFinite(percent) || percent <= 0) return ''
+  return String(Number(percent.toFixed(2)))
+}
+
+/**
+ * Keep the fee pair and its hints in step (calculator parity): the percent is
+ * canonical, the ₪ mirror re-derives from it, and a cleared pair shows the
+ * market norm as a hint instead of refilling. Also records whether the pair
+ * has a basis to render the ₪ mirror against and whether the lawyer floor won.
+ */
+function syncFeeDialogue(s: ComparisonState): void {
+  const realtorCleared = s.shared.realtorPercentText.trim() === ''
+  const lawyerCleared = s.shared.lawyerPercentText.trim() === ''
+  const basis = feeBasisOf(s)
+  s.fee.amountsVisible = basis > 0
+  s.fee.realtorPercentHint = realtorCleared ? String(DEFAULT_REALTOR_PERCENT) : null
+  s.fee.lawyerPercentHint = lawyerCleared ? String(DEFAULT_LAWYER_PERCENT) : null
+  if (basis > 0) {
+    const realtorPreVat = (effectiveRealtorPercent(s) / 100) * basis
+    const lawyerPercent = effectiveLawyerPercent(s)
+    const lawyerPreVat = lawyerFee(basis, lawyerPercent)
+    const realtorWithVat =
+      realtorPreVat > 0 ? formatGroupedNumber(Math.round(realtorPreVat * (1 + VAT_RATE))) : ''
+    const lawyerWithVat =
+      lawyerPreVat > 0 ? formatGroupedNumber(Math.round(lawyerPreVat * (1 + VAT_RATE))) : ''
+    s.fee.lawyerFloorApplied =
+      !lawyerCleared &&
+      lawyerPreVat > 0 &&
+      (lawyerPercent / 100) * basis < LAWYER_MINIMUM_FEE - 1e-6
+    // A typed percent rewrites its ₪ mirror; a cleared pair stays blank so the
+    // hint shows (and the field never refills under the user).
+    s.shared.realtorAmountText = realtorCleared ? '' : realtorWithVat
+    s.shared.lawyerAmountText = lawyerCleared ? '' : lawyerWithVat
+    s.fee.realtorAmountHint = realtorCleared ? realtorWithVat || null : null
+    s.fee.lawyerAmountHint = lawyerCleared ? lawyerWithVat || null : null
+  } else {
+    s.shared.realtorAmountText = ''
+    s.shared.lawyerAmountText = ''
+    s.fee.realtorAmountHint = null
+    s.fee.lawyerAmountHint = null
+    s.fee.lawyerFloorApplied = false
+  }
 }
 
 /** Pure scaleTrackAmounts applied to one scenario's tracks. */
@@ -414,6 +592,7 @@ export const useComparisonStore = create<ComparisonStore>()(
     scenarios: createInitialScenarios(),
     shared: defaultSharedInputs(),
     results: [],
+    fee: defaultFeeHints(),
 
     setLabel: (id, label) => {
       set((s) => {
@@ -490,18 +669,85 @@ export const useComparisonStore = create<ComparisonStore>()(
       })
     },
 
+    updateRealtorPercent: (raw) => {
+      const clean = sanitizePercentInput(raw)
+      set((s) => {
+        s.shared.realtorPercentText = clean
+        recompute(s)
+      })
+      return clean
+    },
+
+    updateLawyerPercent: (raw) => {
+      const clean = sanitizePercentInput(raw)
+      set((s) => {
+        s.shared.lawyerPercentText = clean
+        recompute(s)
+      })
+      return clean
+    },
+
+    updateRealtorAmount: (raw, caret) => {
+      const formatted = formatAmountWithCaret(raw, caret)
+      set((s) => {
+        const basis = feeBasisOf(s)
+        const value = parseAmountText(formatted.text)
+        // Editing the ₪ side sets the equivalent percent (the percent stays
+        // canonical); recompute then mirrors the ₪ back from it. A cleared or
+        // zero field restores the market-norm hint like the property field.
+        if (basis > 0) {
+          s.shared.realtorPercentText =
+            value > 0 ? percentTextFromAmount((value / (1 + VAT_RATE) / basis) * 100) : ''
+        }
+        recompute(s)
+      })
+      return formatted
+    },
+
+    updateLawyerAmount: (raw, caret) => {
+      const formatted = formatAmountWithCaret(raw, caret)
+      set((s) => {
+        const basis = feeBasisOf(s)
+        const value = parseAmountText(formatted.text)
+        if (basis > 0) {
+          s.shared.lawyerPercentText =
+            value > 0 ? percentTextFromAmount((value / (1 + VAT_RATE) / basis) * 100) : ''
+        }
+        recompute(s)
+        // Keep the typed ₪ figure when the ₪6,000 pre-VAT minimum would have
+        // replaced it (calculator parity): the field shows what was typed and
+        // the floor note explains that the real fee is the minimum.
+        if (s.fee.lawyerFloorApplied) s.shared.lawyerAmountText = formatted.text
+      })
+      return formatted
+    },
+
+    updateAppraiserFee: (raw, caret) => {
+      const formatted = formatAmountWithCaret(raw, caret)
+      set((s) => {
+        s.shared.appraiserFeeText = formatted.text
+        recompute(s)
+      })
+      return formatted
+    },
+
+    updateRenovationAmount: (raw, caret) => {
+      const formatted = formatAmountWithCaret(raw, caret)
+      set((s) => {
+        s.shared.renovationAmountText = formatted.text
+        // Calculator parity: renovations reduce the capital the loan is
+        // derived from, so the shared loan and every scenario re-fill.
+        applySharedLoanInput(s)
+        recompute(s)
+      })
+      return formatted
+    },
+
     addSharedExpense: () => {
       set((s) => {
         if (s.shared.otherExpenses.length >= MAX_OTHER_EXPENSES) return
         s.shared.otherExpenses.push(blankExpense())
         recompute(s)
-      })
-    },
-
-    updateSharedExpenseLabel: (id, label) => {
-      set((s) => {
-        const expense = s.shared.otherExpenses.find((entry) => entry.id === id)
-        if (expense) expense.label = label
       })
     },
 
@@ -520,6 +766,9 @@ export const useComparisonStore = create<ComparisonStore>()(
       set((s) => {
         const expense = s.shared.otherExpenses.find((entry) => entry.id === id)
         if (expense) expense.oneTimeText = formatted.text
+        // Calculator parity: a one-time expense eats the down-payment equity
+        // like renovations, so the shared loan and every scenario re-fill.
+        applySharedLoanInput(s)
         recompute(s)
       })
       return formatted
@@ -528,6 +777,9 @@ export const useComparisonStore = create<ComparisonStore>()(
     removeSharedExpense: (id) => {
       set((s) => {
         s.shared.otherExpenses = s.shared.otherExpenses.filter((entry) => entry.id !== id)
+        // Removing a row can restore equity (a one-time amount goes with it),
+        // so re-derive the shared loan like an edit does.
+        applySharedLoanInput(s)
         recompute(s)
       })
     },
@@ -590,6 +842,27 @@ export const useComparisonStore = create<ComparisonStore>()(
             scenario.tracks.forEach((existing, index) => {
               existing.amountText = displayAmountText(amounts[index])
             })
+          }
+          // ...and the shared loan from the תמהילים section funds whatever the
+          // split above could not: a scenario with no amounts at all gets the
+          // loan split equally across its tracks (last one absorbs the
+          // remainder), and a mix whose total drifted off the shared loan is
+          // snapped back onto it. A mix that already totals the loan is left
+          // exactly as the split left it.
+          const loan = loanAmount(s)
+          if (loan > 0) {
+            const total = scenario.tracks.reduce(
+              (sum, entry) => sum + parseAmountText(entry.amountText),
+              0,
+            )
+            if (total === 0) {
+              const shares = distributeEqually(loan, scenario.tracks.length)
+              scenario.tracks.forEach((entry, index) => {
+                entry.amountText = displayAmountText(shares[index])
+              })
+            } else if (total !== loan) {
+              snapScenarioTracksToLoan(s, scenario)
+            }
           }
         }
         recompute(s)
@@ -733,6 +1006,90 @@ export const useComparisonStore = create<ComparisonStore>()(
       return formatted
     },
 
+    fixScenario: (scenarioId) => {
+      set((s) => {
+        const index = s.scenarios.findIndex((entry) => entry.id === scenarioId)
+        if (index < 0) return
+        const scenario = s.scenarios[index]
+        const error = s.results[index]?.error
+        if (!error) return
+        const loan = loanAmount(s)
+
+        if (error === 'variableCap') {
+          const fix = autoFixVariableMix(
+            scenario.tracks.map((track) => ({
+              amount: parseAmountText(track.amountText),
+              isVariable: isVariableType(track.type),
+            })),
+          )
+          if (fix.convertedToFixedIndex !== null) {
+            const converted = scenario.tracks[fix.convertedToFixedIndex]
+            converted.type = 'fixed'
+            // Same rule as changeTrackType: keep a custom rate, reseed an auto one.
+            if (!converted.rateText.trim() || converted.isAutoRate) {
+              converted.rateText = defaultRateFor('fixed')
+              converted.isAutoRate = true
+            }
+          }
+          scenario.tracks.forEach((track, trackIndex) => {
+            track.amountText = displayAmountText(Math.max(0, fix.amounts[trackIndex]))
+          })
+          // The trim takes the excess off the variable side. On this page the
+          // shared loan is the invariant every column is compared at, so the
+          // excess returns to the fixed side instead of leaving the loan.
+          if (loan > 0) {
+            const total = scenario.tracks.reduce(
+              (sum, track) => sum + parseAmountText(track.amountText),
+              0,
+            )
+            const shortfall = loan - total
+            if (shortfall > 0) {
+              const fundedFixed = scenario.tracks.filter(
+                (track) => !isVariableType(track.type) && parseAmountText(track.amountText) > 0,
+              )
+              if (fundedFixed.length > 0) {
+                const target = fundedFixed[fundedFixed.length - 1]
+                target.amountText = displayAmountText(
+                  parseAmountText(target.amountText) + shortfall,
+                )
+              } else {
+                // No fixed track carries money: split the shortfall across the
+                // fixed tracks (autoFixVariableMix always leaves at least one).
+                const fixedTracks = scenario.tracks.filter(
+                  (track) => !isVariableType(track.type),
+                )
+                const shares = distributeEqually(shortfall, fixedTracks.length)
+                fixedTracks.forEach((track, fixedIndex) => {
+                  track.amountText = displayAmountText(shares[fixedIndex])
+                })
+              }
+            }
+          }
+          // The repaired mix no longer matches the preset that seeded it.
+          scenario.activePreset = null
+        } else {
+          // 'positive': every track needs a 1..30 year term and a positive
+          // amount. Clamp the term, drop zero amounts, then fund whatever is
+          // left from the shared loan (the same rule the add-track uses).
+          const years = Math.min(
+            MAX_YEARS,
+            Math.max(1, Math.round(scenario.termYears) || DEFAULT_TERM_YEARS),
+          )
+          scenario.termYears = years
+          scenario.tracks.forEach((track) => {
+            const trackYears = Number(track.yearsText)
+            if (!Number.isFinite(trackYears) || trackYears < 1 || trackYears > MAX_YEARS) {
+              track.yearsText = String(years)
+            }
+            if (parseAmountText(track.amountText) <= 0) track.amountText = ''
+          })
+          scenario.activePreset = null
+          if (loan > 0) fillScenarioTracksFromLoanInput(s, scenario)
+        }
+        recompute(s)
+      })
+    },
+
     loadScenarioPreset: (scenarioId, presetId) => {
       set((s) => {
         const scenario = s.scenarios.find((entry) => entry.id === scenarioId)
@@ -792,6 +1149,8 @@ export function seedFromCalculator(calculator: {
   purpose: PropertyPurpose
   realtorPercentText: string
   lawyerPercentText: string
+  realtorAmountText: string
+  lawyerAmountText: string
   appraiserFeeText: string
   renovationAmountText: string
   otherExpenses: Array<{ label: string; amountText: string; oneTimeAmountText: string }>
@@ -807,19 +1166,22 @@ export function seedFromCalculator(calculator: {
       capitalText: calculator.capitalText,
       incomeText: calculator.incomeText,
       purpose: calculator.purpose,
-      realtorPercent: percentOrDefault(calculator.realtorPercentText, 2),
-      lawyerPercent: percentOrDefault(calculator.lawyerPercentText, 0.5),
-      appraiserFee:
-        calculator.appraiserFeeText.trim() === ''
-          ? 0
-          : parseAmountText(calculator.appraiserFeeText),
-      renovations: parseAmountText(calculator.renovationAmountText),
-      otherExpenses: calculator.otherExpenses.map((expense) => ({
-        id: makeExpenseId(),
-        label: expense.label,
-        monthlyText: expense.amountText,
-        oneTimeText: expense.oneTimeAmountText,
-      })),
+      realtorPercentText: calculator.realtorPercentText,
+      lawyerPercentText: calculator.lawyerPercentText,
+      realtorAmountText: calculator.realtorAmountText,
+      lawyerAmountText: calculator.lawyerAmountText,
+      appraiserFeeText: calculator.appraiserFeeText,
+      renovationAmountText: calculator.renovationAmountText,
+      // This page keeps exactly ONE expense row (no add/remove), so the
+      // calculator's rows collapse into a single pair by summing their monthly
+      // and one-time amounts (the compare pair drops the calculator's name).
+      otherExpenses: [
+        {
+          id: makeExpenseId(),
+          monthlyText: sumAmountsText(calculator.otherExpenses.map((e) => e.amountText)),
+          oneTimeText: sumAmountsText(calculator.otherExpenses.map((e) => e.oneTimeAmountText)),
+        },
+      ],
       ptiThresholdPercent: calculator.ptiThresholdPercent,
       // The calculator's sum travels as the ONE shared loan (parity): the mix
       // the user arrived with is scenario 1, and scenario 2 is an alternative
@@ -849,7 +1211,13 @@ export function seedFromCalculator(calculator: {
   })
 }
 
-function percentOrDefault(text: string, fallback: number): number {
-  const value = Number(text.replace(',', '.'))
-  return Number.isFinite(value) && value > 0 ? value : fallback
+/** Percent input: digits and a single decimal separator, max 2 decimals. */
+function sanitizePercentInput(raw: string): string {
+  const cleaned = raw
+    .replace(/[^0-9.,]/g, '')
+    .replace(',', '.')
+    .replace(/(\.\d\d)\d+/, '$1')
+  const firstDot = cleaned.indexOf('.')
+  if (firstDot === -1) return cleaned
+  return cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '')
 }

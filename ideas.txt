@@ -18,6 +18,8 @@ Ideas for my business
 Use REA to inspect https://www.smartnpv.co.il/. Clone this website for me.
 
 
+when we leave compare page with changes, need modal prompt to save or discard like in calculator, also can we add the compare details in our profile like we save mixes? 
+
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

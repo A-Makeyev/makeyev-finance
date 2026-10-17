@@ -365,6 +365,67 @@ test.describe('article comments', () => {
     await expect(comments.comments).toHaveCount(3)
   })
 
+  test('folding replies keeps the clicked comment at the same screen position', async ({
+    mockedPage,
+  }) => {
+    // A long thread with a full page of comments below it, so the fold changes
+    // the document height without hitting the page bottom: the comment the
+    // reader just clicked must stay put, not jump under the cursor.
+    const base = {
+      parentId: null,
+      userImage: null,
+      editedAt: null,
+      deleted: false,
+      mine: false,
+      canDelete: false,
+    }
+    const now = Date.now()
+    const feed = [
+      { ...base, id: 'p1', userName: 'Dana', body: 'parent', createdAt: new Date(now).toISOString() },
+      ...Array.from({ length: 8 }, (_, index) => ({
+        ...base,
+        id: `r${index + 1}`,
+        parentId: 'p1',
+        userName: 'Noa',
+        body: `reply ${index + 1}`,
+        createdAt: new Date(now + (index + 1) * 1000).toISOString(),
+      })),
+      ...Array.from({ length: 6 }, (_, index) => ({
+        ...base,
+        id: `q${index + 1}`,
+        userName: 'Later',
+        body: `later ${index + 1}`,
+        createdAt: new Date(now - 100_000 + index * 1000).toISOString(),
+      })),
+    ]
+    await mockedPage.route('**/api/articles/mortgage-decisions/comments', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ comments: feed }),
+      }),
+    )
+
+    const comments = new CommentsPage(mockedPage)
+    await mockedPage.setViewportSize({ width: 1280, height: 900 })
+    await comments.goto('/en/articles/mortgage-decisions')
+    await expect(comments.comments).toHaveCount(15)
+
+    const toggle = comments.collapseToggles
+    await expect(toggle).toHaveCount(1)
+    // Low in the viewport on purpose: the document then keeps enough room
+    // below the toggle to absorb the fold, so its position stays reachable.
+    await comments.placeFirstToggleAt(700)
+    const before = (await toggle.boundingBox())!.y
+
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(comments.children).toHaveCount(0)
+
+    const after = (await toggle.boundingBox())!.y
+    expect(Math.abs(after - before)).toBeLessThanOrEqual(1)
+  })
+
   test('a #comment- deep link scrolls the target comment into view', async ({ mockedPage }) => {
     // The profile's reply cards link to /articles/<slug>#comment-<id>; the
     // comments load asynchronously, so the scroll has to happen once the

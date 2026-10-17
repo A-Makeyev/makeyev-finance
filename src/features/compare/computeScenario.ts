@@ -109,7 +109,9 @@ export interface SharedBuyerInputs {
   lawyerPercent: number
   appraiserFee: number
   renovations: number
+  /** Recurring monthly liabilities (car loan, arrears) - fold into PTI. */
   otherMonthly: number
+  /** One-time cash costs (moving, furniture) - fold into the upfront total. */
   oneTimeExpenses: number
   ptiThresholdPercent: number
 }
@@ -142,7 +144,12 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
   const property = parseAmountText(inputs.propertyValueText)
   const capital = parseAmountText(inputs.capitalText)
   const income = parseAmountText(inputs.incomeText)
-  const capitalForLoan = Math.max(0, capital - inputs.renovations)
+  // Renovations and one-time expenses are paid from savings, so they shrink
+  // the equity actually available for the down payment (calculator parity).
+  const capitalForLoan = Math.max(
+    0,
+    capital - inputs.renovations - inputs.oneTimeExpenses,
+  )
 
   const invalidTerm = tracks.some((track) => {
     const years = Number(track.yearsText)
@@ -341,6 +348,7 @@ export interface SharedSuggestionInputs {
   incomeText: string
   purpose: PropertyPurpose
   renovations: number
+  oneTimeExpenses: number
   otherMonthly: number
   ptiThresholdPercent: number
 }
@@ -377,7 +385,7 @@ export function sharedInputSuggestions(
   )
   const property = parseAmountText(inputs.propertyValueText)
   const capital = parseAmountText(inputs.capitalText)
-  const capitalForLoan = Math.max(0, capital - inputs.renovations)
+  const capitalForLoan = Math.max(0, capital - inputs.renovations - inputs.oneTimeExpenses)
   const income = parseAmountText(inputs.incomeText)
 
   return {

@@ -46,3 +46,4 @@ export function trendValues(rows: TrendSourceRow[], metric: TrendMetric): TrendP
     return { year: row.year, value }
   })
 }
+

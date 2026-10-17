@@ -8,16 +8,20 @@ import { useTooltipClamp } from '@/hooks/useTooltipClamp'
 import { trendValues, type TrendMetric, type TrendSourceRow } from './trend'
 
 /**
- * The comparison's trend charts: one small line chart per metric, two per row,
- * each plotting every mix as its own line so the differences read at a glance
- * (no toggling between them).
+ * The comparison's trend charts: one small chart per metric, each plotting every
+ * mix so the differences read at a glance (no toggling between them).
  *
- * The four metrics are monthly payment, remaining debt, cumulative interest and
- * cumulative paid. Monthly payment is drawn as the calculator's combined chart
- * (stacked קרן/ריבית columns, one per mix, per year); debt and interest are
- * lines with a per-mix gradient fill; total paid is a plain line. One color per
- * mix, one shared legend above the grid; hovering a year shows every mix's value
- * for that chart. Each chart repeats its data as text for screen readers - never
+ * The composition chart comes first (the 2×2 grid's top-left panel) and mirrors
+ * the calculator's combined chart: stacked קרן/ריבית columns per mix per year.
+ * The other three metrics each get their own visual language so they do not
+ * read as copies: remaining debt is a filled area, cumulative paid a line with
+ * a dot per year, cumulative interest a dashed line. On the cumulative-
+ * interest chart a mix that ends before the horizon drops vertically to the
+ * axis at its term year, so its line visibly closes instead of stopping
+ * mid-air; the balance and total lines simply end at their own term. One color
+ * per mix,
+ * one shared legend above the grid; hovering a year shows every mix's value for
+ * that chart. Each chart repeats its data as text for screen readers - never
  * chart-only.
  *
  * Measured (ResizeObserver) and rendered at real pixel size so axis text keeps a
@@ -32,10 +36,17 @@ export interface TrendSeries {
   schedule: TrendSourceRow[]
 }
 
-const METRICS: TrendMetric[] = ['payment', 'balance', 'interest', 'total']
+/** The line panels, ordered like the reference gallery: debt first. */
+const LINE_METRICS: TrendMetric[] = ['balance', 'total', 'interest']
+
+/** The full-width stacked-column panel (קרן + ריבית per year and mix). */
+const COMPOSITION_METRIC = 'composition' as const
+
+/** What a panel can draw: one of the line metrics, or the composition bars. */
+type PanelMetric = TrendMetric | typeof COMPOSITION_METRIC
 
 /** Metrics drawn as a filled area under the line; the rest stay plain lines. */
-const AREA_METRICS: TrendMetric[] = ['balance', 'interest']
+const AREA_METRICS: PanelMetric[] = ['balance']
 
 /** One color per mix, up to the scenario maximum; themed in globals.css. */
 const SERIES_TOKENS = [
@@ -60,7 +71,7 @@ const MARGIN_LEFT = 78
 const MARGIN_RIGHT = 18
 
 /** The chart heading for each metric (also its screen-reader summary heading). */
-function metricTitleKey(metric: TrendMetric): string {
+function metricTitleKey(metric: PanelMetric): string {
   switch (metric) {
     case 'balance':
       return 'compare.remainingBalanceTitle'
@@ -68,13 +79,15 @@ function metricTitleKey(metric: TrendMetric): string {
       return 'compare.cumulativeInterestTitle'
     case 'total':
       return 'compare.totalPaymentsTitle'
+    case 'composition':
+      return 'compare.paymentCompositionTitle'
     default:
       return 'compare.paymentTrendTitle'
   }
 }
 
 /** The left-axis caption: what the ₪ ticks count for this metric. */
-function metricAxisKey(metric: TrendMetric): string {
+function metricAxisKey(metric: PanelMetric): string {
   switch (metric) {
     case 'balance':
       return 'calculator.charts.axisBalance'
@@ -107,6 +120,8 @@ interface TrendLine {
   label: string
   token: string
   points: { year: number; value: number }[]
+  /** Last year the mix actually runs (the horizon when it is the longest). */
+  termYear: number
 }
 
 /** One mix's per-year amount split into its two stack segments (monthly ₪). */
@@ -126,9 +141,9 @@ function TrendPanel({
   maxYear,
   testIdPrefix,
 }: {
-  metric: TrendMetric
+  metric: PanelMetric
   lines: TrendLine[]
-  /** Present only for the payment metric: stacked קרן/ריבית bars, one per mix. */
+  /** Present only for the composition metric: stacked קרן/ריבית bars, one per mix. */
   bars?: BarSeries[]
   maxYear: number
   testIdPrefix: string
@@ -150,9 +165,12 @@ function TrendPanel({
 
   const title = t(metricTitleKey(metric))
   const axisLabel = t(metricAxisKey(metric))
-  // Unique per panel: gradients are referenced by id, and the id has to stay
-  // stable across renders (React re-uses the same <defs>).
+  // Unique per panel: gradients/patterns are referenced by id, and the id has to
+  // stay stable across renders (React re-uses the same <defs>).
   const areaId = (index: number) => `${testIdPrefix}-area-${index}`
+  // ריבית is hatched in its mix's own color, so the split reads the same for
+  // every mix without inventing a second color per series.
+  const hatchId = (index: number) => `${testIdPrefix}-hatch-${index}`
 
   const layout = useMemo(() => {
     if (width <= 0 || maxYear === 0) return null
@@ -179,6 +197,24 @@ function TrendPanel({
 
   const yearTicks = useMemo(() => xAxisTicks(maxYear, false), [maxYear])
 
+  /**
+   * The polyline for one mix. Only cumulative interest gets the vertical
+   * terminator: a mix that finishes before the horizon drops to the axis at
+   * its term year, so its line visibly closes (user-requested). Balance and
+   * total simply end at their own term.
+   */
+  const linePath = (line: TrendLine): string => {
+    if (!layout || !geometry) return ''
+    const segments = line.points.map(
+      (point, index) =>
+        `${index === 0 ? 'M' : 'L'} ${layout.x(point.year)} ${geometry.y(point.value)}`,
+    )
+    if (metric === 'interest' && line.termYear > 0 && line.termYear < maxYear) {
+      segments.push(`L ${layout.x(line.termYear)} ${geometry.y(0)}`)
+    }
+    return segments.join(' ')
+  }
+
   const handleMove = (event: React.MouseEvent<SVGSVGElement>) => {
     if (!layout || !svgRef.current) return
     const bounds = svgRef.current.getBoundingClientRect()
@@ -199,14 +235,11 @@ function TrendPanel({
         {bars && bars.length > 0 && (
           <>
             <span>
-              <i className="compare-trend-swatch" style={{ background: bars[0].token }} />
+              <i className="compare-trend-swatch compare-trend-swatch-principal" />
               {t('calculator.schedule.principalHeader')}
             </span>
             <span>
-              <i
-                className="compare-trend-swatch"
-                style={{ background: bars[0].tokenSoft }}
-              />
+              <i className="compare-trend-swatch compare-trend-swatch-interest" />
               {t('calculator.schedule.interestHeader')}
             </span>
           </>
@@ -240,6 +273,19 @@ function TrendPanel({
                   <stop offset="45%" style={{ stopColor: line.token, stopOpacity: 0.05 }} />
                   <stop offset="100%" style={{ stopColor: line.token, stopOpacity: 0 }} />
                 </linearGradient>
+              ))}
+              {bars?.map((bar, index) => (
+                <pattern
+                  key={`hatch-${index}`}
+                  id={hatchId(index)}
+                  width="6"
+                  height="6"
+                  patternUnits="userSpaceOnUse"
+                  patternTransform="rotate(45)"
+                >
+                  <rect width="6" height="6" fill={bar.tokenSoft} />
+                  <line x1="0" y1="0" x2="0" y2="6" stroke={bar.token} strokeWidth="1.6" />
+                </pattern>
               ))}
             </defs>
 
@@ -287,7 +333,7 @@ function TrendPanel({
                           width={svgRound(Math.max(0.8, barW - gap))}
                           height={svgRound(Math.max(0, principalTop - interestTop))}
                           className="compare-trend-bar"
-                          style={{ fill: bar.tokenSoft }}
+                          style={{ fill: `url(#${hatchId(barIndex)})` }}
                         />
                       </g>
                     )
@@ -320,16 +366,31 @@ function TrendPanel({
                     {lines.map((line, index) => (
                       <path
                         key={`line-${index}`}
-                        d={line.points
-                          .map(
-                            (point, pointIndex) =>
-                              `${pointIndex === 0 ? 'M' : 'L'} ${layout.x(point.year)} ${geometry.y(point.value)}`,
-                          )
-                          .join(' ')}
-                        className="compare-trend-line"
+                        d={linePath(line)}
+                        className={
+                          metric === 'interest'
+                            ? 'compare-trend-line compare-trend-line-dashed'
+                            : 'compare-trend-line'
+                        }
                         style={{ stroke: line.token }}
                       />
                     ))}
+
+                    {/* Cumulative paid carries a dot per year, so it reads as a
+                        different chart from the two smooth line metrics. */}
+                    {metric === 'total' &&
+                      lines.map((line, index) =>
+                        line.points.map((point) => (
+                          <circle
+                            key={`point-${index}-${point.year}`}
+                            cx={layout.x(point.year)}
+                            cy={geometry.y(point.value)}
+                            r={2.4}
+                            className="compare-trend-point"
+                            style={{ stroke: line.token }}
+                          />
+                        )),
+                      )}
                   </>
                 )}
 
@@ -407,20 +468,39 @@ function TrendPanel({
             style={{ left: `${((layout.x(activeYear) / width) * 100).toFixed(1)}%` }}
           >
             <strong>{t('calculator.charts.yearLabel', { year: activeYear })}</strong>
-            {lines.map((line, index) => {
-              const point = line.points[activeYear - 1]
-              if (!point) return null
-              return (
-                <span key={`tip-${index}`} className="compare-trend-tooltip-row">
-                  <i
-                    className="compare-trend-swatch"
-                    style={{ background: line.token }}
-                    aria-hidden="true"
-                  />
-                  {line.label}: {formatCurrency(point.value)}
-                </span>
-              )
-            })}
+            {bars
+              ? // Composition: quote the two stacked segments, not just the total.
+                bars.map((bar, index) => {
+                  const segment = bar.segments[activeYear - 1]
+                  if (!segment) return null
+                  return (
+                    <span key={`tip-${index}`} className="compare-trend-tooltip-row">
+                      <i
+                        className="compare-trend-swatch"
+                        style={{ background: bar.token }}
+                        aria-hidden="true"
+                      />
+                      {bar.label}: {t('calculator.schedule.principalHeader')}{' '}
+                      {formatCurrency(segment.principal)} ·{' '}
+                      {t('calculator.schedule.interestHeader')}{' '}
+                      {formatCurrency(segment.interest)}
+                    </span>
+                  )
+                })
+              : lines.map((line, index) => {
+                  const point = line.points[activeYear - 1]
+                  if (!point) return null
+                  return (
+                    <span key={`tip-${index}`} className="compare-trend-tooltip-row">
+                      <i
+                        className="compare-trend-swatch"
+                        style={{ background: line.token }}
+                        aria-hidden="true"
+                      />
+                      {line.label}: {formatCurrency(point.value)}
+                    </span>
+                  )
+                })}
           </div>
         )}
       </div>
@@ -458,14 +538,26 @@ export function CompareTrendChart({
     )
   }
 
-  // The x axis spans every mix, so a short mix just stops early. The schedule
-  // length is the same for a mix whichever metric is charted.
+  // The x axis spans every mix. A shorter mix ends at its own term (the
+  // interest chart drops a terminator there). The schedule length is the same
+  // for a mix whichever metric is charted.
   const maxYear = series.reduce((max, entry) => Math.max(max, entry.schedule.length), 0)
 
-  // The payment chart mirrors the calculator's combined chart: per year, one
-  // stacked column per mix, split into קרן (base) and ריבית (top), both as the
-  // year's average monthly amount (the yearly total over 12) so the axis stays
-  // "monthly payment".
+  /** One mix's per-year series for a metric. */
+  const lineFor = (entry: TrendSeries, index: number, metric: TrendMetric): TrendLine => {
+    const points = trendValues(entry.schedule, metric)
+    return {
+      label: entry.label,
+      token: SERIES_TOKENS[index % SERIES_TOKENS.length],
+      termYear: points[points.length - 1]?.year ?? 0,
+      points,
+    }
+  }
+
+  // The composition chart mirrors the calculator's combined chart: per year,
+  // one stacked column per mix, split into קרן (base) and ריבית (top), both as
+  // the year's average monthly amount (the yearly total over 12) so the axis
+  // stays "monthly payment".
   const barSeries: BarSeries[] = series.map((entry, index) => ({
     label: entry.label,
     token: SERIES_TOKENS[index % SERIES_TOKENS.length],
@@ -495,18 +587,22 @@ export function CompareTrendChart({
           </li>
         ))}
       </ul>
-      {METRICS.map((metric) => (
+      <TrendPanel
+        metric={COMPOSITION_METRIC}
+        maxYear={maxYear}
+        testIdPrefix={`${testIdPrefix}-${COMPOSITION_METRIC}`}
+        bars={barSeries}
+        // The tooltip and the screen-reader summary quote the mix's total
+        // monthly payment next to the two stacked segments.
+        lines={series.map((entry, index) => lineFor(entry, index, 'payment'))}
+      />
+      {LINE_METRICS.map((metric) => (
         <TrendPanel
           key={metric}
           metric={metric}
           maxYear={maxYear}
           testIdPrefix={`${testIdPrefix}-${metric}`}
-          bars={metric === 'payment' ? barSeries : undefined}
-          lines={series.map((entry, index) => ({
-            label: entry.label,
-            token: SERIES_TOKENS[index % SERIES_TOKENS.length],
-            points: trendValues(entry.schedule, metric),
-          }))}
+          lines={series.map((entry, index) => lineFor(entry, index, metric))}
         />
       ))}
     </div>
