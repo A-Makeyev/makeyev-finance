@@ -174,6 +174,15 @@ export interface YearlyRow {
   year: number
   opening: number
   principal: number
+  /**
+   * CPI drift added to the balance during the year (the literal הצמדה).
+   * Exactly 0 for non-indexed tracks. Reported on its own, never folded into
+   * interest, so the two costs are not double-counted: each row still
+   * satisfies `paid === principal + interest`, and over a fully amortizing
+   * loan the principal column telescopes to the nominal loan plus the drift,
+   * `sum(principal) === nominal principal + sum(indexation)`.
+   */
+  indexation: number
   paid: number
   interest: number
   closing: number
@@ -186,6 +195,8 @@ export interface MonthlyRow {
   /** Calendar year of the loan (1-based, same as YearlyRow.year). */
   year: number
   principal: number
+  /** CPI drift added to the balance that month (0 for non-indexed tracks). */
+  indexation: number
   interest: number
   paid: number
   closing: number
@@ -196,6 +207,8 @@ export interface TrackResult {
   highestPayment: number
   totalPaid: number
   totalInterest: number
+  /** Total CPI drift added to the debt over the life of the track (0 if not indexed). */
+  totalIndexation: number
   yearlyRows: YearlyRow[]
   /** Per-month payment rows (same totals as yearlyRows, finer granularity). */
   monthlyRows: MonthlyRow[]
@@ -236,6 +249,7 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
   let balance = principal
   let totalPaid = 0
   let totalInterest = 0
+  let totalIndexation = 0
   let firstPayment = 0
   let highestPayment = 0
   let indexFactor = 1
@@ -245,12 +259,18 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
   let yearPrincipal = 0
   let yearPaid = 0
   let yearInterest = 0
+  let yearIndexation = 0
 
   for (let month = 1; month <= months; month++) {
-    // CPI-indexed balances inflate month-over-month starting month 2.
+    // CPI-indexed balances inflate month-over-month starting month 2. The
+    // amount the index adds to the debt is the month's הצמדה - captured here
+    // and reported on its own, never folded into interest or principal.
+    let indexation = 0
     if (isIndexedType(type) && month > 1) {
       indexFactor *= monthlyInflation
+      const beforeInflation = balance
       balance *= monthlyInflation
+      indexation = balance - beforeInflation
     }
     const remaining = months - month + 1
     const interest = balance * monthlyRate
@@ -272,15 +292,18 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     balance = Math.max(0, balance - principalPart)
     totalPaid += payment
     totalInterest += interest
+    totalIndexation += indexation
     yearPrincipal += principalPart
     yearPaid += payment
     yearInterest += interest
+    yearIndexation += indexation
 
     // Record the per-month row (monthly schedule view).
     monthlyRows.push({
       month: ((month - 1) % 12) + 1,
       year: Math.ceil(month / 12),
       principal: principalPart,
+      indexation,
       interest,
       paid: payment,
       closing: balance,
@@ -291,6 +314,7 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
         year: Math.ceil(month / 12),
         opening: yearOpening,
         principal: yearPrincipal,
+        indexation: yearIndexation,
         paid: yearPaid,
         interest: yearInterest,
         closing: balance,
@@ -299,6 +323,7 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
       yearPrincipal = 0
       yearPaid = 0
       yearInterest = 0
+      yearIndexation = 0
     }
   }
 
@@ -307,6 +332,7 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     highestPayment,
     totalPaid,
     totalInterest,
+    totalIndexation,
     yearlyRows,
     monthlyRows,
     type,
@@ -325,6 +351,8 @@ export interface TotalsSummary {
   highestPayment: number
   totalPaid: number
   totalInterest: number
+  /** Total CPI drift across the entered tracks (0 when none is indexed). */
+  totalIndexation: number
 }
 
 export const EMPTY_TOTALS: TotalsSummary = {
@@ -332,6 +360,7 @@ export const EMPTY_TOTALS: TotalsSummary = {
   highestPayment: 0,
   totalPaid: 0,
   totalInterest: 0,
+  totalIndexation: 0,
 }
 
 export function sumTotals(results: TrackResult[]): TotalsSummary {
@@ -341,6 +370,7 @@ export function sumTotals(results: TrackResult[]): TotalsSummary {
       highestPayment: sum.highestPayment + result.highestPayment,
       totalPaid: sum.totalPaid + result.totalPaid,
       totalInterest: sum.totalInterest + result.totalInterest,
+      totalIndexation: sum.totalIndexation + result.totalIndexation,
     }),
     EMPTY_TOTALS,
   )
@@ -456,6 +486,7 @@ export function combineSchedules(results: TrackResult[]): CombinedScheduleRow[] 
       year: index + 1,
       opening: rows.reduce((sum, row) => sum + row.opening, 0),
       principal: rows.reduce((sum, row) => sum + row.principal, 0),
+      indexation: rows.reduce((sum, row) => sum + row.indexation, 0),
       paid: rows.reduce((sum, row) => sum + row.paid, 0),
       interest: rows.reduce((sum, row) => sum + row.interest, 0),
       closing: rows.reduce((sum, row) => sum + row.closing, 0),
@@ -470,6 +501,8 @@ export interface CombinedMonthlyRow {
   /** Month within that year, 1-12. */
   month: number
   principal: number
+  /** CPI drift added to the combined balance that month (0 if none indexed). */
+  indexation: number
   interest: number
   paid: number
   closing: number
@@ -491,6 +524,7 @@ export function combineMonthlySchedules(results: TrackResult[]): CombinedMonthly
       year: rows[0].year,
       month: rows[0].month,
       principal: rows.reduce((sum, row) => sum + row.principal, 0),
+      indexation: rows.reduce((sum, row) => sum + row.indexation, 0),
       paid: rows.reduce((sum, row) => sum + row.paid, 0),
       interest: rows.reduce((sum, row) => sum + row.interest, 0),
       closing: rows.reduce((sum, row) => sum + row.closing, 0),
@@ -505,6 +539,8 @@ export interface TrackScheduleRow {
   /** Sum of the 12 monthly payments in that year (the "annual payment"). */
   paid: number
   principal: number
+  /** CPI drift added to the balance during the year (0 for non-indexed tracks). */
+  indexation: number
   interest: number
   balance: number
   /** The track's flat lifetime payback ratio (total repaid ÷ principal). */
@@ -520,6 +556,7 @@ export function buildTrackScheduleRows(result: TrackResult): TrackScheduleRow[] 
     year: row.year,
     paid: row.paid,
     principal: row.principal,
+    indexation: row.indexation,
     interest: row.interest,
     balance: row.closing,
     paybackRatio: result.paybackRatio,

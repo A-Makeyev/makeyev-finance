@@ -240,7 +240,7 @@ export function ResultsCards() {
       label: <span className="total-payment-text">{vm.totalPaymentLabelParts}</span>,
       labelTestId: 'total-payment-label',
       labelClassName: 'total-payment-label',
-      caption: t('calculator.results.totalPaymentCaption'),
+      caption: vm.totalPaymentCaption,
       featured: true,
       link: 'compare',
       index: 2,

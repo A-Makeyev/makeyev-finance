@@ -3,7 +3,10 @@ import { formatCurrency } from '@/lib/format'
 import { arcPath, donutSegments } from '@/lib/charts'
 
 interface TotalCostDonutProps {
-  totalPrincipal: number
+  /** Nominal loan amount (what was actually borrowed, indexation excluded). */
+  principal: number
+  /** CPI drift folded into the debt over the term (0 for a non-indexed mix). */
+  indexation: number
   totalInterest: number
 }
 
@@ -14,14 +17,27 @@ const R_INNER = 46
 const GAP = 0.03
 
 /**
- * The "how much am I really paying the bank" companion: total קרן vs total
- * ריבית over the full term, one small donut, center showing the interest
- * share, legend with the ₪ amounts - same numbers the summary cards show.
+ * Slice fills in draw order (principal, indexation, interest). The middle
+ * slice is skipped on screen when its value is 0, so a non-indexed mix reads
+ * exactly as before: principal vs interest.
  */
-export function TotalCostDonut({ totalPrincipal, totalInterest }: TotalCostDonutProps) {
+const SLICE_COLORS = [
+  'var(--cost-donut-principal, #087f78)',
+  'var(--cost-donut-indexation, #7b5cc4)',
+  'var(--cost-donut-interest, #e0a63c)',
+]
+
+/**
+ * The "how much am I really paying the bank" companion: the split of total
+ * repayments into קרן / הצמדה / ריבית over the full term, one small donut,
+ * center showing the interest share, legend with the ₪ amounts - same numbers
+ * the summary cards show. The indexation slice appears only when the mix has
+ * an indexed track (indexation > 0).
+ */
+export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCostDonutProps) {
   const { t } = useTranslation()
-  const total = totalPrincipal + totalInterest
-  const segments = donutSegments([totalPrincipal, totalInterest])
+  const total = principal + indexation + totalInterest
+  const segments = donutSegments([principal, indexation, totalInterest])
   const interestPercent = total > 0 ? Math.round((totalInterest / total) * 100) : 0
 
   return (
@@ -41,7 +57,7 @@ export function TotalCostDonut({ totalPrincipal, totalInterest }: TotalCostDonut
             <path
               key={index}
               d={arcPath(CENTER, CENTER, R_OUTER, R_INNER, insetStart, insetEnd)}
-              fill={index === 0 ? 'var(--cost-donut-principal, #087f78)' : 'var(--cost-donut-interest, #e0a63c)'}
+              fill={SLICE_COLORS[index]}
             />
           )
         })}
@@ -55,12 +71,19 @@ export function TotalCostDonut({ totalPrincipal, totalInterest }: TotalCostDonut
 
       <ul className="cost-legend">
         <li className="cost-legend-item">
-          <i className="chart-swatch" style={{ background: 'var(--cost-donut-principal, #087f78)' }} />
+          <i className="chart-swatch" style={{ background: SLICE_COLORS[0] }} />
           <span>{t('calculator.schedule.principalHeader')}</span>
-          <strong>{formatCurrency(totalPrincipal)}</strong>
+          <strong>{formatCurrency(principal)}</strong>
         </li>
+        {indexation > 0 && (
+          <li className="cost-legend-item">
+            <i className="chart-swatch" style={{ background: SLICE_COLORS[1] }} />
+            <span>{t('calculator.schedule.indexationHeader')}</span>
+            <strong>{formatCurrency(indexation)}</strong>
+          </li>
+        )}
         <li className="cost-legend-item">
-          <i className="chart-swatch" style={{ background: 'var(--cost-donut-interest, #e0a63c)' }} />
+          <i className="chart-swatch" style={{ background: SLICE_COLORS[2] }} />
           <span>{t('calculator.schedule.interestHeader')}</span>
           <strong>{formatCurrency(totalInterest)}</strong>
         </li>

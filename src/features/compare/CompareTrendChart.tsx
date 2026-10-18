@@ -13,10 +13,10 @@ import { trendValues, type TrendMetric, type TrendSourceRow } from './trend'
  *
  * The composition chart comes first, across the full width of the gallery, and
  * mirrors the calculator's combined chart: stacked קרן/ריבית columns per mix per
- * year. The other three metrics fall two per row beneath it, each with its own
+ * year. The other four metrics fall two per row beneath it, each with its own
  * visual language so they do not read as copies: remaining debt is a filled
  * area, cumulative paid a line with a dot per year, cumulative interest a
- * dashed line. On the cumulative-
+ * dashed line, cumulative indexation a dotted line. On the cumulative-
  * interest chart a mix that ends before the horizon drops vertically to the
  * axis at its term year, so its line visibly closes instead of stopping
  * mid-air; the balance and total lines simply end at their own term. One color
@@ -38,7 +38,7 @@ export interface TrendSeries {
 }
 
 /** The line panels, ordered like the reference gallery: debt first. */
-const LINE_METRICS: TrendMetric[] = ['balance', 'total', 'interest']
+const LINE_METRICS: TrendMetric[] = ['balance', 'total', 'interest', 'indexation']
 
 /** The full-width stacked-column panel (קרן + ריבית per year and mix). */
 const COMPOSITION_METRIC = 'composition' as const
@@ -80,6 +80,8 @@ function metricTitleKey(metric: PanelMetric): string {
       return 'compare.cumulativeInterestTitle'
     case 'total':
       return 'compare.totalPaymentsTitle'
+    case 'indexation':
+      return 'compare.cumulativeIndexationTitle'
     case 'composition':
       return 'compare.paymentCompositionTitle'
     default:
@@ -96,6 +98,8 @@ function metricAxisKey(metric: PanelMetric): string {
       return 'compare.axisCumulativeInterest'
     case 'total':
       return 'compare.axisTotalPaid'
+    case 'indexation':
+      return 'compare.axisCumulativeIndexation'
     default:
       return 'calculator.charts.axisMonthlyPayment'
   }
@@ -374,7 +378,9 @@ function TrendPanel({
                         className={
                           metric === 'interest'
                             ? 'compare-trend-line compare-trend-line-dashed'
-                            : 'compare-trend-line'
+                            : metric === 'indexation'
+                              ? 'compare-trend-line compare-trend-line-dotted'
+                              : 'compare-trend-line'
                         }
                         style={{ stroke: line.token }}
                       />
@@ -547,6 +553,16 @@ export function CompareTrendChart({
   // for a mix whichever metric is charted.
   const maxYear = series.reduce((max, entry) => Math.max(max, entry.schedule.length), 0)
 
+  // Indexation is worth a panel only when some mix actually carries an indexed
+  // track; a gallery of flat-zero lines would just add noise, so a fully
+  // non-indexed comparison keeps the original four panels.
+  const hasIndexation = series.some((entry) =>
+    entry.schedule.some((row) => row.indexation > 0),
+  )
+  const lineMetrics = hasIndexation
+    ? LINE_METRICS
+    : LINE_METRICS.filter((metric) => metric !== 'indexation')
+
   /** One mix's per-year series for a metric. */
   const lineFor = (entry: TrendSeries, index: number, metric: TrendMetric): TrendLine => {
     const points = trendValues(entry.schedule, metric)
@@ -601,7 +617,7 @@ export function CompareTrendChart({
         // monthly payment next to the two stacked segments.
         lines={series.map((entry, index) => lineFor(entry, index, 'payment'))}
       />
-      {LINE_METRICS.map((metric) => (
+      {lineMetrics.map((metric) => (
         <TrendPanel
           key={metric}
           metric={metric}

@@ -51,7 +51,14 @@ export interface ScenarioResult {
   /** 'variableCap' - variable share exceeds the Bank of Israel 2/3 ceiling. */
   /** 'duplicateType' - the same track type appears more than once in the mix. */
   error: 'positive' | 'variableCap' | 'duplicateType' | null
-  totals: { firstPayment: number; totalPaid: number; totalInterest: number; highestPayment: number }
+  totals: {
+    firstPayment: number
+    totalPaid: number
+    totalInterest: number
+    /** Combined CPI drift across the mix's tracks (0 for a non-indexed mix). */
+    totalIndexation: number
+    highestPayment: number
+  }
   overpayPercent: number
   /** Loan-amount-weighted average annual rate (%). */
   weightedAvgInterestRate: number
@@ -93,7 +100,14 @@ export interface ScenarioResult {
   /** Chart data: remaining principal (balance) at the end of each year (goes DOWN to 0) */
   balanceTrend: Array<{ year: number; balance: number }>
   /** The combined yearly schedule the chart and the payments table both read. */
-  schedule: Array<{ year: number; paid: number; principal: number; interest: number; closing: number }>
+  schedule: Array<{
+    year: number
+    paid: number
+    principal: number
+    indexation: number
+    interest: number
+    closing: number
+  }>
   /**
    * Track-mix composition, grouped by track type (defensive: the duplicate
    * gate above means a priced mix holds one track per type): each slice's
@@ -178,7 +192,7 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
   const emptyResult: ScenarioResult = {
     isEmpty: true,
     error: invalidTerm ? 'positive' : null,
-    totals: { firstPayment: 0, totalPaid: 0, totalInterest: 0, highestPayment: 0 },
+    totals: { firstPayment: 0, totalPaid: 0, totalInterest: 0, totalIndexation: 0, highestPayment: 0 },
     overpayPercent: 0,
     weightedAvgInterestRate: 0,
     avgInterestRate: 0,
@@ -286,6 +300,7 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     year: row.year,
     paid: row.paid,
     principal: row.principal,
+    indexation: row.indexation,
     interest: row.interest,
     closing: row.closing,
   }))

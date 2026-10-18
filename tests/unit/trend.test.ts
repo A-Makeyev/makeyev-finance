@@ -7,8 +7,8 @@ import { trendValues, type TrendSourceRow } from '@/features/compare/trend'
  */
 
 const rows: TrendSourceRow[] = [
-  { year: 1, paid: 12000, principal: 8000, interest: 4000, closing: 92000 },
-  { year: 2, paid: 12000, principal: 8400, interest: 3600, closing: 83600 },
+  { year: 1, paid: 12000, principal: 8000, indexation: 0, interest: 4000, closing: 92000 },
+  { year: 2, paid: 12000, principal: 8400, indexation: 0, interest: 3600, closing: 83600 },
 ]
 
 describe('trendValues', () => {
@@ -52,12 +52,27 @@ describe('trendValues', () => {
 
   it('a year with no interest keeps the cumulative line flat', () => {
     const principalOnly: TrendSourceRow[] = [
-      { year: 1, paid: 5000, principal: 5000, interest: 0, closing: 95000 },
-      { year: 2, paid: 5000, principal: 5000, interest: 0, closing: 90000 },
+      { year: 1, paid: 5000, principal: 5000, indexation: 0, interest: 0, closing: 95000 },
+      { year: 2, paid: 5000, principal: 5000, indexation: 0, interest: 0, closing: 90000 },
     ]
     expect(trendValues(principalOnly, 'interest')).toEqual([
       { year: 1, value: 0 },
       { year: 2, value: 0 },
+    ])
+  })
+
+  it('indexation accumulates the CPI drift and stays 0 for a plain schedule', () => {
+    expect(trendValues(rows, 'indexation')).toEqual([
+      { year: 1, value: 0 },
+      { year: 2, value: 0 },
+    ])
+    const indexed: TrendSourceRow[] = [
+      { year: 1, paid: 12000, principal: 8000, indexation: 900, interest: 4000, closing: 92900 },
+      { year: 2, paid: 12400, principal: 8600, indexation: 1000, interest: 3800, closing: 85300 },
+    ]
+    expect(trendValues(indexed, 'indexation')).toEqual([
+      { year: 1, value: 900 },
+      { year: 2, value: 1900 },
     ])
   })
 })

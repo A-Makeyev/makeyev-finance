@@ -164,6 +164,7 @@ export function ScheduleSection() {
                       <th>{t('calculator.schedule.monthTotalHeader')}</th>
                     )}
                     <th>{t('calculator.schedule.principalHeader')}</th>
+                    {vm.hasIndexation && <th>{t('calculator.schedule.indexationHeader')}</th>}
                     <th>{t('calculator.schedule.interestHeader')}</th>
                     {granularity === 'yearly' && (
                       <th>{t('calculator.schedule.annualPaymentHeader')}</th>
@@ -180,6 +181,7 @@ export function ScheduleSection() {
                           </td>
                           <td>{totalMonth(row.year, row.month)}</td>
                           <td>{formatCurrency(row.principal)}</td>
+                          {vm.hasIndexation && <td>{formatCurrency(row.indexation)}</td>}
                           <td>{formatCurrency(row.interest)}</td>
                           <td>{formatCurrency(row.closing)}</td>
                         </tr>
@@ -188,6 +190,7 @@ export function ScheduleSection() {
                         <tr key={row.year}>
                           <td data-testid={`schedule-year-${row.year}`}>{row.year}</td>
                           <td>{formatCurrency(row.principal)}</td>
+                          {vm.hasIndexation && <td>{formatCurrency(row.indexation)}</td>}
                           <td>{formatCurrency(row.interest)}</td>
                           <td>{formatCurrency(row.paid)}</td>
                           <td>{formatCurrency(row.closing)}</td>
@@ -229,6 +232,7 @@ export function ScheduleSection() {
                         </th>
                         {granularity === 'monthly' && <th>{t('calculator.schedule.monthTotalHeader')}</th>}
                         <th>{t('calculator.schedule.principalHeader')}</th>
+                        {vm.hasIndexation && <th>{t('calculator.schedule.indexationHeader')}</th>}
                         <th>{t('calculator.schedule.interestHeader')}</th>
                         {granularity === 'yearly' && (
                           <th>{t('calculator.schedule.annualPaymentHeader')}</th>
@@ -245,6 +249,7 @@ export function ScheduleSection() {
                               </td>
                               <td>{totalMonth(row.year, row.month)}</td>
                               <td>{formatCurrency(row.principal)}</td>
+                              {vm.hasIndexation && <td>{formatCurrency(row.indexation)}</td>}
                               <td>{formatCurrency(row.interest)}</td>
                               <td>{formatCurrency(row.closing)}</td>
                             </tr>
@@ -253,6 +258,7 @@ export function ScheduleSection() {
                             <tr key={row.year}>
                               <td data-testid={`schedule-year-${row.year}`}>{row.year}</td>
                               <td>{formatCurrency(row.principal)}</td>
+                              {vm.hasIndexation && <td>{formatCurrency(row.indexation)}</td>}
                               <td>{formatCurrency(row.interest)}</td>
                               <td>{formatCurrency(row.paid)}</td>
                               <td>{formatCurrency(row.balance)}</td>
@@ -267,8 +273,17 @@ export function ScheduleSection() {
         )}
 
         <div className="schedule-asides">
+          {/* Total repaid = nominal principal + indexation + interest, so the
+              nominal principal is totalPaid minus the other two (exact, not a
+              rounding of the loan: the principal column telescopes to
+              nominal + indexation over the term). */}
           <TotalCostDonut
-            totalPrincipal={vm.snapshot.totals.totalPaid - vm.snapshot.totals.totalInterest}
+            principal={
+              vm.snapshot.totals.totalPaid -
+              vm.snapshot.totals.totalInterest -
+              vm.snapshot.totals.totalIndexation
+            }
+            indexation={vm.snapshot.totals.totalIndexation}
             totalInterest={vm.snapshot.totals.totalInterest}
           />
           <p className="schedule-asides-title">{t('calculator.results.paybackPerTrackTitle')}</p>

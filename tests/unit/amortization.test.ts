@@ -209,6 +209,149 @@ describe('computeTrackResult - CPI-indexed tracks', () => {
   })
 })
 
+describe('indexation visibility (הצמדה)', () => {
+  /** 1-year, zero-rate, equal-principal indexed loan with a hand-checkable drift. */
+  const indexedYear = () => {
+    const inflation = 0.12
+    const factor = Math.pow(1 + inflation, 1 / 12)
+    return {
+      factor,
+      result: computeTrackResult({
+        principal: 120_000,
+        years: 1,
+        annualRatePercent: 0,
+        type: 'fixedIndexed',
+        method: 'equalPrincipal',
+        annualInflation: inflation,
+      })!,
+    }
+  }
+
+  it('a non-indexed track reports zero indexation everywhere', () => {
+    const result = computeTrackResult({
+      principal: 100_000,
+      years: 2,
+      annualRatePercent: 4.5,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    expect(result.totalIndexation).toBe(0)
+    expect(result.yearlyRows.every((row) => row.indexation === 0)).toBe(true)
+    expect(result.monthlyRows.every((row) => row.indexation === 0)).toBe(true)
+  })
+
+  it('the first month carries no indexation; later months carry the drift', () => {
+    const { factor, result } = indexedYear()
+    // No inflation is applied before month 1.
+    expect(result.monthlyRows[0].indexation).toBe(0)
+    // Month 2 drift = the month-1 closing balance × (factor − 1):
+    // 110,000 × (1.12^(1/12) − 1) ≈ 1043.77.
+    expect(result.monthlyRows[1].indexation).toBeCloseTo(110_000 * (factor - 1), 6)
+  })
+
+  it('aggregates the monthly drift into the yearly row and the track total', () => {
+    const { result } = indexedYear()
+    const monthlySum = result.monthlyRows.reduce((sum, row) => sum + row.indexation, 0)
+    expect(result.yearlyRows[0].indexation).toBeCloseTo(monthlySum, 6)
+    expect(result.yearlyRows[0].indexation).toBeCloseTo(result.totalIndexation, 6)
+    expect(result.totalIndexation).toBeGreaterThan(0)
+  })
+
+  it('each row still decomposes as paid = principal + interest', () => {
+    const result = computeTrackResult({
+      principal: 250_000,
+      years: 4,
+      annualRatePercent: 3.5,
+      type: 'variableIndexed5y',
+      method: 'spitzer',
+      annualInflation: 0.025,
+    })!
+    for (const row of result.yearlyRows) {
+      expect(row.paid).toBeCloseTo(row.principal + row.interest, 6)
+    }
+    for (const row of result.monthlyRows) {
+      expect(row.paid).toBeCloseTo(row.principal + row.interest, 6)
+    }
+  })
+
+  it('holds the identity sum(principal) === nominal principal + total indexation', () => {
+    // Spitzer: the payment's principal part repays the nominal loan plus the
+    // CPI drift, so the principal column telescopes to nominal + indexation.
+    const spitzer = computeTrackResult({
+      principal: 300_000,
+      years: 5,
+      annualRatePercent: 3,
+      type: 'fixedIndexed',
+      method: 'spitzer',
+      annualInflation: 0.03,
+    })!
+    const spitzerPrincipal = spitzer.yearlyRows.reduce((sum, row) => sum + row.principal, 0)
+    expect(spitzerPrincipal).toBeCloseTo(300_000 + spitzer.totalIndexation, 3)
+    expect(spitzer.yearlyRows[spitzer.yearlyRows.length - 1].closing).toBeCloseTo(0, 6)
+
+    // Equal principal closes at 0 the same way.
+    const equal = computeTrackResult({
+      principal: 240_000,
+      years: 3,
+      annualRatePercent: 2.5,
+      type: 'fixedIndexed',
+      method: 'equalPrincipal',
+      annualInflation: 0.04,
+    })!
+    const equalPrincipalSum = equal.yearlyRows.reduce((sum, row) => sum + row.principal, 0)
+    expect(equalPrincipalSum).toBeCloseTo(240_000 + equal.totalIndexation, 3)
+    expect(equal.yearlyRows[equal.yearlyRows.length - 1].closing).toBeCloseTo(0, 6)
+  })
+
+  it('combineSchedules and sumTotals sum indexation across tracks', () => {
+    const indexed = computeTrackResult({
+      principal: 200_000,
+      years: 3,
+      annualRatePercent: 3,
+      type: 'fixedIndexed',
+      method: 'spitzer',
+      annualInflation: 0.03,
+    })!
+    const plain = computeTrackResult({
+      principal: 100_000,
+      years: 3,
+      annualRatePercent: 4,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const rows = combineSchedules([indexed, plain])
+    const totals = sumTotals([indexed, plain])
+    expect(totals.totalIndexation).toBeCloseTo(indexed.totalIndexation, 6)
+    expect(plain.yearlyRows[0].indexation).toBe(0)
+    expect(rows[0].indexation).toBeCloseTo(
+      indexed.yearlyRows[0].indexation + plain.yearlyRows[0].indexation,
+      6,
+    )
+    expect(sumTotals([]).totalIndexation).toBe(0)
+  })
+
+  it('carries indexation into the per-track schedule rows', () => {
+    const { result } = indexedYear()
+    const rows = buildTrackScheduleRows(result)
+    expect(rows[0].indexation).toBeCloseTo(result.yearlyRows[0].indexation, 6)
+  })
+
+  it('sums monthly indexation across tracks in the combined monthly view', () => {
+    const indexed = computeTrackResult({
+      principal: 200_000,
+      years: 1,
+      annualRatePercent: 3,
+      type: 'fixedIndexed',
+      method: 'spitzer',
+      annualInflation: 0.03,
+    })!
+    const combined = combineMonthlySchedules([indexed])
+    const monthlySum = combined.reduce((sum, row) => sum + row.indexation, 0)
+    expect(combined[0].indexation).toBe(0)
+    expect(monthlySum).toBeCloseTo(indexed.totalIndexation, 6)
+  })
+})
+
 describe('validation gate', () => {
   const base = {
     years: 10,

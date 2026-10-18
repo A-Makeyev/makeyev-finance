@@ -23,6 +23,7 @@ import {
   purchaseTaxBreakdown,
   suggestedIncomeForAllowance,
   suggestedPropertyValue,
+  isIndexedType,
   isVariableType,
   type PaymentLabelKind,
   type PropertyPurpose,
@@ -127,6 +128,11 @@ export function useCalculatorViewModel() {
   const lawyerNormAmount = useCalculatorStore((s) => s.lawyerNormAmount)
   const tracks = useCalculatorStore((s) => s.tracks)
   const requiredCapitalPercent = 100 - PURPOSE_LIMITS[purpose].limit
+
+  // True when the mix holds at least one CPI-indexed track: only then does the
+  // indexation column (schedule) and the indexation slice (cost donut) carry
+  // real money, so only then are they shown.
+  const hasIndexation = snapshot.summaryTypes.some(isIndexedType)
 
   const countText =
     snapshot.enteredCount === 1
@@ -790,8 +796,15 @@ export function useCalculatorViewModel() {
     highestPayment: formatCurrency(snapshot.totals.highestPayment),
     highestLabelText,
     totalInterest: formatCurrency(snapshot.totals.totalInterest),
+    totalIndexation: formatCurrency(snapshot.totals.totalIndexation),
+    hasIndexation,
     totalPayment: formatCurrency(snapshot.totals.totalPaid),
     totalPaymentLabelParts,
+    // The total-payments caption names indexation only when the mix holds an
+    // indexed track: otherwise "principal and interest" is the whole story.
+    totalPaymentCaption: hasIndexation
+      ? t('calculator.results.totalPaymentCaptionIndexed')
+      : t('calculator.results.totalPaymentCaption'),
     paymentNote,
     avgRate: formatRatePercent(snapshot.avgInterestRate),
     weightedAvgRate: formatRatePercent(snapshot.weightedAvgInterestRate),

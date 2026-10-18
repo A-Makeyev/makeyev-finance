@@ -7,13 +7,15 @@
  * component stays a rendering concern.
  */
 
-export type TrendMetric = 'payment' | 'balance' | 'interest' | 'total'
+export type TrendMetric = 'payment' | 'balance' | 'interest' | 'total' | 'indexation'
 
 /** The subset of a scenario's yearly schedule the trend reads. */
 export interface TrendSourceRow {
   year: number
   paid: number
   principal: number
+  /** CPI drift booked that year (0 for a non-indexed mix). */
+  indexation: number
   interest: number
   closing: number
 }
@@ -29,6 +31,8 @@ export interface TrendPoint {
  * - balance: the remaining principal at the end of the year
  * - interest: cumulative interest paid through the end of the year
  * - total: cumulative amount paid through the end of the year
+ * - indexation: cumulative CPI drift added to the debt through the end of the
+ *   year (flat 0 across a non-indexed schedule)
  * The cumulative series start at 0 before the first year (no prefix row here,
  * the chart's x axis starts at year 1).
  */
@@ -37,6 +41,7 @@ export function trendValues(rows: TrendSourceRow[], metric: TrendMetric): TrendP
   return rows.map((row) => {
     if (metric === 'interest') cumulative += row.interest
     if (metric === 'total') cumulative += row.paid
+    if (metric === 'indexation') cumulative += row.indexation
     const value =
       metric === 'payment'
         ? row.paid / 12

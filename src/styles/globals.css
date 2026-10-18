@@ -248,6 +248,7 @@ strong {
   --chart-interest: #d2762e;
   --chart-balance: #111111;
   --cost-donut-principal: #087f78;
+  --cost-donut-indexation: #7b5cc4;
   --cost-donut-interest: #e0a63c;
   /* Comparison chart: one color per mix (up to MAX_TRACKS scenarios), picked to
      stay distinct and readable on the card surface in this theme. */
@@ -7453,6 +7454,7 @@ tbody tr:hover {
   --chart-interest: #e08b3c;
   --chart-balance: #cfe3e0;
   --cost-donut-principal: #12b3a5;
+  --cost-donut-indexation: #a68ae0;
   --cost-donut-interest: #f0b95c;
   /* Comparison chart series brighten a step so a thin line stays legible on the
      dark card surface. */
@@ -8772,11 +8774,15 @@ html[dir='rtl'] .comment-text {
   );
 }
 
-/* One visual language per metric so the four panels never read as copies:
+/* One visual language per metric so the five panels never read as copies:
    balance is a filled area, cumulative paid a line with year dots, cumulative
-   interest a dashed line. */
+   interest a dashed line, cumulative indexation a dotted line. */
 .compare-trend-line-dashed {
   stroke-dasharray: 7 5;
+}
+
+.compare-trend-line-dotted {
+  stroke-dasharray: 2 5;
 }
 
 .compare-trend-point {

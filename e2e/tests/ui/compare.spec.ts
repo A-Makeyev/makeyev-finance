@@ -324,11 +324,11 @@ test.describe('mortgage comparison - /compare', () => {
     expect(overflow).toBeLessThanOrEqual(1)
   })
 
-  test('four trend charts below the cards, each comparing every priced mix', async ({ page }) => {
+  test('five trend charts below the cards, each comparing every priced mix', async ({ page }) => {
     await page.goto('/compare')
     // Card 1 is seeded with the calculator mix; card 2 is blank. The charts live
     // in their own section below the cards: the payment composition chart first,
-    // then the three line charts (the monthly-payment line duplicated its story
+    // then the four line charts (the monthly-payment line duplicated its story
     // and was removed).
     await expect(page.getByTestId('compare-trend')).toBeVisible()
     await expect(page.getByTestId('compare-trends')).toContainText('תשלומים לאורך זמן')
@@ -342,7 +342,7 @@ test.describe('mortgage comparison - /compare', () => {
     )) as string
     expect(opacity).toBe('1')
 
-    const lineMetrics = ['balance', 'total', 'interest']
+    const lineMetrics = ['balance', 'total', 'interest', 'indexation']
     for (const metric of lineMetrics) {
       const panel = page.getByTestId(`compare-trend-${metric}`)
       await expect(panel).toBeVisible()
@@ -363,22 +363,25 @@ test.describe('mortgage comparison - /compare', () => {
     )
     const oneMixBars = await compositionPanel.locator('.compare-trend-bar').count()
 
-    // The other three panels each have their own visual language, so they do
+    // The other four panels each have their own visual language, so they do
     // not read as copies: balance is a filled area, total carries a dot per
-    // year, interest is a dashed line.
+    // year, interest is a dashed line, indexation a dotted one.
     await expect(page.getByTestId('compare-trend-balance').locator('.compare-trend-area')).toHaveCount(1)
     await expect(page.getByTestId('compare-trend-interest').locator('.compare-trend-line-dashed')).toHaveCount(1)
+    await expect(page.getByTestId('compare-trend-indexation').locator('.compare-trend-line-dotted')).toHaveCount(1)
     expect(
       await page.getByTestId('compare-trend-total').locator('.compare-trend-point').count(),
     ).toBeGreaterThan(0)
 
-    // The composition panel leads the gallery across the full row; the three
-    // line panels fall two per row beneath it (balance + total, then interest).
+    // The composition panel leads the gallery across the full row; the four
+    // line panels fall two per row beneath it (balance + total, then
+    // interest + indexation).
     const box = async (metric: string) =>
       (await page.getByTestId(`compare-trend-${metric}`).boundingBox())!
     const balance = await box('balance')
     const total = await box('total')
     const interest = await box('interest')
+    const indexation = await box('indexation')
     const composition = await box('composition')
     // Composition spans the row on its own, above the line panels.
     expect(composition.width).toBeGreaterThan(balance.width * 1.5)
@@ -386,8 +389,10 @@ test.describe('mortgage comparison - /compare', () => {
     // Balance and total share the next row at equal half-row width.
     expect(Math.abs(total.y - balance.y)).toBeLessThan(4)
     expect(Math.abs(total.width - balance.width)).toBeLessThan(4)
-    // Interest takes the row after them, at the same half-row width.
+    // Interest and indexation take the row after them, at the same half-row width.
     expect(Math.abs(interest.width - balance.width)).toBeLessThan(4)
+    expect(Math.abs(indexation.width - balance.width)).toBeLessThan(4)
+    expect(Math.abs(indexation.y - interest.y)).toBeLessThan(4)
     expect(interest.y).toBeGreaterThan(balance.y + balance.height / 2)
 
     // One legend entry for the one priced mix.
@@ -397,7 +402,7 @@ test.describe('mortgage comparison - /compare', () => {
     // are read against each other.
     await page.getByTestId('compare-preset-2-basket4').click()
     await expect(page.getByTestId('compare-trend-legend').locator('li')).toHaveCount(2)
-    await expect(page.locator('.compare-trend-line')).toHaveCount(6)
+    await expect(page.locator('.compare-trend-line')).toHaveCount(8)
     for (const metric of lineMetrics) {
       await expect(page.getByTestId(`compare-trend-${metric}`).locator('.compare-trend-line')).toHaveCount(2)
     }
