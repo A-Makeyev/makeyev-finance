@@ -90,14 +90,47 @@ have neither an approval-date field nor a validity window anywhere.
 
 **Effort** S. **Risk** low.
 
+**Shipped (first slice).**
+
+- `src/lib/rateValidity.ts`: `RATE_VALIDITY_DAYS = 24`, `EXPIRING_SOON_DAYS = 3`,
+  `rateValidityStatus(approvalDate, now)`, `parseDateOnly`, `formatDateOnly`,
+  `rateValidityText`. `now` is injected, and both sides of the comparison are
+  normalised to UTC midnight so a timezone or DST change cannot shift the day
+  count.
+- Shared `src/components/ui/RateValidityChip.tsx` (renders nothing without a
+  real date; `data-status` carries valid | expiring | expired).
+- Calculator: `approvalDateText` + `setApprovalDate` on the store (session
+  input, NOT part of a saved mix), a date field with the shared chip under the
+  limits row, and an ⓘ/❌ summary note when the rate is lapsing or lapsed.
+- Compare: `approvalDateText` per scenario (each mix is its own offer), the same
+  field + chip in each scenario editor, and the same actionable warning as a
+  status line in that mix's result card. The calculator's date travels into the
+  first mix on seeding.
+- he/en keys; 18 pure-module tests, 13 store tests, a placeholder-parity test,
+  and 11 e2e cases (states, boundaries, both languages, 360px, and the seed
+  carrying the date).
+
+**Not done (deliberately).** The approval date is not persisted with a saved
+mix: that would add a field to the stored mix scenario (server zod schema,
+serialize baseline, load/restore), which is a data-model change to flag rather
+than slip in. Today the date is session input, cleared on reset, on detaching
+from a mix, and on loading one.
+
+**Wording split.** The chip beside the field is the compact sentence; the
+results area (calculator summary note, compare status line) carries the
+actionable warning ("ask the bank for an updated rate"). One rule, both pages.
+
+**Open decision (resolved).** Per mix. In the calculator that is the single
+mix; in the comparison each scenario is its own offer and gets its own date.
+
 **Source.** The Bank of Israel mortgage-transparency reform made the אישור
 עקרוני a standardized, binding document; the **rate** inside it holds **24
-days** (the approval document itself up to ~3 months). Confirm the figure and
-its wording against
+days** (the approval document itself up to ~3 months). Re-checked before
+shipping against
 `boi.org.il/information/bank-paymnts/financial-education/competition-in-mortgages/`
-before shipping, and label the UI with the source and an "as of" date.
-
-**Open decision.** Approval date per mix or per comparison scenario?
+and the Kol-Zchut rights guide, which restates the BOI amendment's 24-day
+minimum. `EXPIRING_SOON_DAYS = 3` is a UI urgency threshold, not a regulatory
+figure. The UI does not yet print an "as of" date next to the figure.
 
 ---
 

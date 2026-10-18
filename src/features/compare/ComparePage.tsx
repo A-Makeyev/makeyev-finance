@@ -26,6 +26,9 @@ import { PRESET_IDS } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { TermSlider } from '@/components/ui/TermSlider'
+import { HelpTooltip } from '@/components/ui/HelpTooltip'
+import { RateValidityChip } from '@/components/ui/RateValidityChip'
+import { formatDateOnly, rateValidityStatus } from '@/lib/rateValidity'
 import { useMediaQuery } from '@/hooks/useScrolled'
 import { useComparisonStore } from '@/stores/comparisonStore'
 import { TrackMixDonut } from '@/features/calculator/TrackMixDonut'
@@ -69,7 +72,7 @@ interface MetricDef {
 const LAWYER_FLOOR_WITH_VAT = formatGroupedNumber(Math.round(LAWYER_MINIMUM_FEE * (1 + VAT_RATE)))
 
 export function ComparePage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const isDesktop = useMediaQuery('(min-width: 768px)')
   // Which scenario the mobile stacked view shows (index into scenarios).
   const [mobileIndex, setMobileIndex] = useState(0)
@@ -85,6 +88,7 @@ export function ComparePage() {
   // returning a fresh object would re-render forever in Zustand v5.
   const actions = {
     setLabel: useComparisonStore((s) => s.setLabel),
+    setScenarioApprovalDate: useComparisonStore((s) => s.setScenarioApprovalDate),
     setPropertyValue: useComparisonStore((s) => s.setPropertyValue),
     setCapital: useComparisonStore((s) => s.setCapital),
     setIncome: useComparisonStore((s) => s.setIncome),
@@ -304,17 +308,44 @@ export function ComparePage() {
   )
 
   /** Regulatory status summary for one scenario, as short pass/fail lines. */
-  const statusLines = (result: ScenarioResult): Array<{ ok: boolean | null; text: string }> => {
+  const statusLines = (
+    result: ScenarioResult,
+    approvalDateText: string,
+  ): Array<{ ok: boolean | null; text: string }> => {
+    // אישור עקרוני rate validity: a lapsed or lapsing rate is a status line
+    // like any other, appended to whichever branch fires so a scenario in an
+    // error state still reports it. The line is absent when the date is blank,
+    // invalid, or still comfortably valid.
+    //
+    // It carries the SAME actionable wording as the calculator's summary note
+    // (calculator.warnings.rateExpiring/rateExpired), not the chip's compact
+    // sentence: a results area warns and says what to do, while the chip
+    // beside the field stays a short badge. Same split on both pages.
+    const validity = rateValidityStatus(approvalDateText, new Date())
+    const rateLine: Array<{ ok: boolean | null; text: string }> =
+      validity && validity.status !== 'valid'
+        ? [
+            {
+              ok: validity.status === 'expired' ? false : null,
+              text: t(
+                validity.status === 'expired'
+                  ? 'calculator.warnings.rateExpired'
+                  : 'calculator.warnings.rateExpiring',
+                { date: formatDateOnly(validity.validUntil, i18n.language) },
+              ),
+            },
+          ]
+        : []
     if (result.error === 'positive') {
-      return [{ ok: false, text: t('compare.statusErrorPositive') }]
+      return [{ ok: false, text: t('compare.statusErrorPositive') }, ...rateLine]
     }
     if (result.error === 'variableCap') {
-      return [{ ok: false, text: t('compare.statusErrorVariableCap') }]
+      return [{ ok: false, text: t('compare.statusErrorVariableCap') }, ...rateLine]
     }
     if (result.error === 'duplicateType') {
-      return [{ ok: false, text: t('compare.statusErrorDuplicateType') }]
+      return [{ ok: false, text: t('compare.statusErrorDuplicateType') }, ...rateLine]
     }
-    if (result.isEmpty) return [{ ok: null, text: t('compare.statusEmpty') }]
+    if (result.isEmpty) return [{ ok: null, text: t('compare.statusEmpty') }, ...rateLine]
     const lines: Array<{ ok: boolean | null; text: string }> = []
     if (result.ltv) {
       lines.push({
@@ -343,7 +374,7 @@ export function ComparePage() {
     } else if (result.totals.firstPayment > 0) {
       lines.push({ ok: true, text: t('compare.statusPtiOk') })
     }
-    return lines
+    return [...lines, ...rateLine]
   }
 
   /** The scenario editor block (tracks + term + label), shared by both layouts. */
@@ -422,6 +453,38 @@ export function ComparePage() {
             {scenario.termYears} {t('compare.scenarioTermSuffix')}
           </span>
         </label>
+        {/* אישור עקרוני: each mix is its own offer, so each carries its own
+            approval date (and its own result, since offers compared side by
+            side rarely share one). The field, chip and hint are shared with
+            the calculator. htmlFor names the input directly: the tooltip's
+            "?" button is the label's first labelable descendant. */}
+        <div className="compare-approval-row">
+          <label className="input-group" htmlFor={`compare-approval-date-${scenarioIndex + 1}`}>
+            <span className="label-help-row">
+              <span className="label-help-text">{t('calculator.approvalDateLabel')}</span>
+              <HelpTooltip
+                label={t('calculator.help.approvalDateAria')}
+                content={t('calculator.help.approvalDate')}
+                testId={`help-approval-date-${scenarioIndex + 1}`}
+              />
+            </span>
+            <span className="input-wrap">
+              <input
+                id={`compare-approval-date-${scenarioIndex + 1}`}
+                type="date"
+                value={scenario.approvalDateText}
+                onChange={(event) =>
+                  actions.setScenarioApprovalDate(scenario.id, event.target.value)
+                }
+                data-testid={`compare-approval-date-${scenarioIndex + 1}`}
+              />
+            </span>
+          </label>
+          <RateValidityChip
+            approvalDate={scenario.approvalDateText}
+            testId={`compare-approval-chip-${scenarioIndex + 1}`}
+          />
+        </div>
         {/* Preset mixes (תמהיל 1-4), calculator parity: clicking one replaces
             the scenario's tracks with the preset's allocation at the shared
             loan (or at the tracks' own total when no loan is derivable yet).
@@ -604,7 +667,7 @@ export function ComparePage() {
           })}
         </dl>
         <div className="compare-status-list">
-          {statusLines(result).map((line, lineIndex) => (
+          {statusLines(result, scenario.approvalDateText).map((line, lineIndex) => (
             <StatusChip key={lineIndex} ok={line.ok} text={line.text} />
           ))}
         </div>

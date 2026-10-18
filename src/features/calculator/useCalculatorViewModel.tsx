@@ -10,6 +10,7 @@ import {
   isFeeAboveNorm,
   parseAmountText,
 } from '@/lib/format'
+import { formatDateOnly, rateValidityStatus } from '@/lib/rateValidity'
 import {
   FIRST_HOME_TAX_EXEMPTION_UP_TO,
   LAWYER_MINIMUM_FEE,
@@ -105,7 +106,7 @@ const LAWYER_FLOOR_WITH_VAT = formatGroupedNumber(Math.round(LAWYER_MINIMUM_FEE 
  * the legacy dynamic-label priority chain and message compositions.
  */
 export function useCalculatorViewModel() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const snapshot = useCalculatorStore((s) => s.snapshot)
   const error = useCalculatorStore((s) => s.error)
   const flaggedTrackIds = useCalculatorStore((s) => s.flaggedTrackIds)
@@ -119,6 +120,7 @@ export function useCalculatorViewModel() {
   const incomeText = useCalculatorStore((s) => s.incomeText)
   const otherExpenses = useCalculatorStore((s) => s.otherExpenses)
   const ptiThresholdPercent = useCalculatorStore((s) => s.ptiThresholdPercent)
+  const approvalDateText = useCalculatorStore((s) => s.approvalDateText)
   const realtorPercentHint = useCalculatorStore((s) => s.realtorPercentHint)
   const lawyerPercentHint = useCalculatorStore((s) => s.lawyerPercentHint)
   const realtorAmountHint = useCalculatorStore((s) => s.realtorAmountHint)
@@ -191,6 +193,23 @@ export function useCalculatorViewModel() {
   // Regulatory-limit messages: capital shortfall and LTV violations are "bad"
   // (red ❌); the DTI explanation is general info (ℹ️) - feedback request.
   const warningMessages: NoteLine[] = []
+  // אישור עקרוני rate validity: a pre-approval's rate holds for a fixed window
+  // (see src/lib/rateValidity.ts), so a lapsed one is ❌ and one about to lapse
+  // is 💡. A blank or malformed date yields no result, so no line and no chip.
+  const rateValidity = rateValidityStatus(approvalDateText, new Date())
+  if (rateValidity && rateValidity.status !== 'valid') {
+    warningMessages.push(
+      mark(
+        rateValidity.status === 'expired' ? 'negative' : 'info',
+        t(
+          rateValidity.status === 'expired'
+            ? 'calculator.warnings.rateExpired'
+            : 'calculator.warnings.rateExpiring',
+          { date: formatDateOnly(rateValidity.validUntil, i18n.language) },
+        ),
+      ),
+    )
+  }
   // Entered capital below the required amount → tell the user how much more.
   // When the capital-percent line (below) already folds in the shortfall, the
   // standalone message is skipped - feedback request (mix together). With no
@@ -880,5 +899,7 @@ export function useCalculatorViewModel() {
     purposeLimits: PURPOSE_LIMITS,
     otherExpenses,
     ptiThresholdPercent,
+    approvalDate: approvalDateText,
+    rateValidity,
   }
 }

@@ -14,6 +14,7 @@ import { seedFromCalculator } from '@/stores/comparisonStore'
 import { MAX_OTHER_EXPENSES, MAX_TRACKS, MAX_YEARS, PRESET_IDS, type PresetId, type PropertyPurpose } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
+import { RateValidityChip } from '@/components/ui/RateValidityChip'
 import { HoverTooltip } from '@/components/ui/HoverTooltip'
 import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenaltyFacts'
 import { TermSlider } from '@/components/ui/TermSlider'
@@ -157,6 +158,7 @@ export function CalculatorPage() {
       mortgageSumText: useCalculatorStore.getState().startingAmountText,
       activePreset: useCalculatorStore.getState().activePreset,
       tracks: useCalculatorStore.getState().tracks,
+      approvalDateText: useCalculatorStore.getState().approvalDateText,
     })
     navigate('/compare')
   }
@@ -241,6 +243,8 @@ export function CalculatorPage() {
     appraiserFeeText: useCalculatorStore((s) => s.appraiserFeeText),
     renovationAmountText: useCalculatorStore((s) => s.renovationAmountText),
     otherExpenses: useCalculatorStore((s) => s.otherExpenses),
+    approvalDateText: useCalculatorStore((s) => s.approvalDateText),
+    setApprovalDate: useCalculatorStore((s) => s.setApprovalDate),
     setStartingAmount: useCalculatorStore((s) => s.setStartingAmount),
     setTermYears: useCalculatorStore((s) => s.setTermYears),
     setPropertyValue: useCalculatorStore((s) => s.setPropertyValue),
@@ -472,6 +476,41 @@ export function CalculatorPage() {
                   testId="monthly-income"
                 />
               </label>
+            </div>
+
+            {/* אישור עקרוני approval date: the rate quoted in a pre-approval
+                holds for a fixed window (Bank of Israel), so the calculator
+                reports how long the quoted rates are still good for. It is
+                reported, never auto-corrected, and is not part of a saved mix -
+                the hint says so. htmlFor names the input directly: the
+                tooltip's "?" button is the label's first labelable
+                descendant, so nesting alone would hand the label to it (see
+                the term slider). */}
+            <div className="rate-validity-row" data-testid="rate-validity-row">
+              <label className="input-group rate-validity-field" htmlFor="approval-date">
+                <span className="label-help-row">
+                  <span className="label-help-text">{t('calculator.approvalDateLabel')}</span>
+                  <HelpTooltip
+                    label={t('calculator.help.approvalDateAria')}
+                    content={t('calculator.help.approvalDate')}
+                    testId="help-approval-date"
+                  />
+                </span>
+                <span className="input-wrap">
+                  <input
+                    id="approval-date"
+                    type="date"
+                    value={store.approvalDateText}
+                    onChange={(event) => store.setApprovalDate(event.target.value)}
+                    data-testid="approval-date"
+                  />
+                </span>
+              </label>
+              <RateValidityChip
+                approvalDate={store.approvalDateText}
+                testId="rate-validity-chip"
+                className="rate-validity-row-chip"
+              />
             </div>
 
             {/* Transaction costs (realtor / lawyer / appraiser) - market

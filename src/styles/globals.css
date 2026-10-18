@@ -188,6 +188,10 @@ strong {
   --comment-line: rgba(15, 15, 15, 0.18);
   --danger: #bb3a3a;
   --danger-strong: #d32f2f;
+  /* "Careful, not wrong yet": the rate-validity chip's expiring state (a
+     pre-approval rate about to lapse). Tuned per theme for contrast - text on
+     the light calc panel here, on the dark panel below. */
+  --rate-warn: #a15c00;
   /* Navbar glass, back to the legacy two-state look (user-requested):
      TRANSPARENT at the top, a denser slab once the page scrolls under it.
 
@@ -4196,6 +4200,60 @@ e #name,
   margin-top: 7px;
 }
 
+/* אישור עקרוני approval date: one field on its own row under the limits row,
+   with the rate-validity chip beside it. The row wraps rather than squeezing
+   the date control, whose intrinsic width is modest but not zero. */
+.rate-validity-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 18px;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--calc-line);
+}
+
+.rate-validity-field {
+  flex: 0 1 220px;
+  min-width: 0;
+}
+
+/* The panel's blanket input rule stretches a field to 100%; a native date
+   control has its own usable width, so let it keep it. */
+.rate-validity-field .input-wrap input[type='date'] {
+  width: auto;
+  min-width: 0;
+}
+
+/* The status chip itself: colour carries the urgency. Shared with the compare
+   page's editor, so it lives on its own, not under .calculator-panel. */
+.rate-validity-chip {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  background: var(--calc-field);
+  color: var(--calc-muted);
+}
+
+.rate-validity-chip.valid {
+  color: var(--calc-accent);
+  border-color: var(--calc-accent);
+}
+
+.rate-validity-chip.expiring {
+  color: var(--rate-warn);
+  border-color: var(--rate-warn);
+}
+
+.rate-validity-chip.expired {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 /* Summary notes - the capital/closing-cost breakdown and the regulatory
    warnings share one container (feedback request): a single uniform font
    size, no yellow tint, and per-line status markers. Positive lines lead
@@ -7419,6 +7477,8 @@ tbody tr:hover {
   /* The legacy reds are too dark to read on a dark page. */
   --danger: #ff9a9a;
   --danger-strong: #ff8f8f;
+  /* Lighter amber for the dark calc panel (see the light value above). */
+  --rate-warn: #e8b04b;
   /* The 0.5px legacy drop shadows were tuned for a light page. */
   --black-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.55);
   /* Only the SCROLLED tint is per-theme. The TOP slab is the shared legacy
@@ -8423,6 +8483,36 @@ html[dir='rtl'] .comment-text {
   border: 1px solid var(--calc-line);
   border-radius: 4px;
   padding: 8px 12px;
+}
+
+/* אישור עקרוני approval date in a scenario column: the calculator's field +
+   validity chip, on one wrapping row between the term slider and the preset
+   buttons. Each mix carries its own date, so the row is per scenario. */
+.compare-approval-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  margin: 0 0 12px;
+}
+
+.compare-approval-row .input-group {
+  flex: 0 1 200px;
+  min-width: 0;
+}
+
+/* A native date control has its own usable width; the shell's blanket 100%
+   would stretch it across the column. */
+.compare-approval-row .input-wrap input[type='date'] {
+  width: auto;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.compare-approval-row .rate-validity-chip {
+  font-size: 0.8rem;
+  padding: 5px 8px;
 }
 
 /* Preset mixes (תמהיל 1-4): the calculator's .preset-list/.preset-button

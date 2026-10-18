@@ -75,6 +75,7 @@ import {
   formatGroupedNumber,
   parseAmountText,
 } from '@/lib/format'
+import { parseDateOnly } from '@/lib/rateValidity'
 
 export interface TrackState {
   id: string
@@ -306,6 +307,14 @@ interface CalculatorData {
   /** Payment-to-income ceiling in percent (20-40, default 33). */
   ptiThresholdPercent: number
   /**
+   * אישור עקרוני approval date as a date-only 'YYYY-MM-DD', or '' when the
+   * user has not entered one. The rate quoted in a pre-approval holds for a
+   * fixed window (see `src/lib/rateValidity.ts`), so the calculator reports
+   * whether the quoted rates are still good for. Session input: it is not part
+   * of a saved mix and does not affect the math.
+   */
+  approvalDateText: string
+  /**
    * Serialized tracks + term at the last save/load/reset, used to tell
    * whether the current mix has unsaved changes. Compared against the live
    * state via isMixDirty rather than mutated by every action.
@@ -369,6 +378,7 @@ export interface CalculatorActions {
   ): { text: string; caret: number | null }
   removeOtherExpense(id: string): void
   setPtiThreshold(percent: number): void
+  setApprovalDate(raw: string): void
   addTrack(values?: AddTrackValues): void
   removeTrack(id: string): void
   updateTrackAmount(
@@ -1161,6 +1171,7 @@ const initialData: CalculatorData = {
     { id: `expense-${nextExpenseId++}`, label: '', amountText: '', oneTimeAmountText: '' },
   ],
   ptiThresholdPercent: PTI_DEFAULT_THRESHOLD * 100,
+  approvalDateText: '',
   mixBaseline: '',
   loadedMixId: null,
   loadedMixLabel: null,
@@ -1473,6 +1484,14 @@ export const useCalculatorStore = create<CalculatorStore>()(
       })
     },
 
+    setApprovalDate: (raw) => {
+      set((s) => {
+        // A malformed value clears rather than storing junk the chip would
+        // silently swallow. No recalculate: the date never feeds the math.
+        s.approvalDateText = parseDateOnly(raw) === null ? '' : raw.trim()
+      })
+    },
+
     addTrack: (values) => {
       set((s) => {
         if (s.tracks.length >= 3) return
@@ -1693,6 +1712,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.startingPointDirty = false
         s.loadedMixId = id ?? null
         s.loadedMixLabel = id ? (label ?? null) : null
+        // The אישור עקרוני date is not persisted with a mix, so it must not
+        // carry over from whatever was in the editor before this load.
+        s.approvalDateText = ''
         if (scenario) {
           // Restore the saved scenario verbatim: the user-entered text fields,
           // the choice fields, and the expenses (fresh ids). recalculate()
@@ -1738,6 +1760,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         s.loadedMixId = null
         s.loadedMixLabel = null
+        // Detaching starts a fresh offer, so the previous offer's approval date
+        // must not linger on it.
+        s.approvalDateText = ''
       })
     },
 
@@ -1860,6 +1885,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.lawyerAmountHint = null
         s.lawyerFloorApplied = false
         s.ptiThresholdPercent = PTI_DEFAULT_THRESHOLD * 100
+        // The אישור עקרוני date belongs to one offer, so a reset drops it with
+        // the rest of the mix's work.
+        s.approvalDateText = ''
         s.termYears = DEFAULT_TERM_YEARS
         s.scheduleExpanded = false
         s.activePreset = 'basket4'

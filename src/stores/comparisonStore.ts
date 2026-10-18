@@ -26,6 +26,7 @@ import {
   type TrackType,
 } from '@/lib/amortization'
 import { formatAmountWithCaret, formatGroupedNumber, parseAmountText } from '@/lib/format'
+import { parseDateOnly } from '@/lib/rateValidity'
 import {
   computeScenario,
   sharedFeeProfileFromTexts,
@@ -58,6 +59,14 @@ export interface ComparisonScenario {
   termYears: number
   /** Last chosen preset mix: highlights its button and keeps re-allocation exact. */
   activePreset: PresetId | null
+  /**
+   * אישור עקרוני approval date as a date-only 'YYYY-MM-DD', or '' when not
+   * entered. Each mix is its own offer, so each carries its own date: the rate
+   * quoted in a pre-approval holds for a fixed window (see
+   * `src/lib/rateValidity.ts`), and offers compared side by side rarely share
+   * one. Session input: never persisted, never part of the math.
+   */
+  approvalDateText: string
 }
 
 /** One repeatable shared expense row: a recurring monthly amount plus an
@@ -129,6 +138,8 @@ export interface ComparisonState {
 
 export interface ComparisonActions {
   setLabel(id: string, label: string): void
+  /** אישור עקרוני date for one mix; date-only 'YYYY-MM-DD' or '' to clear. */
+  setScenarioApprovalDate(id: string, raw: string): void
   setPropertyValue(raw: string, caret: number | null): { text: string; caret: number | null }
   setCapital(raw: string, caret: number | null): { text: string; caret: number | null }
   setIncome(raw: string, caret: number | null): { text: string; caret: number | null }
@@ -247,7 +258,7 @@ function blankTrack(termYears: number, type: TrackType = 'fixed'): TrackState {
  * touching anything. Scenario 2 opens blank: it is the alternative the user
  * builds by hand (or by duplicating scenario 1).
  */
-function createInitialScenarios(): ComparisonScenario[] {
+function createInitialScenarios(calculatorApprovalDate = ''): ComparisonScenario[] {
   return [
     {
       id: makeScenarioId(),
@@ -255,6 +266,8 @@ function createInitialScenarios(): ComparisonScenario[] {
       tracks: createInitialTracks(null),
       termYears: DEFAULT_TERM_YEARS,
       activePreset: 'basket4',
+      // The calculator's אישור עקרוני date travels with the mix it belongs to.
+      approvalDateText: calculatorApprovalDate,
     },
     {
       id: makeScenarioId(),
@@ -262,6 +275,7 @@ function createInitialScenarios(): ComparisonScenario[] {
       tracks: [blankTrack(DEFAULT_TERM_YEARS)],
       termYears: DEFAULT_TERM_YEARS,
       activePreset: null,
+      approvalDateText: '',
     },
   ]
 }
@@ -603,6 +617,16 @@ export const useComparisonStore = create<ComparisonStore>()(
       })
     },
 
+    setScenarioApprovalDate: (id, raw) => {
+      set((s) => {
+        const scenario = s.scenarios.find((entry) => entry.id === id)
+        if (!scenario) return
+        // A malformed value clears rather than storing junk the chip would
+        // silently swallow. No recompute: the date never feeds the math.
+        scenario.approvalDateText = parseDateOnly(raw) === null ? '' : raw.trim()
+      })
+    },
+
     setPropertyValue: (raw, caret) => {
       const formatted = formatAmountWithCaret(raw, caret)
       // Same home-price cap as the main calculator: one clamp at the input.
@@ -797,6 +821,7 @@ export const useComparisonStore = create<ComparisonStore>()(
           tracks: [blankTrack(DEFAULT_TERM_YEARS)],
           termYears: DEFAULT_TERM_YEARS,
           activePreset: null,
+          approvalDateText: '',
         })
         recompute(s)
       })
@@ -815,6 +840,8 @@ export const useComparisonStore = create<ComparisonStore>()(
           tracks: source.tracks.map((track) => ({ ...track, id: makeTrackId() })),
           termYears: source.termYears,
           activePreset: source.activePreset,
+          // The copy is the same offer, so it starts on the same date.
+          approvalDateText: source.approvalDateText,
         })
         recompute(s)
       })
@@ -1182,6 +1209,8 @@ export function seedFromCalculator(calculator: {
   mortgageSumText: string
   activePreset: PresetId | null
   tracks: TrackState[]
+  /** אישור עקרוני date for the seeded mix; omitted = no date entered. */
+  approvalDateText?: string
 }): void {
   useComparisonStore.setState((state) => {
     state.shared = {
@@ -1219,6 +1248,7 @@ export function seedFromCalculator(calculator: {
         tracks: calculator.tracks.map((track) => ({ ...track, id: makeTrackId() })),
         termYears: calculator.termYears,
         activePreset: calculator.activePreset,
+        approvalDateText: calculator.approvalDateText ?? '',
       },
       {
         id: makeScenarioId(),
@@ -1228,6 +1258,7 @@ export function seedFromCalculator(calculator: {
         tracks: [blankTrack(calculator.termYears)],
         termYears: calculator.termYears,
         activePreset: null,
+        approvalDateText: '',
       },
     ]
     recompute(state)

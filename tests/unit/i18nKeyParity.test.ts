@@ -63,4 +63,18 @@ describe('translation key parity', () => {
     expect(he.translation.auth.resetResendExhausted).toContain('3')
     expect(en.translation.auth.resetResendExhausted).toMatch(/sign-in/i)
   })
+
+  it('interpolates the rate-validity date in every status, in both languages', () => {
+    // The chip and the compare status line fill {{date}} in; a missing
+    // placeholder would render the raw token next to the word "valid".
+    for (const translation of [he.translation, en.translation]) {
+      for (const status of ['valid', 'expiring', 'expired'] as const) {
+        expect(translation.calculator.rateValidity[status]).toContain('{{date}}')
+      }
+      // The results warnings name a date AND tell the user what to do next.
+      for (const key of ['rateExpiring', 'rateExpired'] as const) {
+        expect(translation.calculator.warnings[key]).toContain('{{date}}')
+      }
+    }
+  })
 })

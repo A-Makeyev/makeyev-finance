@@ -20,6 +20,9 @@ import { expect, type Locator, type Page } from '@playwright/test'
   readonly initialCapital: Locator
   readonly monthlyIncome: Locator
   readonly termSlider: Locator
+  /** אישור עקרוני approval date and the rate-validity chip it drives. */
+  readonly approvalDate: Locator
+  readonly rateValidityChip: Locator
   /** The starting-point row's primary action and its action cell. */
   readonly showPayments: Locator
   readonly startingActions: Locator
@@ -74,6 +77,8 @@ import { expect, type Locator, type Page } from '@playwright/test'
     this.initialCapital = page.getByTestId('initial-capital')
     this.monthlyIncome = page.getByTestId('monthly-income')
     this.termSlider = page.getByTestId('term-years')
+    this.approvalDate = page.getByTestId('approval-date')
+    this.rateValidityChip = page.getByTestId('rate-validity-chip')
     this.showPayments = page.getByTestId('show-payments')
     this.startingActions = page.getByTestId('starting-actions')
     this.myMixesMenuTrigger = page.getByTestId('my-mixes-menu-trigger')
@@ -155,6 +160,21 @@ import { expect, type Locator, type Page } from '@playwright/test'
 
   async selectPurpose(value: string): Promise<void> {
     await this.page.getByTestId('property-purpose').selectOption(value)
+  }
+
+  /** Sets the אישור עקרוני approval date (a date-only 'YYYY-MM-DD' value). */
+  async setApprovalDate(value: string): Promise<void> {
+    await this.approvalDate.fill(value)
+  }
+
+  /**
+   * The rate-validity chip's status, or null when no chip is rendered. Read
+   * from `data-status` rather than the text: the rendered date is
+   * locale-dependent, the status is not.
+   */
+  async rateValidityStatus(): Promise<string | null> {
+    if ((await this.rateValidityChip.count()) === 0) return null
+    return this.rateValidityChip.getAttribute('data-status')
   }
 
   /**

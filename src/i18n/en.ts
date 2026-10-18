@@ -394,6 +394,12 @@ export const en: { translation: Translation } = {
       ptiThresholdSuffix: 'of income',
       ptiHint:
         'Suggested payment: the mortgage payment together with additional monthly expenses should not exceed {{threshold}}% of income.',
+      approvalDateLabel: 'Pre-approval date',
+      rateValidity: {
+        valid: 'Rate valid until {{date}}',
+        expiring: 'Rate expires soon, on {{date}}',
+        expired: 'Rate validity ended on {{date}}',
+      },
       expenseLabel: 'Expense description',
       expenseLabelAria: 'Description of the additional expense',
       expenseAmountLabel: 'Monthly payment',
@@ -467,6 +473,9 @@ export const en: { translation: Translation } = {
         presetAria: 'More about the ready-made mixes',
         preset:
           'A ready-made mix fills the tracks with a fixed split between fixed, prime and variable-indexed tracks, as a starting point to tweak. The article explains what each mix contains.',
+        approvalDateAria: 'More about how long a pre-approval rate holds',
+        approvalDate:
+          'Per the Bank of Israel, a rate in a pre-approval holds for 24 days from issue. The date is for this calculation only and is not saved with the mix.',
       },
       trackTypes: {
         prime: 'Prime',
@@ -662,6 +671,10 @@ export const en: { translation: Translation } = {
         purposeFirst: 'first home',
         purposeUpgrade: 'home upgrade',
         purposeInvestment: 'investment property',
+        rateExpiring:
+          'The pre-approval rate is about to lapse (until {{date}}). Consider asking the bank for an updated approval.',
+        rateExpired:
+          'The pre-approval rate has lapsed ({{date}}). Ask the bank for an updated rate.',
       },
       taxBreakdown: {
         title: 'Purchase tax breakdown',
