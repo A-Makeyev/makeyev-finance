@@ -5707,11 +5707,11 @@ e #name,
 }
 
 /* Collapse cascade: the entrance run backwards - same duration, same 70ms
-   steps, same drift, but the last card hides first ((11 - index) flips the
+   steps, same drift, but the last card hides first ((12 - index) flips the
    stagger order) so the grid closes in mirror image of how it opened. */
 .results-card.results-extra-out {
   animation: results-card-out 0.45s ease-in both;
-  animation-delay: calc((11 - var(--card-index, 0)) * 70ms);
+  animation-delay: calc((12 - var(--card-index, 0)) * 70ms);
 }
 
 @keyframes results-card-out {

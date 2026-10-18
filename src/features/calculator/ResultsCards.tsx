@@ -19,7 +19,7 @@ import {
 import { useCalculatorViewModel } from './useCalculatorViewModel'
 
 /**
- * Must cover the longest exit delay (11 × 70ms) plus the exit duration
+ * Must cover the longest exit delay (12 × 70ms) plus the exit duration
  * (450ms) - after it elapses the collapsed cards are removed from the grid.
  */
 const EXIT_TOTAL_MS = 1300
@@ -30,11 +30,11 @@ const SETTLE_MS = 350
 /**
  * The toggle stays out of sight while a card cascade plays and fades in
  * afterwards: after the featured trio on first paint (~590ms cascade),
- * after the twelve-card expansion (~1220ms), and together with the
+ * after the thirteen-card expansion (~1290ms), and together with the
  * glide-up on collapse (EXIT_TOTAL_MS).
  */
 const TOGGLE_IN_FEATURED_MS = 620
-const TOGGLE_IN_EXPANDED_MS = 1250
+const TOGGLE_IN_EXPANDED_MS = 1350
 
 /** The toggle's fade-out duration (CSS) - the label swaps once fully faded. */
 const TOGGLE_FADE_OUT_MS = 400
@@ -60,7 +60,7 @@ interface CardDef {
   primary?: boolean
   /** "Read more" link shown at the bottom of the explanation dialog. */
   link: LinkKey
-  /** --card-index stagger slot (0-2 featured, 0-11 extras). */
+  /** --card-index stagger slot (0-2 featured, 0-12 extras). */
   index: number
 }
 
@@ -274,7 +274,8 @@ export function ResultsCards() {
       testId: 'highest-payment',
       value: vm.highestPayment,
       label: vm.highestLabelText,
-      caption: t('calculator.results.highestCaption'),
+      caption: vm.highestCaption,
+      captionTestId: 'highest-caption',
       link: 'cpi',
       index: 2,
     },
@@ -363,6 +364,17 @@ export function ResultsCards() {
       caption: t('calculator.results.per100kCaption'),
       link: 'compare',
       index: 11,
+    },
+    {
+      // The debt the payments clear (the principal column, so nominal plus CPI
+      // drift on an indexed mix), not the loan the user typed.
+      key: 'principalDecline',
+      testId: 'principal-decline',
+      value: vm.totalPrincipalPaid,
+      label: t('calculator.results.principalDeclineCard'),
+      caption: vm.principalDeclineCaption,
+      link: 'cpi',
+      index: 12,
     },
   ] // The dialog reads straight from the live card definition, so it always
   // shows the current values and language while open. Content follows

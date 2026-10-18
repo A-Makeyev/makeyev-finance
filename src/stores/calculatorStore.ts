@@ -41,6 +41,7 @@ import {
   isVariableType,
   nextFreeTrackType,
   paymentPer100k,
+  peakPaymentYear,
   resolvePaymentLabel,
   scaleTrackAmounts,
   redistributeTrackAmounts,
@@ -215,6 +216,20 @@ export interface CalculatorSnapshot {
   scheduleTracks: TrackSchedule[]
   /** Combined per-month payment rows across all entered tracks (monthly view). */
   scheduleMonthlyRows: CombinedMonthlyRow[]
+  /**
+   * The debt the payments clear over the term: the combined schedule's
+   * principal column. Over a fully amortizing loan that column telescopes to
+   * the nominal loan plus the CPI drift (`sum(principal) === nominal +
+   * indexation`), so it equals the loan for a non-indexed mix and exceeds it
+   * for an indexed one.
+   */
+  totalPrincipalPaid: number
+  /**
+   * 1-based year in which the combined monthly payment peaks, from the same
+   * monthly series the schedule shows. A tie keeps the earliest year and float
+   * drift is ignored, so 1 means the payment never rises.
+   */
+  peakPaymentYear: number
 }
 
 export interface AddTrackValues {
@@ -577,6 +592,8 @@ const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   trackPaybacks: [],
   scheduleTracks: [],
   scheduleMonthlyRows: [],
+  totalPrincipalPaid: 0,
+  peakPaymentYear: 0,
   firstPaymentRateUp1: 0,
   firstPaymentRateDown1: 0,
   first5yInterestShare: 0,
@@ -995,6 +1012,8 @@ function recalculate(s: CalculatorState): void {
       trackPaybacks: [],
       scheduleTracks: [],
       scheduleMonthlyRows: [],
+      totalPrincipalPaid: 0,
+      peakPaymentYear: 0,
       firstPaymentRateUp1: 0,
       firstPaymentRateDown1: 0,
       first5yInterestShare: 0,
@@ -1067,6 +1086,15 @@ function recalculate(s: CalculatorState): void {
   const row5 = combinedRows.find((row) => row.year === 5)
   const balanceAfter5y = row5 ? row5.closing : (combinedRows[combinedRows.length - 1]?.closing ?? 0)
 
+  // Advisor rows. The principal column telescopes to nominal + indexation, so
+  // "everything repaid that was not interest" is the debt the payments actually
+  // clear (not merely the loan the user typed) - the donut derives its nominal
+  // principal slice the same way, one indexation lower. The peak year comes
+  // from the combined MONTHLY series, the same one the schedule renders.
+  const totalPrincipalPaid = totals.totalPaid - totals.totalInterest
+  const combinedMonthlyRows = combineMonthlySchedules(validResults)
+  const peakYear = peakPaymentYear(combinedMonthlyRows)
+
   s.snapshot = {
     totals,
     overpayPercent,
@@ -1115,7 +1143,9 @@ function recalculate(s: CalculatorState): void {
       rows: buildTrackScheduleRows(result),
       monthlyRows: result.monthlyRows,
     })),
-    scheduleMonthlyRows: combineMonthlySchedules(validResults),
+    scheduleMonthlyRows: combinedMonthlyRows,
+    totalPrincipalPaid,
+    peakPaymentYear: peakYear,
   }
 }
 

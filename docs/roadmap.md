@@ -228,6 +228,45 @@ only for decomposition display, so no existing math changes.
 
 **Open decision.** Add the per-track margin field, or only the derived rows?
 
+**Shipped (first slice, derived rows only).** Decided: no per-track מרווח שוק
+field (a data-model change) - only the rows that fall out of the existing
+schedule.
+
+- `snapshot.totalPrincipalPaid` = `totals.totalPaid - totals.totalInterest`:
+  everything repaid that was not interest, which is the principal column and so
+  telescopes to the nominal loan plus the CPI drift (`sum(principal) === nominal
+  + indexation`; the donut derives its nominal slice the same way, one
+  indexation lower). Rendered as a new extra results card, **סך ירידת הקרן**,
+  whose caption names the indexation part when the mix holds an indexed track.
+- `peakPaymentYear(rows)` in `src/lib/amortization.ts`: the 1-based year the
+  combined payment peaks, read from the combined MONTHLY series the schedule
+  renders. It requires a relative step (1e-9) to count, so the float drift of a
+  constant payment is not mistaken for a rise and a flat loan does not "peak"
+  in its final year. Year 1 (a payment that never rises) leaves the caption
+  alone; otherwise the highest-payment card's caption reads "ההחזר מגיע לשיאו
+  בשנה ה-{{year}}".
+- The extra-card cascade grew from twelve to thirteen (`--card-index` collapse
+  formula 11 → 12, `TOGGLE_IN_EXPANDED_MS` 1250 → 1350); `EXIT_TOTAL_MS` at
+  1300 still covers the 1290ms reverse cascade.
+- he/en keys (+ a details text for the new card's dialog); 8 store tests, 7
+  `peakPaymentYear` unit tests (empty, flat, rising, mid-term peak, ties, float
+  drift), and 6 e2e cases (both languages, the dialog, 360px, non-indexed mix).
+
+**Known nuance.** The highest-payment card's *amount* is the sum of each
+track's own peak (an estimate, as its label says), while the *year* comes from
+the combined monthly series. For a mix with a rising track and a falling
+(equal-principal) track those two need not coincide, so the caption's year
+describes the payment the user actually makes. Making the card's amount read
+the true combined peak too is a behaviour change to an existing card - a
+decision to take deliberately, not inside this slice.
+
+**Not done (deliberately).** תשלומי ריבית והצמדה as a *single* combined number:
+in this model indexation is folded into the principal column, so a combined
+"interest + indexation" row would count the indexation twice against סך ירידת
+הקרן. The indexation is instead named in that card's caption (and the donut
+shows the three-way split). Say the word if the combined figure is wanted anyway
+as a labelled cut. The מרווח שוק field stays a separate decision.
+
 ---
 
 ## Recommended order

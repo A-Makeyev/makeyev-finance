@@ -31,6 +31,7 @@ export const RESULTS_TOPIC_IDS = [
   'fiveYInterest',
   'balance5y',
   'per100k',
+  'principalDecline',
 ] as const
 
 export type ResultsTopicId = (typeof RESULTS_TOPIC_IDS)[number]
@@ -57,6 +58,7 @@ const CARD_LABEL_KEYS: Record<PlainTopicId, string> = {
   fiveYInterest: 'calculator.results.fiveYInterestCard',
   balance5y: 'calculator.results.balance5yCard',
   per100k: 'calculator.results.per100kCard',
+  principalDecline: 'calculator.results.principalDeclineCard',
 }
 
 /** Dynamic "highest payment" label by track composition (mirror of the view model). */

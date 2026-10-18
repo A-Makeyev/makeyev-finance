@@ -496,6 +496,7 @@ export const en: { translation: Translation } = {
         firstPaymentCard: 'First monthly payment',
         highestPaymentDefault: 'Highest estimated monthly payment',
         highestCaption: 'Largest payment across the whole term, per indexation',
+        highestCaptionWithYear: 'The payment reaches its peak in year {{year}}',
         totalInterestCard: 'Total interest',
         interestCaption: 'Extra cost of borrowing beyond the principal',
         totalPaymentCaption: 'Everything repaid: principal plus interest',
@@ -522,6 +523,10 @@ export const en: { translation: Translation } = {
         fiveYInterestCaption: 'Share of interest in the first 5 years of payments',
         per100kCard: 'Payment per ₪100k',
         per100kCaption: 'Monthly cost scaled to ₪100k ~ compare offers fairly',
+        principalDeclineCard: 'Total principal repaid',
+        principalDeclineCaption: 'The principal paid back over the whole term',
+        principalDeclineCaptionIndexed:
+          'The principal repaid plus {{indexation}} of indexation',
         avgRateCard: 'Average interest rate',
         avgRateCaption: 'Simple average of track rates; loan-weighted: {{weighted}}%',
         avgPaybackCard: 'Average payback ratio',
@@ -563,6 +568,8 @@ export const en: { translation: Translation } = {
             'The debt still owed after five years of payments. Early payments go mostly to interest, so a large share of the principal remains after five years. Key figure for refinancing or selling.',
           per100k:
             'Your monthly payment scaled to every ₪100,000 of the loan. This removes loan size from the equation, letting you fairly compare bank offers with different rates and terms.',
+          principalDecline:
+            'The total principal your payments give back over the term. On an indexed track, indexation makes the debt grow every month, so this sum is larger than the original loan ~ the difference is the indexation. On a non-indexed track it is exactly the loan amount.',
         },
         links: {
           guide: {

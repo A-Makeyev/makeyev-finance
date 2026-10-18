@@ -849,6 +849,22 @@ export function useCalculatorViewModel() {
     paymentPer100k: formatCurrency(snapshot.paymentPer100k),
     firstPaymentInterestShare: formatRatePercent(snapshot.firstPaymentInterestShare),
     balanceAfter5y: formatCurrency(snapshot.balanceAfter5y),
+    // Advisor rows: the peak-year line rides the highest-payment card's
+    // caption (its label already carries the "(estimated)" caveat, and the
+    // year comes from the schedule's own combined series). Year 1 means the
+    // payment never rises, so the caption stays as it was.
+    highestCaption:
+      snapshot.peakPaymentYear > 1
+        ? t('calculator.results.highestCaptionWithYear', { year: snapshot.peakPaymentYear })
+        : t('calculator.results.highestCaption'),
+    totalPrincipalPaid: formatCurrency(snapshot.totalPrincipalPaid),
+    // For an indexed mix the decline exceeds the loan, so the caption names the
+    // CPI part; otherwise the row is just the principal back.
+    principalDeclineCaption: hasIndexation
+      ? t('calculator.results.principalDeclineCaptionIndexed', {
+          indexation: formatCurrency(snapshot.totals.totalIndexation),
+        })
+      : t('calculator.results.principalDeclineCaption'),
     effectiveRate: formatRatePercent(effectiveAnnualRatePercent(snapshot.avgInterestRate)),
     avgPayback: formatRatio(snapshot.avgPaybackRatio),
     trackPaybacks: snapshot.trackPaybacks,

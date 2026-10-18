@@ -23,6 +23,10 @@ import { expect, type Locator, type Page } from '@playwright/test'
   /** אישור עקרוני approval date and the rate-validity chip it drives. */
   readonly approvalDate: Locator
   readonly rateValidityChip: Locator
+  /** Advisor-metric extra: the total principal the payments give back. */
+  readonly principalDecline: Locator
+  /** The highest-payment card's caption (carries the peak year). */
+  readonly highestCaption: Locator
   /** The starting-point row's primary action and its action cell. */
   readonly showPayments: Locator
   readonly startingActions: Locator
@@ -30,7 +34,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
   readonly myMixesMenuTrigger: Locator
   readonly savedMixesMenu: Locator
   readonly myMixesProfileLink: Locator
-  /** Toggle that reveals the twelve secondary result cards. */
+  /** Toggle that reveals the thirteen secondary result cards. */
   readonly resultsToggle: Locator
   /** Save-this-mix control, and its signed-out sign-in variant. */
   readonly saveMix: Locator
@@ -79,6 +83,8 @@ import { expect, type Locator, type Page } from '@playwright/test'
     this.termSlider = page.getByTestId('term-years')
     this.approvalDate = page.getByTestId('approval-date')
     this.rateValidityChip = page.getByTestId('rate-validity-chip')
+    this.principalDecline = page.getByTestId('principal-decline')
+    this.highestCaption = page.getByTestId('highest-caption')
     this.showPayments = page.getByTestId('show-payments')
     this.startingActions = page.getByTestId('starting-actions')
     this.myMixesMenuTrigger = page.getByTestId('my-mixes-menu-trigger')
@@ -321,7 +327,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
     return this.page.evaluate('window.scrollY')
   }
 
-  /** Expand the results grid so the twelve secondary cards are visible. */
+  /** Expand the results grid so the thirteen secondary cards are visible. */
   async showAllResults(): Promise<void> {
     await this.resultsToggle.click()
     await expect(this.page.getByTestId('total-payment')).toBeVisible()

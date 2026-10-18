@@ -533,6 +533,26 @@ export function combineMonthlySchedules(results: TrackResult[]): CombinedMonthly
   return combined
 }
 
+/**
+ * The 1-based year in which the combined monthly payment peaks, read from the
+ * same series the schedule renders. Ties keep the earliest year, and a step
+ * must clear a relative tolerance to count: a constant payment drifts by float
+ * noise over a long schedule, and a flat loan must not be reported as peaking
+ * in its final year. An empty series yields 0; a mix whose payment never rises
+ * (all-fixed, or an equal-principal schedule) peaks in year 1.
+ */
+export function peakPaymentYear(rows: CombinedMonthlyRow[]): number {
+  let peakYear = 0
+  let peakPayment = -Infinity
+  for (const row of rows) {
+    if (row.paid > peakPayment * (1 + 1e-9)) {
+      peakPayment = row.paid
+      peakYear = row.year
+    }
+  }
+  return peakYear
+}
+
 /** One display row of a single track's yearly schedule. */
 export interface TrackScheduleRow {
   year: number

@@ -25,6 +25,7 @@ import {
   firstPaymentWithRateBump,
   nextFreeTrackType,
   paymentPer100k,
+  peakPaymentYear,
   purchaseTaxBreakdown,
   redistributeTrackAmounts,
   scaleTrackAmounts,
@@ -40,6 +41,7 @@ import {
   suggestedPropertyValue,
   totalUpfrontCash,
   variableShareExceeded,
+  type CombinedMonthlyRow,
 } from '@/lib/amortization'
 
 const round2 = (value: number) => Math.round(value * 100) / 100
@@ -1131,6 +1133,80 @@ describe('combineMonthlySchedules (monthly view)', () => {
 
   it('returns an empty list when no tracks are given', () => {
     expect(combineMonthlySchedules([])).toEqual([])
+  })
+})
+
+describe('peakPaymentYear (advisor row)', () => {
+  const month = (year: number, paid: number): CombinedMonthlyRow => ({
+    year,
+    month: 1,
+    principal: 0,
+    indexation: 0,
+    interest: 0,
+    paid,
+    closing: 0,
+  })
+
+  it('returns 0 for an empty series', () => {
+    expect(peakPaymentYear([])).toBe(0)
+  })
+
+  it('keeps the first year when the payment never changes', () => {
+    const rows = [month(1, 5_000), month(1, 5_000), month(2, 5_000), month(2, 5_000)]
+    expect(peakPaymentYear(rows)).toBe(1)
+  })
+
+  it('reports the last year for a payment that rises every month', () => {
+    const rows = [month(1, 4_000), month(1, 4_100), month(2, 4_200), month(2, 4_300)]
+    expect(peakPaymentYear(rows)).toBe(2)
+  })
+
+  it('finds a peak in the middle of the term', () => {
+    const rows = [month(1, 10), month(2, 20), month(3, 5)]
+    expect(peakPaymentYear(rows)).toBe(2)
+  })
+
+  it('keeps the earliest of two equal peaks', () => {
+    const rows = [month(1, 10), month(2, 99), month(3, 99)]
+    expect(peakPaymentYear(rows)).toBe(2)
+  })
+
+  it('ignores float drift in a constant payment', () => {
+    // A real fixed-track schedule drifts by ~1e-9 shekels over 30 years; that
+    // must not read as the payment peaking in the final year.
+    const rows = [month(1, 5_062.256908243979), month(30, 5_062.256908244686)]
+    expect(peakPaymentYear(rows)).toBe(1)
+  })
+
+  it('still reports a tiny but real rise', () => {
+    const rows = [month(1, 5_000), month(2, 5_000.001)]
+    expect(peakPaymentYear(rows)).toBe(2)
+  })
+
+  it('peaks in the final year for a CPI-indexed track', () => {
+    const indexed = computeTrackResult({
+      principal: 500_000,
+      years: 10,
+      annualRatePercent: 3,
+      type: 'fixedIndexed',
+      method: 'spitzer',
+      annualInflation: 0.03,
+    })!
+    const rows = combineMonthlySchedules([indexed])
+    // Indexation raises the balance (and so the payment) every month, so the
+    // final month is the peak - the year the highest-payment card points at.
+    expect(peakPaymentYear(rows)).toBe(10)
+  })
+
+  it('peaks in year 1 for a non-indexed mix', () => {
+    const fixed = computeTrackResult({
+      principal: 500_000,
+      years: 10,
+      annualRatePercent: 4,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    expect(peakPaymentYear(combineMonthlySchedules([fixed]))).toBe(1)
   })
 })
 
