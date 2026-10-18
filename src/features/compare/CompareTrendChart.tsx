@@ -11,11 +11,12 @@ import { trendValues, type TrendMetric, type TrendSourceRow } from './trend'
  * The comparison's trend charts: one small chart per metric, each plotting every
  * mix so the differences read at a glance (no toggling between them).
  *
- * The composition chart comes first (the 2×2 grid's top-left panel) and mirrors
- * the calculator's combined chart: stacked קרן/ריבית columns per mix per year.
- * The other three metrics each get their own visual language so they do not
- * read as copies: remaining debt is a filled area, cumulative paid a line with
- * a dot per year, cumulative interest a dashed line. On the cumulative-
+ * The composition chart comes first, across the full width of the gallery, and
+ * mirrors the calculator's combined chart: stacked קרן/ריבית columns per mix per
+ * year. The other three metrics fall two per row beneath it, each with its own
+ * visual language so they do not read as copies: remaining debt is a filled
+ * area, cumulative paid a line with a dot per year, cumulative interest a
+ * dashed line. On the cumulative-
  * interest chart a mix that ends before the horizon drops vertically to the
  * axis at its term year, so its line visibly closes instead of stopping
  * mid-air; the balance and total lines simply end at their own term. One color
@@ -140,6 +141,7 @@ function TrendPanel({
   bars,
   maxYear,
   testIdPrefix,
+  wide = false,
 }: {
   metric: PanelMetric
   lines: TrendLine[]
@@ -147,6 +149,8 @@ function TrendPanel({
   bars?: BarSeries[]
   maxYear: number
   testIdPrefix: string
+  /** Spans the full grid row (the composition panel leads the gallery). */
+  wide?: boolean
 }) {
   const { t } = useTranslation()
   const plotRef = useRef<HTMLDivElement | null>(null)
@@ -227,7 +231,7 @@ function TrendPanel({
   const isArea = AREA_METRICS.includes(metric)
 
   return (
-    <div className="compare-trend" data-testid={testIdPrefix}>
+    <div className={`compare-trend${wide ? ' compare-trend-wide' : ''}`} data-testid={testIdPrefix}>
       <h3 className="compare-trend-title">{title}</h3>
       {/* Always rendered (empty for the line metrics) so every panel's header is
           the same height and the plots stay aligned across a row. */}
@@ -592,6 +596,7 @@ export function CompareTrendChart({
         maxYear={maxYear}
         testIdPrefix={`${testIdPrefix}-${COMPOSITION_METRIC}`}
         bars={barSeries}
+        wide
         // The tooltip and the screen-reader summary quote the mix's total
         // monthly payment next to the two stacked segments.
         lines={series.map((entry, index) => lineFor(entry, index, 'payment'))}

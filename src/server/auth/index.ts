@@ -15,12 +15,22 @@ import {
 } from './config'
 import { getDb } from './mongo'
 import { canSendMail } from '@/server/mail/config'
-import { sendDeleteAccountEmail, sendPasswordResetOtpEmail, sendVerificationEmail } from './email'
+import { sendDeleteCodeEmail, sendPasswordResetOtpEmail, sendVerificationEmail } from './email'
+import {
+  DELETE_ACCOUNT_PREFIX,
+  DELETE_CODE_TTL_SECONDS,
+  deleteAccountIdentifier,
+  generateDeleteCode,
+} from './deleteCode'
 import { duplicateSignUpError, signUpCollision } from './duplicateSignUp'
 import { isSocialSignIn, releaseOrphanedAccounts } from './orphanedAccounts'
 import { purgeUserData } from './deleteAccount'
 
-/** The endpoint the confirmation mail links to, handled by the hook below. */
+/**
+ * The endpoint a mail sent before the code switch links to (see
+ * createAndSendDeleteCode below): kept so those links still land their visitor
+ * somewhere sensible, handled by the hook below.
+ */
 const DELETE_USER_CALLBACK_PATH = '/delete-user/callback'
 import { DEFAULT_ROLE } from './roles'
 
@@ -134,12 +144,12 @@ async function createAuth() {
           return
         }
 
-        // The account-deletion link is only honoured for the session that asked
-        // for it (the token is checked against that session's user), so opening
-        // the mail on another device, signed out, answered a raw 404 JSON page.
-        // Send that visitor to the sign-in page instead: the token is not
-        // consumed until a session is present, so the link still works once
-        // they sign in and open it again.
+        // Legacy: mails sent before the deletion flow switched from a link to a
+        // typed code still point here. The link is only honoured for the session
+        // that asked for it, so opening such a mail on another device, signed
+        // out, answered a raw 404 JSON page. Send that visitor to the sign-in
+        // page instead: the token is not consumed until a session is present, so
+        // the old link still works once they sign in and open it again.
         if (ctx.path === DELETE_USER_CALLBACK_PATH) {
           const session = await getSessionFromCtx(ctx).catch(() => null)
           if (!session) {
@@ -199,16 +209,18 @@ async function createAuth() {
         enabled: true,
         // Two independent proofs before anything is removed: the account's own
         // password when it has one (verified by Better Auth itself, see the
-        // endpoint's `password` handling) and a link mailed to the address,
+        // endpoint's `password` handling) and a CODE mailed to the address,
         // which is the same proof for every account ~ a Google-created account
-        // has no password to ask for. The link lands on the profile page with
-        // the token, where the last press is what deletes; the token is Better
-        // Auth's, and nothing here is hand-rolled.
-        sendDeleteAccountVerification: async ({ user, token }, request) => {
-          await sendDeleteAccountEmail({ user, token, request })
+        // has no password to ask for. The code is typed into the profile's
+        // delete modal, and it IS the token this endpoint consumes: nothing
+        // about the deletion is hand-rolled, Better Auth still checks the code
+        // against the session that asked, spends it once, and does the delete.
+        sendDeleteAccountVerification: async ({ user }, request) => {
+          await createAndSendDeleteCode({ user, request })
         },
-        // Explicit, because the copy promises 24 hours (the default value).
-        deleteTokenExpiresIn: 24 * 60 * 60,
+        // Explicit, and matched by DELETE_CODE_TTL_SECONDS below: the mail
+        // promises 30 minutes.
+        deleteTokenExpiresIn: DELETE_CODE_TTL_SECONDS,
         afterDelete: async (user) => {
           // The user row is already gone at this point, so this cannot be
           // scoped by anything but the id Better Auth hands over. Removes the
@@ -287,6 +299,58 @@ async function createAuth() {
       nextCookies(),
     ],
   })
+}
+
+/**
+ * Replaces Better Auth's deletion link with a short, typed code.
+ *
+ * The library mints its own 32-character token for this mail and stores a row
+ * for it; that string is unusable as something a person types, so it is never
+ * mailed. Instead a short code is generated and stored under the SAME
+ * identifier shape (`delete-account-<code>`) with the session's user id as its
+ * value ~ which is exactly what the library's `/delete-user` endpoint looks up
+ * when the code comes back as `token`.
+ *
+ * Asking again supersedes the last code: every `delete-account-` row this user
+ * owns is swept before the new one is stored, so an earlier mailed code (and
+ * the library's own unused token row, which nothing could ever learn about)
+ * stops working the moment a fresh code is issued. Without the sweep an old
+ * code would stay valid until its own expiry, so a replaced code could still
+ * delete the account.
+ *
+ * Runs inside Better Auth's `runInBackgroundOrAwait`, so a failure here is
+ * logged (never the code, never the address) and the user can simply ask
+ * again; it must not throw into the delete request.
+ */
+async function createAndSendDeleteCode(args: {
+  user: { id: string; email: string; name?: string | null }
+  /** The triggering request; only its headers are read, to resolve the mail's language. */
+  request?: Request
+}): Promise<void> {
+  try {
+    const context = await (await getAuth()).$context
+    await context.adapter.deleteMany({
+      model: 'verification',
+      where: [
+        { field: 'identifier', operator: 'starts_with', value: DELETE_ACCOUNT_PREFIX },
+        { field: 'value', value: args.user.id },
+      ],
+    })
+
+    const code = generateDeleteCode()
+    await context.internalAdapter.createVerificationValue({
+      identifier: deleteAccountIdentifier(code),
+      value: args.user.id,
+      expiresAt: new Date(Date.now() + DELETE_CODE_TTL_SECONDS * 1000),
+    })
+
+    await sendDeleteCodeEmail({ user: args.user, code, request: args.request })
+  } catch (error) {
+    console.error(
+      '[auth] could not send the account-deletion code',
+      error instanceof Error ? error.name : 'unknown',
+    )
+  }
 }
 
 /**

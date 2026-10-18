@@ -38,18 +38,20 @@ export class ProfilePage {
   readonly deleteWarning: Locator
   readonly deleteConfirm: Locator
   readonly deleteConfirmHint: Locator
-  /** The password step: the account proves itself before the link is mailed. */
+  /** The password step: the account proves itself before the code is mailed. */
   readonly deletePassword: Locator
   readonly deleteSubmit: Locator
   readonly deleteSpinner: Locator
-  /** The last step, on the page the mailed link opens. */
-  readonly deleteMailConfirm: Locator
+  /** The second step: the mailed code is typed back in, one box per character. */
+  readonly deleteCodeHeading: Locator
+  /** Every box of the code field shares one test id (see CodeInput). */
+  readonly deleteCodeInputs: Locator
+  readonly deleteCode: Locator
+  readonly deleteResend: Locator
+  readonly deleteResendSent: Locator
+  readonly deleteMailTo: Locator
   readonly deleteCancel: Locator
   readonly deleteError: Locator
-  /** The "a link was sent to" state the modal switches to. */
-  readonly deleteMailSent: Locator
-  readonly deleteMailTo: Locator
-  readonly deleteClose: Locator
   /** The set-a-password flow (accounts created through Google). */
   readonly openSetPassword: Locator
   readonly setPasswordHint: Locator
@@ -85,17 +87,30 @@ export class ProfilePage {
     this.deletePassword = page.getByTestId('profile-delete-password')
     this.deleteSubmit = page.getByTestId('profile-delete-submit')
     this.deleteSpinner = page.getByTestId('delete-submit-spinner')
-    this.deleteMailConfirm = page.getByTestId('delete-account-mail-confirm')
+    this.deleteCodeHeading = page.getByTestId('delete-account-code-heading')
+    this.deleteCodeInputs = page.getByTestId('profile-delete-code')
+    this.deleteCode = this.deleteCodeInputs.first()
+    this.deleteResend = page.getByTestId('delete-account-resend')
+    this.deleteResendSent = page.getByTestId('delete-account-resend-sent')
+    this.deleteMailTo = page.getByTestId('delete-account-mail-to')
     this.deleteCancel = page.getByTestId('delete-account-cancel')
     this.deleteError = page.getByTestId('profile-delete-error')
-    this.deleteMailSent = page.getByTestId('delete-account-sent')
-    this.deleteMailTo = page.getByTestId('delete-account-mail-to')
-    this.deleteClose = page.getByTestId('delete-account-close')
     this.openSetPassword = page.getByTestId('open-set-password')
     this.setPasswordHint = page.getByTestId('set-password-hint')
   }
 
   async goto(path = '/profile'): Promise<void> {
     await this.page.goto(path)
+  }
+
+  /**
+   * Delivers a whole code to one box in a single change event, the way a
+   * clipboard paste or the OS one-time-code autofill does. keyboard.insertText
+   * goes through the browser's own input handling, unlike fill(), which sets
+   * the value directly and would not exercise the spread-across-boxes rules.
+   */
+  async insertDeleteCode(code: string, index = 0): Promise<void> {
+    await this.deleteCodeInputs.nth(index).click()
+    await this.page.keyboard.insertText(code)
   }
 }

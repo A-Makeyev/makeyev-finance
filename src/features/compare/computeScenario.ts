@@ -23,6 +23,7 @@ import {
   assessLtv,
   assessPti,
   computeTrackResult,
+  duplicateTrackType,
   estimateClosingCosts,
   estimateTransactionCosts,
   MAX_YEARS,
@@ -48,7 +49,8 @@ export interface ScenarioResult {
   isEmpty: boolean
   /** 'positive' - a track with an amount has years outside 1..30 or a non-positive amount. */
   /** 'variableCap' - variable share exceeds the Bank of Israel 2/3 ceiling. */
-  error: 'positive' | 'variableCap' | null
+  /** 'duplicateType' - the same track type appears more than once in the mix. */
+  error: 'positive' | 'variableCap' | 'duplicateType' | null
   totals: { firstPayment: number; totalPaid: number; totalInterest: number; highestPayment: number }
   overpayPercent: number
   /** Loan-amount-weighted average annual rate (%). */
@@ -93,8 +95,9 @@ export interface ScenarioResult {
   /** The combined yearly schedule the chart and the payments table both read. */
   schedule: Array<{ year: number; paid: number; principal: number; interest: number; closing: number }>
   /**
-   * Track-mix composition, grouped by track type (a mix can repeat a type):
-   * each slice's principal and its share of the loan. Drives the donut.
+   * Track-mix composition, grouped by track type (defensive: the duplicate
+   * gate above means a priced mix holds one track per type): each slice's
+   * principal and its share of the loan. Drives the donut.
    */
   mixShares: Array<{ type: string; amount: number; percent: number }>
 }
@@ -229,6 +232,12 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     return { ...emptyResult, isEmpty: false, error: 'positive' }
   }
 
+  // One track per type: a repeated type (e.g. two prime tracks) is rejected
+  // before any figure is shown, mirroring the calculator's store gate.
+  if (duplicateTrackType(enteredIndexes.map((index) => tracks[index].type))) {
+    return { ...emptyResult, isEmpty: false, error: 'duplicateType' }
+  }
+
   const validResults = enteredResults.filter(Boolean) as NonNullable<
     ReturnType<typeof computeTrackResult>
   >[]
@@ -281,7 +290,8 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     closing: row.closing,
   }))
   // Track-mix composition for the donut: sum each type's principal, then rank
-  // the slices largest-first. A mix may repeat a type, so this groups by type.
+  // the slices largest-first. The duplicate gate means each type is one track,
+  // so this grouping is defensive rather than load-bearing.
   const amountByType = new Map<string, number>()
   for (const result of validResults) {
     amountByType.set(result.type, (amountByType.get(result.type) ?? 0) + result.principal)

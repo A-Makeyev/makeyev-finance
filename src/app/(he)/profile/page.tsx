@@ -26,19 +26,14 @@ export default async function Page({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   // The verification link lands here with `?verified=1` (see the sign-up
-  // callbackURL in AuthPage), which is what triggers the one-off confetti. The
-  // deletion link lands here with `?delete=<token>`: the modal it opens is the
-  // last press before the account goes (nothing is deleted before it).
-  const { verified, delete: deleteParam } = await searchParams
-  const deleteToken = typeof deleteParam === 'string' && deleteParam ? deleteParam : null
+  // callbackURL in AuthPage), which is what triggers the one-off confetti.
+  // Account deletion no longer lands here: it is confirmed with a code typed
+  // into the profile's own modal (see ProfilePage and src/lib/deleteCode).
+  const { verified } = await searchParams
 
   const session = await getServerSession()
   if (!session) {
-    // Keep the token through the sign-in: the deletion link is only honoured
-    // for the session that asked for it, and making the visitor dig the mail
-    // out again would be the same dead end the raw JSON page used to be.
-    const next = deleteToken ? `/profile?delete=${encodeURIComponent(deleteToken)}` : '/profile'
-    redirect(`/login?next=${encodeURIComponent(next)}`)
+    redirect(`/login?next=${encodeURIComponent('/profile')}`)
   }
   // Resolved from this request's own session: the delete modal asks for a
   // password only when the account actually has one.
@@ -53,7 +48,6 @@ export default async function Page({
         role={toRole((session.user as { role?: unknown }).role)}
         hasPassword={hasPassword}
         justVerified={verified === '1'}
-        deleteToken={deleteToken}
       />
     </LocaleShell>
   )

@@ -116,6 +116,47 @@ export function isVariableType(type: TrackType): boolean {
   return VARIABLE_TRACK_TYPES.includes(type)
 }
 
+/**
+ * The first track type that appears more than once in `types`, or null when
+ * every type is distinct. A mix holds one track of each type - repeating a
+ * type (e.g. two prime tracks) is rejected as an app rule, so this drives the
+ * duplicate-type validation in both the calculator and the comparison.
+ */
+export function duplicateTrackType(types: readonly TrackType[]): TrackType | null {
+  const seen = new Set<TrackType>()
+  for (const type of types) {
+    if (seen.has(type)) return type
+    seen.add(type)
+  }
+  return null
+}
+
+/**
+ * Preference order for a newly added track's type: the classic fixed/prime
+ * pair first, then the remaining fixed-rate type (a third track then keeps a
+ * variable-heavy mix under the 2/3 cap), then the variable types. Kept out of
+ * TRACK_TYPES so the select's display order is untouched.
+ */
+const ADD_TRACK_TYPE_PREFERENCE: readonly TrackType[] = [
+  'fixed',
+  'prime',
+  'fixedIndexed',
+  'variable5y',
+  'variable',
+  'variableIndexed5y',
+  'variableIndexed',
+]
+
+/**
+ * The first preferred track type not present in `types`, or null when every
+ * type is taken. Used to seed a newly added track with a type the mix does not
+ * already hold, so adding a track never creates a duplicate.
+ */
+export function nextFreeTrackType(types: readonly TrackType[]): TrackType | null {
+  const used = new Set(types)
+  return ADD_TRACK_TYPE_PREFERENCE.find((type) => !used.has(type)) ?? null
+}
+
 export function isIndexedType(type: TrackType): boolean {
   return type.includes('Indexed')
 }

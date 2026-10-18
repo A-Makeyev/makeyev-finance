@@ -1,23 +1,24 @@
 'use client'
 
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FaGoogle, FaSpinner } from 'react-icons/fa'
 import { authClient } from '@/lib/auth-client'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { CodeInput } from '@/components/ui/CodeInput'
 import { FieldError } from '@/components/ui/FieldError'
+import { PendingContent } from '@/components/ui/PendingContent'
 import { useRouter } from '@/router'
 import { languageFromSegment, localePath } from '@/i18n'
-import { maskEmail } from '@/lib/mask'
 import { safeNextPath } from '@/lib/safeNextPath'
 import { RESEND_COOLDOWN_MS } from '@/lib/timings'
 import {
-  applyOtpInput,
   emptyOtpSlots,
   isOtpComplete,
   OTP_LENGTH,
   resendAvailability,
   resendSecondsLeft,
+  sanitizeOtpInput,
 } from './otp'
 
 /**
@@ -47,17 +48,6 @@ const INPUT_CLASS =
 /** Shared keyboard ring: the site's blue over the card, never the UA outline. */
 const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-soft-blue focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card'
-
-/**
- * One square of the 4-digit reset code: big centered digit, themed field.
- *
- * No `maxLength`: the box has to be able to receive a whole code in one change
- * event (a paste, or the OS one-time-code autofill) so the digits can spread
- * across the other boxes. A `maxLength={1}` clips that string to its first
- * digit before React ever sees it.
- */
-const OTP_INPUT_CLASS =
-  'h-12 w-12 rounded-lg border border-line-strong bg-surface-page text-center text-xl font-semibold text-ink outline-none transition-colors hover:border-ink focus:border-ink focus-visible:ring-2 focus-visible:ring-soft-blue'
 
 /** Providers this deployment has credentials for (see next.config.ts). */
 const ENABLED_SOCIAL_PROVIDERS = (process.env.AUTH_SOCIAL_PROVIDERS ?? '')
@@ -111,9 +101,6 @@ export function AuthPage() {
   // The reset step is two stages: the code is verified on the server first,
   // and only a code that passes swaps the boxes for the new-password fields.
   const [codeVerified, setCodeVerified] = useState(false)
-  // One ref per square input, so typing can auto-advance focus to the next
-  // box (and backspace can fall back to the previous one).
-  const otpRefs = useRef<Array<HTMLInputElement | null>>([])
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   // Set when a sign-up succeeded but the server did not sign the user in (a
@@ -137,6 +124,9 @@ export function AuthPage() {
   // Ticks once a second, only while a cooldown is running, so the button's
   // countdown counts down without a timer per render.
   const [now, setNow] = useState(() => Date.now())
+  // Bumped after a re-sent code clears the boxes, so CodeInput puts the caret
+  // back in the first box for the code that is about to arrive.
+  const [otpFocusRequest, setOtpFocusRequest] = useState(0)
 
   /** Starts (or restarts) the cooldown on the re-send action. */
   function lockResend() {
@@ -263,33 +253,6 @@ export function AuthPage() {
     }
     // A fresh attempt always starts at stage 1, never at the password fields.
     setCodeVerified(false)
-  }
-
-  /**
-   * The four square code inputs share one value. The editing rules (which box
-   * a change belongs to, what a paste or autofill does, digits only) live in
-   * ./otp where they are unit tested; this only applies them and moves focus.
-   */
-  function onOtpChange(index: number, raw: string) {
-    const edit = applyOtpInput(otp, index, raw)
-    setOtp(edit.slots)
-    otpRefs.current[edit.focusIndex]?.focus()
-  }
-
-  /** Backspace on an empty box moves focus to the previous one. */
-  function onOtpKeyDown(index: number, event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Backspace' && !otp[index]) {
-      otpRefs.current[Math.max(index - 1, 0)]?.focus()
-    }
-    // Arrow keys walk the boxes, the way a spread code field should.
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault()
-      otpRefs.current[Math.max(index - 1, 0)]?.focus()
-    }
-    if (event.key === 'ArrowRight') {
-      event.preventDefault()
-      otpRefs.current[Math.min(index + 1, OTP_LENGTH - 1)]?.focus()
-    }
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -496,7 +459,7 @@ export function AuthPage() {
       setResendSends((sent) => sent + 1)
       lockResend()
       setResetResend('sent')
-      otpRefs.current[0]?.focus()
+      setOtpFocusRequest((request) => request + 1)
     } finally {
       // A settled request never leaves the button spinning: 'sent' swaps the
       // label, and a failure resets to 'idle' above.
@@ -546,7 +509,7 @@ export function AuthPage() {
   // way in both themes instead of dropping to a darker fill in dark mode.
   const secondaryButtonClass = `rounded-lg border border-line-strong bg-surface-raised px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-ink/10 ${FOCUS_RING}`
 
-  const submitButtonClass = `mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2.5 font-medium leading-5 text-surface-page transition-[background-color,transform] hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-soft-blue focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 ${
+  const submitButtonClass = `relative mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2.5 font-medium leading-5 text-surface-page transition-[background-color,transform] hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-soft-blue focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 ${
     pending ? 'btn-sheen' : ''
   }`
 
@@ -565,7 +528,7 @@ export function AuthPage() {
           <div className="flex flex-col gap-4" data-testid="auth-verify-panel">
             {/* The address is NOT verified yet, so the panel must not announce a
                 created account (user-requested). It says only that the mail went
-                out; the masked address follows as the chip beneath it. */}
+                out; the address follows as the chip beneath it. */}
             <h5
               data-testid="auth-verify-heading"
               className="text-center font-semibold text-ink"
@@ -573,17 +536,15 @@ export function AuthPage() {
               {t('auth.verifyTitle')}
             </h5>
             {/* The address IS the confirmation: it stands on its own soft
-                surface with no sentence around it (user-requested), and only
-                half the local part is shown, so whoever is looking at the
-                screen reads which mailbox the mail went to without reading the
-                address itself. */}
+                surface with no sentence around it (user-requested), so whoever
+                is looking at the screen reads which mailbox the mail went to. */}
             <p
               role="status"
               data-testid="auth-notice"
               className="rounded-lg bg-surface-soft px-3 py-2.5 text-center text-sm font-medium text-ink"
             >
               <span data-testid="auth-verify-email" className="text-lg" dir="ltr">
-                {maskEmail(verifyEmail)}
+                {verifyEmail}
               </span>
             </p>
 
@@ -657,17 +618,9 @@ export function AuthPage() {
                 data-testid="auth-send-code"
                 className={submitButtonClass}
               >
-                {pending ? (
-                  <span className="flex h-5 w-5 items-center justify-center">
-                    <FaSpinner
-                      aria-hidden="true"
-                      data-testid="auth-submit-spinner"
-                      className="animate-spin"
-                    />
-                  </span>
-                ) : (
-                  t('auth.resetRequestAction')
-                )}
+                <PendingContent pending={pending} spinnerTestId="auth-submit-spinner">
+                  {t('auth.resetRequestAction')}
+                </PendingContent>
               </button>
               {/* Centered under the primary action it backs out of: every other
                   control on the card is centred, and a start-aligned button in
@@ -700,39 +653,23 @@ export function AuthPage() {
               <form onSubmit={onVerifyCode} className="flex flex-col gap-4">
                 {/* The code as four square boxes: digits-only, auto-advance on
                     type, a paste (or the OS one-time-code autofill) spreads
-                    across the boxes, backspace falls back. All four inputs
-                    carry the same data-testid so the specs (and autofill) keep
-                    working against the group. */}
-                <div
-                  role="group"
-                  aria-label={t('auth.resetCodeLabel')}
-                  className="flex justify-center gap-2"
-                  dir="ltr"
-                >
-                  {Array.from({ length: OTP_LENGTH }, (_, index) => (
-                    <input
-                      key={index}
-                      ref={(node) => {
-                        otpRefs.current[index] = node
-                      }}
-                      type="text"
-                      dir="ltr"
-                      required
-                      name={`reset-code-${index + 1}`}
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      autoComplete={index === 0 ? 'one-time-code' : 'off'}
-                      aria-label={`${t('auth.resetCodeLabel')} ${index + 1}`}
-                      data-testid="auth-otp"
-                      data-otp-index={index}
-                      className={OTP_INPUT_CLASS}
-                      value={otp[index] ?? ''}
-                      onChange={(event) => onOtpChange(index, event.target.value)}
-                      onKeyDown={(event) => onOtpKeyDown(index, event)}
-                      onFocus={(event) => event.target.select()}
-                    />
-                  ))}
-                </div>
+                    across the boxes, backspace falls back. Shared with the
+                    account-deletion code (src/components/ui/CodeInput); every
+                    box carries the same data-testid so the specs keep working
+                    against the group. */}
+                <CodeInput
+                  value={otp}
+                  onChange={setOtp}
+                  length={OTP_LENGTH}
+                  sanitize={sanitizeOtpInput}
+                  ariaLabel={t('auth.resetCodeLabel')}
+                  testId="auth-otp"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete
+                  namePrefix="reset-code"
+                  focusRequest={otpFocusRequest}
+                />
                 {/* Centered under the boxes it describes: as a stretched flex item the
                     text would otherwise sit on the start edge. */}
                 <span className="text-center text-xs text-ink-muted">
@@ -758,17 +695,9 @@ export function AuthPage() {
                   data-testid="auth-reset-verify"
                   className={submitButtonClass}
                 >
-                  {pending ? (
-                    <span className="flex h-5 w-5 items-center justify-center">
-                      <FaSpinner
-                        aria-hidden="true"
-                        data-testid="auth-submit-spinner"
-                        className="animate-spin"
-                      />
-                    </span>
-                  ) : (
-                    t('auth.resetVerifyAction')
-                  )}
+                <PendingContent pending={pending} spinnerTestId="auth-submit-spinner">
+                  {t('auth.resetVerifyAction')}
+                </PendingContent>
                 </button>
                 {/* Escape hatch for a code that never arrived, expired, or was
                     deleted: re-mail it without making the user abandon the
@@ -847,17 +776,9 @@ export function AuthPage() {
                   data-testid="auth-reset-submit"
                   className={submitButtonClass}
                 >
-                  {pending ? (
-                    <span className="flex h-5 w-5 items-center justify-center">
-                      <FaSpinner
-                        aria-hidden="true"
-                        data-testid="auth-submit-spinner"
-                        className="animate-spin"
-                      />
-                    </span>
-                  ) : (
-                    t('auth.resetAction')
-                  )}
+                <PendingContent pending={pending} spinnerTestId="auth-submit-spinner">
+                  {t('auth.resetAction')}
+                </PendingContent>
                 </button>
               </form>
             )}
@@ -1037,11 +958,11 @@ export function AuthPage() {
               )}
 
               {/* While the request is in flight the label is replaced by the
-                  spinner alone (plus the .btn-sheen sweep). leading-5 + the
-                  h-5 spinner box keep the button's height identical in both
-                  states, so swapping to the spinner never nudges the form.
-                  aria-label carries the "sending" name the dropped label used
-                  to provide. */}
+                  spinner alone (plus the .btn-sheen sweep). The label stays in
+                  the flow, invisible, and the spinner is laid over it
+                  (PendingContent), so the button keeps its exact width and
+                  height and never nudges the form. aria-label carries the
+                  "sending" name the invisible label no longer provides. */}
               <button
                 type="submit"
                 disabled={pending}
@@ -1050,19 +971,9 @@ export function AuthPage() {
                 data-testid="auth-submit"
                 className={submitButtonClass}
               >
-                {pending ? (
-                  <span className="flex h-5 w-5 items-center justify-center">
-                    <FaSpinner
-                      aria-hidden="true"
-                      data-testid="auth-submit-spinner"
-                      className="animate-spin"
-                    />
-                  </span>
-                ) : isSignUp ? (
-                  t('auth.signUpAction')
-                ) : (
-                  t('auth.signInAction')
-                )}
+                <PendingContent pending={pending} spinnerTestId="auth-submit-spinner">
+                  {t(isSignUp ? 'auth.signUpAction' : 'auth.signInAction')}
+                </PendingContent>
               </button>
             </form>
 

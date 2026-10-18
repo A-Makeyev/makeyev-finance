@@ -35,6 +35,11 @@ export class CommentsPage {
   readonly deleteError: Locator
   readonly toast: Locator
   readonly showMore: Locator
+  /** The control that reveals more of a single comment's replies. */
+  readonly showMoreReplies: Locator
+  /** The first-load placeholder: the group and one bar per skeleton row. */
+  readonly loading: Locator
+  readonly skeletons: Locator
   readonly collapseToggles: Locator
   readonly children: Locator
   /** Comments past the visual-depth cap: they have a toggle but no rail. */
@@ -69,6 +74,9 @@ export class CommentsPage {
     this.deleteError = page.getByTestId('comment-delete-error')
     this.toast = page.getByTestId('comment-toast')
     this.showMore = page.getByTestId('comments-show-more')
+    this.showMoreReplies = page.getByTestId('comment-show-more-replies')
+    this.loading = page.getByTestId('comments-loading')
+    this.skeletons = page.locator('.comment-skeleton')
     this.collapseToggles = page.getByTestId('comment-collapse')
     this.children = page.getByTestId('comment-children')
     this.toggleWithNoRail = page.locator('.comment-node.has-collapse:not(.has-children)')

@@ -129,17 +129,18 @@ export function ScheduleSection() {
         ))}
       </div>
 
+      {/* Chart band: the mix donut sits on one side with the view's chart on
+          the other, so both are full-size and read as one panel. Shared by
+          both views, so the donut stays put when switching tabs. */}
       {view === 'total' && hasTotalRows && chartRows.length > 0 && (
-        <div className="amort-chart-wrap">
+        <div className="schedule-chart-band">
+          {mixShares.some((share) => share.amount > 0) && <TrackMixDonut shares={mixShares} />}
           <AmortizationChart rows={chartRows} periodLabel={periodLabel} monthly={granularity === 'monthly'} />
         </div>
       )}
 
-      {/* Per-track band: the mix donut sits on the left with the per-track
-          balance comparison on the right, so both are full-size and read as
-          one panel. Sits above the grid like the total view's chart. */}
       {view === 'separate' && vm.visibleScheduleTracks.length > 0 && (
-        <div className="per-track-band">
+        <div className="schedule-chart-band">
           {mixShares.some((share) => share.amount > 0) && <TrackMixDonut shares={mixShares} />}
           {/* Same granularity as the per-track tables below it: one point per
               month when the monthly tab is on, matching the total view. */}

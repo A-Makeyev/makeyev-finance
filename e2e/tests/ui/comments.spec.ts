@@ -409,7 +409,16 @@ test.describe('article comments', () => {
     const comments = new CommentsPage(mockedPage)
     await mockedPage.setViewportSize({ width: 1280, height: 900 })
     await comments.goto('/en/articles/mortgage-decisions')
+    // Replies are paged like the top-level list: the first three show, then
+    // the control reveals another page each press. Reveal all of them so the
+    // fold below changes a full-height thread rather than a short one.
+    await expect(comments.comments).toHaveCount(10)
+    await expect(comments.showMoreReplies).toHaveText('Show 5 more replies')
+    await comments.showMoreReplies.click()
+    await expect(comments.comments).toHaveCount(13)
+    await comments.showMoreReplies.click()
     await expect(comments.comments).toHaveCount(15)
+    await expect(comments.showMoreReplies).toHaveCount(0)
 
     const toggle = comments.collapseToggles
     await expect(toggle).toHaveCount(1)
@@ -465,6 +474,53 @@ test.describe('article comments', () => {
     // few frames rather than instantly.
     await expect(comments.commentById('c1')).toBeInViewport()
     await expect(comments.commentById('c1')).toContainText('comment number 1')
+  })
+
+  test('a #comment- deep link into a paged reply reveals the path and scrolls to it', async ({
+    mockedPage,
+  }) => {
+    // The profile's reply cards can point at a reply that sits past the first
+    // page of that comment's replies, so the jump has to reveal the ancestor
+    // chain before it can scroll, not just raise the top-level page.
+    const base = {
+      parentId: null,
+      userImage: null,
+      editedAt: null,
+      deleted: false,
+      mine: false,
+      canDelete: false,
+      createdAt: new Date().toISOString(),
+    }
+    const feed = [
+      { ...base, id: 'p1', userName: 'Dana', body: 'parent' },
+      ...Array.from({ length: 7 }, (_, index) => ({
+        ...base,
+        id: `r${index + 1}`,
+        parentId: 'p1',
+        userName: 'Noa',
+        body: `reply number ${index + 1}`,
+      })),
+    ]
+    await mockedPage.route('**/api/articles/mortgage-decisions/comments', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ comments: feed }),
+      }),
+    )
+
+    const comments = new CommentsPage(mockedPage)
+    await comments.goto('/en/articles/mortgage-decisions#comment-r6')
+
+    // r6 is the sixth reply, past the first page of three, so it can only be
+    // on screen if the link revealed the chain down to it.
+    await expect(comments.commentById('r6')).toHaveClass(/is-target/)
+    await expect(comments.commentById('r6')).toBeInViewport()
+    await expect(comments.commentById('r6')).toContainText('reply number 6')
+    // It reveals up to the target, not the whole thread: r7 stays behind the
+    // control, which still counts exactly the one reply left.
+    await expect(comments.commentById('r7')).toHaveCount(0)
+    await expect(comments.showMoreReplies).toHaveText('Show 1 more reply')
   })
 
   test('replies past the visual-depth cap can still be folded', async ({ mockedPage }) => {
@@ -550,5 +606,90 @@ test.describe('article comments', () => {
     await comments.goto('/en/articles/mortgage-decisions')
     await expect(comments.deletedAuthorMarks).toHaveCount(1)
     await expect(comments.deletedAuthorMarks).toHaveText('(deleted account)')
+  })
+
+  test('a comment with many replies pages them behind a show-more control', async ({
+    mockedPage,
+  }) => {
+    // Replies used to render in full, so one busy comment could push the rest
+    // of the thread off the page. Reading needs no session, so the real markup
+    // renders against the mocked feed.
+    const base = {
+      parentId: null,
+      userImage: null,
+      editedAt: null,
+      deleted: false,
+      mine: false,
+      canDelete: false,
+      createdAt: new Date().toISOString(),
+    }
+    const feed = [
+      { ...base, id: 'p1', userName: 'Dana', body: 'parent' },
+      ...Array.from({ length: 7 }, (_, index) => ({
+        ...base,
+        id: `r${index + 1}`,
+        parentId: 'p1',
+        userName: 'Noa',
+        body: `reply ${index + 1}`,
+      })),
+    ]
+    await mockedPage.route('**/api/articles/mortgage-decisions/comments', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ comments: feed }),
+      }),
+    )
+
+    const comments = new CommentsPage(mockedPage)
+    await comments.goto('/en/articles/mortgage-decisions')
+
+    // The parent plus the first three of its seven replies.
+    await expect(comments.comments).toHaveCount(4)
+    await expect(comments.showMoreReplies).toHaveCount(1)
+    await expect(comments.showMoreReplies).toHaveText('Show 4 more replies')
+
+    // One press adds a page: three more replies, one still hidden.
+    await comments.showMoreReplies.click()
+    await expect(comments.comments).toHaveCount(7)
+    await expect(comments.showMoreReplies).toHaveText('Show 1 more reply')
+
+    // The last press reveals the rest and retires the control.
+    await comments.showMoreReplies.click()
+    await expect(comments.comments).toHaveCount(8)
+    await expect(comments.showMoreReplies).toHaveCount(0)
+  })
+
+  test('the thread holds the page with skeleton rows while the first fetch is in flight', async ({
+    mockedPage,
+  }) => {
+    // Hold the response open: the thread must show its placeholder immediately
+    // rather than a bare "loading" line, and swap it for the real content once
+    // the fetch lands.
+    let release: () => void = () => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    await mockedPage.route('**/api/articles/mortgage-decisions/comments', async (route) => {
+      await held
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ comments: [] }),
+      })
+    })
+
+    const comments = new CommentsPage(mockedPage)
+    await comments.goto('/en/articles/mortgage-decisions')
+
+    await expect(comments.loading).toBeVisible()
+    await expect(comments.skeletons).toHaveCount(3)
+    // Nothing of the real thread is drawn while the skeleton stands in.
+    await expect(comments.comments).toHaveCount(0)
+
+    release()
+    await expect(comments.loading).toHaveCount(0)
+    await expect(comments.skeletons).toHaveCount(0)
+    await expect(comments.empty).toBeVisible()
   })
 })

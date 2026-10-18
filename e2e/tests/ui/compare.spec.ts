@@ -372,19 +372,23 @@ test.describe('mortgage comparison - /compare', () => {
       await page.getByTestId('compare-trend-total').locator('.compare-trend-point').count(),
     ).toBeGreaterThan(0)
 
-    // Two charts per row, composition first: composition + balance, then total
-    // + interest. All four are equal-width half-row panels.
+    // The composition panel leads the gallery across the full row; the three
+    // line panels fall two per row beneath it (balance + total, then interest).
     const box = async (metric: string) =>
       (await page.getByTestId(`compare-trend-${metric}`).boundingBox())!
     const balance = await box('balance')
     const total = await box('total')
     const interest = await box('interest')
     const composition = await box('composition')
-    expect(Math.abs(composition.y - balance.y)).toBeLessThan(4)
-    expect(Math.abs(total.y - interest.y)).toBeLessThan(4)
-    expect(total.y).toBeGreaterThan(balance.y + balance.height / 2)
-    expect(Math.abs(composition.width - balance.width)).toBeLessThan(4)
-    expect(Math.abs(total.width - interest.width)).toBeLessThan(4)
+    // Composition spans the row on its own, above the line panels.
+    expect(composition.width).toBeGreaterThan(balance.width * 1.5)
+    expect(composition.y).toBeLessThan(balance.y)
+    // Balance and total share the next row at equal half-row width.
+    expect(Math.abs(total.y - balance.y)).toBeLessThan(4)
+    expect(Math.abs(total.width - balance.width)).toBeLessThan(4)
+    // Interest takes the row after them, at the same half-row width.
+    expect(Math.abs(interest.width - balance.width)).toBeLessThan(4)
+    expect(interest.y).toBeGreaterThan(balance.y + balance.height / 2)
 
     // One legend entry for the one priced mix.
     await expect(page.getByTestId('compare-trend-legend').locator('li')).toHaveCount(1)
@@ -531,15 +535,17 @@ test.describe('mortgage comparison - /compare', () => {
     await page.goto('/compare')
     await expect(page.getByTestId('compare-shell')).toBeVisible()
     const card = page.getByTestId('compare-result-card-1')
-    // Turning the opening mix's fixed track variable puts 100% on variable
-    // tracks, over the Bank of Israel ⅔ ceiling. A freshly hydrated page can
-    // replace the select right after the first change, so retry until the
-    // controlled value sticks instead of assuming the first shot landed.
+    // Turning the opening mix's fixed track into another variable type (not a
+    // repeat of the prime track, which the duplicate-type rule rejects) puts
+    // 100% on variable tracks, over the Bank of Israel ⅔ ceiling. A freshly
+    // hydrated page can replace the select right after the first change, so
+    // retry until the controlled value sticks instead of assuming the first
+    // shot landed.
     const typeSelect = page.getByTestId('compare-track-type-1-2')
     await expect(typeSelect).toHaveValue('fixed')
     await expect(async () => {
-      await typeSelect.selectOption('prime')
-      await expect(typeSelect).toHaveValue('prime')
+      await typeSelect.selectOption('variable5y')
+      await expect(typeSelect).toHaveValue('variable5y')
     }).toPass()
     await expect(card).toContainText('חריגה מתקרת הריבית המשתנה')
 
@@ -551,6 +557,28 @@ test.describe('mortgage comparison - /compare', () => {
     // The repair clears the violation and keeps the scenario priced at the
     // same shared loan (the excess moves to the fixed side).
     await expect(card).not.toContainText('חריגה מתקרת הריבית המשתנה')
+    await expect(page.getByTestId('compare-metric-loan-1')).toContainText(ils(1_000_000))
+    await expect(fix).toHaveCount(0)
+  })
+
+  test('a repeated track type in a scenario is rejected and auto-fixable', async ({ page }) => {
+    await page.goto('/compare')
+    const card = page.getByTestId('compare-result-card-1')
+    // Scenario 1's default basket4 mix: prime / fixed / variable-indexed-5y.
+    // Turning the fixed track into a second prime repeats a track type.
+    const typeSelect = page.getByTestId('compare-track-type-1-2')
+    await expect(typeSelect).toHaveValue('fixed')
+    await expect(async () => {
+      await typeSelect.selectOption('prime')
+      await expect(typeSelect).toHaveValue('prime')
+    }).toPass()
+    await expect(card).toContainText('אותו מסלול מופיע יותר מפעם אחת בתמהיל')
+
+    // One-click repair restores a distinct type and keeps the shared loan.
+    const fix = page.getByTestId('compare-autofix-1')
+    await expect(fix).toBeVisible()
+    await fix.click()
+    await expect(card).not.toContainText('אותו מסלול מופיע יותר מפעם אחת בתמהיל')
     await expect(page.getByTestId('compare-metric-loan-1')).toContainText(ils(1_000_000))
     await expect(fix).toHaveCount(0)
   })

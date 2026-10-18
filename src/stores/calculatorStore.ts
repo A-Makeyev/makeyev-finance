@@ -24,6 +24,7 @@ import {
   computeTrackResult,
   deriveLoanAmount,
   distributeEqually,
+  duplicateTrackType,
   EMPTY_TOTALS,
   estimateClosingCosts,
   estimateTransactionCosts,
@@ -38,6 +39,7 @@ import {
   first5yInterestShare,
   firstPaymentWithRateBump,
   isVariableType,
+  nextFreeTrackType,
   paymentPer100k,
   resolvePaymentLabel,
   scaleTrackAmounts,
@@ -88,7 +90,11 @@ export interface TrackState {
   loanShareMemory: number | null
 }
 
-export type CalculationError = { kind: 'term' } | { kind: 'positive' } | { kind: 'variableCap' }
+export type CalculationError =
+  | { kind: 'term' }
+  | { kind: 'positive' }
+  | { kind: 'variableCap' }
+  | { kind: 'duplicateType' }
 
 /**
  * A track as it is persisted in a saved mortgage mix: the user-entered fields
@@ -993,6 +999,17 @@ function recalculate(s: CalculatorState): void {
     return
   }
 
+  const duplicate = duplicateTrackType(enteredIndexes.map((index) => s.tracks[index].type))
+  if (duplicate) {
+    // One track per type in a mix: flag every entered track carrying the
+    // repeated type so the user sees which ones to change.
+    s.flaggedTrackIds = s.tracks
+      .filter((track, index) => enteredIndexes.includes(index) && track.type === duplicate)
+      .map((track) => track.id)
+    s.error = { kind: 'duplicateType' }
+    return
+  }
+
   const validResults = enteredResults.filter(Boolean) as TrackResult[]
   const totalPrincipal = validResults.reduce((sum, result) => sum + result.principal, 0)
   const variablePrincipal = validResults
@@ -1460,7 +1477,14 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         if (s.tracks.length >= 3) return
         const wasDirty = isMixDirty(s)
-        const track = trackFromValues(values ?? { years: s.termYears }, s.termYears, s.primeRate)
+        // One track per type: seed the new track with a type the mix does not
+        // already hold, so adding a track never trips the duplicate-type gate.
+        const freeType = nextFreeTrackType(s.tracks.map((track) => track.type)) ?? 'fixed'
+        const track = trackFromValues(
+          { ...(values ?? { years: s.termYears }), type: values?.type ?? freeType },
+          s.termYears,
+          s.primeRate,
+        )
         s.tracks.push(track)
         if (!track.amountText.trim()) {
           // A blank amount computes the new track as a 0-size loan (it

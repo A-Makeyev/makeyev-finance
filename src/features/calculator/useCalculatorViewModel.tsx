@@ -504,6 +504,8 @@ export function useCalculatorViewModel() {
         return t('calculator.errors.positiveAmounts')
       case 'variableCap':
         return `${t('calculator.errors.variableCapLine1')}<br />${t('calculator.errors.variableCapLine2')}`
+      case 'duplicateType':
+        return t('calculator.errors.duplicateType')
     }
   })()
 

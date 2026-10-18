@@ -20,7 +20,7 @@
  * ("לפני 3 שבועות"), "this week" ("השבוע") and the future forms ("השבוע הבא") all
  * read correctly as ICU returns them, so post-processing the string would risk
  * breaking the cases that are right. The one ICU auto form that does read
- * awkwardly in Hebrew is the past dual ("2 weeks ago") — ICU emits
+ * awkwardly in Hebrew is the past dual ("2 weeks ago") - ICU emits
  * "לפני שבועיים (2)", where the parenthetical is the numeric form of the
  * same dual meaning, so it is stripped here.
  */

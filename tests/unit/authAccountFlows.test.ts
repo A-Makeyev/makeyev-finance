@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { MongoMemoryServer } from 'mongodb-memory-server'
+import { DELETE_CODE_ALPHABET, DELETE_CODE_LENGTH } from '@/lib/deleteCode'
 
 /**
  * The real Better Auth instance against a real (ephemeral) Mongo, with Resend
@@ -11,8 +12,9 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
  * Covers the two account flows on the profile page:
  *  - a Google-only account sets its first password, and can then sign in with
  *    email + password;
- *  - deleting an account sends a link, deletes NOTHING until that link is
- *    followed, and then removes the account and its private rows.
+ *  - deleting an account mails a short code, deletes NOTHING until that code is
+ *    typed back (it only works for the session that asked), and then removes the
+ *    account and its private rows.
  */
 
 let mongo: MongoMemoryServer
@@ -61,7 +63,7 @@ function cookieOf(headers: Headers): Headers {
 
 /**
  * A signed-in user on a verified address. Verification is on here (a mailer is
- * configured, which is what the deletion link needs), so the address is marked
+ * configured, which is what the deletion code needs), so the address is marked
  * verified directly and then signed in with the password.
  */
 async function signUp(
@@ -130,15 +132,23 @@ describe('set a first password (Google-only account)', () => {
   })
 })
 
-/** The token the mailed link carries. Never logged by the app; only read here. */
-function tokenFrom(mail: { text: string }): string {
-  const token = mail.text.match(/[?&]delete=([^\s&]+)/)?.[1]
-  expect(token, mail.text).toBeTruthy()
-  return token!
+/**
+ * The code the mailed deletion message carries, read straight off the text
+ * alternative. Never logged by the app; only read here. The alphabet excludes
+ * the characters that get misread (I/1, O/0), which keeps the match unambiguous.
+ */
+const CODE_PATTERN = new RegExp(
+  `(?:^|\\n)([${DELETE_CODE_ALPHABET}]{${DELETE_CODE_LENGTH}})(?=\\n|$)`,
+)
+
+function codeFrom(mail: { text: string }): string {
+  const code = mail.text.match(CODE_PATTERN)?.[1]
+  expect(code, mail.text).toBeTruthy()
+  return code!
 }
 
 describe('deleting an account, step by step', () => {
-  it('refuses a wrong password without mailing anything, then mails the link for the right one', async () => {
+  it('refuses a wrong password without mailing anything, then mails a code for the right one', async () => {
     const { auth, db } = await harness()
     const email = 'delete-wrong-password@example.test'
     const session = await signUp(auth, db, email)
@@ -156,18 +166,36 @@ describe('deleting an account, step by step', () => {
 
     expect(sentMails).toHaveLength(1)
     expect(sentMails[0].to).toBe(email)
-    // Asking for the deletion still deletes nothing: only the link does.
+    // Asking for the deletion still deletes nothing: only the mailed code does.
     expect(await db.collection('user').countDocuments({ email })).toBe(1)
 
-    // The link lands on the profile page of the mail's own language, not on
-    // Better Auth's callback endpoint (which would delete on GET).
-    const link = sentMails[0].text.match(/https?:\/\/\S+/)?.[0]
-    expect(link).toBe('http://localhost:3000/profile?delete=' + tokenFrom(sentMails[0]))
+    // The mail carries a typed code, not a link: nothing to click, so nothing
+    // can delete on a GET (and a link scanner has nothing to follow). The code
+    // is stored under the identifier Better Auth's own /delete-user consumes.
+    const code = codeFrom(sentMails[0])
+    expect(sentMails[0].text).not.toMatch(/https?:\/\//)
+    expect(
+      await db
+        .collection('verification')
+        .countDocuments({ identifier: `delete-account-${code}`, value: session.userId }),
+    ).toBe(1)
+
+    // The legacy callback endpoint (a link from a mail sent before this code
+    // flow) is still guarded: opened signed out it sends the visitor to the
+    // sign-in page instead of a raw JSON 404, and consumes nothing while it does.
+    const signedOut = await auth.handler(
+      new Request('http://localhost:3000/api/auth/delete-user/callback?token=legacy', {
+        headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
+      }),
+    )
+    expect(signedOut.status).toBe(302)
+    expect(signedOut.headers.get('location')).toContain('error=delete_sign_in_required')
+    expect(await db.collection('user').countDocuments({ email })).toBe(1)
   })
 
   it('deletes only for the session that asked, and only once', async () => {
     const { auth, db } = await harness()
-    const email = 'delete-by-link@example.test'
+    const email = 'delete-by-code@example.test'
     const session = await signUp(auth, db, email)
     await db.collection('saved_mixes').insertOne({
       userId: session.userId,
@@ -181,34 +209,22 @@ describe('deleting an account, step by step', () => {
 
     sentMails = []
     await auth.api.deleteUser({ body: { password: 'password123' }, headers: session.headers })
-    const token = tokenFrom(sentMails[0])
+    const code = codeFrom(sentMails[0])
 
-    // The legacy callback endpoint (an old mail) opened signed out still sends
-    // the visitor to the sign-in page instead of a raw JSON 404, and consumes
-    // nothing while it does.
-    const signedOut = await auth.handler(
-      new Request(`http://localhost:3000/api/auth/delete-user/callback?token=${token}`, {
-        headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
-      }),
-    )
-    expect(signedOut.status).toBe(302)
-    expect(signedOut.headers.get('location')).toContain('error=delete_sign_in_required')
-    expect(await db.collection('user').countDocuments({ email })).toBe(1)
-
-    // Another signed-in account cannot spend it. The token is Better Auth's and
-    // is checked against the session's own user id, so this is refused ~ and,
-    // being single-use, it is spent even by a failed attempt.
+    // Another signed-in account cannot spend it. The code is checked against
+    // the session's own user id, so this is refused ~ and, being single-use, it
+    // is spent even by a failed attempt.
     const other = await signUp(auth, db, 'someone-else@example.test')
     await expect(
-      auth.api.deleteUser({ body: { token }, headers: other.headers }),
+      auth.api.deleteUser({ body: { token: code }, headers: other.headers }),
     ).rejects.toThrow(/token/i)
     expect(await db.collection('user').countDocuments({ email })).toBe(1)
 
-    // A fresh link, spent by the session that asked for it, is what finishes it:
+    // A fresh code, spent by the session that asked for it, is what finishes it:
     // the account, its account rows and the app's own rows of private data.
     sentMails = []
     await auth.api.deleteUser({ body: { password: 'password123' }, headers: session.headers })
-    const fresh = tokenFrom(sentMails[0])
+    const fresh = codeFrom(sentMails[0])
     await auth.api.deleteUser({ body: { token: fresh }, headers: session.headers })
 
     expect(await db.collection('user').countDocuments({ email })).toBe(0)
@@ -218,6 +234,57 @@ describe('deleting an account, step by step', () => {
         .countDocuments({ userId: { $in: [session.userId, new ObjectId(session.userId)] } }),
     ).toBe(0)
     expect(await db.collection('saved_mixes').countDocuments({ userId: session.userId })).toBe(0)
+  })
+
+  it('a re-sent code supersedes the last one, without touching another account', async () => {
+    const { auth, db } = await harness()
+    const email = 'resend-supersedes@example.test'
+    const session = await signUp(auth, db, email)
+    const other = await signUp(auth, db, 'resend-other@example.test')
+
+    // A code for the second account, to prove the sweep is scoped by owner.
+    sentMails = []
+    await auth.api.deleteUser({ body: { password: 'password123' }, headers: other.headers })
+    const otherCode = codeFrom(sentMails[0])
+
+    // First request for the main account: code A.
+    sentMails = []
+    await auth.api.deleteUser({ body: { password: 'password123' }, headers: session.headers })
+    const first = codeFrom(sentMails[0])
+    expect(
+      await db
+        .collection('verification')
+        .countDocuments({ identifier: `delete-account-${first}`, value: session.userId }),
+    ).toBe(1)
+
+    // Asking again mints code B and sweeps A, so only the newest code is live.
+    sentMails = []
+    await auth.api.deleteUser({ body: { password: 'password123' }, headers: session.headers })
+    const second = codeFrom(sentMails[0])
+    expect(second).not.toBe(first)
+    expect(
+      await db.collection('verification').countDocuments({ identifier: `delete-account-${first}` }),
+    ).toBe(0)
+    expect(
+      await db
+        .collection('verification')
+        .countDocuments({ identifier: `delete-account-${second}`, value: session.userId }),
+    ).toBe(1)
+    // The other account's own code is left alone.
+    expect(
+      await db
+        .collection('verification')
+        .countDocuments({ identifier: `delete-account-${otherCode}`, value: other.userId }),
+    ).toBe(1)
+
+    // The replaced code can no longer delete anything; the newest one still can.
+    await expect(
+      auth.api.deleteUser({ body: { token: first }, headers: session.headers }),
+    ).rejects.toThrow(/token/i)
+    expect(await db.collection('user').countDocuments({ email })).toBe(1)
+
+    await auth.api.deleteUser({ body: { token: second }, headers: session.headers })
+    expect(await db.collection('user').countDocuments({ email })).toBe(0)
   })
 })
 
@@ -258,7 +325,7 @@ describe('what a deleted account leaves in the comment threads', () => {
     sentMails = []
     await auth.api.deleteUser({ body: { password: 'password123' }, headers: first.headers })
     await auth.api.deleteUser({
-      body: { token: tokenFrom(sentMails[0]) },
+      body: { token: codeFrom(sentMails[0]) },
       headers: first.headers,
     })
     expect(await db.collection('user').countDocuments({ email })).toBe(0)

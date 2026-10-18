@@ -610,6 +610,8 @@ export const en: { translation: Translation } = {
         variableCapLine1:
           'Per Bank of Israel, variable-rate tracks marked below cannot exceed 66.66% of the total mortgage',
         variableCapLine2: ' Reduce a marked track or increase a fixed-rate track',
+        duplicateType:
+          'A track type cannot repeat within one mix. Pick a different type for one of the marked tracks.',
       },
       warnings: {
         capital: 'Capital is <0>{{percent}}%</0> of the property value',
@@ -750,6 +752,7 @@ export const en: { translation: Translation } = {
       statusEmpty: 'Add tracks to see figures',
       statusErrorPositive: 'Enter a positive amount and a 1-30 year term in every track',
       statusErrorVariableCap: 'Exceeds the Bank of Israel two-thirds variable-rate cap',
+      statusErrorDuplicateType: 'The same track type appears more than once in this mix',
       // Mobile stacked view.
       scenarioSwitcherAria: 'Switch between mixes',
       bestBadge: 'Best',
@@ -801,7 +804,7 @@ export const en: { translation: Translation } = {
       ariaLabel: 'Market prices',
       proxyOf: 'Tracks {{proxy}}',
       indexPoints: 'Index level in points',
-      futuresNote: 'COMEX front-month futures',
+      futuresNote: 'COMEX front-month futures, above the spot price',
       staleTooltip: 'Cached data, may be out of date',
       assets: {
         sp500: 'SPY',
@@ -831,6 +834,7 @@ export const en: { translation: Translation } = {
     comments: {
       title: 'Comments',
       empty: 'No comments yet. Be the first to write one.',
+      loading: 'Loading comments...',
       loadError: 'Loading the comments failed. Please try again.',
       signInPrompt: 'Sign in to comment',
       placeholder: 'Write a comment...',
@@ -852,6 +856,12 @@ export const en: { translation: Translation } = {
       deleteFailed: 'Deleting failed. Please try again.',
       deletedToast: 'Comment deleted',
       showMore: 'Show more comments',
+      showMoreReplies_one: 'Show 1 more reply',
+      // English has no "two" plural category, so this duplicates _other; the key
+      // exists because both language files must carry the same set (Hebrew is
+      // the one that actually selects it).
+      showMoreReplies_two: 'Show {{count}} more replies',
+      showMoreReplies_other: 'Show {{count}} more replies',
       collapseReplies: 'Collapse replies',
       expandReplies: 'Expand replies',
       blocked: 'Your comment contains language that is not allowed, so it was not posted.',
@@ -900,8 +910,8 @@ export const en: { translation: Translation } = {
       termFor_two: 'For a term of 2 years',
       termFor_other: 'For a term of {{count}} years',
       unsavedTitle: 'Unsaved changes',
-      unsavedBody: 'You have an unsaved mix. Leave anyway?',
-      unsavedLeave: 'Leave without saving',
+      unsavedBody: 'This mix is not saved. It stays in this browser until you refresh or close it. Leave anyway?',
+      unsavedLeave: 'Leave anyway',
       unsavedStay: 'Stay',
       savedState: 'Saved',
       unsavedSave: 'Save',
@@ -1012,26 +1022,25 @@ export const en: { translation: Translation } = {
       profileDeleteConfirmWord: 'DELETE',
       profileDeleteConfirmMismatch: 'The word you typed does not match',
       // The password the account proves itself with. Better Auth checks it
-      // before the link is mailed, so a typo is answered rather than ignored.
-      profileDeletePasswordHint: 'The password is checked before the confirmation link is sent',
+      // before the deletion code is mailed, so a typo is answered rather than
+      // ignored.
+      profileDeletePasswordHint: 'The password is checked before the deletion code is sent',
       profileDeletePasswordRequired: 'Enter your password',
-      // The button sends the confirmation mail; the account goes when the link
-      // in that mail is opened and its own button is pressed.
+      // The first button mails the code; the account goes when that code is
+      // typed into the modal's second step.
+      profileDeleteSendCode: 'Send a code',
       profileDeleteAction: 'Delete',
       profileDeleting: 'Deleting...',
-      profileDeleteClose: 'Close',
       profileDeleteSessionExpired: 'This action needs a fresh sign-in. Sign in again and retry',
-      // The last step, on the page the mailed link opens: the address is
-      // already proved, and one press ends it.
-      profileDeleteMailConfirmHint:
-        'This link verified your email address. Pressing delete removes the account immediately, with no way back',
-      profileDeleteInvalidLink:
-        'The link is not valid or has expired. You can send a new one from the delete account button',
-      // Deletion is confirmed by a link mailed to the address, so the modal ends
-      // by naming that address (masked) rather than by deleting anything.
-      profileDeleteMailSent: 'A link to confirm the deletion was sent to',
-      profileDeleteMailHint:
-        'The account is deleted only after the link is opened and delete is pressed on the profile page, from this browser. Check the spam folder too. The link is valid for 24 hours',
+      // The second step: the mailed code is the last thing between the account
+      // and its deletion.
+      profileDeleteCodeTitle: 'Enter the deletion code',
+      profileDeleteCodeSentTo: 'We sent a deletion code to',
+      profileDeleteCodeLabel: 'Deletion code',
+      profileDeleteCodeHint: 'The code has letters and numbers, and is valid for 30 minutes',
+      profileDeleteInvalidCode: 'The code is wrong or has expired',
+      profileDeleteResendCode: 'Send a new code',
+      profileDeleteResendSent: 'A new code was sent',
       profileDeleteTooManyAttempts: 'Too many requests. Please wait a minute and try again',
       emails: {
         subject: 'Verify your email address',
@@ -1047,11 +1056,11 @@ export const en: { translation: Translation } = {
         otpExpiry: 'The code is valid for 5 minutes',
         otpIgnore:
           'If you did not ask to reset your password, you can ignore this message. Your password stays unchanged',
-        deleteSubject: 'Confirm deleting your account',
+        deleteSubject: 'Your account deletion code',
         deleteHeading: 'Delete your account',
         deleteBody:
-          'To delete the account permanently, open the link below and confirm the deletion on your profile page. The account and your saved mixes will be deleted. Comments you already wrote stay on the articles',
-        deleteCta: 'Open the deletion page',
+          'To delete the account permanently, enter this code in the delete-account window on your profile page. The account and your saved mixes will be deleted. Comments you already wrote stay on the articles',
+        deleteExpiry: 'The code is valid for 30 minutes',
         deleteIgnore:
           'If you did not ask to delete the account, you can ignore this message. The account will not be deleted',
         signature: 'Makeyev Finance',

@@ -44,7 +44,7 @@ const stateBottom = await page.evaluate(() => {
 })
 console.log('LOGIN BAR STATE (after scroll to bottom):', stateBottom)
 
-// Also try the / route — does it gain navbar-scrolling at scroll 400?
+// Also try the / route - does it gain navbar-scrolling at scroll 400?
 await page.goto('http://localhost:3100/')
 await page.waitForFunction('document.documentElement.dataset.hydrated === "true"')
 const homeState = await page.evaluate(() => {

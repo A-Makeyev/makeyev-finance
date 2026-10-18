@@ -25,8 +25,8 @@ const HEBREW_PASSWORD_TOO_SHORT = 'הסיסמה חייבת להכיל לפחות
 const HEBREW_VERIFY_SENT_TO = 'הודעת האימות נשלחה לכתובת'
 const HEBREW_EMAIL_NOT_CREATED = 'החשבון נוצר'
 const HEBREW_EMAIL_IN_USE = 'כתובת הדוא״ל הזו כבר רשומה'
-// 'user@example.test' with half the local part hidden (see src/lib/mask).
-const MASKED_USER_EMAIL = 'us••@example.test'
+// The address is shown in full on the confirmation chip.
+const USER_EMAIL = 'user@example.test'
 const HEBREW_RESET_SENT = 'שלחנו קוד בן 4 ספרות לכתובת הזו:'
 const HEBREW_RESET_INVALID_CODE = 'הקוד שגוי או שפג תוקפו'
 const HEBREW_RESET_DONE = 'הסיסמה עודכנה. אפשר להתחבר עם הסיסמה החדשה'
@@ -172,15 +172,15 @@ test.describe('auth pages', () => {
     })
 
     // The panel says where the mail went but never announces a created account
-    // (the address is not verified yet), and the address sits masked on its own
+    // (the address is not verified yet), and the address sits on its own
     // soft chip instead of being printed under a sentence.
     await expect(auth.verifyHeading).toHaveText(HEBREW_VERIFY_SENT_TO)
     await expect(auth.verifyPanel).not.toContainText(HEBREW_EMAIL_NOT_CREATED)
-    await expect(auth.notice).toHaveText(MASKED_USER_EMAIL)
+    await expect(auth.notice).toHaveText(USER_EMAIL)
     await expect(auth.verifyPanel).toBeVisible()
     // The form is gone, so the sign-up does not silently reset to an empty
     // sign-in tab.
-    await expect(auth.verifyEmail).toHaveText(MASKED_USER_EMAIL)
+    await expect(auth.verifyEmail).toHaveText(USER_EMAIL)
     await expect(auth.submit).toHaveCount(0)
 
     // The chip is centered on the card, and the old "once the address is
@@ -232,7 +232,7 @@ test.describe('auth pages', () => {
 
     await expect(auth.verifyPanel).toBeVisible()
     await expect(auth.verifyHeading).toHaveText(HEBREW_VERIFY_SENT_TO)
-    await expect(auth.verifyEmail).toHaveText(MASKED_USER_EMAIL)
+    await expect(auth.verifyEmail).toHaveText(USER_EMAIL)
     await expect(auth.resend).toBeVisible()
     await expect(auth.error).toHaveCount(0)
   })
@@ -245,7 +245,7 @@ test.describe('auth pages', () => {
     await mockedPage.setViewportSize({ width: 360, height: 800 })
 
     // The chip, the quiet re-send link and the exit button all stay inside the
-    // narrow viewport; the masked address is short, so nothing may overflow.
+    // narrow viewport; the address is short, so nothing may overflow.
     const assertInside = async () => {
       const overflow = (await mockedPage.evaluate(
         'document.documentElement.scrollWidth - document.documentElement.clientWidth',
@@ -265,7 +265,7 @@ test.describe('auth pages', () => {
     await auth.signUp('Test User', 'user@example.test', 'password123')
     await assertInside()
 
-    // Same panel in the LTR locale: the mask and the chip must not push the
+    // Same panel in the LTR locale: the address and the chip must not push the
     // layout either way.
     await auth.goto('/en/login')
     await auth.switchToSignUp()
@@ -362,9 +362,10 @@ test.describe('auth pages', () => {
     await expect(auth.submitSpinner).toBeVisible()
     await expect(auth.submit).toBeDisabled()
 
-    // Spinner only: the label is gone while it sends, and the accessible name
-    // comes from aria-label instead.
-    await expect(auth.submit).not.toContainText('התחברות')
+    // Spinner only: the label is still in the DOM (invisible, so the button
+    // keeps its width) but is not visible, and the accessible name comes from
+    // aria-label instead.
+    await expect(auth.submit.getByText('התחברות')).toBeHidden()
     await expect(auth.submit).toHaveAttribute('aria-label', 'שולח...')
 
     const busy = (await mockedPage.evaluate(`(() => {

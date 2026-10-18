@@ -15,6 +15,7 @@ import {
   MAX_OTHER_EXPENSES,
   MAX_TRACKS,
   MAX_YEARS,
+  nextFreeTrackType,
   PRESETS,
   redistributeTrackAmounts,
   scaleTrackAmounts,
@@ -22,6 +23,7 @@ import {
   VAT_RATE,
   type PresetId,
   type PropertyPurpose,
+  type TrackType,
 } from '@/lib/amortization'
 import { formatAmountWithCaret, formatGroupedNumber, parseAmountText } from '@/lib/format'
 import {
@@ -224,13 +226,13 @@ function makeTrackId(): string {
  * one (same rule as commitTrackRateBlur). Everything else is the user's to
  * enter.
  */
-function blankTrack(termYears: number): TrackState {
+function blankTrack(termYears: number, type: TrackType = 'fixed'): TrackState {
   return {
     id: makeTrackId(),
-    type: 'fixed',
+    type,
     amountText: '',
     yearsText: String(termYears),
-    rateText: defaultRateFor('fixed'),
+    rateText: defaultRateFor(type),
     method: 'spitzer',
     isAutoRate: true,
     loanShareMemory: null,
@@ -830,7 +832,10 @@ export const useComparisonStore = create<ComparisonStore>()(
       set((s) => {
         const scenario = s.scenarios.find((entry) => entry.id === scenarioId)
         if (!scenario || scenario.tracks.length >= MAX_TRACKS) return
-        const track = blankTrack(scenario.termYears)
+        // One track per type: seed the new track with a type the scenario does
+        // not already hold, so adding a track never trips the duplicate gate.
+        const freeType = nextFreeTrackType(scenario.tracks.map((track) => track.type)) ?? 'fixed'
+        const track = blankTrack(scenario.termYears, freeType)
         scenario.tracks.push(track)
         // Calculator parity: a blank new track is funded by moving half of the
         // largest existing track's amount over, keeping the loan total constant.
@@ -1066,6 +1071,24 @@ export const useComparisonStore = create<ComparisonStore>()(
             }
           }
           // The repaired mix no longer matches the preset that seeded it.
+          scenario.activePreset = null
+        } else if (error === 'duplicateType') {
+          // One track per type: walk the mix and move every repeat onto the
+          // first type it does not already hold (reseed the rate, same rule as
+          // changeTrackType), so the fix is one click like the variable cap.
+          const used = new Set<TrackType>()
+          for (const track of scenario.tracks) {
+            if (used.has(track.type)) {
+              const free = nextFreeTrackType([...used])
+              if (!free) break
+              track.type = free
+              if (!track.rateText.trim() || track.isAutoRate) {
+                track.rateText = defaultRateFor(free)
+                track.isAutoRate = true
+              }
+            }
+            used.add(track.type)
+          }
           scenario.activePreset = null
         } else {
           // 'positive': every track needs a 1..30 year term and a positive

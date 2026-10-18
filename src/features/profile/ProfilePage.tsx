@@ -2,16 +2,24 @@
 
 import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FaKey, FaRegUser, FaSignOutAlt, FaSpinner, FaTrashAlt } from 'react-icons/fa'
+import { FaKey, FaRegUser, FaSignOutAlt, FaTrashAlt } from 'react-icons/fa'
 import { AppModal } from '@/components/ui/AppModal'
+import { CodeInput } from '@/components/ui/CodeInput'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { FieldError } from '@/components/ui/FieldError'
+import { PendingContent } from '@/components/ui/PendingContent'
 import { authClient } from '@/lib/auth-client'
 import { setAccountPassword } from '@/server/auth/actions'
 import { useRouter } from '@/router'
 import { initialsFor } from '@/lib/avatar'
 import { matchesConfirmWord } from '@/lib/confirmWord'
-import { maskEmail } from '@/lib/mask'
+import { announceAccountDeleted, onAccountDeleted } from '@/lib/accountDeleted'
+import { emptyCodeSlots, isCodeComplete } from '@/lib/codeInput'
+import {
+  DELETE_CODE_LENGTH,
+  normalizeDeleteCode,
+  sanitizeDeleteCodeInput,
+} from '@/lib/deleteCode'
 import { SavedMixesSection } from '@/features/mixes/SavedMixesSection'
 import { Confetti } from './Confetti'
 import { RepliesSection } from './RepliesSection'
@@ -32,9 +40,14 @@ import type { Role } from '@/server/auth/roles'
  * registered and the sign-up form refuses it. Deletion is irreversible, so it
  * takes three deliberate acts: a warning modal that will not submit until the
  * account's password is given (or, for an account with no password, the
- * profile's own word is typed), a single-use link mailed to the address, and
- * the button on the page that link lands on (see src/lib/confirmWord,
- * src/server/auth/accounts and src/server/auth/email).
+ * profile's own word is typed), a short single-use code mailed to the address,
+ * and that code typed back into the modal's second step (see src/lib/confirmWord,
+ * src/lib/deleteCode, src/server/auth/accounts and src/server/auth/email).
+ * Nothing is deleted by asking; the code is the last thing between the account
+ * and its deletion, and it only works for the session that asked for it. Once it
+ * is spent the other open profile tabs are told through src/lib/accountDeleted
+ * and leave too instead of sitting on the identity of an account that no longer
+ * exists.
  *
  * Layout: a theme-aware page backdrop (light surface in light mode; the
  * branded dark mixed-hue gradient in dark mode, the same family as the hero
@@ -92,13 +105,17 @@ const DANGER_BUTTON_CLASS = `inline-flex items-center justify-center gap-2 round
 
 // The one button in the modal that really does delete the account. Brand red
 // again, and at 90%: a full-strength fill on a 460px dialog read louder than the
-// action needs, while staying obviously destructive (user-requested). The
-// spinner box keeps the button's height identical while the request is in
-// flight, so swapping the label for it never nudges the modal's actions row.
+// action needs, while staying obviously destructive (user-requested). The label
+// stays in the flow while the request is in flight and only the spinner is laid
+// over it (PendingContent), so the button keeps its exact width and height and
+// never nudges the modal's actions row.
 const DELETE_BUTTON_CLASS =
-  'inline-flex items-center justify-center gap-2 rounded-[5px] bg-soft-red/90 px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-soft-red disabled:cursor-not-allowed disabled:opacity-60'
+  'relative inline-flex items-center justify-center gap-2 rounded-[5px] bg-soft-red/90 px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-soft-red disabled:cursor-not-allowed disabled:opacity-60'
 
 const PRIMARY_BUTTON_CLASS = `inline-flex items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-surface-page transition-colors hover:bg-ink/85 ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-70`
+
+/** The delete modal's two steps: prove it is you, then type the mailed code. */
+type DeleteStep = 'request' | 'code'
 
 export function ProfilePage({
   name,
@@ -107,7 +124,6 @@ export function ProfilePage({
   role,
   hasPassword,
   justVerified = false,
-  deleteToken = null,
 }: {
   name: string
   email: string
@@ -121,13 +137,6 @@ export function ProfilePage({
   hasPassword: boolean
   /** True when the page was opened by an email-verification link. */
   justVerified?: boolean
-  /**
-   * Better Auth's single-use token from the mailed deletion link
-   * (`?delete=...`). Present means the visitor opened that link, so the delete
-   * modal opens on its last step. It is never logged, and Better Auth only
-   * honours it for the session that asked for the deletion.
-   */
-  deleteToken?: string | null
 }) {
   const { t, i18n } = useTranslation()
   const router = useRouter()
@@ -140,6 +149,11 @@ export function ProfilePage({
     url.searchParams.delete('verified')
     window.history.replaceState(null, '', `${url.pathname}${url.search}`)
   }, [justVerified])
+
+  // The account was deleted from another tab (the mailed link opened there):
+  // this tab's session is gone server-side, so leave the profile instead of
+  // keeping the identity of an account that no longer exists on screen.
+  useEffect(() => onAccountDeleted(() => router.replace('/')), [router])
 
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
@@ -155,20 +169,22 @@ export function ProfilePage({
 
   // Deleting the account keeps its own state, separate from the password
   // modal's: the two modals are never open together, but sharing `pending`
-  // would let one form's spinner appear on the other's button. The mailed link
-  // opens the modal on its LAST step, the warning's own button opens it on the
-  // first (prove it is you, then we mail you).
-  const [deleteFromMail, setDeleteFromMail] = useState(Boolean(deleteToken))
-  const [deleteOpen, setDeleteOpen] = useState(Boolean(deleteToken))
+  // would let one form's spinner appear on the other's button. The modal has
+  // two steps: prove it is you (the request step, which mails the code), then
+  // type that code in (the code step, which deletes).
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>('request')
+  const [deleteOpen, setDeleteOpen] = useState(false)
   /** The profile's own word: the deliberate act for an account with no password. */
   const [deleteConfirm, setDeleteConfirm] = useState('')
   /** The account's password, verified by Better Auth before it mails anything. */
   const [deletePassword, setDeletePassword] = useState('')
+  /** The code from the mail, one box per character. Never persisted. */
+  const [deleteCode, setDeleteCode] = useState<string[]>(() => emptyCodeSlots(DELETE_CODE_LENGTH))
   const [deletePending, setDeletePending] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  // True once Better Auth accepted the request and mailed the confirmation
-  // link: the modal then only reports where the mail went.
-  const [deleteMailSent, setDeleteMailSent] = useState(false)
+  // True once a freshly re-sent code has been mailed, so the resend link can
+  // confirm it did something without a modal of its own.
+  const [deleteResendSent, setDeleteResendSent] = useState(false)
 
   const confirmWord = t('auth.profileDeleteConfirmWord')
   // An account that has a password is proved with that password: Better Auth's
@@ -177,8 +193,12 @@ export function ProfilePage({
   // Google-created account has none to give, so it types the profile's word
   // instead, with the mismatch shown live while typing.
   const confirmTyped = !hasPassword && matchesConfirmWord(deleteConfirm, confirmWord)
-  const deleteReady =
-    deleteFromMail || confirmTyped || (hasPassword && deletePassword.length > 0)
+  const deleteReady = confirmTyped || (hasPassword && deletePassword.length > 0)
+  // The code is only accepted once every box is filled: the letters and digits
+  // are matched exactly (case and stray spacing are not secrets, see deleteCode).
+  const deleteCodeReady = isCodeComplete(deleteCode)
+  /** Any box filled: used only to flag a half-typed code, never to submit. */
+  const deleteCodeTouched = deleteCode.some(Boolean)
 
   const initials = initialsFor(name)
 
@@ -267,37 +287,35 @@ export function ProfilePage({
     setDeleteError(null)
     setDeleteConfirm('')
     setDeletePassword('')
-    setDeleteMailSent(false)
-    // The warning's own button always starts at the top; only the mailed link
-    // opens the modal on the last step.
-    setDeleteFromMail(false)
+    setDeleteCode(emptyCodeSlots(DELETE_CODE_LENGTH))
+    setDeleteResendSent(false)
+    // The profile's own button always starts at the top: prove it is you, then
+    // we mail the code.
+    setDeleteStep('request')
     setDeleteOpen(true)
   }
 
   /**
-   * Closes the delete modal, and drops the token from the address bar when the
-   * modal came from the mailed link: the URL is the only thing holding it, the
-   * link is single-use, and leaving it behind would reopen the modal on the
-   * next reload.
+   * Closes the delete modal and drops the second step's code: it is single-use
+   * and the half-typed value has no reason to survive the close.
    */
   function closeDelete() {
     setDeleteOpen(false)
-    if (!deleteFromMail) return
-    setDeleteFromMail(false)
-    const url = new URL(window.location.href)
-    url.searchParams.delete('delete')
-    window.history.replaceState(null, '', `${url.pathname}${url.search}`)
+    setDeleteStep('request')
+    setDeleteCode(emptyCodeSlots(DELETE_CODE_LENGTH))
+    setDeleteResendSent(false)
+    setDeleteError(null)
   }
 
   /**
    * First step, from the profile's warning modal: prove the deletion is wanted,
-   * then let Better Auth mail the link. It deletes NOTHING yet.
+   * then let Better Auth mail a short code. It deletes NOTHING yet.
    *
    * The password goes to Better Auth's own delete endpoint, which checks it
-   * against the credential account before it creates the token, so a wrong
+   * against the credential account before the code is stored, so a wrong
    * password is refused there and reported here. An account created through
    * Google has no password, so its proof is the typed word, checked here (the
-   * mail's link is still the real gate on the deletion).
+   * mailed code is still the real gate on the deletion).
    */
   async function onDeleteRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -329,37 +347,78 @@ export function ProfilePage({
         )
         return
       }
-      setDeleteMailSent(true)
+      // The code is in the mail now: move to the step that takes it. Nothing
+      // has been deleted.
+      setDeleteCode(emptyCodeSlots(DELETE_CODE_LENGTH))
+      setDeleteResendSent(false)
+      setDeleteStep('code')
     } finally {
       setDeletePending(false)
     }
   }
 
   /**
-   * Last step, from the mailed link: the token costs the account. Better Auth
-   * consumes it, checks it belongs to this session's user, then removes the
-   * user, its sessions and its account rows, clears the cookie, and runs the
-   * app's own cleanup (see the afterDelete hook in src/server/auth/index.ts).
-   * The browser is left signed out on the home page, so it goes there.
+   * Second step's escape hatch: mail a fresh code without leaving the modal.
+   * The password from the first step is still in state, so Better Auth can
+   * re-verify it; a fresh code replaces the old one (Better Auth stores the new
+   * token, and the sender removes the previous row, see createAndSendDeleteCode
+   * in src/server/auth/index).
+   */
+  async function onDeleteResend() {
+    setDeleteError(null)
+    setDeleteResendSent(false)
+
+    setDeletePending(true)
+    try {
+      const { error: deleteFailure } = await authClient.deleteUser(
+        hasPassword ? { password: deletePassword } : {},
+      )
+      if (deleteFailure) {
+        setDeleteError(
+          deleteFailure.status === 429
+            ? t('auth.profileDeleteTooManyAttempts')
+            : deleteFailure.code === 'SESSION_EXPIRED'
+              ? t('auth.profileDeleteSessionExpired')
+              : t('auth.errorGeneric'),
+        )
+        return
+      }
+      setDeleteCode(emptyCodeSlots(DELETE_CODE_LENGTH))
+      setDeleteResendSent(true)
+    } finally {
+      setDeletePending(false)
+    }
+  }
+
+  /**
+   * Last step: the mailed code costs the account. Better Auth consumes it,
+   * checks it belongs to this session's user, then removes the user, its
+   * sessions and its account rows, clears the cookie, and runs the app's own
+   * cleanup (see the afterDelete hook in src/server/auth/index.ts). The browser
+   * is left signed out on the home page, so it goes there.
    */
   async function onDeleteConfirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!deleteToken) return
+    const code = normalizeDeleteCode(deleteCode.join(''))
+    if (!code) return
     setDeleteError(null)
 
     setDeletePending(true)
     try {
-      const { error: deleteFailure } = await authClient.deleteUser({ token: deleteToken })
+      const { error: deleteFailure } = await authClient.deleteUser({ token: code })
       if (deleteFailure) {
         setDeleteError(
           deleteFailure.status === 429
             ? t('auth.profileDeleteTooManyAttempts')
             : deleteFailure.code === 'INVALID_TOKEN'
-              ? t('auth.profileDeleteInvalidLink')
+              ? t('auth.profileDeleteInvalidCode')
               : t('auth.errorGeneric'),
         )
         return
       }
+      // Tell the other open tabs before this one navigates, so none is left
+      // showing the profile of the account that was just removed.
+      announceAccountDeleted()
       router.push('/')
     } finally {
       setDeletePending(false)
@@ -626,61 +685,81 @@ export function ProfilePage({
         tone="red"
         contentClassName="max-w-[460px]"
       >
-        {deleteMailSent ? (
-          /* The request went out: nothing is deleted yet, and the mail is the
-             only thing that can finish it. Names the address (masked, like the
-             sign-up panel) so it is clear which mailbox to open. */
-          <div className="flex flex-col gap-4 p-6" data-testid="delete-account-sent">
+        {deleteStep === 'code' ? (
+          /* The mail is out: the short code it carries is the last thing between
+             the account and its deletion. Names the address so it is clear which
+             mailbox to open, and the code is typed right here. */
+          <form onSubmit={onDeleteConfirm} className="flex flex-col gap-4 p-6">
             <h3
-              data-testid="delete-account-mail-heading"
-              className="text-center text-lg font-semibold text-ink"
+              data-testid="delete-account-code-heading"
+              className="text-[20px] font-bold leading-tight text-ink"
             >
-              {t('auth.profileDeleteMailSent')}
+              {t('auth.profileDeleteCodeTitle')}
             </h3>
+
+            <p className="text-sm leading-relaxed text-ink-muted">
+              {t('auth.profileDeleteCodeSentTo')}
+            </p>
+
             <p
               role="status"
               data-testid="delete-account-mail-to"
               className="rounded-lg bg-surface-soft px-3 py-2.5 text-center text-sm font-medium text-ink"
             >
-              <span dir="ltr">{maskEmail(email)}</span>
+              <span dir="ltr">{email}</span>
             </p>
-            <p className="text-sm leading-relaxed text-ink-muted">{t('auth.profileDeleteMailHint')}</p>
-            <div className="mt-2 modal-actions modal-actions-reversed">
-              <button
-                type="button"
-                data-testid="delete-account-close"
-                className="rounded-[5px] border border-line-strong px-5 py-2 text-[15px] font-medium text-ink-muted transition-colors hover:text-ink"
-                onClick={closeDelete}
-              >
-                {t('auth.profileDeleteClose')}
-              </button>
+
+            {/* The code as six square boxes, the same widget as the reset
+                code: Latin letters and digits whatever the mail's direction,
+                dir="ltr" so they stay in the order they were generated even
+                inside the RTL modal. A label cannot wrap several controls, so
+                the text sits above the group and each box is named through
+                CodeInput's ariaLabel. */}
+            <div className="flex flex-col gap-2 text-start">
+              <span className="text-sm text-ink-muted">{t('auth.profileDeleteCodeLabel')}</span>
+              <CodeInput
+                value={deleteCode}
+                onChange={setDeleteCode}
+                length={DELETE_CODE_LENGTH}
+                sanitize={sanitizeDeleteCodeInput}
+                ariaLabel={t('auth.profileDeleteCodeLabel')}
+                testId="profile-delete-code"
+                invalid={deleteCodeTouched && !deleteCodeReady}
+                autoComplete
+                autoCapitalize="characters"
+                namePrefix="delete-code"
+                // A touch narrower than the reset code's four boxes: six of
+                // them plus the modal's padding have to fit a 360px phone on
+                // one row (6x40 + 5x8 gaps = 280, inside the ~283px that
+                // 92vw minus p-6 leaves). Group wraps as a last resort.
+                boxClassName="h-11 w-10 text-lg"
+              />
+              <span className="text-center text-xs text-ink-muted">
+                {t('auth.profileDeleteCodeHint')}
+              </span>
             </div>
-          </div>
-        ) : deleteFromMail ? (
-          /* The mailed link: the address is already proved, and this is the last
-             press. The warning is repeated in full here because this is the page
-             the mail points at - the consequence has to be readable without
-             going back to the profile's own modal. */
-          <form onSubmit={onDeleteConfirm} className="flex flex-col gap-4 p-6">
-            <h3 className="text-[20px] font-bold leading-tight text-ink">
-              {t('auth.profileDeleteTitle')}
-            </h3>
-
-            <p
-              data-testid="delete-account-warning"
-              className="rounded-lg border border-danger/40 bg-surface-soft px-3 py-2.5 text-sm leading-relaxed text-ink"
-            >
-              {t('auth.profileDeleteWarning')}
-            </p>
-
-            <p
-              data-testid="delete-account-mail-confirm"
-              className="text-sm leading-relaxed text-ink-muted"
-            >
-              {t('auth.profileDeleteMailConfirmHint')}
-            </p>
 
             {deleteError && <FieldError message={deleteError} testId="profile-delete-error" />}
+
+            {/* A quiet text link, like the reset form's: a lost or expired code
+                is the rare path, and the delete button below should stay the
+                only solid control in the modal. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
+              <button
+                type="button"
+                data-testid="delete-account-resend"
+                disabled={deletePending}
+                onClick={onDeleteResend}
+                className="font-medium text-[var(--calc-teal)] underline-offset-2 transition-colors hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
+              >
+                {t('auth.profileDeleteResendCode')}
+              </button>
+              {deleteResendSent && (
+                <span role="status" data-testid="delete-account-resend-sent">
+                  {t('auth.profileDeleteResendSent')}
+                </span>
+              )}
+            </div>
 
             <div className="mt-2 modal-actions modal-actions-reversed">
               <button
@@ -693,23 +772,15 @@ export function ProfilePage({
               </button>
               <button
                 type="submit"
-                disabled={deletePending}
+                disabled={!deleteCodeReady || deletePending}
                 aria-busy={deletePending}
                 aria-label={deletePending ? t('auth.profileDeleting') : undefined}
                 data-testid="profile-delete-submit"
                 className={DELETE_BUTTON_CLASS}
               >
-                {deletePending ? (
-                  <span className="flex h-5 w-5 items-center justify-center">
-                    <FaSpinner
-                      aria-hidden="true"
-                      data-testid="delete-submit-spinner"
-                      className="animate-spin"
-                    />
-                  </span>
-                ) : (
-                  t('auth.profileDeleteAction')
-                )}
+                <PendingContent pending={deletePending} spinnerTestId="delete-submit-spinner">
+                  {t('auth.profileDeleteAction')}
+                </PendingContent>
               </button>
             </div>
           </form>
@@ -728,9 +799,9 @@ export function ProfilePage({
               {t('auth.profileDeleteWarning')}
             </p>
 
-            {/* The password is what Better Auth verifies before it mails
-                anything; an account created through Google has none, so it
-                types the profile's word instead. */}
+            {/* The password is what Better Auth verifies before it stores the
+                code and mails it; an account created through Google has none, so
+                it types the profile's word instead. */}
             {hasPassword ? (
               <label className="flex flex-col gap-1 text-start">
                 <span className="text-sm text-ink-muted">
@@ -780,7 +851,7 @@ export function ProfilePage({
                 type="button"
                 data-testid="delete-account-cancel"
                 className="rounded-[5px] border border-line-strong px-5 py-2 text-[15px] font-medium text-ink-muted transition-colors hover:text-ink"
-                onClick={() => setDeleteOpen(false)}
+                onClick={closeDelete}
               >
                 {t('savedMixes.cancel')}
               </button>
@@ -792,17 +863,9 @@ export function ProfilePage({
                 data-testid="profile-delete-submit"
                 className={DELETE_BUTTON_CLASS}
               >
-                {deletePending ? (
-                  <span className="flex h-5 w-5 items-center justify-center">
-                    <FaSpinner
-                      aria-hidden="true"
-                      data-testid="delete-submit-spinner"
-                      className="animate-spin"
-                    />
-                  </span>
-                ) : (
-                  t('auth.profileDeleteAction')
-                )}
+                <PendingContent pending={deletePending} spinnerTestId="delete-submit-spinner">
+                  {t('auth.profileDeleteSendCode')}
+                </PendingContent>
               </button>
             </div>
           </form>

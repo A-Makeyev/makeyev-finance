@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCommentTree, visualDepth } from '@/features/comments/tree'
+import { ancestorPath, buildCommentTree, visualDepth } from '@/features/comments/tree'
 import type { CommentDto } from '@/features/comments/types'
 
 /**
@@ -64,6 +64,30 @@ describe('buildCommentTree', () => {
     expect(tree).toHaveLength(1)
     expect(tree[0].comment.id).toBe('orphan')
     expect(tree[0].depth).toBe(0)
+  })
+})
+
+describe('ancestorPath', () => {
+  const tree = buildCommentTree([
+    comment('a', null, '2026-01-01T10:00:00Z'),
+    comment('b', 'a', '2026-01-01T11:00:00Z'),
+    comment('c', 'b', '2026-01-01T12:00:00Z'),
+    comment('other', null, '2026-01-01T09:00:00Z'),
+  ])
+
+  it('walks from the outermost comment down to the target', () => {
+    expect(ancestorPath(tree, 'c')).toEqual(['a', 'b', 'c'])
+  })
+
+  it('includes the target itself as the last id, and the root as the first', () => {
+    expect(ancestorPath(tree, 'a')).toEqual(['a'])
+    expect(ancestorPath(tree, 'other')).toEqual(['other'])
+  })
+
+  it('is null for an id that is not in the tree', () => {
+    // The caller uses null to stop revealing: a forced id can never loop.
+    expect(ancestorPath(tree, 'missing')).toBeNull()
+    expect(ancestorPath([], 'a')).toBeNull()
   })
 })
 

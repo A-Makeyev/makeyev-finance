@@ -18,23 +18,20 @@ Ideas for my business
 Use REA to inspect https://www.smartnpv.co.il/. Clone this website for me.
 
 
+there are images in examples folder, go over them deeply, see what can u implament and improve in our app
+
 when we leave compare page with changes, need modal prompt to save or discard like in calculator, also can we add the compare details in our profile like we save mixes? 
+
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
-change to node mailer
 email sub -> when rate change
-
-
 
 add affiliate next to lawyer, realtor etc
 ביטוח
-
-
-email about rate change (change to node mailer)
 
 
 to live should finish faster and pay less rates

@@ -121,6 +121,26 @@ test.describe('mortgage calculator - tracks and allocation', () => {
     await expect(calc.startingAmount).toHaveValue('1,020,000')
   })
 
+  test('a repeated track type is rejected with an error', async ({ calc }) => {
+    // Default basket4 mix: prime / fixed / variable-indexed-5y. Turning the
+    // fixed track into a second prime repeats a type, which the mix rejects.
+    await expect(calc.formError).toBeHidden()
+    const track2 = calc.track(2)
+    await expect(async () => {
+      await track2.setType('prime')
+      await expect(track2.type()).toHaveValue('prime')
+    }).toPass()
+    await expect(calc.formError).toContainText('לא ניתן לחזור על אותו מסלול')
+    // Both repeated-type rows are flagged, and this rule has no auto-fix.
+    await expect(calc.track(1).legend()).toHaveClass(/variable-limit-flag/)
+    await expect(track2.legend()).toHaveClass(/variable-limit-flag/)
+    await expect(calc.autofixButton).toBeHidden()
+
+    // Picking a distinct type clears it.
+    await track2.setType('fixed')
+    await expect(calc.formError).toBeHidden()
+  })
+
   test('typing a home amount fills empty tracks with the recommended mix', async ({ calc }) => {
     // With some tracks left empty (e.g. cleared), the whole loan used to land
     // in whichever single track still held money - usually the last variable

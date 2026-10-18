@@ -21,16 +21,14 @@ export default async function Page({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   // Same contract as the Hebrew page: `?verified=1` means the visitor just
-  // clicked the verification link, so the card celebrates once, and
-  // `?delete=<token>` means the deletion link was just opened.
-  const { verified, delete: deleteParam } = await searchParams
-  const deleteToken = typeof deleteParam === 'string' && deleteParam ? deleteParam : null
+  // clicked the verification link, so the card celebrates once. Account
+  // deletion is confirmed with a code typed into the profile's own modal, so no
+  // link lands here any more.
+  const { verified } = await searchParams
 
   const session = await getServerSession()
   if (!session) {
-    // Same contract as the Hebrew page: the token survives the sign-in.
-    const next = deleteToken ? `/en/profile?delete=${encodeURIComponent(deleteToken)}` : '/profile'
-    redirect(`/en/login?next=${encodeURIComponent(next)}`)
+    redirect(`/en/login?next=${encodeURIComponent('/profile')}`)
   }
   // Same contract as the Hebrew page: the delete modal asks for a password
   // only when the account has one.
@@ -45,7 +43,6 @@ export default async function Page({
         role={toRole((session.user as { role?: unknown }).role)}
         hasPassword={hasPassword}
         justVerified={verified === '1'}
-        deleteToken={deleteToken}
       />
     </LocaleShell>
   )

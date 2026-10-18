@@ -17,7 +17,8 @@ import { authClient } from '@/lib/auth-client'
 import { useRouter } from '@/router'
 import { initialsFor } from '@/lib/avatar'
 import { formatRelativeTime } from '@/lib/relativeTime'
-import { buildCommentTree, MAX_VISUAL_DEPTH, visualDepth, type CommentNode } from './tree'
+import { buildCommentTree, ancestorPath, MAX_VISUAL_DEPTH, visualDepth, type CommentNode } from './tree'
+import { REPLY_PAGE_SIZE, hiddenReplyCount, shownReplyCount, withRevealedPath } from './replies'
 import { useComments, useDeleteComment, useEditComment, usePostComment } from './api'
 import type { CommentDto } from './types'
 
@@ -41,25 +42,14 @@ const MAX_COMMENT_LENGTH = 600
 /** Top-level comments rendered before the "show more" control. */
 const COMMENT_PAGE_SIZE = 8
 
+/** Placeholder rows drawn while the first comment fetch is in flight. */
+const SKELETON_ROWS = 3
+
 /** How long the delete confirmation toast stays up. */
 const TOAST_MS = 1800
 
 /** How long a jumped-to comment stays highlighted, matching the CSS flash. */
 const TARGET_FLASH_MS = 2400
-
-/**
- * The id of the top-level comment whose subtree contains `id`, or null. Used to
- * make sure a linked-to comment is actually rendered (the list shows the first
- * COMMENT_PAGE_SIZE top-level comments) before scrolling to it.
- */
-function findRootId(nodes: CommentNode[], id: string): string | null {
-  const contains = (node: CommentNode): boolean =>
-    node.comment.id === id || node.children.some(contains)
-  for (const root of nodes) {
-    if (contains(root)) return root.comment.id
-  }
-  return null
-}
 
 const inputClass =
   'w-full rounded-lg border border-line-strong bg-surface-page px-3 py-2 text-ink outline-none transition-colors hover:border-ink focus:border-ink'
@@ -89,6 +79,10 @@ export function CommentsSection({ slug }: { slug: string }) {
   const [pendingDelete, setPendingDelete] = useState<CommentDto | null>(null)
   const [deleteFailed, setDeleteFailed] = useState(false)
   const [visibleCount, setVisibleCount] = useState(COMMENT_PAGE_SIZE)
+  // How many replies the reader has revealed under each comment, keyed by that
+  // comment's id (see ./replies). An absent id means the first REPLY_PAGE_SIZE,
+  // so the map only ever grows as controls are pressed or a link reveals a path.
+  const [revealedReplies, setRevealedReplies] = useState<Record<string, number>>({})
   // Comments whose replies are folded away. Collapsing is per-comment and keeps
   // its state across replies to that comment being posted, so it is keyed by
   // comment id rather than by position in the tree.
@@ -140,14 +134,16 @@ export function CommentsSection({ slug }: { slug: string }) {
     if (scrolledToHash.current === hashTarget) return
     const target = document.getElementById(`comment-${hashTarget}`)
     if (!target) {
-      // The target is real but its top-level comment is still beyond the
-      // rendered page: raise the page size to include it, then let this effect
-      // run again and scroll.
+      // The target is real but something is hiding it: its top-level comment
+      // may be beyond the rendered page, and any of its ancestors may hold it
+      // behind that comment's own "show more replies". Reveal the whole path,
+      // then let this effect run again and scroll once it renders.
       const roots = buildCommentTree(commentsQuery.data ?? [])
-      const rootId = findRootId(roots, hashTarget)
-      if (!rootId) return
-      const rootIndex = roots.findIndex((node) => node.comment.id === rootId)
+      const path = ancestorPath(roots, hashTarget)
+      if (!path) return
+      const rootIndex = roots.findIndex((node) => node.comment.id === path[0])
       if (rootIndex >= visibleCount) setVisibleCount(rootIndex + 1)
+      setRevealedReplies((current) => withRevealedPath(current, roots, path))
       return
     }
     scrolledToHash.current = hashTarget
@@ -155,7 +151,10 @@ export function CommentsSection({ slug }: { slug: string }) {
     setHighlightedId(hashTarget)
     const timer = window.setTimeout(() => setHighlightedId(null), TARGET_FLASH_MS)
     return () => window.clearTimeout(timer)
-  }, [hashTarget, commentsQuery.data, visibleCount])
+    // revealedReplies is a dependency because revealing a reply page changes
+    // the DOM without changing visibleCount: without it the target would render
+    // but the effect would never run again to scroll to it.
+  }, [hashTarget, commentsQuery.data, visibleCount, revealedReplies])
 
   /** Maps the server's error token to the message the author should see. */
   function describeError(thrown: unknown): 'blocked' | 'rate_limited' | 'generic' {
@@ -220,6 +219,14 @@ export function CommentsSection({ slug }: { slug: string }) {
     })
   }
 
+  /** Reveals one more page of replies under `id` (see ./replies). */
+  function revealReplies(id: string) {
+    setRevealedReplies((current) => ({
+      ...current,
+      [id]: (current[id] ?? REPLY_PAGE_SIZE) + REPLY_PAGE_SIZE,
+    }))
+  }
+
   function startReply(node: CommentNode) {
     setReplyTo({ id: node.comment.id, name: node.comment.userName })
     setEditingId(null)
@@ -262,6 +269,11 @@ export function CommentsSection({ slug }: { slug: string }) {
     const hasRail = hasChildren && !childrenFlat
     const collapsed = hasChildren && collapsedIds.has(comment.id)
     const childrenId = `comment-children-${comment.id}`
+    // Replies are paged like the top-level list: the first REPLY_PAGE_SIZE
+    // show, then a control reveals another page. A hidden reply is one the
+    // reader asked not to see yet, not a missing one.
+    const repliesShown = shownReplyCount(node.children.length, revealedReplies[comment.id] ?? REPLY_PAGE_SIZE)
+    const hiddenReplies = hiddenReplyCount(node.children.length, revealedReplies[comment.id] ?? REPLY_PAGE_SIZE)
     return (
       <li
         key={comment.id}
@@ -420,13 +432,27 @@ export function CommentsSection({ slug }: { slug: string }) {
           // Past MAX_VISUAL_DEPTH the container stops indenting and only keeps
           // the thread rule, so a deep chain flattens instead of marching off
           // the side of a phone screen.
-          <ul
-            id={childrenId}
-            className={`comment-children${childrenFlat ? ' is-flat' : ''}`}
-            data-testid="comment-children"
-          >
-            {node.children.map((child) => renderNode(child))}
-          </ul>
+          <>
+            <ul
+              id={childrenId}
+              className={`comment-children${childrenFlat ? ' is-flat' : ''}`}
+              data-testid="comment-children"
+            >
+              {node.children.slice(0, repliesShown).map((child) => renderNode(child))}
+            </ul>
+            {hiddenReplies > 0 && (
+              // Sits under the replies it continues and shares their indent, so
+              // it reads as part of the thread rather than a page-level control.
+              <button
+                type="button"
+                data-testid="comment-show-more-replies"
+                className={`${smallButtonClass} comment-more-replies${childrenFlat ? ' is-flat' : ''}`}
+                onClick={() => revealReplies(comment.id)}
+              >
+                {t('comments.showMoreReplies', { count: hiddenReplies })}
+              </button>
+            )}
+          </>
         )}
       </li>
     )
@@ -512,9 +538,27 @@ export function CommentsSection({ slug }: { slug: string }) {
       )}
 
       {commentsQuery.isPending && (
-        <p className="mt-4 text-sm text-ink-muted" data-testid="comments-loading">
-          {t('savedMixes.loading')}
-        </p>
+        // Skeleton rows rather than a bare "loading" line: the thread settles
+        // into the shape it is about to have (avatar circle + text lines) so
+        // the first fetch does not jump from one line of text to a full list.
+        // The bars are decorative; the group's label carries the state for
+        // assistive tech.
+        <div
+          className="mt-5 flex flex-col gap-6"
+          data-testid="comments-loading"
+          role="status"
+        >
+          <span className="sr-only">{t('comments.loading')}</span>
+          {Array.from({ length: SKELETON_ROWS }, (_, row) => (
+            <div key={row} className="comment-skeleton" aria-hidden="true">
+              <span className="comment-skeleton-avatar" />
+              <span className="comment-skeleton-lines">
+                <span className="comment-skeleton-line is-short" />
+                <span className="comment-skeleton-line" />
+              </span>
+            </div>
+          ))}
+        </div>
       )}
       {commentsQuery.isError && (
         <p role="alert" className="mt-4 text-sm text-danger">

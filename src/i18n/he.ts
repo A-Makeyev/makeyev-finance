@@ -599,6 +599,7 @@ export const he = {
         variableCapLine1:
           'בהתאם להוראות בנק ישראל, המסלולים המסומנים בריבית משתנה לא יכולים לעבור 66.66% מסך המשכנתא',
         variableCapLine2: ' הקטינו מסלול מסומן או הגדילו מסלול בריבית קבועה',
+        duplicateType: 'לא ניתן לחזור על אותו מסלול פעמיים בתמהיל. בחרו סוג מסלול אחר לאחד המסלולים המסומנים.',
       },
       warnings: {
         capital: 'הון עצמי <0>{{percent}}%</0> משווי הנכס',
@@ -737,6 +738,7 @@ export const he = {
       statusEmpty: 'הזינו מסלולים להצגת נתונים',
       statusErrorPositive: 'יש להזין סכום חיובי ותקופה של 1-30 שנים בכל מסלול',
       statusErrorVariableCap: 'חריגה מתקרת הריבית המשתנה (2/3) של בנק ישראל',
+      statusErrorDuplicateType: 'אותו מסלול מופיע יותר מפעם אחת בתמהיל',
       // Mobile stacked view.
       scenarioSwitcherAria: 'מעבר בין תמהילים',
       bestBadge: 'הטוב ביותר',
@@ -816,6 +818,7 @@ export const he = {
     comments: {
       title: 'תגובות',
       empty: 'עדיין אין תגובות. היו הראשונים להגיב.',
+      loading: 'טוען תגובות...',
       loadError: 'טעינת התגובות נכשלה. נסו שוב.',
       signInPrompt: 'התחבר כדי להגיב',
       placeholder: 'כתבו תגובה...',
@@ -837,6 +840,9 @@ export const he = {
       deleteFailed: 'המחיקה נכשלה. נסו שוב.',
       deletedToast: 'התגובה נמחקה',
       showMore: 'הצגת תגובות נוספות',
+      showMoreReplies_one: 'הצגת תגובה נוספת',
+      showMoreReplies_two: 'הצגת 2 תגובות נוספות',
+      showMoreReplies_other: 'הצגת {{count}} תגובות נוספות',
       collapseReplies: 'כיווץ התגובות',
       expandReplies: 'הצגת התגובות',
       blocked: 'התגובה מכילה שפה שאינה מתאימה, ולכן לא נשלחה.',
@@ -861,7 +867,7 @@ export const he = {
       defaultLabel: 'תמהיל',
       confirm: 'שמירה',
       cancel: 'ביטול',
-      signIn: 'התחברות כדי לשמור',
+      signIn: 'התחבר כדי לשמור',
       saved: 'התמהיל נשמר',
       saveError: 'השמירה נכשלה. נסו שוב.',
       capReached: 'אפשר לשמור עד 4 תמהילים. יש להסיר תמהיל כדי להוסיף חדש.',
@@ -885,8 +891,8 @@ export const he = {
       termFor_two: 'לתקופה של שנתיים',
       termFor_other: 'לתקופה של {{count}} שנים',
       unsavedTitle: 'שינויים שלא נשמרו',
-      unsavedBody: 'יש תמהיל שלא נשמר. לצאת בכל זאת?',
-      unsavedLeave: 'יציאה בלי לשמור',
+      unsavedBody: 'התמהיל הנוכחי לא נשמר. הוא יישאר בדפדפן עד לרענון או סגירה. לצאת בכל זאת?',
+      unsavedLeave: 'יציאה בכל זאת',
       unsavedStay: 'להישאר',
       savedState: 'תמהיל שמור',
       unsavedSave: 'שמירה',
@@ -1005,25 +1011,25 @@ export const he = {
       profileDeleteConfirmWord: 'מחיקה',
       profileDeleteConfirmMismatch: 'המילה שהוקלדה אינה מתאימה',
       // The password the account proves itself with. Better Auth checks it
-      // before the link is mailed, so a typo is answered rather than ignored.
-      profileDeletePasswordHint: 'הסיסמה נבדקת לפני שליחת קישור האישור',
+      // before the deletion code is mailed, so a typo is answered rather than
+      // ignored.
+      profileDeletePasswordHint: 'הסיסמה נבדקת לפני שליחת קוד המחיקה',
       profileDeletePasswordRequired: 'יש להזין סיסמה',
-      // The button sends the confirmation mail; the account goes when the link
-      // in that mail is opened and its own button is pressed.
+      // The first button mails the code; the account goes when that code is
+      // typed into the modal's second step.
+      profileDeleteSendCode: 'שליחת קוד',
       profileDeleteAction: 'מחיקה',
       profileDeleting: 'מוחק...',
-      profileDeleteClose: 'סגירה',
       profileDeleteSessionExpired: 'הפעולה דורשת התחברות מחדש. יש להתחבר שוב ולנסות שוב',
-      // The last step, on the page the mailed link opens: the address is
-      // already proved, and one press ends it.
-      profileDeleteMailConfirmHint:
-        'הקישור הזה אימת את כתובת הדוא״ל. לחיצה על מחיקה תמחק את החשבון מיד, בלי אפשרות לשחזר',
-      profileDeleteInvalidLink: 'הקישור אינו תקף או שפג תוקפו. אפשר לשלוח קישור חדש מהכפתור מחיקת חשבון',
-      // Deletion is confirmed by a link mailed to the address, so the modal ends
-      // by naming that address (masked) rather than by deleting anything.
-      profileDeleteMailSent: 'קישור לאישור המחיקה נשלח לכתובת',
-      profileDeleteMailHint:
-        'החשבון יימחק רק אחרי פתיחת הקישור ולחיצה על מחיקה בדף הפרופיל, מהדפדפן הזה. יש לבדוק גם בתיקיית הספאם. הקישור תקף ל-24 שעות',
+      // The second step: the mailed code is the last thing between the account
+      // and its deletion.
+      profileDeleteCodeTitle: 'הזנת קוד מחיקה',
+      profileDeleteCodeSentTo: 'שלחנו קוד מחיקה לכתובת',
+      profileDeleteCodeLabel: 'קוד מחיקה',
+      profileDeleteCodeHint: 'הקוד מכיל אותיות וספרות, ותקף ל-30 דקות',
+      profileDeleteInvalidCode: 'הקוד שגוי או שפג תוקפו',
+      profileDeleteResendCode: 'שליחת קוד חדש',
+      profileDeleteResendSent: 'נשלח קוד חדש',
       profileDeleteTooManyAttempts: 'יותר מדי בקשות. המתינו דקה ונסו שוב',
       emails: {
         subject: 'אימות כתובת הדוא״ל',
@@ -1038,11 +1044,11 @@ export const he = {
         otpBody: 'יש להזין את הקוד הזה בטופס איפוס הסיסמה:',
         otpExpiry: 'הקוד תקף ל-5 דקות',
         otpIgnore: 'אם לא ביקשתם לאפס את הסיסמה, ניתן להתעלם מהודעה זו. הסיסמה לא תשתנה',
-        deleteSubject: 'אישור מחיקת חשבון',
+        deleteSubject: 'קוד למחיקת החשבון',
         deleteHeading: 'מחיקת חשבון',
         deleteBody:
-          'כדי למחוק את החשבון לצמיתות יש לפתוח את הקישור למטה ולאשר את המחיקה בדף הפרופיל. החשבון והתמהילים השמורים יימחקו. תגובות שכבר כתבתם יישארו בכתבות',
-        deleteCta: 'מעבר לדף המחיקה',
+          'כדי למחוק את החשבון לצמיתות יש להזין את הקוד הזה בחלון מחיקת החשבון שבדף הפרופיל. החשבון והתמהילים השמורים יימחקו. תגובות שכבר כתבתם יישארו בכתבות',
+        deleteExpiry: 'הקוד תקף ל-30 דקות',
         deleteIgnore:
           'אם לא ביקשתם למחוק את החשבון, אפשר להתעלם מהודעה זו. החשבון לא יימחק',
         signature: 'Makeyev Finance',

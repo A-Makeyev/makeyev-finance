@@ -2,11 +2,12 @@
  * Pure editing rules for the password-reset code: four square inputs, one
  * digit each, all sharing a single value.
  *
- * Kept out of the component (and free of React) so the rules that are easy to
- * get wrong - which box a change belongs to, what a paste or the OS
- * one-time-code autofill does, what a non-digit does - are unit tested with
- * concrete slots instead of only through a browser.
+ * The box-editing rules themselves are shared with the account-deletion code
+ * and live in src/lib/codeInput; this file keeps the reset code's specifics
+ * (four digits) plus the re-send policy below.
  */
+
+import { applyCodeInput, emptyCodeSlots, type CodeEdit } from '@/lib/codeInput'
 
 /** The reset code is 4 digits, one square input per digit. */
 export const OTP_LENGTH = 4
@@ -90,14 +91,15 @@ export function isOtpComplete(slots: readonly string[]): boolean {
 
 /** Four empty boxes. A fresh array each call, so it is always safe to edit. */
 export function emptyOtpSlots(): string[] {
-  return Array.from({ length: OTP_LENGTH }, () => '')
+  return emptyCodeSlots(OTP_LENGTH)
 }
 
-export interface OtpEdit {
-  /** The slots after the edit, always exactly OTP_LENGTH long. */
-  slots: string[]
-  /** The box focus should land on once the edit is applied. */
-  focusIndex: number
+/** The edit shape for the reset code (see src/lib/codeInput). */
+export type OtpEdit = CodeEdit
+
+/** Digits only: the reset code is numeric whatever the user pastes in. */
+export function sanitizeOtpInput(raw: string): string {
+  return raw.replace(/\D/g, '')
 }
 
 /**
@@ -112,21 +114,5 @@ export interface OtpEdit {
  *   there rather than sliding it to the first.
  */
 export function applyOtpInput(slots: readonly string[], index: number, raw: string): OtpEdit {
-  const digits = raw.replace(/\D/g, '')
-  const next = [...slots]
-
-  if (!digits) {
-    next[index] = ''
-    return { slots: next, focusIndex: index }
-  }
-
-  // Typing into a filled box overwrites its digit instead of being swallowed.
-  // The last box can only take the final digit of a spread.
-  const write = index < OTP_LENGTH - 1 && digits.length > 1 ? digits : digits.slice(-1)
-  for (let i = 0; i < write.length && index + i < OTP_LENGTH; i++) {
-    next[index + i] = write[i]
-  }
-
-  // Move focus to the box after the last digit just written.
-  return { slots: next, focusIndex: Math.min(index + write.length, OTP_LENGTH - 1) }
+  return applyCodeInput(slots, index, raw, OTP_LENGTH, sanitizeOtpInput)
 }

@@ -1,132 +1,66 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect } from 'react'
+import confetti from 'canvas-confetti'
 
 /**
- * A short celebratory burst for the profile page, shown once right after an
- * email address is verified (the verification link lands here with
- * `?verified=1`, see the profile pages).
+ * The celebratory burst shown once right after an email address is verified
+ * (the profile page is opened with `?verified=1`, see the profile pages).
  *
- * Hand-rolled rather than a confetti dependency: it is a few dozen absolutely
- * positioned pieces and one keyframe, and AGENTS.md treats a new dependency as
- * a decision rather than a default.
+ * Library rather than hand-rolled: the piece is genuinely a canvas particle
+ * effect, and `canvas-confetti` gives the custom SVG shapes (triangle, square,
+ * coin, tree) and the out-from-the-centre burst that the previous CSS pieces
+ * could only approximate (user-requested, with their own snippet). It is a
+ * small, dependency-free library, and it is the only reason this component
+ * ships a canvas.
  *
- * Decorative by construction: aria-hidden, pointer-events none (.confetti-
- * layer), and the pieces are generated only after mount, so the server render
- * (which is empty) can never disagree with the client. Under reduced motion
- * nothing is generated at all and the component simply stays empty.
+ * Everything is fired from the viewport centre with spread 360 and no gravity,
+ * so it reads as an explosion outward rather than confetti falling from the
+ * top, in three quick waves (0/100/200ms) sized exactly as the snippet had it.
  *
- * "Short" is deliberate: every piece finishes within ~2.4s and the whole layer
- * is removed at BURST_MS, so it never becomes a layer the user has to wait out.
- * It was sized up, lengthened by a second and given three shapes and two waves
- * over its first version, then enlarged again with the extra shapes and a sway
- * (user-requested): at the original size and flat straight fall it read as a
- * flicker rather than a celebration.
+ * Decorative by construction: it renders nothing, the canvas the library
+ * creates is pointer-events none, and under reduced motion nothing is fired at
+ * all (`disableForReducedMotion` covers the same preference inside the library,
+ * this returns before doing any work).
  */
-const PIECE_COUNT = 90
-const BURST_MS = 3200
-
-/** Brand accents plus celebration hues; readable on both theme surfaces. */
-const COLORS = [
-  '#0f5c4b',
-  '#2fa37c',
-  '#f2c14e',
-  '#e06c75',
-  '#5b8def',
-  '#c084fc',
-  '#ff9f45',
-  '#38bdf8',
-]
-
-type Shape = 'square' | 'circle' | 'ribbon'
-
-interface Piece {
-  left: number
-  drift: number
-  sway: number
-  spin: number
-  delay: number
-  duration: number
-  width: number
-  height: number
-  color: string
-  shape: Shape
-  radius: string
-}
-
-/** Pure-ish: the randomness is fine because it only ever runs in the browser. */
-function makePieces(): Piece[] {
-  return Array.from({ length: PIECE_COUNT }, (_, index) => {
-    // Launch points spread across the top edge, pulled toward the middle so
-    // the burst reads as coming from the card rather than a flat curtain.
-    const spread = (index / (PIECE_COUNT - 1)) * 100
-    const size = 8 + Math.round(Math.random() * 10)
-    const shape: Shape = index % 5 === 0 ? 'ribbon' : index % 3 === 0 ? 'circle' : 'square'
-    // Two waves, half a second apart, so the burst reads as a shower rather
-    // than a single curtain. Every piece (delay + duration) still lands inside
-    // BURST_MS, so the layer is never cut mid-fall.
-    const wave = index % 2 === 0 ? 0 : 450
-    const width = shape === 'ribbon' ? 5 + Math.round(Math.random() * 3) : size
-    const height =
-      shape === 'ribbon'
-        ? size + 9
-        : shape === 'circle'
-          ? // Equal sides, so border-radius turns it into a real circle.
-            size
-          : size + Math.round(Math.random() * 4)
-    return {
-      left: 50 + (spread - 50) * 0.92,
-      drift: Math.round((spread - 50) * 3),
-      // A sideways push at the midpoint (see the 50% keyframe): without it every
-      // piece falls on a straight line and the whole thing looks mechanical.
-      sway: Math.round((Math.random() - 0.5) * 130),
-      spin: 360 + Math.round(Math.random() * 720),
-      delay: wave + Math.round(Math.random() * 250),
-      duration: 1500 + Math.round(Math.random() * 900),
-      width,
-      height,
-      color: COLORS[index % COLORS.length],
-      shape,
-      radius: shape === 'circle' ? '9999px' : shape === 'ribbon' ? '9999px' : '2px',
-    }
-  })
-}
+const SHAPES = [
+  // A triangle pointing up, a square, a coin (a filled circle) and a tree.
+  { path: 'M0 10 L5 0 L10 10z' },
+  { path: 'M0 0 L10 0 L10 10 L0 10 Z' },
+  { path: 'M5 0 A5 5 0 1 0 5 10 A5 5 0 1 0 5 0 Z' },
+  { path: 'M5 0 L10 10 L0 10 Z' },
+] as const
 
 export function Confetti() {
-  const [pieces, setPieces] = useState<Piece[] | null>(null)
-
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    setPieces(makePieces())
-    const timer = window.setTimeout(() => setPieces(null), BURST_MS)
-    return () => window.clearTimeout(timer)
+
+    const scalar = 2
+    const shapes = SHAPES.map((shape) => confetti.shapeFromPath(shape.path))
+    const defaults = {
+      spread: 360,
+      ticks: 60,
+      gravity: 0,
+      decay: 0.96,
+      startVelocity: 20,
+      shapes,
+      scalar,
+      // Below the fixed chrome, the band the old CSS confetti used: this is
+      // decoration behind the page furniture, never over it.
+      zIndex: 60,
+      disableForReducedMotion: true,
+    }
+
+    const shoot = () => {
+      void confetti({ ...defaults, particleCount: 30 })
+      void confetti({ ...defaults, particleCount: 5 })
+      void confetti({ ...defaults, particleCount: 15, scalar: scalar / 2, shapes: ['circle'] })
+    }
+
+    // Three waves just after paint, exactly as the snippet fires them.
+    const timers = [0, 100, 200].map((delay) => window.setTimeout(shoot, delay))
+    return () => timers.forEach((timer) => window.clearTimeout(timer))
   }, [])
 
-  if (!pieces) return null
-
-  return (
-    <div className="confetti-layer" aria-hidden="true" data-testid="profile-confetti">
-      {pieces.map((piece, index) => (
-        <span
-          key={index}
-          className="confetti-piece"
-          data-shape={piece.shape}
-          style={
-            {
-              left: `${piece.left}%`,
-              width: `${piece.width}px`,
-              height: `${piece.height}px`,
-              backgroundColor: piece.color,
-              borderRadius: piece.radius,
-              animationDelay: `${piece.delay}ms`,
-              animationDuration: `${piece.duration}ms`,
-              '--confetti-drift': `${piece.drift}px`,
-              '--confetti-sway': `${piece.sway}px`,
-              '--confetti-spin': `${piece.spin}deg`,
-            } as CSSProperties
-          }
-        />
-      ))}
-    </div>
-  )
+  return null
 }

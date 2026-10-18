@@ -55,6 +55,29 @@ export function buildCommentTree(comments: CommentDto[]): CommentNode[] {
 }
 
 /**
+ * The comments between the outermost one and `id`, outermost first (both ends
+ * included), or null when `id` is not in the tree.
+ *
+ * A linked-to comment (the profile's reply cards link to /articles/<slug>
+ * #comment-<id>) can be hidden twice over: its top-level comment may sit beyond
+ * the page of comments, and any ancestor may be holding it behind that
+ * comment's "show more replies" control. Walking this path is how both are
+ * revealed before the scroll, without guessing where in the tree it lives.
+ */
+export function ancestorPath(nodes: CommentNode[], id: string): string[] | null {
+  const walk = (list: CommentNode[], trail: string[]): string[] | null => {
+    for (const node of list) {
+      const path = [...trail, node.comment.id]
+      if (node.comment.id === id) return path
+      const found = walk(node.children, path)
+      if (found) return found
+    }
+    return null
+  }
+  return walk(nodes, [])
+}
+
+/**
  * Visual depth cap: replies deeper than this render at the cap instead of
  * indenting further, which keeps a long chain readable on a phone.
  */

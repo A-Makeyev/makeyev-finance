@@ -121,10 +121,15 @@ describe('computeScenario - golden values', () => {
   })
 
   it('bases the recommended income on the average payment, not the first payment', () => {
-    // A mixed-term mix separates the two: 500k fixed 30y + 500k fixed 5y has
-    // a first payment of 11,854.94 but an average of 4,087.01 (golden).
+    // A mixed-term mix separates the two: 500k fixed 30y + 500k variable 5y has
+    // a first payment of 11,854.94 but an average of 4,087.01 (golden). The two
+    // tracks must carry different types (one per type in a mix), so the second
+    // is a non-indexed variable track at the same rate - identical amortization.
     const result = computeScenario(
-      [track({ amountText: '500,000', yearsText: '30' }), track({ amountText: '500,000', yearsText: '5' })],
+      [
+        track({ amountText: '500,000', yearsText: '30' }),
+        track({ type: 'variable', amountText: '500,000', yearsText: '5', rateText: '4.5' }),
+      ],
       baseInputs,
     )
     expect(result.totals.firstPayment).toBeCloseTo(11_854.9362, 3)
@@ -180,15 +185,16 @@ describe('computeScenario - chart series', () => {
     expect(result.schedule[14].closing).toBeCloseTo(0, 4)
   })
 
-  it('groups the mix shares by track type and ranks them largest first', () => {
-    // Prime repeated twice (200k + 100k) must collapse into one 300k slice.
-    const primeA = track({ id: 'a', type: 'prime', amountText: '200,000', rateText: '5.75' })
-    const primeB = track({ id: 'b', type: 'prime', amountText: '100,000', rateText: '5.75' })
-    const fixed = track({ id: 'c', amountText: '700,000' })
-    const result = computeScenario([primeA, primeB, fixed], baseInputs)
+  it('lists one slice per distinct type and ranks them largest first', () => {
+    // One track per type in a mix, so each type is its own slice.
+    const variable = track({ id: 'a', type: 'variable', amountText: '200,000', rateText: '4.3' })
+    const prime = track({ id: 'b', type: 'prime', amountText: '300,000', rateText: '5.75' })
+    const fixed = track({ id: 'c', amountText: '500,000' })
+    const result = computeScenario([variable, prime, fixed], baseInputs)
     expect(result.mixShares).toEqual([
-      { type: 'fixed', amount: 700_000, percent: 70 },
+      { type: 'fixed', amount: 500_000, percent: 50 },
       { type: 'prime', amount: 300_000, percent: 30 },
+      { type: 'variable', amount: 200_000, percent: 20 },
     ])
     expect(result.mixShares.reduce((sum, share) => sum + share.percent, 0)).toBeCloseTo(100, 6)
   })
@@ -230,6 +236,22 @@ describe('computeScenario - errors and caps', () => {
       baseInputs,
     )
     expect(result.error).toBe('variableCap')
+  })
+
+  it('flags a repeated track type with no numbers', () => {
+    // Two prime tracks (one per type rule): error gates all figures.
+    const result = computeScenario(
+      [
+        track({ id: 'a', type: 'prime', amountText: '300,000', rateText: '5.75' }),
+        track({ id: 'b', type: 'prime', amountText: '200,000', rateText: '5.75' }),
+        track({ id: 'c', amountText: '500,000' }),
+      ],
+      baseInputs,
+    )
+    expect(result.error).toBe('duplicateType')
+    expect(result.totals.firstPayment).toBe(0)
+    expect(result.loanAmount).toBe(0)
+    expect(result.mixShares).toEqual([])
   })
 
   it('reports LTV violation above the purpose limit', () => {
@@ -437,9 +459,10 @@ describe('comparisonStore', () => {
     ])
     expect(state.results[1].loanAmount).toBe(1_000_000)
     expect(state.results[1].isEmpty).toBe(false)
-    // Type/rate keep the blank track's defaults: the loan only supplies amounts.
-    expect(state.scenarios[1].tracks[1].type).toBe('fixed')
-    expect(state.scenarios[1].tracks[1].rateText).toBe('4.5')
+    // The new track takes a type the mix does not hold (free of duplicates):
+    // the blank track is 'fixed', so the new one is 'prime'.
+    expect(state.scenarios[1].tracks[1].type).toBe('prime')
+    expect(state.scenarios[1].tracks[1].rateText).toBe('5.75')
   })
 
   it('the split keeps the mix exactly on the shared loan (odd shekel in the last track)', () => {
@@ -511,14 +534,16 @@ describe('comparisonStore', () => {
     const scenario = store.scenarios[1]
     store.loadScenarioPreset(scenario.id, 'basket2')
     const fixedTrack = useComparisonStore.getState().scenarios[1].tracks[0]
-    useComparisonStore.getState().changeTrackType(scenario.id, fixedTrack.id, 'prime')
+    // A distinct variable type (not a repeat of the prime track) makes the mix
+    // 100% variable, tripping the 2/3 cap rather than the duplicate-type rule.
+    useComparisonStore.getState().changeTrackType(scenario.id, fixedTrack.id, 'variable5y')
     expect(useComparisonStore.getState().results[1].error).toBe('variableCap')
 
     useComparisonStore.getState().fixScenario(scenario.id)
     const fixed = useComparisonStore.getState()
     expect(fixed.results[1].error).toBeNull()
     // The last track holding money anchors the fixed share.
-    expect(fixed.scenarios[1].tracks.map((entry) => entry.type)).toEqual(['prime', 'fixed'])
+    expect(fixed.scenarios[1].tracks.map((entry) => entry.type)).toEqual(['variable5y', 'fixed'])
     expect(fixed.scenarios[1].tracks.map((entry) => entry.amountText)).toEqual([
       '500,000',
       '500,000',

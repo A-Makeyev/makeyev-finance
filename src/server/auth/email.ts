@@ -1,22 +1,22 @@
 import type { Language } from '@/i18n'
 import { he } from '@/i18n/he'
 import { en } from '@/i18n/en'
-import { getAuthConfig, publicOrigin } from './config'
 import { sendMail, MailSendError } from '@/server/mail/client'
 import { canSendMail } from '@/server/mail/config'
 import { escapeHtml } from '@/server/mail/html'
 
 /**
- * Verification-email delivery.
+ * Auth-email delivery: verify the address, reset the password, confirm an
+ * account deletion.
  *
  * The copy lives in the same i18n files as the rest of the site (`auth.emails`
  * in he.ts/en.ts) so a new language cannot be added to the UI while the email
- * silently stays Hebrew. Language is chosen from the recipient's
- * Accept-Language, because at verification time there is no session to read a
- * stored preference from.
+ * silently stays Hebrew. The language is the one the user is looking at when
+ * they trigger the mail, so an English browser on the Hebrew site gets Hebrew
+ * mail (and any link it carries lands on the Hebrew pages).
  *
- * Nothing here is hand-rolled crypto: the token and URL are produced by Better
- * Auth; this module only renders and sends.
+ * Nothing here is hand-rolled crypto: the token, URL and code are produced by
+ * Better Auth; this module only renders and sends.
  */
 
 /** First supported language named in an Accept-Language header wins; Hebrew is the default. */
@@ -24,6 +24,35 @@ export function pickEmailLanguage(acceptLanguage: string | null | undefined): La
   if (!acceptLanguage) return 'hebrew'
   const first = acceptLanguage.split(',')[0]?.trim().toLowerCase() ?? ''
   return first.startsWith('en') ? 'english' : 'hebrew'
+}
+
+/**
+ * The language the auth email should be written in.
+ *
+ * The page the request came from is the strongest signal: locale lives in the
+ * path (`/en/...` is English, everything unprefixed is Hebrew), and a
+ * same-origin auth request carries that page in `Referer`. Browsers advertise
+ * their own UI language in `Accept-Language`, which is why a Hebrew user with
+ * an English browser was getting English mail and an English deletion link;
+ * the app sets that header too (src/lib/auth-client.ts), and this keeps the
+ * server honest even when a request arrives without it.
+ *
+ * `Accept-Language` stays as the fallback for requests that have no referrer
+ * (a direct API call, a prefetch, a client that strips it). Hebrew is the
+ * default, matching the unprefixed site.
+ */
+export function emailLanguageForRequest(request: Request | undefined): Language {
+  const headers = request?.headers
+  const referer = headers?.get('referer') ?? headers?.get('referrer')
+  if (referer) {
+    try {
+      const path = new URL(referer).pathname
+      return path === '/en' || path.startsWith('/en/') ? 'english' : 'hebrew'
+    } catch {
+      // A malformed referrer is not a language signal; fall through.
+    }
+  }
+  return pickEmailLanguage(headers?.get('accept-language'))
 }
 
 export interface VerificationEmailContent {
@@ -50,7 +79,7 @@ interface AuthEmailCopy {
   deleteSubject: string
   deleteHeading: string
   deleteBody: string
-  deleteCta: string
+  deleteExpiry: string
   deleteIgnore: string
 }
 
@@ -79,14 +108,20 @@ interface ActionEmailCopy {
 function renderActionEmail(language: Language, copy: ActionEmailCopy): VerificationEmailContent {
   const dir = language === 'hebrew' ? 'rtl' : 'ltr'
   const lang = language === 'hebrew' ? 'he' : 'en'
+  // Direction and alignment are repeated on the body, the wrapper table and the
+  // content cell: plenty of mail clients ignore `dir` on <html> and render the
+  // message from the table instead, which is why a Hebrew mail could show up
+  // left-aligned. text-align is spelled right/left rather than `start` for the
+  // same reason ~ `start` only means anything once the direction is honoured.
+  const align = language === 'hebrew' ? 'right' : 'left'
   const safeUrl = escapeHtml(copy.url)
 
   const html = [
     `<!doctype html>`,
     `<html lang="${lang}" dir="${dir}">`,
-    `<body style="margin:0;padding:24px;background:#f4f4f4;">`,
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;">`,
-    `<tr><td style="padding:32px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;text-align:start;">`,
+    `<body dir="${dir}" style="margin:0;padding:24px;background:#f4f4f4;">`,
+    `<table role="presentation" width="100%" dir="${dir}" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;">`,
+    `<tr><td dir="${dir}" style="padding:32px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;text-align:${align};">`,
     `<h1 style="margin:0 0 16px;font-size:20px;">${escapeHtml(copy.heading)}</h1>`,
     `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;">${escapeHtml(copy.greeting)}</p>`,
     `<p style="margin:0 0 24px;font-size:15px;line-height:1.6;">${escapeHtml(copy.body)}</p>`,
@@ -142,27 +177,85 @@ export function buildVerificationEmail(
   })
 }
 
+/** Everything a code email needs: a heading, a body and the code itself. */
+interface CodeEmailCopy {
+  subject: string
+  heading: string
+  body: string
+  code: string
+  expiry: string
+  ignore: string
+  signature: string
+}
+
 /**
- * Pure: renders the account-deletion email. The link is the proof that
- * whoever is deleting the account also controls its address, and it is what
- * finally deletes it: nothing happens until the profile page it lands on
- * confirms with the token.
+ * The one template behind every "type this code" mail (reset the password,
+ * confirm deleting the account). Sharing it keeps the two from drifting apart
+ * in direction, RTL/LTR handling, escaping or the code treatment, and it is
+ * the code sibling of renderActionEmail above: a code mail carries no link at
+ * all, which is also what makes it immune to link-scanning prefetch.
  */
-export function buildDeleteAccountEmail(
+function renderCodeEmail(language: Language, copy: CodeEmailCopy): VerificationEmailContent {
+  const dir = language === 'hebrew' ? 'rtl' : 'ltr'
+  const lang = language === 'hebrew' ? 'he' : 'en'
+  // Same repetition as renderActionEmail: the direction has to survive clients
+  // that ignore <html dir>, or a Hebrew code mail reads left to right.
+  const align = language === 'hebrew' ? 'right' : 'left'
+  const safeCode = escapeHtml(copy.code)
+
+  const html = [
+    `<!doctype html>`,
+    `<html lang="${lang}" dir="${dir}">`,
+    `<body dir="${dir}" style="margin:0;padding:24px;background:#f4f4f4;">`,
+    `<table role="presentation" width="100%" dir="${dir}" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;">`,
+    `<tr><td dir="${dir}" style="padding:32px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;text-align:${align};">`,
+    `<h1 style="margin:0 0 16px;font-size:20px;">${escapeHtml(copy.heading)}</h1>`,
+    `<p style="margin:0 0 20px;font-size:15px;line-height:1.6;">${escapeHtml(copy.body)}</p>`,
+    // The code is LTR in both languages: it is a sequence of Latin letters and
+    // digits, and letting it ride the Hebrew direction would reorder it.
+    `<p style="margin:0 0 24px;text-align:${align};"><span dir="ltr" style="display:inline-block;color:#0f5c4b;font-size:26px;letter-spacing:8px;font-weight:700;">${safeCode}</span></p>`,
+    `<p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#555555;">${escapeHtml(copy.expiry)}</p>`,
+    `<p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#555555;">${escapeHtml(copy.ignore)}</p>`,
+    `<p style="margin:0;font-size:13px;color:#777777;">${escapeHtml(copy.signature)}</p>`,
+    `</td></tr></table>`,
+    `</body></html>`,
+  ].join('')
+
+  const text = [
+    copy.heading,
+    '',
+    copy.body,
+    '',
+    copy.code,
+    '',
+    copy.expiry,
+    '',
+    copy.ignore,
+    '',
+    copy.signature,
+  ].join('\n')
+
+  return { subject: copy.subject, html, text }
+}
+
+/**
+ * Pure: renders the account-deletion CODE email. The code is the proof that
+ * whoever is deleting the account also controls its address, and it is what
+ * finally deletes it: typing it in the profile's delete modal is the last step.
+ */
+export function buildDeleteCodeEmail(
   language: Language,
-  url: string,
-  name?: string | null,
+  code: string,
 ): VerificationEmailContent {
   const t = authEmailCopy(language)
-  return renderActionEmail(language, {
+  return renderCodeEmail(language, {
     subject: t.deleteSubject,
     heading: t.deleteHeading,
-    greeting: greetingFor(t, name),
     body: t.deleteBody,
-    cta: t.deleteCta,
+    code,
+    expiry: t.deleteExpiry,
     ignore: t.deleteIgnore,
     signature: t.signature,
-    url,
   })
 }
 
@@ -200,11 +293,10 @@ function logAuthMailFailure(label: string, error: unknown): void {
  *
  * Failures are logged and swallowed: the request that triggered it already
  * succeeded, and an error here must not disclose whether an address is
- * registered or whether an account exists.
- *
- * The `build` callback receives the resolved language, so the one URL that
- * depends on the language (the deletion link, which lands on the profile page
- * of the mail's own language) can be built from it. The URL carries a
+ * registered or whether an account exists. Used for the link-carrying mail
+ * (verify the address); the code mails (reset the password, confirm deletion)
+ * go through sendPasswordResetOtpEmail / sendDeleteCodeEmail instead. The
+ * `build` callback receives the resolved language. The URL carries a
  * single-purpose token, so it is never logged; neither is the address.
  */
 async function sendActionEmail(
@@ -217,7 +309,7 @@ async function sendActionEmail(
     return
   }
 
-  const language = pickEmailLanguage(args.request?.headers.get('accept-language'))
+  const language = emailLanguageForRequest(args.request)
   const { subject, html, text } = build(language)
 
   try {
@@ -239,65 +331,37 @@ export async function sendVerificationEmail(args: VerificationEmailArgs): Promis
   )
 }
 
-export interface DeleteAccountEmailArgs {
+export interface DeleteCodeEmailArgs {
   user: { name?: string | null; email: string }
-  /** Better Auth's single-use deletion token. Never logged. */
-  token: string
-  /** Used for the Accept-Language header and the link's origin. */
+  /** The code the user must type in the delete modal. Never logged. */
+  code: string
+  /** Used to resolve the mail's language (the page it came from). */
   request?: Request
 }
 
 /**
- * Where the deletion link lands: the profile page of the mail's own language,
- * carrying the token. Better Auth builds its own `url` for this mail, but that
- * one points at its callback endpoint, which deletes on GET. Opening the link
- * is not the confirmation the product wants, so the link is rebuilt here to
- * land on the profile page, where the last step is a button.
+ * Sends the account-deletion CODE email. The code is short lived (30 minutes,
+ * see DELETE_CODE_TTL_SECONDS) and single purpose: the mail says what it is
+ * for, so a phished code cannot be replayed anywhere else.
  *
- * Pure, so the URL shape is unit-tested instead of assumed.
+ * Never logs the address or the code itself. A delivery failure is logged and
+ * swallowed, like every other auth mail: the request that triggered it already
+ * succeeded, and an error here must not disclose whether an account exists.
  */
-export function deleteConfirmationUrl(language: Language, origin: string, token: string): string {
-  const path = language === 'english' ? '/en/profile' : '/profile'
-  return `${origin.replace(/\/+$/, '')}${path}?delete=${encodeURIComponent(token)}`
-}
-
-/**
- * The deployment's own origin, for a link that has to come back to this app.
- * The request's origin first (that is where the user actually is), then the
- * configured-or-compiled public origin (see `publicOrigin`). That fallback is
- * always absolute, so a mail link is never built from an unrecognised host.
- */
-function appOrigin(request: Request | undefined, configured: string | undefined): string | null {
-  try {
-    if (request) return new URL(request.url).origin
-  } catch {
-    // Fall through to the configured origin.
-  }
-  if (!configured) return null
-  try {
-    return new URL(configured).origin
-  } catch {
-    return null
-  }
-}
-
-/** Sends the account-deletion email: a link to the profile page, where the deletion is confirmed. */
-export async function sendDeleteAccountEmail(args: DeleteAccountEmailArgs): Promise<void> {
-  const origin = appOrigin(args.request, publicOrigin(getAuthConfig().BETTER_AUTH_URL))
-  if (!origin) {
-    console.warn('[auth] no app origin available; account-deletion email not sent.')
+export async function sendDeleteCodeEmail(args: DeleteCodeEmailArgs): Promise<void> {
+  if (!canSendMail()) {
+    console.warn('[mail] not configured; account-deletion code not sent.')
     return
   }
-  await sendActionEmail(
-    args,
-    (language) =>
-      buildDeleteAccountEmail(
-        language,
-        deleteConfirmationUrl(language, origin, args.token),
-        args.user.name,
-      ),
-    'account-deletion email',
-  )
+
+  const language = emailLanguageForRequest(args.request)
+  const { subject, html, text } = buildDeleteCodeEmail(language, args.code)
+
+  try {
+    await sendMail({ to: args.user.email, subject, html, text })
+  } catch (error) {
+    logAuthMailFailure('account-deletion code email', error)
+  }
 }
 
 export interface OtpEmailArgs {
@@ -322,7 +386,7 @@ export async function sendPasswordResetOtpEmail(args: OtpEmailArgs): Promise<voi
     return
   }
 
-  const language = pickEmailLanguage(args.request?.headers.get('accept-language'))
+  const language = emailLanguageForRequest(args.request)
   const { subject, html, text } = buildOtpEmail(language, args.otp)
 
   try {
@@ -335,33 +399,17 @@ export async function sendPasswordResetOtpEmail(args: OtpEmailArgs): Promise<voi
 }
 
 /**
- * Pure: renders the password-reset code email. A code email carries no link:
- * the user types the code into the form they came from, which is both the
- * mobile-friendlier flow and immune to link-scanning prefetch.
+ * Pure: renders the password-reset code email through the shared code template.
  */
 export function buildOtpEmail(language: Language, otp: string): VerificationEmailContent {
   const t = authEmailCopy(language)
-  const dir = language === 'hebrew' ? 'rtl' : 'ltr'
-  const lang = language === 'hebrew' ? 'he' : 'en'
-  const safeOtp = escapeHtml(otp)
-
-  const html = [
-    `<!doctype html>`,
-    `<html lang="${lang}" dir="${dir}">`,
-    `<body style="margin:0;padding:24px;background:#f4f4f4;">`,
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;">`,
-    `<tr><td style="padding:32px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;text-align:start;">`,
-    `<h1 style="margin:0 0 16px;font-size:20px;">${escapeHtml(t.otpHeading)}</h1>`,
-    `<p style="margin:0 0 20px;font-size:15px;line-height:1.6;">${escapeHtml(t.otpBody)}</p>`,
-    `<p style="margin:0 0 24px;text-align:start;"><span dir="ltr" style="display:inline-block;color:#0f5c4b;font-size:26px;letter-spacing:8px;font-weight:700;">${safeOtp}</span></p>`,
-    `<p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#555555;">${escapeHtml(t.otpExpiry)}</p>`,
-    `<p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#555555;">${escapeHtml(t.otpIgnore)}</p>`,
-    `<p style="margin:0;font-size:13px;color:#777777;">${escapeHtml(t.signature)}</p>`,
-    `</td></tr></table>`,
-    `</body></html>`,
-  ].join('')
-
-  const text = [t.otpHeading, '', t.otpBody, '', otp, '', t.otpExpiry, '', t.otpIgnore, '', t.signature].join('\n')
-
-  return { subject: t.otpSubject, html, text }
+  return renderCodeEmail(language, {
+    subject: t.otpSubject,
+    heading: t.otpHeading,
+    body: t.otpBody,
+    code: otp,
+    expiry: t.otpExpiry,
+    ignore: t.otpIgnore,
+    signature: t.signature,
+  })
 }

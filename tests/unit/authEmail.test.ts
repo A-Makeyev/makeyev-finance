@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildDeleteAccountEmail,
+  buildDeleteCodeEmail,
   buildOtpEmail,
   buildVerificationEmail,
-  deleteConfirmationUrl,
+  emailLanguageForRequest,
   pickEmailLanguage,
 } from '@/server/auth/email'
 import { he } from '@/i18n/he'
@@ -22,6 +22,50 @@ describe('pickEmailLanguage', () => {
     expect(pickEmailLanguage('')).toBe('hebrew')
     expect(pickEmailLanguage(null)).toBe('hebrew')
     expect(pickEmailLanguage(undefined)).toBe('hebrew')
+  })
+})
+
+describe('emailLanguageForRequest', () => {
+  const requestWith = (headers: Record<string, string>) =>
+    new Request('https://app.test/api/auth/delete-user', { headers })
+
+  it('follows the locale of the page the request came from', () => {
+    // The page path is the strongest signal: the Hebrew site is unprefixed and
+    // English lives under /en, so a Hebrew user gets Hebrew mail even when the
+    // browser itself is English.
+    expect(emailLanguageForRequest(requestWith({ referer: 'https://app.test/profile' }))).toBe(
+      'hebrew',
+    )
+    expect(
+      emailLanguageForRequest(requestWith({ referer: 'https://app.test/en/profile?delete=tok' })),
+    ).toBe('english')
+    expect(emailLanguageForRequest(requestWith({ referer: 'https://app.test/en' }))).toBe('english')
+    expect(
+      emailLanguageForRequest(requestWith({ referer: 'https://app.test/login?next=%2Fprofile' })),
+    ).toBe('hebrew')
+  })
+
+  it('prefers the page over the browser language', () => {
+    // The bug this fixes: an English browser on the Hebrew site got English
+    // mail and an English account-deletion link.
+    expect(
+      emailLanguageForRequest(
+        requestWith({ referer: 'https://app.test/profile', 'accept-language': 'en-US,en;q=0.9' }),
+      ),
+    ).toBe('hebrew')
+  })
+
+  it('falls back to Accept-Language when there is no referrer', () => {
+    expect(
+      emailLanguageForRequest(requestWith({ 'accept-language': 'en-US,en;q=0.9' })),
+    ).toBe('english')
+    expect(emailLanguageForRequest(requestWith({ 'accept-language': 'he-IL' }))).toBe('hebrew')
+  })
+
+  it('defaults to Hebrew for a missing, empty or malformed request', () => {
+    expect(emailLanguageForRequest(undefined)).toBe('hebrew')
+    expect(emailLanguageForRequest(requestWith({ referer: 'not a url' }))).toBe('hebrew')
+    expect(emailLanguageForRequest(requestWith({}))).toBe('hebrew')
   })
 })
 
@@ -49,6 +93,25 @@ describe('buildVerificationEmail', () => {
     expect(email.html).toContain('?a=1&amp;b=2')
   })
 
+  it('carries the direction on the wrapper, not only on <html>', () => {
+    // Clients that ignore <html dir> render the message from the table, which
+    // is why a Hebrew mail showed up left-aligned (user-reported). Direction
+    // and alignment are repeated on the body, the table and the content cell.
+    const hebrew = buildVerificationEmail('hebrew', url, 'Dana').html
+    expect(hebrew).toContain('<body dir="rtl"')
+    expect(hebrew).toContain('<table role="presentation" width="100%" dir="rtl"')
+    expect(hebrew).toContain('<td dir="rtl"')
+    expect(hebrew).toContain('text-align:right')
+    expect(hebrew).not.toContain('text-align:start')
+
+    const english = buildVerificationEmail('english', url, 'Dana').html
+    expect(english).toContain('<body dir="ltr"')
+    expect(english).toContain('<table role="presentation" width="100%" dir="ltr"')
+    expect(english).toContain('<td dir="ltr"')
+    expect(english).toContain('text-align:left')
+    expect(english).not.toContain('text-align:right')
+  })
+
   it('uses the generic greeting when no name is known', () => {
     const email = buildVerificationEmail('english', url, null)
     expect(email.html).toContain(en.translation.auth.emails.greetingGeneric)
@@ -69,44 +132,61 @@ describe('buildVerificationEmail', () => {
   })
 })
 
-describe('buildDeleteAccountEmail', () => {
-  const url = 'https://example.com/api/auth/delete-user/callback?token=abc&callbackURL=%2F'
-
+describe('buildDeleteCodeEmail', () => {
   it('renders Hebrew RTL with the Hebrew deletion copy', () => {
-    const email = buildDeleteAccountEmail('hebrew', url, 'Dana')
+    const email = buildDeleteCodeEmail('hebrew', 'AB12CD')
     expect(email.subject).toBe(he.translation.auth.emails.deleteSubject)
     expect(email.html).toContain('dir="rtl"')
+    expect(email.html).toContain('lang="he"')
     expect(email.html).toContain(he.translation.auth.emails.deleteHeading)
-    expect(email.text).toContain(url)
+    expect(email.html).toContain('AB12CD')
+    expect(email.text).toContain('AB12CD')
   })
 
   it('renders English LTR with the English deletion copy', () => {
-    const email = buildDeleteAccountEmail('english', url, 'Dana')
+    const email = buildDeleteCodeEmail('english', 'AB12CD')
     expect(email.subject).toBe(en.translation.auth.emails.deleteSubject)
     expect(email.html).toContain('dir="ltr"')
-    expect(email.html).toContain(en.translation.auth.emails.deleteCta)
+    expect(email.html).toContain(en.translation.auth.emails.deleteHeading)
+    expect(email.html).toContain('AB12CD')
   })
 
-  it('shares the verification template, so direction and escaping cannot drift', () => {
-    const deletion = buildDeleteAccountEmail('english', 'https://x.test/?a=1&b=2', 'Dana')
-    expect(deletion.html).not.toContain('?a=1&b=2')
-    expect(deletion.html).toContain('?a=1&amp;b=2')
-    for (const language of ['hebrew', 'english'] as const) {
-      const anchor = buildDeleteAccountEmail(language, url, 'Dana').html.slice(
-        buildDeleteAccountEmail(language, url, 'Dana').html.indexOf('<a href'),
-      )
-      expect(anchor, language).toContain('display:block')
-      expect(anchor, language).toContain('box-sizing:border-box')
-      expect(anchor, language).toContain('text-align:center')
-    }
+  it('isolates the code as LTR inside an RTL message', () => {
+    // Six letters and digits in an RTL body can render reversed; the code span
+    // carries its own dir="ltr" so the user reads what was generated.
+    const email = buildDeleteCodeEmail('hebrew', 'AB12CD')
+    expect(email.html).toContain('dir="ltr"')
   })
 
-  it('says the account is not deleted by asking, only by the link', () => {
-    // The request mails a link; the words in the mail are the last chance to
+  it('carries the direction on the wrapper, not only on <html>', () => {
+    const hebrew = buildDeleteCodeEmail('hebrew', 'AB12CD').html
+    expect(hebrew).toContain('<body dir="rtl"')
+    expect(hebrew).toContain('<table role="presentation" width="100%" dir="rtl"')
+    expect(hebrew).toContain('<td dir="rtl"')
+    expect(hebrew).toContain('text-align:right')
+    expect(hebrew).not.toContain('text-align:start')
+
+    const english = buildDeleteCodeEmail('english', 'AB12CD').html
+    expect(english).toContain('<body dir="ltr"')
+    expect(english).toContain('<table role="presentation" width="100%" dir="ltr"')
+    expect(english).toContain('<td dir="ltr"')
+    expect(english).toContain('text-align:left')
+  })
+
+  it('carries no link: the code is typed into the profile modal', () => {
+    // Nothing to click means nothing can delete on a GET, which is also what
+    // makes the mail immune to link-scanning prefetch.
+    const email = buildDeleteCodeEmail('english', 'AB12CD')
+    expect(email.html).not.toContain('href=')
+    expect(email.text).not.toMatch(/https?:\/\//)
+  })
+
+  it('says the account is not deleted by asking, only by the code', () => {
+    // The request mails a code; the words in the mail are the last chance to
     // stop an irreversible action, so the ignore line must be present.
     for (const language of ['hebrew', 'english'] as const) {
       const copy = language === 'hebrew' ? he.translation.auth.emails : en.translation.auth.emails
-      expect(buildDeleteAccountEmail(language, url, null).html).toContain(copy.deleteIgnore)
+      expect(buildDeleteCodeEmail(language, 'AB12CD').html).toContain(copy.deleteIgnore)
     }
   })
 })
@@ -146,10 +226,17 @@ describe('buildOtpEmail', () => {
     expect(email.html).not.toContain('color:#ffffff')
   })
 
-  it('sets the code on the start edge, so it flips with the language', () => {
-    // start, not right/left: the same template serves both locales.
-    expect(buildOtpEmail('hebrew', '1234').html).toContain('text-align:start')
-    expect(buildOtpEmail('english', '1234').html).toContain('text-align:start')
+  it('aligns the code explicitly per language, and repeats the direction on the wrapper', () => {
+    // right/left rather than `start`: `start` only means anything once the
+    // direction is honoured, and clients that ignore <html dir> render from
+    // the table.
+    const hebrew = buildOtpEmail('hebrew', '1234').html
+    expect(hebrew).toContain('<table role="presentation" width="100%" dir="rtl"')
+    expect(hebrew).toContain('<td dir="rtl"')
+    expect(hebrew).toContain('text-align:right')
+    expect(hebrew).not.toContain('text-align:start')
+
+    expect(buildOtpEmail('english', '9876').html).toContain('text-align:left')
   })
 
   it('carries no link: the code is typed into the form the user came from', () => {
@@ -163,36 +250,6 @@ describe('buildOtpEmail', () => {
       expect(email.html, language).toContain('4567')
       expect(email.text, language).toContain('4567')
     }
-  })
-})
-
-describe('deleteConfirmationUrl', () => {
-  it('lands on the profile page of the mail\'s own language, with the token', () => {
-    expect(deleteConfirmationUrl('hebrew', 'https://app.test', 'tok123')).toBe(
-      'https://app.test/profile?delete=tok123',
-    )
-    expect(deleteConfirmationUrl('english', 'https://app.test', 'tok123')).toBe(
-      'https://app.test/en/profile?delete=tok123',
-    )
-  })
-
-  it('tolerates a trailing slash on the origin and encodes the token', () => {
-    expect(deleteConfirmationUrl('hebrew', 'https://app.test/', 'a b/c')).toBe(
-      'https://app.test/profile?delete=a%20b%2Fc',
-    )
-  })
-
-  it('is the link the deletion mail carries, not Better Auth\'s callback endpoint', () => {
-    // The callback endpoint deletes on GET; the product wants opening the link
-    // to land on the profile, where the last step is a button.
-    const { html, text } = buildDeleteAccountEmail(
-      'hebrew',
-      deleteConfirmationUrl('hebrew', 'https://app.test', 'tok123'),
-      'Dana',
-    )
-    expect(html).toContain('https://app.test/profile?delete=tok123')
-    expect(html).not.toContain('/api/auth/delete-user/callback')
-    expect(text).toContain('https://app.test/profile?delete=tok123')
   })
 })
 

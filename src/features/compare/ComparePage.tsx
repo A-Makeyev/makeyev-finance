@@ -311,6 +311,9 @@ export function ComparePage() {
     if (result.error === 'variableCap') {
       return [{ ok: false, text: t('compare.statusErrorVariableCap') }]
     }
+    if (result.error === 'duplicateType') {
+      return [{ ok: false, text: t('compare.statusErrorDuplicateType') }]
+    }
     if (result.isEmpty) return [{ ok: null, text: t('compare.statusEmpty') }]
     const lines: Array<{ ok: boolean | null; text: string }> = []
     if (result.ltv) {
@@ -349,8 +352,16 @@ export function ComparePage() {
     if (!scenario) return null
     // The Bank of Israel 2/3 variable cap is caused by the variable tracks'
     // share, so flag THOSE rows red (like the calculator's flagged tracks)
-    // instead of tinting the whole result card.
-    const variableCap = results[scenarioIndex]?.error === 'variableCap'
+    // instead of tinting the whole result card. A duplicate type flags every
+    // row carrying the repeated type, so the user sees which to change.
+    const error = results[scenarioIndex]?.error
+    const typeCounts = new Map<string, number>()
+    scenario.tracks.forEach((track) => {
+      typeCounts.set(track.type, (typeCounts.get(track.type) ?? 0) + 1)
+    })
+    const flagTrack = (track: (typeof scenario.tracks)[number]) =>
+      (error === 'variableCap' && isVariableType(track.type)) ||
+      (error === 'duplicateType' && (typeCounts.get(track.type) ?? 0) > 1)
     return (
       <div
         className="compare-scenario-editor"
@@ -443,7 +454,7 @@ export function ComparePage() {
           <fieldset
             key={track.id}
             className={
-              variableCap && isVariableType(track.type)
+              flagTrack(track)
                 ? 'mortgage-track compare-track variable-limit-flag'
                 : 'mortgage-track compare-track'
             }

@@ -17,11 +17,13 @@ import {
   DEFAULT_LAWYER_PERCENT,
   deriveLoanAmount,
   distributeEqually,
+  duplicateTrackType,
   effectiveAnnualRatePercent,
   estimateClosingCosts,
   estimateTransactionCosts,
   first5yInterestShare,
   firstPaymentWithRateBump,
+  nextFreeTrackType,
   paymentPer100k,
   purchaseTaxBreakdown,
   redistributeTrackAmounts,
@@ -41,6 +43,43 @@ import {
 } from '@/lib/amortization'
 
 const round2 = (value: number) => Math.round(value * 100) / 100
+
+describe('duplicateTrackType / nextFreeTrackType (one track per type)', () => {
+  it('returns null when every type is distinct', () => {
+    expect(duplicateTrackType(['fixed', 'prime', 'variable'])).toBeNull()
+  })
+
+  it('returns the first repeated type', () => {
+    expect(duplicateTrackType(['fixed', 'prime', 'prime'])).toBe('prime')
+    expect(duplicateTrackType(['fixed', 'fixed', 'fixed'])).toBe('fixed')
+  })
+
+  it('handles the empty and single-track cases', () => {
+    expect(duplicateTrackType([])).toBeNull()
+    expect(duplicateTrackType(['prime'])).toBeNull()
+  })
+
+  it('picks a free type, preferring fixed then prime', () => {
+    expect(nextFreeTrackType(['prime'])).toBe('fixed')
+    expect(nextFreeTrackType(['fixed'])).toBe('prime')
+    // A third track after fixed+prime takes the fixed-rate index type, so the
+    // mix does not tip over the 2/3 variable cap.
+    expect(nextFreeTrackType(['fixed', 'prime'])).toBe('fixedIndexed')
+  })
+
+  it('returns null when every type is taken', () => {
+    const all = [
+      'prime',
+      'fixed',
+      'variable5y',
+      'variable',
+      'fixedIndexed',
+      'variableIndexed5y',
+      'variableIndexed',
+    ] as const
+    expect(nextFreeTrackType(all)).toBeNull()
+  })
+})
 
 describe('computeTrackResult - Spitzer', () => {
   it('computes the classic annuity payment (P=100k, 10%/yr, 12mo)', () => {

@@ -535,72 +535,10 @@ img {
     linear-gradient(160deg, #0b1220 0%, #101a2e 55%, #0c1524 100%);
 }
 
-/* One-shot confetti after the email address is verified (the profile page is
-   opened with ?verified=1). The layer is fixed and inert - pointer-events none,
-   aria-hidden in the markup - so it can never take a click or a focus ring. The
-   pieces are generated in the browser only (see Confetti.tsx), so there is
-   nothing here for the server render to disagree with.
-
-   Each piece drifts, sways and spins by its own inline custom properties; the
-   animation is short (about 1.5-2.4s per piece, auto-dismissed at 3.2s) and
-   ends on opacity 0, so cleanup is never visible. */
-.confetti-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.confetti-piece {
-  position: absolute;
-  top: -14px;
-  display: block;
-  animation-name: confetti-fall;
-  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
-  animation-fill-mode: forwards;
-  will-change: transform, opacity;
-}
-
-/* The midpoint is what makes the fall look like confetti rather than a curtain:
-   each piece is pushed sideways once on the way down (--confetti-sway) and is
-   already half-turned, so the pieces spread and cross instead of descending in
-   parallel lines. */
-@keyframes confetti-fall {
-  from {
-    transform: translate3d(0, 0, 0) rotate(0deg);
-    opacity: 1;
-  }
-
-  50% {
-    transform: translate3d(
-        calc(var(--confetti-drift, 0px) * 0.35 + var(--confetti-sway, 0px)),
-        46vh,
-        0
-      )
-      rotate(calc(var(--confetti-spin, 540deg) * 0.45));
-    opacity: 1;
-  }
-
-  to {
-    transform: translate3d(var(--confetti-drift, 0px), 92vh, 0) rotate(var(--confetti-spin, 540deg));
-    opacity: 0;
-  }
-}
-
-/* A slight shimmer on the flat shapes only: on a circle it reads as a smudge. */
-.confetti-piece[data-shape='square'],
-.confetti-piece[data-shape='ribbon'] {
-  box-shadow: 0 0 3px rgba(255, 255, 255, 0.35);
-}
-
-/* The component already renders nothing under reduced motion; this is the CSS
-   half of the same promise, so a stale piece can never animate. */
-@media (prefers-reduced-motion: reduce) {
-  .confetti-layer {
-    display: none;
-  }
-}
+/* The one-shot confetti after an email address is verified (the profile page is
+   opened with ?verified=1) is drawn by canvas-confetti from Confetti.tsx, which
+   creates and owns its own fixed, pointer-events-none canvas at z-index 60 (the
+   band below, above page content but under the chrome). Nothing is styled here. */
 
 /* "My mixes" sits beside the save button it feeds, as a quiet text link with
    the running count in parentheses. Anchors need the underline suppressed,
@@ -5931,10 +5869,6 @@ e #name,
    CHARTS (hand-rolled SVG)
    ========================= */
 
-.amort-chart-wrap {
-  margin: 0 0 22px;
-}
-
 .amort-chart,
 .per-track-chart {
   /* No white box - charts sit directly on the page background with only a
@@ -6250,9 +6184,10 @@ e #name,
   position: relative;
 }
 
-/* Per-track band: donut on the left, per-track comparison on the right.
-   The RTL page flips flex rows, so force left-to-right placement. */
-.per-track-band {
+/* Schedule chart band (both the combined and per-track views): the mix donut
+   on the left, the chart on the right. The RTL page flips flex rows, so force
+   left-to-right placement. */
+.schedule-chart-band {
   display: flex;
   align-items: flex-start;
   gap: 26px;
@@ -6262,8 +6197,27 @@ e #name,
 }
 
 /* English (LTR): put the donut on the RIGHT, chart on the LEFT. */
-:root[dir='ltr'] .per-track-band {
+:root[dir='ltr'] .schedule-chart-band {
   flex-direction: row-reverse;
+}
+
+/* The combined chart shares the band with the donut, so it shrinks to the
+   remaining width instead of overflowing (the per-track chart already does). */
+.schedule-chart-band .amort-chart {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The band forces LTR for its layout, so the combined chart restores the page
+   direction for its legend and tooltip, exactly like the per-track chart. */
+.schedule-chart-band .amort-chart .chart-legend,
+.schedule-chart-band .amort-chart .chart-tooltip {
+  direction: rtl;
+}
+
+:root[dir='ltr'] .schedule-chart-band .amort-chart .chart-legend,
+:root[dir='ltr'] .schedule-chart-band .amort-chart .chart-tooltip {
+  direction: ltr;
 }
 
 /* Track-mix donut + its legend: the legend column is pushed left under
@@ -6953,10 +6907,10 @@ tbody tr:hover {
     grid-column: 1 / -1;
   }
 
-  /* Donut and per-track chart stack once the side-by-side band gets tight,
+  /* Donut and chart stack once the side-by-side band gets tight,
      each centered on the row - chart on top, donut below it. */
-  .per-track-band,
-  :root[dir='ltr'] .per-track-band {
+  .schedule-chart-band,
+  :root[dir='ltr'] .schedule-chart-band {
     flex-direction: column-reverse;
     align-items: center;
   }
@@ -6968,6 +6922,10 @@ tbody tr:hover {
   }
 
   .per-track-chart {
+    width: 100%;
+  }
+
+  .schedule-chart-band .amort-chart {
     width: 100%;
   }
 
@@ -8037,6 +7995,94 @@ html[dir='rtl'] .comment-text {
   content: none;
 }
 
+/* The reply "show more" control lines up with the replies it continues: the
+   children container indents by 0.25rem margin + 1.5rem padding, and past
+   MAX_VISUAL_DEPTH the flat container drops both. */
+.comment-more-replies {
+  margin-inline-start: calc(0.25rem + 1.5rem);
+  margin-block-start: 0.5rem;
+}
+
+.comment-more-replies.is-flat {
+  margin-inline-start: 0;
+}
+
+/* The thread's first-load placeholder: the shape of the first rows (avatar
+   circle + two text lines) drawn from the theme's own surface role, so the
+   list settles into place instead of jumping from one line of text to a full
+   thread. The bars shimmer, like the market and indexes skeletons; reduced
+   motion gets the steady bars (see the media query below). */
+.comment-skeleton {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.comment-skeleton-avatar {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+}
+
+.comment-skeleton-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-block-start: 0.35rem;
+}
+
+.comment-skeleton-line {
+  height: 0.7rem;
+  border-radius: 3px;
+}
+
+/* The author line is short and the body runs wide, so the two bars hint at the
+   real shape rather than two identical rules. */
+.comment-skeleton-line.is-short {
+  width: 38%;
+}
+
+/* Both bars are a low-alpha wash of --ink-muted: unlike --surface-soft (a
+   near-white that all but disappears on the page in light mode) it is a solid
+   role in BOTH themes, so one colour reads as "a bar" on the light and the dark
+   page alike, and the reduced-motion state below is still clearly a placeholder
+   rather than an empty gap. */
+.comment-skeleton-avatar,
+.comment-skeleton-line {
+  background-color: color-mix(in srgb, var(--ink-muted) 18%, transparent);
+  background-image: linear-gradient(90deg,
+      transparent 20%,
+      color-mix(in srgb, var(--ink-muted) 34%, transparent) 50%,
+      transparent 80%);
+  background-repeat: no-repeat;
+  background-size: 200% 100%;
+  animation: comment-skeleton-shimmer 1400ms linear infinite;
+}
+
+/* Dragging the highlight across a background twice the bar's width; the
+   gradient's transparent ends mean the bar never flashes a hard edge. */
+@keyframes comment-skeleton-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+
+  to {
+    background-position: -50% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  /* Settle on the steady bar rather than a frozen sheen pulled to one end. */
+  .comment-skeleton-avatar,
+  .comment-skeleton-line {
+    background-image: none;
+    animation: none;
+  }
+}
+
 .article-section ul {
   display: grid;
   gap: 8px;
@@ -8642,9 +8688,9 @@ html[dir='rtl'] .comment-text {
   color: var(--calc-muted);
 }
 
-/* Comparison trend charts: one line chart per metric, two per row, each
-   plotting every priced mix so the differences read at a glance. One shared
-   legend, one color per mix. */
+/* Comparison trend charts: one line chart per metric, plotting every priced mix
+   so the differences read at a glance, under the full-width composition panel.
+   One shared legend, one color per mix. */
 .compare-trends {
   margin-bottom: 26px;
 }
@@ -8657,7 +8703,8 @@ html[dir='rtl'] .comment-text {
 
 .compare-trend-grid {
   display: grid;
-  /* Two charts per row, always (the four panels make a 2×2 grid). */
+  /* Two line charts per row; the composition panel spans both columns above
+     them (see .compare-trend-wide). */
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
@@ -8675,6 +8722,12 @@ html[dir='rtl'] .comment-text {
   border: 1px solid rgba(8, 127, 120, 0.14);
   box-shadow: 0 20px 55px rgba(22, 50, 53, 0.1);
   padding: 16px 18px 10px;
+}
+
+/* The payment-composition panel leads the gallery across the full width; the
+   remaining panels fall two per row beneath it. */
+.compare-trend-wide {
+  grid-column: 1 / -1;
 }
 
 .compare-trend-title {
