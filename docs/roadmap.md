@@ -169,27 +169,50 @@ the main one (היוון) first.
 
 ## 4. BOI average-interest table (ריבית ממוצעת)
 
-**Gap.** We deep-link to the BOI average-rate page
-(`calculator.links.rates.label`) but never show the data.
+**Gap (closed).** The calculator's average-rate card used to deep-link to the
+BOI page without showing the data. `/rates` now renders the official tables and
+the card links there.
 
 **Shape.**
 
 - New `src/server/rates/` following the `src/server/market/` pattern (provider
   + service + cache + typed snapshot), exposed at
   `src/app/api/rates/average/route.ts`.
-- A real accessible table: buckets 1-5 / 5-10 / 10-15 / 15-20 / 20-25 / 25+
-  years, indexed vs non-indexed, nominal vs MIN, with dated snapshot history.
+- Two accessible tables with each workbook's official bucket layout: indexed
+  has 25+, 20-25, 15-20, 10-15, 5-10 and up-to-5 buckets; non-indexed adds
+  1-5 and up-to-1-year buckets. Current publication plus dated history.
 - Show an "as of" and degrade honestly (never invent a value), like the market
   strips' `stale` flag.
 - Parse-fixture-to-table unit tests, plus e2e.
 
 **Effort** M. **Risk** medium (external shape drift).
 
-**Source.** The BOI series database (`edge.boi.gov.il`) and the monthly
-housing-loans report. Pin the exact series ids with a test fixture.
+**Shipped (first slice).**
 
-**Open decision.** New external data source acceptable? Table near the
-indexes/markets area, or on its own rates page?
+- `src/server/rates/` parses the two official BIFF8 workbooks with SheetJS,
+  validates the column count before reading, converts Excel date serials and
+  normalizes every row; rows are deduped and sorted newest first.
+- `GET /api/rates/average` returns both tables independently, each with
+  `ok` / `stale` / `unavailable`. A six-hour in-memory cache, in-flight
+  collapsing and a 45-day disk snapshot under `.cache/` keep one BOI outage
+  from blanking the page.
+- `/rates` and `/en/rates` show the current rate plus 12 monthly rows per
+  table, the official bucket layout for each kind, a source link, and honest
+  stale/unavailable messages. The calculator's average-rate card now links
+  there instead of leaving the site.
+- Unit tests cover the pinned real workbooks, date serials, shape mismatches,
+  caching, stale fallback and the API contract. E2e covers both locales at 360
+  and 1280, stale/partial/500 states, dark theme, and the calculator entry.
+
+**Source (decided).** The two official BOI workbooks, not the series database:
+`https://www.boi.org.il/boi_files/Pikuah/pribmash.xls` (indexed) and
+`https://www.boi.org.il/boi_files/Pikuah/mashfix.xls` (non-indexed). The series
+database (`edge.boi.gov.il`, `BIR_MRTG_99`) exposes only total series, not the
+term-bucketed table. Pinned fixtures live in `tests/fixtures/rates/`.
+
+**Open decision (resolved).** An external data source was approved, and the
+tables live on their own `/rates` page linked from the calculator's existing
+average-rate result card.
 
 ---
 
@@ -275,7 +298,7 @@ as a labelled cut. The מרווח שוק field stays a separate decision.
    of item 6.
 2. **Item 2** (rate validity) - small, sourced, visibly useful.
 3. **Item 6 derived rows** - falls out of item 1.
-4. **Item 4** (BOI average rates) - feeds item 3.
+4. **Item 4** (BOI average rates) - shipped; feeds item 3.
 5. **Item 3** (early-repayment fee) - the flagship, but needs item 4 and a
    verified formula.
 6. **Item 5** (resets and forecast) - needs the most product agreement.

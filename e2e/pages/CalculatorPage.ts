@@ -36,6 +36,8 @@ import { expect, type Locator, type Page } from '@playwright/test'
   readonly myMixesProfileLink: Locator
   /** Toggle that reveals the thirteen secondary result cards. */
   readonly resultsToggle: Locator
+  /** The explanation dialog's "learn more" link. */
+  readonly resultsCardModalLink: Locator
   /** Save-this-mix control, and its signed-out sign-in variant. */
   readonly saveMix: Locator
   readonly saveMixSignIn: Locator
@@ -91,6 +93,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
     this.savedMixesMenu = page.getByTestId('saved-mixes-menu')
     this.myMixesProfileLink = page.getByTestId('my-mixes-link')
     this.resultsToggle = page.getByTestId('results-toggle')
+    this.resultsCardModalLink = page.getByTestId('results-card-modal-link')
     this.saveMix = page.getByTestId('save-mix')
     this.saveMixSignIn = page.getByTestId('save-mix-sign-in')
     this.saveMixLabel = page.getByTestId('save-mix-label')
@@ -331,6 +334,12 @@ import { expect, type Locator, type Page } from '@playwright/test'
   async showAllResults(): Promise<void> {
     await this.resultsToggle.click()
     await expect(this.page.getByTestId('total-payment')).toBeVisible()
+  }
+
+  /** Open one result card's explanation dialog by its value test id. */
+  async openResultCard(testId: string): Promise<void> {
+    await this.page.getByTestId(testId).click()
+    await expect(this.page.getByTestId('results-card-modal')).toBeVisible()
   }
 }
 

@@ -27,6 +27,9 @@ export const en: { translation: Translation } = {
       articlesMortgageDecisionsDescription:
         'Three practical mortgage questions: what each ready-made mix contains and what risk it carries, which track to prepay first, and Spitzer versus equal principal as a whole-loan decision.',
       contactTitle: 'Contact Us - Makeyev Finance',
+      ratesTitle: 'Average Mortgage Rates | Makeyev Finance',
+      ratesDescription:
+        'Bank of Israel average rates on new mortgages by period to repayment, CPI-indexed and non-indexed.',
     },
     nav: {
       home: 'Home',
@@ -585,8 +588,8 @@ export const en: { translation: Translation } = {
             url: 'https://www.boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/campaigns/boi-equalizer/',
           },
           rates: {
-            label: 'Bank of Israel – current mortgage interest rates',
-            url: 'https://www.boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/campaigns/boi-equalizer/',
+            label: 'Average rates on new mortgages',
+            url: '/rates',
           },
           cpi: {
             label: 'Consumer Price Index – Israel Central Bureau of Statistics',
@@ -837,6 +840,53 @@ export const en: { translation: Translation } = {
         gold: 'GOLD',
         bitcoin: 'BTC',
         usdils: 'USD/ILS',
+      },
+    },
+    rates: {
+      title: 'Average rates',
+      subtitle: 'Average mortgage rates',
+      intro:
+        'The Bank of Israel publishes a monthly effective average rate on new housing loans, by period to repayment. The tables show the official data, including the last 12 months.',
+      indexedTitle: 'CPI-indexed mortgages',
+      nonIndexedTitle: 'Non-indexed mortgages',
+      indexedNote: 'Effective rates on new CPI-indexed housing loans, by period to repayment.',
+      nonIndexedNote:
+        'Effective rates on new loans in the non-indexed shekel sector, by period to repayment.',
+      current: 'Current rate',
+      currentBadge: 'Latest',
+      validFrom: 'Rate valid from {{date}}',
+      historyTitle: 'Monthly history',
+      historyCaption: 'The last 12 months. The first row is the current rate.',
+      historyHint: 'Scroll the table sideways',
+      month: 'Valid from',
+      average: 'Average',
+      loading: 'Loading Bank of Israel data...',
+      errorTitle: 'Could not load the average rates',
+      errorBody: 'Try again, or open the official table on the Bank of Israel site.',
+      retry: 'Try again',
+      retrying: 'Retrying...',
+      empty: 'No data was published for this period.',
+      unavailable: 'The data is not available right now. Try again later.',
+      stale: 'Showing the last data we had, which could not be refreshed. It may be out of date.',
+      source: 'Source: Bank of Israel',
+      sourceLink: 'The official table on the Bank of Israel site',
+      sourceUrl: 'https://www.boi.org.il/en/information/interestrates/mortgage/',
+      buckets: {
+        over25: 'More than 25 years',
+        '20to25': '20-25 years',
+        '15to20': '15-20 years',
+        '10to15': '10-15 years',
+        '5to10': '5-10 years',
+        '1to5': '1-5 years',
+        upTo5: 'Up to 5 years',
+        upTo1: 'Up to 1 year',
+      },
+      footnotes: {
+        periods: 'Periods include their upper bound.',
+        upTo1:
+          'The "up to 1 year" period also includes loans whose rate-reset date is not known in advance.',
+        source:
+          'These are the effective average rates the Bank of Israel publishes for early-repayment-fee calculations. They are not an offer or a bank commitment.',
       },
     },
     wishlist: {

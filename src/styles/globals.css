@@ -9365,3 +9365,104 @@ html[dir='rtl'] .comment-text {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(8, 127, 120, 0.14);
 }
+
+/* ---------------------------------------------------------------------------
+   Average mortgage-rate page (Bank of Israel tables)
+   Logical properties keep the two tables reading correctly in Hebrew (RTL)
+   and English (LTR). The wide table scrolls inside its own wrapper; the page
+   itself never scrolls sideways.
+   --------------------------------------------------------------------------- */
+.rates-page {
+  inline-size: 90%;
+  max-inline-size: 1180px;
+  margin-block: 40px 60px;
+  margin-inline: auto;
+}
+
+.rates-current {
+  border-inline-start: 4px solid var(--soft-blue);
+  border-radius: 5px;
+  background: var(--surface-soft);
+}
+
+.rates-current-badge {
+  display: inline-block;
+  margin-inline-start: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--soft-blue-background);
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rates-table-wrap {
+  inline-size: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--surface-card);
+  scrollbar-width: thin;
+}
+
+.rates-table-wrap:focus-visible {
+  outline: 2px solid var(--soft-blue);
+  outline-offset: 2px;
+}
+
+.rates-table-wrap::-webkit-scrollbar {
+  height: 8px;
+}
+
+.rates-table-wrap::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+.rates-table {
+  inline-size: 100%;
+  min-inline-size: 760px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.rates-table th,
+.rates-table td {
+  padding: 0.6rem 0.75rem;
+  border-block-end: 1px solid var(--line-soft);
+  text-align: start;
+  white-space: nowrap;
+}
+
+.rates-table thead th {
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.rates-table tbody th {
+  font-weight: 600;
+}
+
+.rates-table tbody tr:last-child th,
+.rates-table tbody tr:last-child td {
+  border-block-end: 0;
+}
+
+.rates-table tbody tr:hover {
+  background: var(--surface-soft);
+}
+
+.rates-current-row {
+  background: var(--surface-soft);
+}
+
+.rates-current-row th,
+.rates-current-row td {
+  font-weight: 700;
+}
+
+.rates-num {
+  font-variant-numeric: tabular-nums;
+}

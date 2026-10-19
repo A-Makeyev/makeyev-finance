@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { FaExternalLinkAlt, FaRegStar, FaStar } from 'react-icons/fa'
 import { AppModal } from '@/components/ui/AppModal'
+import { Link } from '@/router'
 import { useCalculatorStore } from '@/stores/calculatorStore'
 import { useQuestionWishlist } from '@/stores/questionWishlistStore'
 import {
@@ -412,6 +413,11 @@ export function ResultsCards() {
   // The external-link icon sits on the physical right of the label in both
   // languages: leading (start) in RTL, trailing (end) in LTR.
   const isRtl = i18n.dir() === 'rtl'
+  const cardLinkHref = openCard ? t(`calculator.results.links.${openCard.link}.url`) : ''
+  // The rates card links to our own /rates page; every other card still points
+  // at the Bank of Israel. Internal links must not open a new tab or show the
+  // external-arrow icon.
+  const cardLinkIsInternal = cardLinkHref.startsWith('/')
 
   return (
     <>
@@ -486,21 +492,31 @@ export function ResultsCards() {
             <div className="mt-3 text-[14px] font-semibold leading-relaxed text-[var(--calc-muted)]">
               {openCard.caption}
             </div>
-            <a
-              href={t(`calculator.results.links.${openCard.link}.url`)}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="results-card-modal-link"
-              className="mt-5 inline-block text-[15px] font-semibold text-[var(--calc-teal-dark)] underline underline-offset-4 transition-colors hover:text-[var(--calc-accent)]"
-            >
-              {isRtl && (
-                <FaExternalLinkAlt aria-hidden="true" className="me-1.5 inline-block text-[13px]" />
-              )}
-              {t(`calculator.results.links.${openCard.link}.label`)}
-              {!isRtl && (
-                <FaExternalLinkAlt aria-hidden="true" className="ms-1.5 inline-block text-[13px]" />
-              )}
-            </a>
+            {cardLinkIsInternal ? (
+              <Link
+                to={cardLinkHref}
+                data-testid="results-card-modal-link"
+                className="mt-5 inline-block text-[15px] font-semibold text-[var(--calc-teal-dark)] underline underline-offset-4 transition-colors hover:text-[var(--calc-accent)]"
+              >
+                {t(`calculator.results.links.${openCard.link}.label`)}
+              </Link>
+            ) : (
+              <a
+                href={cardLinkHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="results-card-modal-link"
+                className="mt-5 inline-block text-[15px] font-semibold text-[var(--calc-teal-dark)] underline underline-offset-4 transition-colors hover:text-[var(--calc-accent)]"
+              >
+                {isRtl && (
+                  <FaExternalLinkAlt aria-hidden="true" className="me-1.5 inline-block text-[13px]" />
+                )}
+                {t(`calculator.results.links.${openCard.link}.label`)}
+                {!isRtl && (
+                  <FaExternalLinkAlt aria-hidden="true" className="ms-1.5 inline-block text-[13px]" />
+                )}
+              </a>
+            )}
             <button
               type="button"
               data-testid="wishlist-toggle"
