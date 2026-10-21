@@ -6593,13 +6593,6 @@ e #name,
   margin-top: 26px;
 }
 
-.prepayment-lead {
-  color: var(--calc-muted);
-  font-size: 1rem;
-  max-width: 460px;
-  margin: 0;
-}
-
 .prepayment-controls {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
@@ -6774,22 +6767,19 @@ e #name,
   margin-top: 26px;
 }
 
-.forecast-lead {
-  color: var(--calc-muted);
-  font-size: 1rem;
-  max-width: 580px;
-  margin: 0;
-}
-
 .forecast-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
+  align-items: stretch;
   gap: 24px;
   margin-top: 24px;
 }
 
+/* Both cards stretch to the taller one, so a caption or a missing cost line
+   never leaves the pair at different heights. */
 .forecast-card {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   padding: 18px 20px 12px;
   border: 1px solid var(--calc-line);
@@ -6816,8 +6806,31 @@ e #name,
 }
 
 .forecast-chart .chart-legend {
-  padding: 4px 8px 12px;
-  font-size: 0.82rem;
+  /* The three scenario names stay on one line. The row scrolls sideways on a
+     phone (invisible handle, same as the tables) instead of stacking. */
+  flex-wrap: nowrap;
+  gap: 6px 8px;
+  padding: 4px 0 12px;
+  font-size: 0.78rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.forecast-chart .chart-legend::-webkit-scrollbar {
+  display: none;
+}
+
+.forecast-chart .chart-legend-item {
+  flex: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .forecast-chart .chart-legend {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
 }
 
 .forecast-chart svg {
@@ -6827,10 +6840,25 @@ e #name,
   overflow: visible;
 }
 
-/* The forecast chart sits in a half-width card, so its 900-unit viewBox
-   renders smaller than the schedule charts; the tick size compensates. */
+/* The forecast chart sits in a half-width card on wide screens, so its
+   900-unit viewBox renders smaller than the schedule charts; the tick size
+   compensates there, while the full-width tablet layout keeps the base size. */
 .forecast-chart .chart-tick {
   font-size: 20px;
+}
+
+.forecast-chart .chart-axis-title {
+  font-size: 17px;
+}
+
+@media (min-width: 1001px) {
+  .forecast-chart .chart-tick {
+    font-size: 26px;
+  }
+
+  .forecast-chart .chart-axis-title {
+    font-size: 21px;
+  }
 }
 
 .forecast-plot {
@@ -6848,7 +6876,7 @@ e #name,
 }
 
 .forecast-caption {
-  margin: 4px 0 8px;
+  margin: 16px 0 8px;
   color: var(--calc-muted);
   font-size: 0.82rem;
   line-height: 1.5;
@@ -6874,6 +6902,24 @@ e #name,
   cursor: pointer;
 }
 
+/* Same box as the chart above: the aspect ratio matches the SVG's 900x520
+   viewBox, so the table viewport is exactly the plot's height and scrolls
+   through the years instead of making the card taller. */
+.forecast-table-scroll {
+  aspect-ratio: 900 / 520;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--calc-line);
+  background: var(--calc-field);
+}
+
+.forecast-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--calc-field);
+}
+
 .forecast-table {
   font-size: 0.85rem;
 }
@@ -6881,6 +6927,18 @@ e #name,
 .forecast-table th,
 .forecast-table td {
   padding: 8px 10px;
+}
+
+/* The starting row height. The forecast section measures it and stretches
+   the rows to fill the viewport exactly, so this only sets the count. */
+.forecast-table tbody th,
+.forecast-table tbody td {
+  padding-block: 7.75px;
+}
+
+/* Set by ForecastSection: same viewport, a whole number of rows inside it. */
+.forecast-table tbody tr {
+  height: var(--forecast-row-height, auto);
 }
 
 .forecast-table th {
@@ -6907,12 +6965,12 @@ e #name,
 
 @media (max-width: 650px) {
   .forecast-chart .chart-tick {
-    font-size: 24px;
+    font-size: 28px;
   }
 
   .forecast-chart .chart-axis-title,
   .forecast-chart .chart-axis-title-above {
-    font-size: 19px;
+    font-size: 24px;
   }
 
   .forecast-chart .chart-legend {
@@ -7908,12 +7966,12 @@ tbody tr:hover {
   }
 
   .forecast-chart .chart-tick {
-    font-size: 26px;
+    font-size: 36px;
   }
 
   .forecast-chart .chart-axis-title,
   .forecast-chart .chart-axis-title-above {
-    font-size: 22px;
+    font-size: 32px;
   }
 
   .donut-center-label {

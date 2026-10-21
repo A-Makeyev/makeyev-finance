@@ -613,7 +613,6 @@ export const en: { translation: Translation } = {
       },
       prepayment: {
         heading: 'Early-repayment fee',
-        lead: 'An estimate of the discounting (היוון) fee if you repay the mortgage on the date you pick, using the Bank of Israel formula.',
         prepayYearsLabel: 'Repayment date (years into the loan)',
         yearsSuffix: 'years',
         marketRateLabel: 'Annual comparison rate',
@@ -647,21 +646,19 @@ export const en: { translation: Translation } = {
         capRatePlaceholder: 'Not known',
         capNote:
           'With no value the cap is not applied, so the fee may be higher than the one actually charged, never lower.',
-        note: 'The estimate covers the discounting (היוון) component only. An operational fee, a no-notice fee (up to 0.1% of the amount repaid) and a CPI compensation fee on index-linked tracks are charged on top. The section 3(4) cap applies only when you enter the average rate on the origination date; with no value it is left off, so the estimate may be higher than the actual fee. Your bank decides the actual fee.',
+        note: 'The estimate refers to the repayment date you pick and uses the Bank of Israel formula. It covers the discounting (היוון) component only: an operational fee, a no-notice fee (up to 0.1% of the amount repaid) and a CPI compensation fee on index-linked tracks are charged on top. The section 3(4) cap applies only when you enter the average rate on the origination date; with no value it is left off, so the estimate may be higher than the actual fee. Your bank decides the actual fee.',
         empty: 'Nothing is left to repay on that date: no track still carries a balance.',
       },
       forecast: {
         heading: 'Rate and CPI forecast',
-        lead: 'Two assumptions are shown up front: at every reset of a five-year variable track the rate moves by ±{{step}} percentage point (pp) in each scenario, and the CPI rises at a flat {{cpi}}% a year.',
         resetHeading: 'Monthly payment by rate scenario',
-        resetLead:
-          'The monthly payment at the start of each year. Resets are counted from the start of the mortgage and are also marked with vertical lines.',
-        resetYears: 'Rate resets in years {{years}}.',
+        resetLead: 'The monthly payment at the start of each year; vertical lines mark the resets.',
+        resetYears: 'Rate resets in years {{years}}',
+        costCaption: 'Indexation is shown at a flat {{cpi}}% CPI a year',
         noReset:
           'No rate reset falls inside the loan term, so all scenarios are identical. Only five-year variable tracks have a contractual reset date.',
         costHeading: 'Cumulative interest and indexation',
-        costLead:
-          'What has accrued from the start of the loan through the end of each year on the base rate path: interest paid and CPI added to the principal, at a flat {{cpi}}% a year.',
+        costLead: 'What has accrued from the start of the loan through the end of each year on the base rate path.',
         noIndexation:
           'The mix has no CPI-indexed track, so there is no indexation to show. The line shows cumulative interest only.',
         tableSummary: 'Show the data as a table',
@@ -671,9 +668,9 @@ export const en: { translation: Translation } = {
         resetTableAria: 'Monthly payment by year and rate scenario',
         costTableAria: 'Cumulative interest and indexation by year',
         scenarios: {
-          base: 'Rates unchanged',
-          up: 'A {{step}} pp rise at every reset',
-          down: 'A {{step}} pp fall at every reset',
+          base: 'No change',
+          up: '+{{step}} pp',
+          down: '-{{step}} pp',
         },
         series: {
           interest: 'Cumulative interest',
@@ -685,7 +682,7 @@ export const en: { translation: Translation } = {
         chartResetAria: 'Monthly payment by rate scenario, with reset dates marked',
         chartCostAria: 'Cumulative interest and indexation over the term',
         disclaimer:
-          'The forecast is an illustration only, not a forecast of rates or the CPI. The actual rate, reset dates and CPI may differ, and the monthly payment is recalculated at every reset. It is not financial advice.',
+          'The forecast is an illustration only, not a forecast of rates or the CPI. Assumptions: at every reset of a five-year variable track the rate moves by ±{{step}} percentage point (pp) in each scenario, and the CPI rises at a flat {{cpi}}% a year. The actual rate, reset dates and CPI may differ, and the monthly payment is recalculated at every reset. It is not financial advice.',
       },
       dynamicNotes: {
         indexedLabel: 'Highest payment',

@@ -184,7 +184,6 @@ export function PrepaymentSection() {
         <div>
           <h2>{t('calculator.prepayment.heading')}</h2>
         </div>
-        <p className="prepayment-lead">{t('calculator.prepayment.lead')}</p>
       </div>
 
       {rows.length === 0 ? (

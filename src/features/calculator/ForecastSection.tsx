@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency, formatRatePercent } from '@/lib/format'
 import {
@@ -18,6 +18,55 @@ const SCENARIO_COLORS: Record<ForecastScenarioId, string> = {
 }
 const INTEREST_COLOR = 'var(--chart-interest, #d2762e)'
 const INDEXATION_COLOR = 'var(--cost-donut-indexation, #7b5cc4)'
+
+/**
+ * Fit a whole number of table rows into the chart-height viewport.
+ *
+ * The viewport is exactly as tall as the chart above it, but the row height
+ * does not divide that height evenly. Left alone, the next row peeks out
+ * below the last full one, and the sliver between that row's border and the
+ * viewport's border reads as a stray second line. Measuring the natural row
+ * height and stretching the rows to fill the same viewport keeps the bottom
+ * border flush at every width and language without changing the table height.
+ */
+function useWholeRowTable() {
+  const disconnect = useRef<(() => void) | null>(null)
+
+  const attach = useCallback((host: HTMLDivElement | null) => {
+    disconnect.current?.()
+    disconnect.current = null
+    if (!host) return
+
+    const fit = () => {
+      const head = host.querySelector('thead')
+      const firstRow = host.querySelector('tbody tr')
+      if (!head || !firstRow) return
+
+      // Measure the unstretched row, then let the rows share the viewport.
+      host.style.removeProperty('--forecast-row-height')
+      const available = host.clientHeight - head.getBoundingClientRect().height
+      const natural = firstRow.getBoundingClientRect().height
+      if (available <= 0 || natural <= 0) return
+
+      const rows = Math.max(1, Math.floor(available / natural))
+      host.style.setProperty('--forecast-row-height', `${available / rows}px`)
+    }
+
+    const observer = new ResizeObserver(fit)
+    observer.observe(host)
+    const head = host.querySelector('thead')
+    if (head) observer.observe(head)
+    fit()
+    // A late webfont changes the natural row height without resizing the host.
+    void document.fonts?.ready.then(fit)
+
+    disconnect.current = () => observer.disconnect()
+  }, [])
+
+  useEffect(() => () => disconnect.current?.(), [])
+
+  return attach
+}
 
 /**
  * Rate-reset and CPI forecast panel. Two forward assumptions are stated in
@@ -40,6 +89,8 @@ export function ForecastSection() {
   const vm = useCalculatorViewModel()
   const tracks = vm.snapshot.scheduleTracks
   const annualInflation = vm.snapshot.annualInflation
+  const resetTableRef = useWholeRowTable()
+  const costTableRef = useWholeRowTable()
 
   const forecast = useMemo(
     () =>
@@ -111,7 +162,6 @@ export function ForecastSection() {
         <div>
           <h2>{t('calculator.forecast.heading')}</h2>
         </div>
-        <p className="forecast-lead">{t('calculator.forecast.lead', { step, cpi: cpiText })}</p>
       </div>
 
       <div className="forecast-grid">
@@ -141,9 +191,9 @@ export function ForecastSection() {
           )}
 
           {forecast.hasResetTracks && (
-            <details className="forecast-table-details" data-testid="forecast-reset-table">
+            <details className="forecast-table-details" data-testid="forecast-reset-table" open>
               <summary>{t('calculator.forecast.tableSummary')}</summary>
-              <div className="table-wrap">
+              <div className="table-wrap forecast-table-scroll no-scrollbar" ref={resetTableRef}>
                 <table
                   className="forecast-table"
                   aria-label={t('calculator.forecast.resetTableAria')}
@@ -194,15 +244,19 @@ export function ForecastSection() {
             axisTitle={t('calculator.forecast.axisCumulative')}
             testId="forecast-cost-chart"
           />
-          {!forecast.hasIndexation && (
+          {forecast.hasIndexation ? (
+            <p className="forecast-caption" data-testid="forecast-cost-caption">
+              {t('calculator.forecast.costCaption', { cpi: cpiText })}
+            </p>
+          ) : (
             <p className="forecast-caption" data-testid="forecast-no-indexation">
               {t('calculator.forecast.noIndexation')}
             </p>
           )}
 
-          <details className="forecast-table-details" data-testid="forecast-cost-table">
+          <details className="forecast-table-details" data-testid="forecast-cost-table" open>
             <summary>{t('calculator.forecast.tableSummary')}</summary>
-            <div className="table-wrap">
+            <div className="table-wrap forecast-table-scroll no-scrollbar" ref={costTableRef}>
               <table
                 className="forecast-table"
                 aria-label={t('calculator.forecast.costTableAria')}
@@ -234,7 +288,7 @@ export function ForecastSection() {
       </div>
 
       <p className="prepayment-note-line forecast-disclaimer">
-        {t('calculator.forecast.disclaimer')}
+        {t('calculator.forecast.disclaimer', { step, cpi: cpiText })}
       </p>
     </section>
   )

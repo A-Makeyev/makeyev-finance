@@ -407,28 +407,38 @@ export class TrackPanel {
 export class ForecastPanel {
   readonly root: Locator
   readonly heading: Locator
-  readonly lead: Locator
+  readonly cards: Locator
   readonly resetChart: Locator
   readonly costChart: Locator
+  readonly resetPlot: Locator
+  readonly costPlot: Locator
   readonly resetCaption: Locator
+  readonly costCaption: Locator
   readonly noResetNote: Locator
   readonly noIndexationNote: Locator
   readonly resetTable: Locator
   readonly costTable: Locator
+  readonly resetTableScroll: Locator
+  readonly costTableScroll: Locator
   readonly resetRows: Locator
   readonly disclaimer: Locator
 
   constructor(page: Page) {
     this.root = page.getByTestId('forecast-section')
     this.heading = this.root.locator('h2')
-    this.lead = this.root.locator('.forecast-lead')
+    this.cards = this.root.locator('.forecast-card')
     this.resetChart = page.getByTestId('forecast-reset-chart')
     this.costChart = page.getByTestId('forecast-cost-chart')
+    this.resetPlot = this.resetChart.locator('.forecast-plot')
+    this.costPlot = this.costChart.locator('.forecast-plot')
     this.resetCaption = page.getByTestId('forecast-reset-caption')
+    this.costCaption = page.getByTestId('forecast-cost-caption')
     this.noResetNote = page.getByTestId('forecast-no-reset')
     this.noIndexationNote = page.getByTestId('forecast-no-indexation')
     this.resetTable = page.getByTestId('forecast-reset-table')
     this.costTable = page.getByTestId('forecast-cost-table')
+    this.resetTableScroll = this.resetTable.locator('.forecast-table-scroll')
+    this.costTableScroll = this.costTable.locator('.forecast-table-scroll')
     this.resetRows = this.resetTable.locator('tr.is-reset')
     this.disclaimer = this.root.locator('.forecast-disclaimer')
   }
@@ -437,14 +447,20 @@ export class ForecastPanel {
     await this.root.scrollIntoViewIfNeeded()
   }
 
+  /** The tables ship open; this only opens one the user has collapsed. */
   async openResetTable(): Promise<void> {
-    await this.resetTable.locator('summary').click()
-    await expect(this.resetTable.locator('table')).toBeVisible()
+    await this.ensureOpen(this.resetTable)
   }
 
   async openCostTable(): Promise<void> {
-    await this.costTable.locator('summary').click()
-    await expect(this.costTable.locator('table')).toBeVisible()
+    await this.ensureOpen(this.costTable)
+  }
+
+  private async ensureOpen(details: Locator): Promise<void> {
+    if (!(await details.evaluate((element) => (element as HTMLDetailsElement).open))) {
+      await details.locator('summary').click()
+    }
+    await expect(details.locator('table')).toBeVisible()
   }
 
   /** The base / +1pp / -1pp payments at the start of `year` (1-based). */
@@ -457,6 +473,24 @@ export class ForecastPanel {
   async costTotals(year: number): Promise<{ interest: number; indexation: number }> {
     const amounts = await this.rowAmounts(this.costTable, year)
     return { interest: amounts[0] ?? 0, indexation: amounts[1] ?? 0 }
+  }
+
+  /**
+   * Distance from the frame's inner bottom edge to the nearest row border
+   * above it. Rows that fill the viewport leave this at zero; a partial row
+   * leaves the gap you would otherwise see as a second line.
+   */
+  async bottomRowGap(scroll: Locator): Promise<number> {
+    return scroll.evaluate((element) => {
+      const border = Number.parseFloat(getComputedStyle(element).borderBottomWidth) || 0
+      const innerBottom = element.getBoundingClientRect().bottom - border
+      const edges = Array.from(element.querySelectorAll('tbody tr')).flatMap((row) => {
+        const box = row.getBoundingClientRect()
+        return [box.top, box.bottom]
+      })
+      const above = edges.filter((edge) => edge <= innerBottom + 0.5)
+      return above.length === 0 ? Number.POSITIVE_INFINITY : innerBottom - Math.max(...above)
+    })
   }
 
   private async rowAmounts(table: Locator, year: number): Promise<number[]> {

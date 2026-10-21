@@ -42,6 +42,8 @@ test.describe('mortgage calculator - rate and CPI forecast', () => {
     const forecast = calc.forecast
     await forecast.scrollTo()
     await forecast.openCostTable()
+    // The caption echoes whichever CPI assumption the calculator is using.
+    await expect(forecast.costCaption).toHaveText(/מדד קבוע של \d+(?:\.\d+)?% בשנה/)
 
     // The default mix holds an indexed track, so both columns are present.
     await expect(forecast.costTable.locator('thead th')).toHaveCount(3)
@@ -82,6 +84,44 @@ test.describe('mortgage calculator - rate and CPI forecast', () => {
     await expect(calc.forecast.root).toHaveCount(0)
   })
 
+  test('shows the data tables open, at the chart height, with their own scroll', async ({
+    calc,
+  }) => {
+    const forecast = calc.forecast
+    await forecast.scrollTo()
+
+    // No click: the exact figures are visible by default.
+    await expect(forecast.resetTable.locator('table')).toBeVisible()
+    await expect(forecast.costTable.locator('table')).toBeVisible()
+
+    for (const [plot, table] of [
+      [forecast.resetPlot, forecast.resetTableScroll],
+      [forecast.costPlot, forecast.costTableScroll],
+    ]) {
+      const plotHeight = (await plot.boundingBox())?.height ?? 0
+      const tableHeight = (await table.boundingBox())?.height ?? 0
+      expect(plotHeight).toBeGreaterThan(0)
+      expect(Math.abs(plotHeight - tableHeight)).toBeLessThanOrEqual(2)
+
+      // The table is a viewport over the years, not a card-stretching list.
+      const scroll = await table.evaluate((element) => ({
+        client: element.clientHeight,
+        total: element.scrollHeight,
+      }))
+      expect(scroll.total).toBeGreaterThan(scroll.client)
+
+      // A whole row ends at the frame, so no sliver of the next row shows.
+      expect(await forecast.bottomRowGap(table)).toBeLessThanOrEqual(1)
+    }
+
+    // Stretch, not start: the shorter card takes the taller card's height.
+    const [first, second] = await forecast.cards.all()
+    const firstHeight = (await first.boundingBox())?.height ?? 0
+    const secondHeight = (await second.boundingBox())?.height ?? 0
+    expect(firstHeight).toBeGreaterThan(0)
+    expect(Math.abs(firstHeight - secondHeight)).toBeLessThanOrEqual(1)
+  })
+
   test('fits a 360px phone without a sideways scroll', async ({ calc }) => {
     await calc.page.setViewportSize({ width: 360, height: 900 })
     await calc.forecast.scrollTo()
@@ -105,15 +145,13 @@ test.describe('rate and CPI forecast in English (LTR)', () => {
     await forecast.scrollTo()
 
     await expect(forecast.heading).toHaveText('Rate and CPI forecast')
-    await expect(forecast.lead).toContainText('1 percentage point')
-    await expect(forecast.resetCaption).toHaveText('Rate resets in years 6 and 11.')
+    await expect(forecast.resetCaption).toHaveText('Rate resets in years 6 and 11')
     await expect(forecast.disclaimer).toContainText(
       'The forecast is an illustration only, not a forecast of rates or the CPI.',
     )
+    await expect(forecast.disclaimer).toContainText('1 percentage point')
 
     await forecast.openResetTable()
-    await expect(forecast.resetTable.locator('thead')).toContainText(
-      'A 1 pp rise at every reset',
-    )
+    await expect(forecast.resetTable.locator('thead')).toContainText('+1 pp')
   })
 })

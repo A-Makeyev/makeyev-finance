@@ -49,7 +49,10 @@ interface ForecastChartProps {
 // up. The plot keeps a zero baseline: payment and cost paths both start at 0.
 const WIDTH = 900
 const HEIGHT = 520
-const MARGIN = { top: 40, right: 88, bottom: 84, left: 88 }
+// The left margin holds the shekel ticks plus the rotated side title; the
+// forecast panel asks for larger ticks, so it needs more room than the
+// schedule charts.
+const MARGIN = { top: 40, right: 88, bottom: 84, left: 120 }
 const INNER_W = WIDTH - MARGIN.left - MARGIN.right
 const INNER_H = HEIGHT - MARGIN.top - MARGIN.bottom
 
