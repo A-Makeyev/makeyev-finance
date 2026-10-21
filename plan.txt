@@ -1,0 +1,861 @@
+go over project, tell me what u think and if u see what to improve, add, then create instructions. i need to also add  we also need to add grace scenario, early payment, like if u want to close mortgage mix earlier, we need to add הצמדה to all calculations where relevant, add it to graphs then i'd like to implement this:
+
+This tutorial video is an in-depth training session for SmartNPV (SMART), a professional mortgage simulation, portfolio management, and advisory software used by mortgage consultants in Israel. Below is a detailed, structured analysis and summary of every meaningful feature, financial concept, and workflow demonstrated across the video’s seven major modules. Table of Contents Mix Construction, In-Principle Approval Scanning & Mix Setup (00:03 – 05:18) Automatic Interest Rates, Anchors, Margins & Grace Periods (05:18 – 14:45) Staged Release, Prepayments & Early Repayment Penalty Calculation (14:45 – 30:14) Financial Data, Economic Forecasts, שת"פ (IRR), Return per Shekel & Market Spread (30:14 – 48:19) Comparison Tools: Duplication, 1-on-1 & Multi-Mix Comparison, Graphs & Savings Charts (48:19 – 58:52) Additional Capabilities: Reports, Overview, Documentation & Rate Expiry Alerts (58:52 – 64:05) The Complete Guide to Mortgage Refinancing (מחזורים) (64:05 – 75:29)
+1. Mix Construction, In-Principle Approval Scanning & Mix Setup (00:03 – 05:18) Mix Naming & Titling (00:18): Advisors can name each individual loan mix (תמהיל) directly at the top of the interface. Best Practice: Give descriptive, professional names (e.g., indicating the bank, date, or main strategy) so that when presenting multiple alternatives to clients, each scenario is easily distinguishable. Loan Amount Allocation (00:40): The total loan amount is pulled from the deal record in the CRM. Amounts can be distributed across tracks in two ways: Entering the exact Shekel amount per track. Entering a percentage (e.g., 33%), and the system automatically calculates the monetary value and displays the remaining unallocated balance. Track Configuration Elements (01:36): Amortization Schedule (לוח סילוקין): Spitzer, Equal Principal (קרן שווה), Full/Partial Balloon, or bank-specific tracks (e.g., Mizrahi Tefahot’s משכנתא בקצב שלך). Track Type: Fixed rate unlinked (קל"צ), Fixed linked (ק"צ), Variable linked/unlinked (מל"צ / מ"צ), Prime, etc. Adjustment Frequency (תדירות עדכון): For variable tracks (e.g., every 12, 36, or 60 months). Duration: Specified in months. Automated In-Principle Approval Scanning (סריקת אישור עקרוני) (02:12): Eliminates manual data entry errors. The user clicks "אישור עקרוני", selects the lending bank, and uploads the bank's approval PDF. The OCR engine extracts the loan data and instantly populates the simulation with tracks, sums, terms, anchors, and rates. Housing Ministry Eligibility Calculator (זכאות משרד השיכון) (03:39): Under the "זכאות" tab, advisors can enter borrower parameters (points, marital status, children, years of marriage, location) to calculate Ministry eligibility. Once calculated, the advisor clicks the eligibility figure in the top corner to automatically instantiate a subsidized loan track within the mix. Saving & Support (04:28): Manual Save Required: The platform does not auto-save mix changes; users must explicitly click "שמירה". Support Integration: A built-in support ticket modal allows consultants to submit questions and opt to share the specific client file with the support team for troubleshooting.
+2. Automatic Interest Rates, Anchors, Margins & Grace Periods (05:18 – 14:45) Automatic Interest Mechanism (05:20): When a track is added, the system automatically suggests an interest rate. Unlike official Bank of Israel (BOI) published average rates—which lag the market by ~2 months—SmartNPV computes real-time daily estimated rates for a standard/average borrower across major banks. Bank of Israel Capital Allocation (הקצאת הון) (06:55): The automatic interest dynamically shifts depending on the bank’s regulatory cost of capital: Financing Rate (LTV): Up to 45% LTV (35% capital allocation), 45%–60% LTV (50% allocation), and above 60% LTV (60% allocation). Risk Factors: Loans over 5 million ILS, high debt-to-income, or all-purpose/pledge loans require up to 100% capital allocation, causing rates to increase. Anchor vs. Margin / Spread (עוגן ותוספת / מרווח) (09:00): Anchor (עוגן): External objective benchmark determined by government bond yields. Neither the borrower nor the bank controls it. Margin / Spread (תוספת / מרווח): The bank’s premium above/below the anchor. This is the actual negotiable parameter. Operational rule: When negotiating a rate down with a bank, advisors should adjust the margin/תוספת, not the anchor. Anchor Update Tool (10:08): Selecting the specific bank and clicking "עדכון עוגנים" synchronizes the mix with that bank’s exact current published anchor. Grace Periods vs. Balloon Loans (11:25): Both involve an initial period where principal is not amortized (partial grace = interest only; full grace = nothing paid). The Critical Difference: Balloon: The entire principal must be repaid as a bullet payment at the end of the term. Grace: At the end of the grace period, the remaining balance is amortized over the rest of the loan term via the chosen schedule (e.g., Spitzer). Initial Repayment vs. Representative Repayment (החזר ראשון לעומת החזר מייצג) (13:46): Initial Repayment: What the borrower pays in month 1. Representative Repayment: What the bank uses for regulatory debt-to-income calculations (e.g., post-grace payment, or adjusted rate upon expected future rate updates).
+3. Staged Release, Prepayments & Early Repayment Penalty Calculation (14:45 – 30:14) Staged Disbursement / Release in Parts (שחרור בחלקים) (14:45): Used for purchases from developers (מחיר למשתכן / staged payment contracts), buyer-build projects (בנייה עצמית), or phased transactions. Setup: Click "שחרור בחלקים", specify the number of disbursement milestones, and set future execution dates (e.g., in 1, 5, or 8 months). Allocation Options: Uniform Percentage: Allocating a flat percentage (e.g., 20%) of all tracks at each milestone. Manual/Granular Allocation: Specifying exact amounts drawn from specific tracks at specific times. Safety Lock (18:38): While staged disbursement is active, the mix is locked from editing to prevent calculation inconsistencies. Early Repayment / Prepayment (פרעון מוקדם) (19:15): Simulated on a per-track basis by clicking "פרעון". Specify payoff timing (e.g., month 6) and repayment sum. Two Modes for Partial Prepayment (20:07): Shorten Loan Term (קיצור תקופה): Monthly payment remains identical, loan finishes earlier. Lower Monthly Payment (ירידה בהחזר): Original loan term remains, monthly payment drops. Prepayment Penalty / Present Value Fee Calculator (עמלת פרעון מוקדם) (22:51): Accessible via the purple button "עמלות פירעון מוקדם". Regulatory Logic: The fee is charged if the market average interest at the time of prepayment is lower than the lower of: The loan's original interest rate, or The Bank of Israel average interest rate at the time of loan origination. Stress Testing: Advisors can model scenarios where interest rates drop in the future by 0.5%, 1%, 2%, or down to the historical minimum. Effective Rate Surcharge (תוספת ריבית להלוואה) (26:30): Converts the Shekel penalty into an effective annualized interest percentage added to the loan cost. Interactive Penalty Curve (27:10): Plots the penalty trajectory across every year of the loan term, demonstrating how the fee diminishes as the loan matures.
+4. Financial Data, Economic Forecasts, שת"פ (IRR), Return per Shekel & Market Spread (30:14 – 48:19) Financial Repository (מידע ליועץ) (29:18): Provides access to historical databases: real/nominal zero-coupon curves (עקום אפס), Bank of Israel interest rate history, CPI (מדד המחירים לצרכן), and construction cost index (מדד תשומות הבנייה). Economic Forecasts (תחזיות כלכליות) (31:40): By default, the platform uses Bank of Israel research forecasts derived from capital market bond yields. Personal Custom Forecasts (תחזית אישית) (38:39): Under Settings -> Economic Data, advisors can create tailored forecast models for CPI, Prime, and variable anchors across 360 months. The "השלמת ערכים" feature automatically interpolates and fills forward values. שת"פ (IRR / Internal Rate of Return) (30:31): Represents the true effective cost of the loan including projected future interest adjustments and CPI inflation. Helps identify deceptive tracks (e.g., a variable linked track that looks cheap at 2.7% initially, but has a higher שת"פ than Prime due to projected inflation and upward rate resets). Return per Shekel (החזר לשקל) (37:05): Measures total expected Shekel payout per 1 ILS borrowed (e.g., 1.60 vs. 1.83). Takes into account the time value / duration element: an expensive rate over a short duration can yield a lower Return per Shekel than a cheap rate stretched over 30 years. Market Spread (מרווח שוק) vs. Bank Spread (33:46 & 41:50): Why Bank Spread is Inadequate: Bank spread is based on internal cost of funds and internal risk underwriting, making it non-standardized and uncomparable between different institutions. The Solution — Market Spread: SmartNPV maps every loan track to a synthetic risk-free government bond of identical duration and linkage. The difference between the track rate and the market benchmark is the Market Spread. This establishes an objective, uniform metric to benchmark any mix against any other mix or bank offer. Payment-to-Income (יחס החזר מהכנסה) (47:45): Displayed on screen; alerts the advisor against exceeding regulatory limits (40% max, with banks preferring lower).
+5. Comparison Tools: Duplication, 1-on-1 & Multi-Mix Comparison, Graphs & Savings Charts (48:19 – 58:52) Mix Duplication (שכפול תמהיל) (48:30): Creates an exact clone of a mix so the advisor can adjust one parameter (e.g., shifting 50,000 ILS from variable to fixed) and observe the delta. 1-on-1 Mix Comparison (תמהיל להשוואה) (49:17): Compares two mixes head-to-head. Visual color-coding: Blue = Active mix; Red = Compared mix; Green = Positive financial delta/savings. Consolidating / Merging Mixes (מיזוג תמהילים) (51:00): Used when a borrower takes two loans simultaneously (e.g., standard mortgage + supplementary loan for self-equity). Merges both into a single consolidated simulation to evaluate the total combined monthly and lifetime burden. Multi-Mix Summary Comparison (ריכוז) (50:17): Allows selecting up to 4 different mixes side-by-side in a single unified table and multi-colored graph view. Comparative Graphs & Savings Curves (55:40 – 57:35): Repayment Over Time: Highlights differences in peak monthly payments. Remaining Balance Trajectory: Shows how fast principal decreases in each scenario. Break-Even Analysis (תרשים חיסכון / חיסכון מצטבר): Crucial chart illustrating net cash flow differences. For example, a mix might be 700 ILS more expensive per month during the first 10 years, but yield 31,000 ILS in total savings by year 20–30. This reveals the exact break-even point (e.g., Year 18) to ensure the strategy matches the client's planned investment horizon.
+6. Additional Capabilities: Reports, Overview, Documentation & Rate Expiry Alerts (58:52 – 64:05) Report Generation & Printing (הדפסת דוחות) (59:00): Can generate: Single Mix Report. 1-on-1 Comparison Report. Multi-Mix Summary Report. Monthly Amortization Schedule (לוח סילוקין חודשי). Multi-Language Support: Instant generation in Hebrew, English, or Russian. Modular Customization: Checkbox controls to include or exclude complex financial metrics (e.g., hide שת"פ, ענ"ן / NPV, or market spread if they might confuse the client). Overview Window (מבט על) (63:00): A split-screen dashboard showing customer profile, total equity, property value, and income without having to leave the simulation screen. File Documentation (תיעוד התיק) (63:16): In-system CRM log to record notes, client requests, and advisor recommendations. Rate Validity Alert (התרעת תוקף ריביות) (63:26): Tracks the regulatory 24-day bank rate commitment window. Advisors can set a countdown alert (e.g., notify 7 days before expiry) via the in-app notification bell.
+7. The Complete Guide to Mortgage Refinancing (מחזורים) (64:05 – 75:29) Navigating to "Existing Mortgage" (משכנתא נוכחית) (64:18): The dedicated area for recording the borrower's current mortgage status. Scanning Balance Payoff Statements (סריקת דוח יתרה לסילוק) (65:16): Uploading the bank’s official payoff statement automatically populates the existing mortgage down to the exact Agora. Multi-Report Scanning (65:55): Checkbox setting allows stacking multiple payoff statements without overwriting existing entries (for loans split across accounts/banks). Mizrahi Tefahot Bank Nuance (67:44): Mizrahi reports bundle internal operational management fees directly into the interest/spread figures. The scanner automatically isolates the true anchor and margin. Duplicating Current Loan into a Refinancing Simulation (שכפול משכנתא נוכחית) (68:53): Prompts the user: Duplicate with or without prepayment penalties? Selecting with penalties adds the penalty sum directly into the new loan's principal, ensuring the new loan covers all costs of exit. The Purple Dot Indicator (נקודה סגולה) (69:22): Tracks duplicated directly from an existing loan display a purple dot. Meaning: The simulation respects the historical update cycle and upcoming reset dates of the original loan rather than treating it as a brand-new loan starting at Month 0. Refinancing Workflow: To evaluate replacing that track with a new product, delete the old track and add a fresh track without the purple dot. Evaluating Refinancing Feasibility (71:00): Compare the new proposal against the existing loan using the Cumulative Savings Chart (חיסכון מצטבר) to see how many years it takes to recoup the early payoff fees. Break-Even IRR for Refinancing (שת"פ לצורך מחזור) (73:16): An advanced metric calculated by the system. Because refinancing often increases total loan balance (due to capitalized prepayment penalties), the new mix must achieve an effective IRR (שת"פ) below this calculated threshold to guarantee that refinancing is financially worthwhile. 1m16s Model 10:29 AM ThinkingThoughts Expand to view model thoughts chevron_right To build an institutional-grade mortgage advisory and simulation platform like SmartNPV, your software must combine an amortization calculation engine, macroeconomic forecasting models, Israeli banking regulatory rules (Bank of Israel - בנק ישראל), and a comparative analytics UI. Below is the complete engineering and product blueprint for your development agent. System Architecture Overview code Code ┌───────────────────────────┐                                   │      Client Web App       │                                   │ (React / Next.js + D3.js) │                                   └─────────────┬─────────────┘                                                 │ REST / GraphQL                                                 ▼                                   ┌───────────────────────────┐                                   │     Application API       │                                   │ (Node.js / Python FastApi)│                                   └──────┬──────────────┬─────┘                                          │              │                     ┌────────────────────┴───┐     ┌────┴────────────────────┐                     ▼                        ▼     ▼                         ▼          ┌─────────────────────┐  ┌────────────────────┐  ┌───────────────────┐          │ Financial Calc Engine│  │ OCR / Document AI  │  │ Market Data Sync  │          │ (C++ / Rust / Python)│  │ (LLM / AWS Textract│  │ (Bank of Israel   │          │                      │  │  PyMuPDF Parser)   │  │  Government Bonds)│          └─────────────────────┘  └────────────────────┘  └───────────────────┘
+8. Core Data Models A. Deal & Borrower Profile (Deal) code TypeScript interface Deal {   id: string;   clientName: string;   propertyValue: number;         // שווי נכס   requestedLoanAmount: number;   // סך הלוואה מבוקש   ltv: number;                   // שיעור מימון = loan / propertyValue   monthlyNetIncome: number;      // הכנסה פנויה חודשית (נטו)   dealType: 'FIRST_HOME' | 'UPGRADER' | 'INVESTMENT' | 'ALL_PURPOSE';   capitalAllocationRate: number; // הקצאת הון (35%, 50%, 60%, 100%)   eligibilityPoints?: number;    // ניקוד זכאות משרד השיכון   mixes: MortgageMix[];   existingMortgage?: ExistingMortgage; } B. Mortgage Mix (MortgageMix) code TypeScript interface MortgageMix {   id: string;   name: string;                  // e.g., "לאומי 240 חודשים"   bankCode?: string;             // Discount, Leumi, Mizrahi, etc.   approvalDate?: Date;           // תאריך אישור עקרוני   rateHoldExpiryDays: number;    // Typically 24 days in Israel   tracks: MortgageTrack[];   stagedReleases?: StagedRelease[];   isLocked: boolean;             // True when staged release is active } C. Track / Route (MortgageTrack) code TypeScript interface MortgageTrack {   id: string;   type:     | 'PRIME'                    // פריים (לא צמוד)     | 'FIXED_UNLINKED'           // קל"צ     | 'FIXED_LINKED'             // ק"צ     | 'VARIABLE_UNLINKED'        // מל"צ     | 'VARIABLE_LINKED'          // מ"צ     | 'ELIGIBILITY';             // זכאות משרד השיכון   scheduleType:     | 'SPITZER'                  // שפיצר     | 'EQUAL_PRINCIPAL'          // קרן שווה     | 'BALLOON_PARTIAL'          // בלון חלקי     | 'BALLOON_FULL';            // בלון מלא   principal: number;             // סכום המסלול   percentageOfLoan: number;      // אחוז מסך ההלוואה   termMonths: number;            // תקופה בחודשים   baseAnchor: number;            // עוגן נוכחי (%)   margin: number;                // תוספת / מרווח סיכון מול הבנק (%)   nominalRate: number;           // baseAnchor + margin   adjustmentFrequencyMonths?: number; // תדירות עדכון (e.g. 12, 36, 60)   gracePeriodMonths?: number;    // גרייס (חודשים)   graceType?: 'PARTIAL' | 'FULL';   prepayment?: Prepayment;   historicalReferenceDate?: Date;// For refinanced tracks (נקודה סגולה) }
+9. Financial Calculation Engine (Math & Formulas) The engine computes a month-by-month cash flow array (up to month 360) for every track, applying interest adjustments and inflation adjustments per month t t . A. Month-by-Month Amortization Let: P t P t ​   : Remaining principal at start of month t t . r t r t ​   : Monthly interest rate at month t t . For nominal annual rate R t R t ​   , r t = R t 12 r t ​  = 12 R t ​   ​   . π t π t ​   : Monthly inflation forecast at month t t  (from CPI forecast). n t n t ​   : Remaining term in months ( N − t
+-
+# 1 N−t+1 ). At the start of month t t : P t
+
+# P t − 1 end × ( 1 + π t ) P t ​  =P t−1 end ​  ×(1+π t ​  ) Payment in month t t : P M T t
+
+# P t × r t ( 1 + r t ) n t ( 1 + r t ) n t − 1 PMT t ​  =P t ​  × (1+r t ​  ) n t ​    −1 r t ​  (1+r t ​  ) n t ​     ​   Interest payment: I n t e r e s t t
+
+# P t × r t Interest t ​  =P t ​  ×r t ​   Principal amortized: P r i n c i p a l t
+
+# P M T t − I n t e r e s t t Principal t ​  =PMT t ​  −Interest t ​   Ending principal: P t end
+
+# P t − P r i n c i p a l t P t end ​  =P t ​  −Principal t ​   Principal amortized is constant: P r i n c i p a l t
+
+# P original N Principal t ​  = N P original ​   ​    (or P t n t n t ​   P t ​   ​    after recalculations) Interest payment: I n t e r e s t t
+
+# P t × r t Interest t ​  =P t ​  ×r t ​   Total monthly payment: P M T t
+
+# P r i n c i p a l t + I n t e r e s t t PMT t ​  =Principal t ​  +Interest t ​    (declines over time) Partial Grace ( G G  months): For t ≤ G t≤G : P M T t
+
+# P 0 × r t PMT t ​  =P 0 ​  ×r t ​   , P r i n c i p a l t
+
+0 Principal t ​  =0 . For t
+
+# G t>G : recalculate standard Spitzer over remaining term ( N − G ) (N−G) . Full Grace ( G G  months): For t ≤ G t≤G : P M T t
+
+# 0 PMT t ​  =0 ; unpaid interest capitalizes: P t
+
+P t − 1 ( 1 + r t ) P t ​  =P t−1 ​  (1+r t ​  ) . For t
+
+# G t>G : amortize the new, higher principal over ( N − G ) (N−G) . Balloon: Same as Grace during term, but at t
+
+# N t=N , remaining P N P N ​    is due in a single bullet payment. B. Crucial Portfolio Metrics Computes the true effective annualized cost of the loan taking inflation and future rate changes into account. Solve for monthly rate r irr r irr ​    such that: L o a n A m o u n t − ∑ t
+
+# 1 N P M T t ( 1 + r irr ) t
+
+# 0 LoanAmount− t=1 ∑ N ​    (1+r irr ​  ) t   PMT t ​   ​  =0 Annualized שת"פ
+
+# ( 1 + r irr ) 12 − 1 Annualized שת"פ=(1+r irr ​  ) 12  −1 Return Per Shekel
+
+# ∑ t
+
+# 1 N P M T t L o a n A m o u n t Return Per Shekel= LoanAmount ∑ t=1 N ​  PMT t ​   ​   Measures the present cost of future payments discounted at risk-free government bond yield curve y t y t ​   : NPV
+
+# ∑ t
+
+# 1 N P M T t ( 1 + y t ) t NPV= t=1 ∑ N ​    (1+y t ​  ) t   PMT t ​   ​   Weighted average time until cash flows are received (measured in years): Macaulay Duration
+
+# 1 12 × ∑ t
+
+# 1 N t × P M T t ( 1 + r irr ) t ∑ t
+
+# 1 N P M T t ( 1 + r irr ) t Macaulay Duration= 12 1 ​  × ∑ t=1 N ​    (1+r irr ​  ) t   PMT t ​   ​   ∑ t=1 N ​  t× (1+r irr ​  ) t   PMT t ​   ​   ​   Because different banks have different internal funding costs (מרווח בנק), the software creates a standardized risk-free benchmark: For each track i i , look up the synthetic zero-coupon government bond yield Y i Y i ​    matching track i i 's linkage (real vs. nominal) and duration D i D i ​   . Track Market Spread i
+
+# R nominal , i − Y i Track Market Spread i ​  =R nominal,i ​  −Y i ​   Mix Market Spread
+
+# ∑ w i × Track Market Spread i Mix Market Spread=∑w i ​  ×Track Market Spread i ​    where w i
+
+# P i P total w i ​  = P total ​   P i ​   ​   . The payment used for the Bank of Israel's payment-to-income (PTI) regulation. If a loan starts with a grace period or promotional rate, the platform computes P M T PMT  at the first normal, post-grace/post-adjustment period, ensuring PTI
+
+# P M T representative Net Income ≤ 40 % PTI= Net Income PMT representative ​   ​  ≤40% . 3. Specialized Engines A. Prepayment Penalty Engine (עמלת פירעון מוקדם) Implements Bank of Israel Order for early repayment fee calculations (צו הבנקאות - עמלת פירעון מוקדם). code Code [Prepayment Month T]         │         ▼ Is Track Fixed Rate (קל"צ / ק"צ) or Variable within an adjustment period?         │        Yes         ▼ Find Baseline Rate: R_base = MIN( R_orig, R_boi_avg_at_origination )         │         ▼ Find Current BOI Average Rate for remaining term: R_boi_current         │         ▼ Is R_boi_current < R_base?        /             Yes        No ──► Penalty = 0       │       ▼ Calculate PV difference: Penalty = PV(CashFlows @ R_base) - PV(CashFlows @ R_boi_current) Discounted at R_boi_current       │       ▼ Apply regulatory discount tiers:  - Year 1-3: No discount  - Year 3-5: 20% discount  - Year 5+: 30% discount Effective Surcharge Percentage: Rate Add-on
+
+# IRR with Penalty Capitalized − Base IRR Rate Add-on=IRR with Penalty Capitalized−Base IRR B. Refinancing Engine (מחזורים) code Code ┌─────────────────────────────────┐                     │ Scan Payoff Statement (PDF OCR) │                     └────────────────┬────────────────┘                                      ▼                     ┌─────────────────────────────────┐                     │ Store as "Existing Mortgage"    │                     │ - Principal balance             │                     │ - Prepayment penalties          │                     │ - Retain calendar reset dates   │                     └────────────────┬────────────────┘                                      ▼                     ┌─────────────────────────────────┐                     │ Duplicate to Target Mix         │                     └────────────────┬────────────────┘                                     /    Include Penalties (New P = P + Fees)  Exclude Penalties (Out-of-Pocket)                                     \ /                                      ▼                     ┌─────────────────────────────────┐                     │ Break-Even Refinancing Analysis │                     │ - Cumulative Net Cash Flow      │                     │ - Break-Even IRR (שת"פ לצורך)  │                     │ - Month/Year of Break-Even      │                     └─────────────────────────────────┘ The Purple Dot Rule (נקודה סגולה): When duplicating existing tracks, set historicalReferenceDate = originalLoanStartDate. Next interest reset for variable tracks occurs at: T next reset
+
+# Frequency − ( T current ( m o d Frequency ) ) T next reset ​  =Frequency−(T current ​  (modFrequency)) instead of starting at t
+
+# 0 t=0 . Break-Even IRR for Refinancing (שת"פ לצורך מחזור): The maximum IRR the new mortgage can have such that its Total Lifetime Repayment ≤ ≤  Total Lifetime Repayment of the existing mortgage. If IRR new < IRR breakeven IRR new ​  <IRR breakeven ​   , refinancing is profitable. C. Economic Forecast Engine (תחזיות כלכליות) Maintains an array of length 360 (months) for: CPI Monthly Rate ( π t π t ​   ): Derived from break-even inflation in government bonds. Bank of Israel Base Rate ( B O I t BOI t ​   ): Projected path of the monetary policy rate. Prime Rate: P r i m e t
+
+B O I t + 1.5 % Prime t ​  =BOI t ​  +1.5% . Variable Anchors (אג"ח ממשלתיות): Yield curve interpolation for 1Y, 3Y, 5Y benchmarks. UI "Auto-Fill" (השלמת ערכים): User inputs a few milestone values (e.g., Month 12: 3.0%, Month 60: 2.5%, Month 120: 2.2%), and the backend performs linear or spline interpolation across all 360 months. 4. Charts & Visualizations Blueprint
+
+# Chart Name (Hebrew)	Technical Chart Type	X-Axis	Y-Axis	Series / Layers	Visual Purpose
+
+# 1	גרף החזר חודשי (Monthly Repayment)	Stepped Line / Spline	Months (1–360)	Monthly payment (ILS)	• Track 1..k • Overall Mix Payment	Visualizes payment spikes, reset shocks, and post-grace step-ups. 2	גרף יתרת חוב (Remaining Balance)	Area / Line	Months (1–360)	Balance (ILS)	Remaining debt balance over time	Shows how principal amortizes; reveals balance increases in CPI-linked loans. 3	חלוקת תשלומים: קרן, ריבית, הצמדה	Stacked Bar Chart	Years (1–30)	Amount (ILS)	1. Principal (קרן) 2. Interest (ריבית) 3. CPI Linkage (הצמדה)	Clarifies what portion of each payment goes toward the bank vs. principal reduction. 4	גרף חיסכון שנתי (Annual Savings)	Diverging Bar Chart	Years (1–30)	Net Difference (ILS) Δ Payment
+
+P M T baseline − P M T candidate ΔPayment=PMT baseline ​  −PMT candidate ​   Green for years the client pays less; Red for years the client pays more. 5	חיסכון מצטבר (Cumulative Savings)	Area / Line Chart with Zero-Crossing	Years (1–30)	Cumulative ∑ Δ Payment ∑ΔPayment  (ILS)	Cumulative Savings Curve	Pinpoints the Break-Even Year where the line crosses from negative to positive. 6	גרף עמלות פירעון מוקדם (Penalty Trajectory)	Step Line	Years (1–30)	Estimated Exit Penalty (ILS)	• Per-track penalty • Total mix penalty	Shows how early exit costs decline over time under selected rate-drop stress tests. 7	תחזית ריבית ואינפלציה (Forecast Curves)	Dual-line Spline	Years (1–30)	Rate (%)	• Line 1: Inflation (CPI) • Line 2: BOI Rate / Prime	Renders macroeconomic assumptions driving the calculations. 5. Information Architecture & Screen Wireframe Guide Screen 1: The Main Simulator Dashboard Top Ribbon: Client Quick Summary (Property Value, Loan Sum, LTV %, PTI % status badge). Fast Action Bar: [+ Add Mix], [Duplicate Mix], [Scan In-Principle Approval], [Merge Mixes], [Export PDF]. Mix Control Bar: Mix tabs (e.g., "Mix A - Bank Leumi", "Mix B - High Prime", "Existing Mortgage"). Mix Name input, Bank selector, Capital Allocation dropdown (35%, 50%, 60%, 100%). Status indicator: Rate Lock 24-day countdown clock. Track Grid Table (Per Mix): Columns: Schedule Type, Track Type, Principal Sum, Percentage Slider, Anchor, Margin/Spread, Total Nominal Rate, Term (Months), Grace (Months), Reset Frequency, שת"פ (IRR), Return per Shekel, Action buttons ([Prepay], [Delete]). KPI Summary Card (Below Grid): Initial Payment, Representative Payment, Total Cost, Total Interest & Linkage, Mix-level IRR (שת"פ), Market Spread, Macaulay Duration. Lower Visual Deck: Tabbed view toggling between: Interactive Comparative Graphs (Charts 1–5). Comparison Summary Table (Side-by-side up to 4 mixes). Monthly Amortization Schedule (לוח סילוקין חודשי). 6. Implementation Roadmap for Your Agent code Code Phase 1: Financial Core (Weeks 1-3)   ├── Build Spitzer & Equal Principal amortizers (unlinked & linked to CPI).   ├── Implement Grace & Balloon logic.   ├── Build IRR (שת"פ) root-finder (Newton-Raphson method).   └── Build Return-per-Shekel & Duration calculators. Phase 2: Bank of Israel Regulatory & Market Rules (Weeks 4-5)   ├── Capital Allocation rate table (LTV & debt tiers).   ├── Payment-to-income (PTI) representative payment logic.   ├── Prepayment penalty formula (צו הבנקאות).   └── Synthetic Market Spread benchmarking engine (Government bond zero-curves). Phase 3: OCR & Document Extraction (Weeks 6-7)   ├── PDF parser for Israeli bank "In-Principle Approvals" (אישור עקרוני).   ├── Parser for bank "Payoff Balance Statements" (דוח יתרה לסילוק).   └── Normalizer for Mizrahi Tefahot embedded account fees. Phase 4: Comparative Analytics & Refinancing (Weeks 8-9)   ├── 1-on-1 and Multi-mix (up to 4) differential calculators.   ├── Cumulative cash-flow & break-even calculation.   ├── Refinancing engine with penalty capitalization & Purple Dot logic.   └── D3.js / Recharts visualization components. Phase 5: Reporting & Workflow (Weeks 10-12)   ├── Modular PDF Report Generator (Hebrew / English / Russian).   ├── Rate hold expiry notification system (24-day countdown).   └── Ministry of Housing eligibility calculator (זכאות).
+
+
+
+Roadmap: reference-tool parity
+This is a working plan, not a commitment to build all of it. It tracks shipped
+slices and remaining parity work inspired by the professional Israeli mortgage
+simulation demonstrated in the "סימולצייה מקצועית בסמארט" YouTube walkthrough
+saved in examples/, with proposed shape, effort, risk and source for each item.
+
+Effort is S (a day or less), M (2-4 days), L (a week or more) for a first
+slice, including unit tests, i18n for every supported language, and e2e.
+
+The reference product's layout and copy belong to it. We borrow the ideas and
+build our own components and strings.
+
+The file-level engineering plan, accounting rules, acceptance criteria and test
+requirements live in docs/SMARTNPV_IMPLEMENTATION.md. Follow its phase order
+when implementing these items. This roadmap is the high-level status overview.
+1. Indexation visibility (הצמדה)
+Status. The core calculation and several UI surfaces are shipped. The
+remaining work is to make the payment-composition charts use reconciled,
+additive components and to make the total CPI amount easier to find in results.
+
+Already shipped.
+- src/lib/amortization.ts records monthly/yearly indexation and
+  TrackResult.totalIndexation; combined rows aggregate these values.
+- The schedule table shows an indexation column only when the mix has an
+  indexed track, for monthly/yearly and combined/per-track views.
+- The cost donut splits total repayment into nominal principal, indexation and
+  interest. The cumulative-indexation compare chart is also shipped.
+- The total-payments caption identifies indexation where relevant. Unit tests,
+  Hebrew/English keys and e2e coverage already exist for the first slice.
+Accounting definition. principal in the existing schedule is the amount
+of the payment allocated to paying down the CPI-adjusted balance. Its lifetime
+sum therefore includes CPI indexation. For a payment-composition chart, derive
+netPrincipal = row.principal - row.indexation, then display
+netPrincipal + indexation + interestPaid = paid. Implement this in one pure
+helper in src/lib/amortization.ts and reuse it in the calculator and compare
+charts. Do not add indexation to a balance that already includes it, and do
+not clamp a negative net-principal result to zero. The implementation plan
+explains how to handle negative values and how grace-period capitalization
+will require separate accrued-interest and interest-paid fields.
+
+Remaining work.
+- Update src/features/calculator/AmortizationChart.tsx and
+  src/features/compare/CompareTrendChart.tsx to use the shared three-part
+  helper and an honest rendering for negative values.
+- Add an explicit total-indexation amount to calculator results, with Hebrew
+  and English labels and matching tests.
+- Keep the current schedule columns, cost donut and cumulative-indexation chart.
+  Do not add a narrow comparison-table column that violates the existing
+  no-horizontal-scroll contract.
+Effort M. Risk medium-high because the display depends on financial
+accounting invariants. See Phase 0 in docs/SMARTNPV_IMPLEMENTATION.md.
+2. Rate-validity / approval-date warning (התראת תוקף ריבית)
+Status. The first slice is shipped: approval date, rate-validity status and
+warnings exist in calculator and compare as session inputs. The date is not yet
+persisted with a saved mix, and the UI does not print an "as of" date next to
+the validity figure.
+
+Shape.
+- New pure module src/lib/rateValidity.ts: RATE_VALIDITY_DAYS = 24 (cited
+  below) and rateValidityStatus(approvalDate, now) returning
+  valid | expiring | expired plus daysRemaining, with now injected.
+- Mix-editor date input; a status chip near the mix title; a banner in results
+  and compare when expired.
+- i18n (he + en); dates formatted through the existing i18n/Intl path.
+- Tests: the boundary at exactly 24 days, 0/negative, and date-only arithmetic
+  so timezone/DST cannot drift. e2e for the chip in both languages at ~360px.
+Effort S. Risk low.
+
+Shipped (first slice).
+- src/lib/rateValidity.ts: RATE_VALIDITY_DAYS = 24, EXPIRING_SOON_DAYS = 3,
+  rateValidityStatus(approvalDate, now), parseDateOnly, formatDateOnly,
+  rateValidityText. now is injected, and both sides of the comparison are
+  normalised to UTC midnight so a timezone or DST change cannot shift the day
+  count.
+- Shared src/components/ui/RateValidityChip.tsx (renders nothing without a
+  real date; data-status carries valid | expiring | expired).
+- Calculator: approvalDateText + setApprovalDate on the store (session
+  input, NOT part of a saved mix), a date field with the shared chip under the
+  limits row, and an ⓘ/❌ summary note when the rate is lapsing or lapsed.
+- Compare: approvalDateText per scenario (each mix is its own offer), the same
+  field + chip in each scenario editor, and the same actionable warning as a
+  status line in that mix's result card. The calculator's date travels into the
+  first mix on seeding.
+- he/en keys; 18 pure-module tests, 13 store tests, a placeholder-parity test,
+  and 11 e2e cases (states, boundaries, both languages, 360px, and the seed
+  carrying the date).
+Not done (deliberately). The approval date is not persisted with a saved
+mix: that would add a field to the stored mix scenario (server zod schema,
+serialize baseline, load/restore), which is a data-model change to flag rather
+than slip in. Today the date is session input, cleared on reset, on detaching
+from a mix, and on loading one.
+
+Wording split. The chip beside the field is the compact sentence; the
+results area (calculator summary note, compare status line) carries the
+actionable warning ("ask the bank for an updated rate"). One rule, both pages.
+
+Open decision (resolved). Per mix. In the calculator that is the single
+mix; in the comparison each scenario is its own offer and gets its own date.
+
+Source. The Bank of Israel mortgage-transparency reform made the אישור
+עקרוני a standardized, binding document; the rate inside it holds 24
+days (the approval document itself up to ~3 months). Re-checked before
+shipping against
+boi.org.il/information/bank-paymnts/financial-education/competition-in-mortgages/
+and the Kol-Zchut rights guide, which restates the BOI amendment's 24-day
+minimum. EXPIRING_SOON_DAYS = 3 is a UI urgency threshold, not a regulatory
+figure. The UI does not yet print an "as of" date next to the figure.
+3. Early-repayment fee calculator (עמלת פירעון מוקדם)
+Gap. We carry static education copy only
+(src/components/education/PrepaymentPenaltyFacts.tsx); there is no fee
+calculation. This is a high-value feature, but the fee is a regulated financial
+figure and must not be approximated in the public UI.
+
+Shape.
+- Build a pure calculation module at src/lib/prepayment.ts only after the
+  applicable official rules, fee components, exemptions, discounts, rate
+  buckets and examples have been documented.
+- Report applicable fee components separately and keep fees separate from
+  scheduled principal, CPI and interest.
+- Create authoritative fixtures from official Bank of Israel examples and
+  match at least two or three worked cases before presenting any result as a
+  complete statutory fee.
+- If only one fee component or a subset of loan types is supported, keep the
+  calculator internal-only. Never label a partial calculation as the complete
+  fee or return a confident-looking zero for unsupported cases.
+- Add stress scenarios only as clearly labeled assumptions. Effective-rate
+  surcharge is a follow-up sub-ticket after the base fee result is verified.
+Dependency. Phase 3 builds the underlying early-payoff events internally.
+The public payoff feature remains gated until this phase can calculate the
+applicable fee completely for its supported cases.
+
+Source candidates already recorded in this roadmap. BOI circular 2103,
+"נוסחה לחישוב עמלת פרעון מוקדם" (30/01/2003), the Banking Order on prepayment
+fees, the relevant later amendments, and the BOI consumer information. The
+implementer must verify the current, applicable official text and examples
+rather than treating the summary in this roadmap as a legal specification.
+
+Effort XL. Risk very high. See Phase 4 in
+docs/SMARTNPV_IMPLEMENTATION.md.
+4. BOI average-interest table (ריבית ממוצעת)
+Gap (closed). The calculator's average-rate card used to deep-link to the
+BOI page without showing the data. /rates now renders the official tables and
+the card links there.
+
+Shape.
+- New src/server/rates/ following the src/server/market/ pattern (provider
+  - service + cache + typed snapshot), exposed at
+    src/app/api/rates/average/route.ts.
+- Two accessible tables with each workbook's official bucket layout: indexed
+  has 25+, 20-25, 15-20, 10-15, 5-10 and up-to-5 buckets; non-indexed adds
+  1-5 and up-to-1-year buckets. Current publication plus dated history.
+- Show an "as of" and degrade honestly (never invent a value), like the market
+  strips' stale flag.
+- Parse-fixture-to-table unit tests, plus e2e.
+Effort M. Risk medium (external shape drift).
+
+Shipped (first slice).
+- src/server/rates/ parses the two official BIFF8 workbooks with SheetJS,
+  validates the column count before reading, converts Excel date serials and
+  normalizes every row; rows are deduped and sorted newest first.
+- GET /api/rates/average returns both tables independently, each with
+  ok / stale / unavailable. A six-hour in-memory cache, in-flight
+  collapsing and a 45-day disk snapshot under .cache/ keep one BOI outage
+  from blanking the page.
+- /rates and /en/rates show the current rate plus 12 monthly rows per
+  table, the official bucket layout for each kind, a source link, and honest
+  stale/unavailable messages. The calculator's average-rate card now links
+  there instead of leaving the site.
+- Unit tests cover the pinned real workbooks, date serials, shape mismatches,
+  caching, stale fallback and the API contract. E2e covers both locales at 360
+  and 1280, stale/partial/500 states, dark theme, and the calculator entry.
+Source (decided). The two official BOI workbooks, not the series database:
+https://www.boi.org.il/boi_files/Pikuah/pribmash.xls (indexed) and
+https://www.boi.org.il/boi_files/Pikuah/mashfix.xls (non-indexed). The series
+database (edge.boi.gov.il, BIR_MRTG_99) exposes only total series, not the
+term-bucketed table. Pinned fixtures live in tests/fixtures/rates/.
+
+Open decision (resolved). An external data source was approved, and the
+tables live on their own /rates page linked from the calculator's existing
+average-rate result card.
+5. Monthly CPI forecasts and variable-rate resets
+Gap. Variable-rate reset periods are described in the help content but are
+not modeled in the amortization schedule. CPI currently uses one annual
+assumption for the full term rather than a changing monthly path.
+
+Shape.
+- Keep the current annual CPI input as the compatibility fallback.
+- Add a validated monthly CPI path and month-indexed interest-rate reset
+  assumptions. A reset takes effect at the start of its declared month, before
+  CPI and interest are calculated for that month.
+- Start with explicit user-provided milestones and deterministic interpolation.
+  Label all future values as assumptions, not predictions or official data.
+- Recalculate scheduled payments after rate changes using the then-current
+  balance and remaining term. Use the same assumptions in calculator and
+  compare views.
+- The forecast chart must render the exact path used by the engine, and a chart
+  tooltip or text summary must explain that these are scenario values.
+Effort L. Risk high because the full future cash flow depends on the
+assumptions. See Phase 2 in docs/SMARTNPV_IMPLEMENTATION.md.
+6. Advisor-metric rows
+Status. The first derived-metrics slice is shipped. snapshot.totalPrincipalPaid
+is the amount repaid that was not interest and therefore includes the CPI drift
+already captured in the balance repayment. It is displayed as סך ירידת הקרן;
+its caption identifies indexation where relevant. peakPaymentYear(rows) is
+also shipped and reads the combined monthly series, with a relative tolerance
+to avoid a false peak from floating-point drift.
+
+Known nuance. The highest-payment card's amount is the sum of each track's
+own peak, while its year comes from the actual combined monthly payment series.
+For mixes with both rising and falling tracks, those may differ. Changing the
+card amount to the true combined peak is a separate behavior decision.
+
+Not done. Do not add a combined "interest + indexation" value by simply
+summing totalInterest and totalIndexation against סך ירידת הקרן. Indexation
+is already included in the principal column, so a poorly defined aggregate can
+double-count it. Phase 0 instead defines additive chart components explicitly.
+The per-track מרווח שוק field remains a separate product/data-model decision;
+true market spread belongs with later advisor metrics after the forecast and
+cash-flow model is trusted.
+
+Effort S-M for additional derived rows. Risk low for values derived from
+the current schedule, medium for any new market-spread field.
+7. Grace periods (גרייס)
+Gap. Tracks cannot model partial grace (interest-only) or full grace (no
+scheduled payment and unpaid interest capitalized).
+
+Shape. Per-track gracePeriodMonths and graceType: partial | full fields;
+backward-compatible saved-mix defaults; re-amortization over the remaining
+original term; separate first actual payment and representative post-grace
+payment; PTI based on representative payment when grace applies. CPI continues
+during grace on indexed tracks. Grace remains distinct from an explicit balloon
+schedule.
+
+Effort L. Risk high. See Phase 1 in
+docs/SMARTNPV_IMPLEMENTATION.md.
+8. Early repayment and full payoff scenarios (פרעון מוקדם)
+Gap. There is no scheduled payoff or extra-principal event in the monthly
+engine.
+
+Shape. Support full-mix close, full-track close and partial prepayment at a
+selected month after that month's scheduled payment. For partial prepayment,
+implement shortenTerm and reducePayment with clearly defined behavior for
+both Spitzer and equal-principal methods. Compare resulting cash flows to the
+baseline. The prototype remains internal-only until the applicable statutory
+fee is complete and verified.
+
+Effort L. Risk high. See Phase 3 in
+docs/SMARTNPV_IMPLEMENTATION.md.
+9. Compare scenario cap and savings break-even
+Gap. MAX_TRACKS = 3 is used both for tracks within one mix and the number
+of compare scenarios, even though the compare chart already has four mix colors.
+
+Shape. Introduce MAX_MIXES = 4 separately. Keep the per-mix track limit
+unchanged. Then add baseline/candidate monthly cash-flow deltas, fee-aware
+cumulative savings, and a break-even month/year after the prepayment fee model
+is trusted. State explicitly when savings do not break even during the horizon.
+
+Effort S for the cap split, M-L for savings analytics. Risk low for the
+cap split and medium-high for finance comparisons. See Phases 0 and 5 in
+docs/SMARTNPV_IMPLEMENTATION.md.
+10. Refinancing (מחזור)
+Gap. There is no separate existing-mortgage model or refinance simulation
+that preserves historical reset dates and balances.
+
+Shape. Store current payoff balance and each track's historical rate/reset
+information; duplicate an existing mortgage without overwriting it; choose
+whether verified fees are paid from cash or capitalized into the new loan; and
+compare the old and proposed schedules on a shared horizon. Add a visual
+historical-track indicator only after the reset calendar is preserved in the
+math. Show cumulative net cash flow and the break-even point including fees.
+
+Dependency. Do not start until the schedule, grace, forecast, payoff-event,
+fee, and comparison phases are stable.
+
+Effort XL. Risk very high. See Phase 6 in
+docs/SMARTNPV_IMPLEMENTATION.md.
+11. Balloon and staged releases
+Gap. The model cannot represent explicit balloon maturity payments or loan
+draws made in stages.
+
+Shape. Add full and partial balloon as explicit schedule types. Add staged
+draw events with dates/months, amount, and destination track. Interest and CPI
+must apply only to amounts already disbursed. Do not infer balloon behavior
+from grace fields.
+
+Effort L-XL. Risk high. See Phase 7 in
+docs/SMARTNPV_IMPLEMENTATION.md.
+12. Advisor metrics, OCR and reporting
+Gap. True forecast-driven IRR (שת"פ), market spread, automated scanning of
+אישור עקרוני and דוח יתרה לסילוק, and modular client reports are not complete.
+
+Shape. Add advisor metrics only after the monthly cash flows are trusted and
+each metric has a documented definition. Treat OCR as an untrusted extraction
+candidate that requires user review; never fill missing financial data with a
+guess. Reports must reflect the same calculations used in the app.
+
+Effort XL, split into independently reviewable tickets. Risk high to
+very high depending on the feature. See Phase 8 in
+docs/SMARTNPV_IMPLEMENTATION.md.
+Recommended implementation order
+1. Phase 0: payment-composition accounting, chart consistency, explicit
+   indexation total, and MAX_MIXES separation.
+2. Phase 1: grace periods and separate first/representative payments.
+3. Phase 2: monthly CPI scenario paths and variable-rate resets.
+4. Phase 3: internal early-payoff event simulation.
+5. Phase 4: complete, source-verified prepayment-fee engine and release gate.
+6. Phase 5: compare deltas, cumulative savings and break-even analysis.
+7. Phase 6: refinancing with historical reset dates and fee capitalization.
+8. Phase 7: explicit balloon and staged-release schedules.
+9. Phase 8: IRR, market spread, OCR and reporting.
+Already-shipped rate-validity and BOI average-rate work should remain stable and
+must not be regressed by these phases. See docs/SMARTNPV_IMPLEMENTATION.md
+for the file-level tickets, event order, accounting invariants, and definition
+of done.
+
+
+Mortgage Simulation Implementation Plan
+Status: implementation plan only. No calculation or UI feature is implemented by this document.
+
+This document is the detailed implementation source of truth for the next mortgage-simulation phases. docs/roadmap.md remains the short status and priority overview. AGENTS.md and docs/AGENTS.md define the repository-wide engineering rules.
+
+The objective is to evolve Makeyev Finance into a more capable Israeli mortgage simulation and refinancing tool while preserving the existing calculator, saved mixes, URLs, and golden calculation results.
+1. Verified current state
+The following findings are based on the project source in the October 20, 2026 project archive.
+- src/lib/amortization.ts contains the pure monthly amortization calculation, track and schedule types, schedule aggregation, totals, and most derived metrics.
+- The existing calculation supports Spitzer and equal-principal schedules, indexed and unlinked track types, and a single annual CPI assumption. For indexed tracks, CPI starts after month 1 and uses the annual inflation assumption for every subsequent month.
+- YearlyRow, MonthlyRow, TrackResult, combined rows, and TotalsSummary already carry indexation amounts. principal is the amount of payment allocated to paying down the indexed balance, so its lifetime sum includes indexation.
+- The schedule table conditionally displays an indexation column. The cost donut already separates nominal principal, indexation, and interest. Compare already has a cumulative-indexation chart.
+- The calculator's AmortizationChart and compare's composition bars still plot principal and interest as two segments. They need a mathematically reconciled three-component representation.
+- ResultsCards.tsx does not currently show a dedicated total-indexation amount. The existing donut, schedule, and comparison chart provide partial visibility.
+- Grace periods, scheduled early-payment events, repayment-mode selection, prepayment-fee calculations, variable-rate reset projections, monthly CPI forecast paths, balloon schedules, staged releases, and refinancing workflows are not present in the core calculation model.
+- MAX_TRACKS = 3 is also used to cap the number of compare scenarios. The chart theme already defines four mix-series colors, so a track limit and a scenario limit need to become separate concepts.
+- The app has Hebrew and English locale files at src/i18n/he.ts and src/i18n/en.ts. New user-facing strings must be added to every locale currently supported.
+- The project already uses Better Auth and custom SVG charts. Do not add an authentication or chart dependency as part of this roadmap without a separate reason and explicit review.
+2. Non-negotiable calculation rules
+2.1 Keep one schedule as the source of truth
+The calculator, compare view, results cards, schedule tables, charts, payoff scenarios, and refinancing calculations must consume the same calculated schedule. Do not recreate mortgage arithmetic in a React component or maintain separate formula implementations for calculator and compare.
+2.2 Preserve compatibility
+- Existing tracks with no new fields must calculate exactly as before.
+- New track fields must be optional when reading old saved mixes and must hydrate to safe defaults.
+- Existing golden tests must keep passing unless a changed result is an intentional, reviewed correction with a replacement golden case.
+- Keep MAX_TRACKS as the maximum number of loan tracks in one mix. Introduce a separate MAX_MIXES for compare scenarios.
+- Do not silently rewrite stored mixes or drop unknown legacy-safe fields during serialization.
+2.3 Indexation definitions and accounting
+The current row fields use this convention:
+- principal: the cash payment allocated to balance repayment, equal to paid - interest in the existing non-grace model. On an indexed track, its lifetime sum includes the CPI increase added to the balance.
+- indexation: the CPI drift added to the outstanding debt during the period. It is a balance movement, not a separate cash payment made to the bank that month.
+- interest: interest accrued and, in the existing model, paid in the same month.
+- paid: the actual scheduled cash payment for the period.
+For the existing fully amortizing model, the total identities are:
+
+sum(principal) = original principal + sum(indexation)
+
+total paid = original principal + total indexation + total interest
+
+For an additive payment-composition visualization, use one pure helper in src/lib/amortization.ts to derive the three displayed components from a schedule row:
+- netPrincipal = row.principal - row.indexation
+- indexation = row.indexation
+- interestPaid = row.interest for the current no-grace model
+The required period identity is:
+
+netPrincipal + indexation + interestPaid = row.paid
+
+The helper must be used by both calculator and compare charts. Do not independently reimplement the subtraction in each UI component. Do not clamp negative netPrincipal to zero, because that breaks reconciliation. The chart must handle negative values explicitly or use a different visual treatment when the data cannot honestly be represented by a conventional positive stacked bar.
+
+When grace periods are implemented, split interestAccrued from interestPaid. During full grace, interest accrues but is not paid and is capitalized. A later payment can repay capitalized interest, so the schedule must not label that amount as repayment of original nominal principal without a component ledger to support the claim. Revisit and test the composition helper when these fields are added.
+
+Do not add indexation to a balance or principal series that already incorporates CPI. The outstanding balance line already includes accumulated indexation. Show the CPI drift as its own series, an explanatory overlay, or a clearly defined counterfactual, not as a second addition to the indexed balance.
+2.4 Define the monthly event order once
+Use this order for new schedule events, with all edge cases documented in tests:
+1. Validate the month inputs and identify any rate reset effective at the start of this month.
+2. Apply the effective annual rate for this month.
+3. Apply CPI indexation to eligible indexed balances. Preserve the current compatibility rule that the existing model does not index month 1.
+4. Accrue interest on the balance after indexation using the effective rate for this month.
+5. Determine the scheduled payment based on the amortization method, remaining term, current balance, and grace state.
+6. Apply the scheduled payment. Track the interest actually paid and the principal amount paid separately. In full grace, scheduled payment is zero and unpaid interest capitalizes.
+7. Apply a configured extra repayment or full payoff after the scheduled payment for that month. The user-facing scenario must explicitly say that the selected event happens after that month's scheduled payment.
+8. Calculate the closing balance and record the period outputs.
+A statutory prepayment fee is a separate amount calculated by the fee engine. Never hide a fee by silently adding it to principal or treating it as interest.
+2.5 Assumptions must be visible
+A forecast is a user-selected scenario, not a prediction. Show its CPI assumptions, rate-reset dates and assumed rates, and the timestamp/source for any official data. Do not imply the app knows future inflation or bank rates.
+3. Implementation phases and file-level tickets
+Effort values are rough first-pass estimates and include unit tests, localization, and relevant end-to-end coverage. They are not promises.
+Phase 0: Accounting charts, explicit indexation, and compare limits
+Priority: P0. Effort: M. Risk: medium because the chart data comes from core financial rows.
+Ticket 0.1: Add the shared payment-composition helper
+Files:
+- src/lib/amortization.ts
+- tests/unit/amortization.test.ts
+- tests/unit/trend.test.ts
+Implement a pure helper that accepts the relevant period fields and returns netPrincipal, indexation, and interestPaid. Use the formula and definitions in section 2.3. The helper must not mutate rows, apply rounding, or format currency.
+
+Tests must cover:
+- Indexed and unlinked periods.
+- Zero indexation.
+- Normal periods where all components are non-negative.
+- A period where netPrincipal is negative. Keep the exact negative value and prove the components still sum to the period's payment within a defined floating-point tolerance.
+- Yearly aggregation equals the sum of monthly components.
+- Lifetime identities for existing fully amortizing indexed fixtures.
+Ticket 0.2: Update the calculator amortization chart
+Files:
+- src/features/calculator/ScheduleSection.tsx
+- src/features/calculator/AmortizationChart.tsx
+- src/features/calculator/PerTrackChart.tsx only if its chart semantics are changed
+- src/i18n/he.ts
+- src/i18n/en.ts
+- Relevant calculator schedule e2e specs
+Feed the chart the shared helper's values. The composition must reconcile to the actual payment for each period. Retain the remaining-balance series on its existing scale and do not add cumulative CPI to a balance that already includes CPI. Make the tooltip and accessible text explain the displayed components. If a negative component makes an ordinary stacked bar misleading, use a diverging or otherwise explicit treatment instead of clamping it.
+Ticket 0.3: Update compare composition bars
+Files:
+- src/features/compare/trend.ts
+- src/features/compare/CompareTrendChart.tsx
+- src/features/compare/computeScenario.ts
+- tests/unit/trend.test.ts
+- tests/unit/compare.test.ts
+- e2e/tests/ui/compare.spec.ts
+Use the same helper as the calculator. All scenarios must use the same component definitions and negative-value handling. Keep the existing cumulative-indexation chart; this ticket improves payment composition and must not remove the already-shipped indexation line.
+Ticket 0.4: Make total indexation easy to find
+Files:
+- src/features/calculator/ResultsCards.tsx
+- src/features/calculator/useCalculatorViewModel.tsx if a view-model field is needed
+- src/i18n/he.ts
+- src/i18n/en.ts
+- Calculator results-card unit/e2e coverage
+Show the total indexation amount for mixes that have indexed tracks. Follow the existing card and details-dialog patterns. If adding a card, update the expansion/collapse timing and card-count tests instead of leaving animation constants out of sync. The value must reconcile to snapshot.totals.totalIndexation and the schedule totals.
+Ticket 0.5: Separate track and mix limits
+Files:
+- Add src/features/compare/constants.ts for MAX_MIXES = 4, unless a closer existing shared location is found during implementation.
+- src/features/compare/ComparePage.tsx
+- src/stores/comparisonStore.ts
+- src/styles/globals.css
+- Relevant compare unit and e2e tests
+Use MAX_TRACKS only for the number of tracks inside a mix. Use MAX_MIXES only for the number of scenarios being compared. Confirm that add, duplicate, seed, load, and compare controls all respect the four-scenario limit and that each mix remains limited to the existing track count. Keep the four chart colors aligned with the four-mix maximum.
+Phase 0 acceptance criteria
+- Both calculator and compare charts use the same pure component helper.
+- The three chart components reconcile to each period's payment, including negative net-principal cases.
+- Existing indexed-balance charts do not double-count indexation.
+- The total CPI amount is explicitly discoverable in calculator results.
+- A compare can contain four mixes, while each mix still has the existing track cap.
+- Existing saved mixes, routes, golden outputs, and the mobile no-overflow contract remain intact.
+Phase 1: Grace periods
+Priority: P1. Effort: L. Risk: high because grace changes the balance path and representative payment.
+Data model and calculation
+Files:
+- src/lib/amortization.ts
+- src/stores/calculatorStore.ts
+- src/features/compare/computeScenario.ts
+- src/server/mixes/schema.ts
+- src/features/calculator/TrackForm.tsx and its parent in src/features/calculator/CalculatorPage.tsx
+- src/features/compare/ComparePage.tsx
+- src/i18n/he.ts, src/i18n/en.ts
+Add optional per-track fields:
+- gracePeriodMonths: integer from 0 to less than the track term. Zero means no grace.
+- graceType: partial or full. Ignore or normalize it to partial when grace length is zero.
+Keep the fields optional in the saved-mix schema so old data still loads. When serializing, preserve new values. Hydration of old mixes defaults to no grace.
+
+Grace semantics:
+- Partial grace: pay accrued interest during the grace months; scheduled principal repayment is zero.
+- Full grace: scheduled payment is zero; interest not paid is capitalized into the balance.
+- CPI still applies to indexed tracks during grace according to the selected CPI scenario.
+- Grace is inside the original loan term. It does not extend the maturity date.
+- After grace, amortize the then-current balance over the remaining original months.
+- Grace is not balloon. Balloon structures get their own explicit schedule type in a later phase.
+For equal-principal schedules, explicitly test how the post-grace principal installments are recalculated over remaining months. Do not reuse the old original-principal divisor in a way that leaves a residual balance or extends the term.
+Result model and PTI
+Add representativePayment to the result model. It is the first normal scheduled payment after grace; with no grace it equals the first scheduled payment. Keep firstPayment as the first actual payment, which can be interest-only or zero during grace.
+
+Use representative payment for the displayed PTI assessment when grace exists, unless an explicitly sourced bank rule defines a different representative amount. Show both values in the calculator and in each compare scenario. Do not silently replace the first-payment result with the representative payment.
+Tests and acceptance criteria
+Add golden tests for partial and full grace on Spitzer and equal-principal tracks, indexed and unlinked tracks, zero interest, grace length zero, grace ending one month before maturity, invalid grace longer than term, and full grace where interest capitalizes. Assert the original maturity month is preserved and the ending balance is zero within tolerance. Test PTI using representative payment while retaining first actual payment in the initial-payment display. Add RTL/LTR and narrow viewport e2e coverage.
+Phase 2: Monthly CPI forecasts and variable-rate resets
+Priority: P2. Effort: L. Risk: high because all future cash flows become scenario-dependent.
+Model
+Files:
+- src/lib/amortization.ts
+- src/stores/calculatorStore.ts
+- src/features/compare/computeScenario.ts
+- New focused forecast types/helper, preferably src/lib/forecast.ts
+- A forecast editor component under src/features/calculator/
+- src/features/compare/ComparePage.tsx
+- src/i18n/he.ts, src/i18n/en.ts
+Keep annualInflation as the legacy fallback. Add an optional monthly CPI assumption path and explicit rate-reset assumptions. Validate path lengths and values, and do not allow NaN, Infinity, negative CPI factors that would make the balance invalid, duplicate reset months, or reset months outside the loan term.
+
+Use sorted rate assumptions with one-based loan month indexes. A reset at month m affects the rate before that month's CPI and interest calculations. Recalculate the scheduled payment using the current balance and remaining term after each reset, except when a later repayment mode explicitly preserves a fixed scheduled payment.
+
+Provide a small, explicit forecast model first: user-entered dated/month-indexed milestones and deterministic interpolation between them. Show the source and assumptions. Do not add a forecasting service or pretend that interpolated values are official forecasts. Do not change legacy calculations when no forecast path or reset is supplied.
+Tests and acceptance criteria
+Test constant-path equivalence with the existing annual CPI option, zero inflation, several CPI milestones, reset exactly on a boundary month, multiple resets, no reset, a reset at the final month, indexed and unlinked loans, and interaction with grace. All chart tooltips must state that the values are scenario projections. The same assumptions must be used in calculator and compare.
+Phase 3: Early repayment and full-mix payoff events
+Priority: P3. Effort: L. Risk: high. Build this as a calculation capability first, then enable it for real users only after the applicable fee calculation in Phase 4 is complete and verified.
+Event model
+Files:
+- src/lib/amortization.ts or a focused event module such as src/lib/repaymentEvents.ts
+- src/stores/calculatorStore.ts
+- src/features/compare/computeScenario.ts
+- Add src/features/calculator/EarlyRepaymentPanel.tsx when the user-facing feature is approved
+- src/i18n/he.ts, src/i18n/en.ts
+- Unit tests and calculator/compare e2e specs
+Support these separate actions:
+1. Close an entire mix at selected month T after that month's scheduled payment.
+2. Fully repay one selected track at selected month T.
+3. Make a partial prepayment on a track at selected month T.
+Partial repayment modes:
+- shortenTerm: for Spitzer, keep the scheduled payment amount after the prepayment and pay the loan off earlier, adjusting the final payment. For equal-principal, retain the current principal installment where possible and close the loan earlier.
+- reducePayment: retain the original maturity date and recalculate the future payment schedule over the remaining months.
+The output must include the event month, pre-event scheduled payment, balance after the scheduled payment, extra principal amount, balance after the event, new payment or maturity, total paid before the event, and the resulting schedule. For a full close, show the payoff balance separately from future payments avoided. Do not call avoided payments guaranteed savings without comparing the actual scenarios and all fees.
+
+Make the month convention explicit in UI: event happens after the regular payment in the selected month. A fee is a separate line item and is not silently added to principal.
+Release gate
+A prototype that calculates payoff without required statutory fees is internal-only and test-only. Do not expose it as a complete early repayment quote or imply that it is the amount the borrower must pay. It can be developed behind an internal feature flag while Phase 4 is in progress.
+Tests and acceptance criteria
+Test month 1, middle month, final month, amount equal to balance, amount above balance, zero amount, invalid month, and an event coinciding with a rate reset or CPI change. Test both amortization methods and indexed/unlinked tracks. For a full mix close, no track may accrue payments after the close month. Verify that the baseline schedule is unchanged when no event is supplied.
+Phase 4: Statutory prepayment-fee engine
+Priority: P4. Effort: XL. Risk: very high. Do not treat simplified reference notes as a legal specification.
+
+Files:
+- New src/lib/prepayment.ts
+- Official-data fixtures under tests/fixtures/
+- tests/unit/prepayment.test.ts
+- The early repayment panel and calculator view model, only after validation
+- src/i18n/he.ts, src/i18n/en.ts
+Before coding the full formula, assemble and document the applicable official Bank of Israel rules, fee components, exemptions, discounts, comparison-rate buckets, and calculation examples. Match at least two or three authoritative examples to within the stated official rounding. Record the source URL and verification date in the documentation and fixture metadata.
+
+Implement the legally applicable fee calculation for the supported track types and payoff cases, with each fee component reported separately. If only one component is implemented or an input cannot be supported, keep the calculator internal-only. Never label a partial discounting fee as the complete statutory prepayment fee. Use explicit supported, unsupported, or unavailable states rather than returning a confident-looking zero.
+
+Stress cases may compare supplied current-rate scenarios, but future rates must be labeled assumptions. The effective-rate surcharge can be a later sub-ticket and must be derived from the same tested cash flows and fee amounts.
+
+Acceptance criteria: official examples match; indexed and unlinked tracks have separately verified handling; exemption and discount boundaries are tested; zero/negative/non-finite inputs are rejected; incomplete fee coverage cannot be presented as a final payoff amount; fees remain separate from scheduled principal, CPI and interest in schedules and reports.
+Phase 5: Compare improvements and break-even analysis
+Priority: P5. Effort: M-L. Risk: medium-high after the shared schedule and fee model are trusted.
+
+Files:
+- src/features/compare/computeScenario.ts
+- src/features/compare/trend.ts
+- src/features/compare/CompareTrendChart.tsx
+- src/features/compare/ComparePage.tsx
+- src/stores/comparisonStore.ts
+- Relevant compare unit and e2e tests
+Add baseline-versus-candidate deltas using the shared monthly schedule. Include payment difference, remaining balance, interest, CPI indexation, fees, and cumulative net cash-flow difference. Mark the break-even month/year when cumulative savings first cross zero. If the curve never crosses zero within the compared horizon, state that plainly.
+
+Include the prepayment fee in refinance/payoff comparisons only when Phase 4 says that fee is complete and supported for the selected tracks. Distinguish cash-flow savings from nominal lifetime repayment differences. Keep the compare page readable at 360px and at the existing 1280px no-sideways-scroll test width.
+Phase 6: Refinancing workflow
+Priority: P6. Effort: XL. Risk: very high. Do not start before Phases 1 through 5 are stable.
+
+Build an explicit existing-mortgage model, separate from an ordinary new mix. Capture each existing track's current balance, original terms/rate data needed for fee calculation, next reset date, adjustment frequency, linkage type, method, and payoff date. Missing document data must be marked unknown, not invented.
+
+Support duplication into a proposed mix with a clear choice for whether the applicable verified payoff fees are paid from cash or capitalized into the new loan. Preserve historical reset calendars for duplicated old tracks. Newly proposed refinance tracks use their own new reset calendars. Compare the old and new schedules on the same horizon, with fee-inclusive cash flows and a break-even month/year.
+
+The reference's purple-dot concept can be represented as a historical-track indicator, but the indicator itself is not a substitute for correctly preserving the loan's historical dates and reset cycle.
+
+Acceptance criteria: the old mortgage is never overwritten by duplication; the user can compare original versus new terms; fee capitalization is explicit; historical resets are tested; fee-free refinancing is not displayed as financially complete; cumulative savings and break-even reconcile to monthly cash flows.
+Phase 7: Explicit balloon and staged-release schedules
+Priority: P7. Effort: L-XL. Risk: high.
+
+Add explicit schedule types for full balloon and partial balloon. Do not infer a balloon from grace fields. Full balloon accumulates/handles interest according to the defined contract and repays principal at its maturity; partial balloon must state which principal portion amortizes and which remains due at the end.
+
+Add staged disbursements as dated/month-indexed draw events, including which tracks receive each draw and the amount. Interest and CPI must only be computed against capital actually disbursed at each point. Keep the original total approved amount separate from amounts already drawn. A mix may be locked against incompatible edits only if that rule is visible, reversible, and tested.
+
+Acceptance criteria: draws before/after milestone dates, uneven amounts, indexed and unlinked tracks, no draw, full draw, and maturity with balloon remainder all have golden cases.
+Phase 8: Advisor metrics and operational features
+Priority: P8. Effort: XL, best split into separate tickets.
+
+Possible sub-tickets after the underlying cash flows are trusted:
+- True forecast-driven effective IRR (שת"פ) computed from dated cash flows, separately describing the treatment of CPI and any fees.
+- Return per shekel, duration and a market-spread metric, each with a documented definition and tested reference values. Do not use bank margin as if it were a comparable market spread.
+- PDF parsing for אישור עקרוני and דוח יתרה לסילוק. Treat OCR results as untrusted extraction candidates and require user review before changing a calculation.
+- Modular client reports, monthly amortization schedules, documentation notes, and rate-expiry notifications.
+Do not begin OCR or report polish ahead of the calculation engine, saved-data compatibility and verified payoff flow. OCR must never fill missing financial numbers with guesses.
+4. Test plan and definition of done
+For each phase:
+1. Write or update the pure calculation tests before the UI implementation.
+2. Check at least two or three sample calculations by hand or in a scratch calculation, as required by AGENTS.md.
+3. Run the focused unit tests, then npm test, npm run typecheck, and npm run lint when dependencies are installed.
+4. Run relevant Playwright specs and the complete npm run test:e2e suite when practical. Use the existing Page Object Model.
+5. Verify a Hebrew RTL view and an English LTR view, light and dark themes, and narrow screen width around 360px.
+6. Confirm old saved mixes with absent new fields still load and re-save without losing existing values.
+7. Check NaN, Infinity, negative inputs, zero rate, zero CPI, maximum term, payoff near maturity, and rounding of the last installment.
+8. Reconcile charts, summary cards, tables and comparison deltas to the exact same source schedule.
+A phase is not done merely because the UI appears. The calculation tests, accessibility/i18n coverage, compatibility checks, and any required official references are part of its acceptance criteria.
+5. Recommended execution order
+1. Phase 0: additive indexation accounting, results visibility, and MAX_MIXES separation.
+2. Phase 1: grace periods and separate first/representative payments.
+3. Phase 2: forecast paths and variable-rate resets.
+4. Phase 3: internal early-payoff event simulation.
+5. Phase 4: verified complete fee calculation and release gate.
+6. Phase 5: fee-aware comparison, cumulative savings and break-even.
+7. Phase 6: refinancing with historical reset dates.
+8. Phase 7: balloon and staged releases.
+9. Phase 8: IRR, market spread, OCR and reporting.
+Do not skip ahead to a later phase because its UI is more visible. Later features depend on the accuracy and consistency of the monthly schedule.
+
+
+Mortgage Simulation: Step-by-Step Implementation Plan
+This breaks the roadmap and detailed implementation plan into small, sequential steps. Complete each step, run its focused tests, and review the result before moving on. Effort estimates are omitted because they are not commitments.
+Before starting
+Step 0 — Establish the baseline
+- Read AGENTS.md, docs/AGENTS.md, docs/roadmap.md, and docs/SMARTNPV_IMPLEMENTATION.md.
+- Run the existing tests, typecheck, lint, and relevant Playwright tests where dependencies allow.
+- Record existing golden calculation results and verify saved mixes still load.
+- Keep the existing rate-validity feature and BOI average-rate tables stable; avoid regressions.
+Done when: the baseline is understood and existing failures are distinguished from new ones.
+Phase 0 — Accounting, charts, indexation visibility, compare limits
+Step 1 — Add one shared payment-composition helper
+- In src/lib/amortization.ts, derive netPrincipal, indexation, and interestPaid from each schedule row.
+- Use netPrincipal = row.principal - row.indexation and preserve negative results.
+- Do not mutate rows, round values, or format currency in this helper.
+- Add unit tests for indexed/unlinked periods, zero indexation, negative net principal, monthly-to-yearly aggregation, and lifetime totals.
+Done when: the components reconcile to the actual payment within a defined floating-point tolerance.
+Step 2 — Update the calculator amortization chart
+- Update AmortizationChart.tsx to use the shared helper.
+- Keep the remaining-balance series on its current scale and do not add CPI again to a balance that already includes it.
+- Make tooltips and accessible text explain each component.
+- Show negative components honestly; do not clamp them to zero.
+- Add Hebrew and English strings and relevant UI tests.
+Done when: calculator chart components add up to each period's payment.
+Step 3 — Update compare payment-composition charts
+- Update trend.ts, CompareTrendChart.tsx, and computeScenario.ts to use the same helper.
+- Match the calculator's component definitions and negative-value treatment.
+- Keep the existing cumulative-indexation chart.
+- Add or update unit and Playwright tests.
+Done when: calculator and compare present the same component math without removing existing CPI visibility.
+Step 4 — Show total indexation in calculator results
+- Add a dedicated total-indexation amount to ResultsCards.tsx, using the existing result-card/details patterns.
+- Show it for mixes with indexed tracks and add Hebrew/English labels.
+- Reconcile it with snapshot.totals.totalIndexation and the schedule totals.
+- Update card-count, expand/collapse, unit, and e2e tests if needed.
+Done when: users can find the total CPI indexation amount directly in results.
+Step 5 — Separate compare limits from track limits
+- Keep MAX_TRACKS = 3 for tracks within one mortgage mix.
+- Introduce MAX_MIXES = 4 for compare scenarios.
+- Update compare controls, stores, styling, and tests for add, duplicate, seed, load, and compare behavior.
+Done when: compare supports four mixes while each mix retains the existing track limit.
+Phase 0 exit check
+- Confirm all charts use the shared helper and reconcile.
+- Confirm existing saved mixes, routes, golden outputs, and the mobile no-horizontal-overflow contract still pass.
+Phase 1 — Grace periods
+Step 6 — Add backward-compatible grace fields
+- Add optional per-track gracePeriodMonths and graceType (partial or full).
+- Validate that grace is zero or less than the loan term; normalize the type when grace is zero.
+- Update calculator state, compare scenarios, saved-mix schema, forms, and Hebrew/English strings.
+- Old saved mixes must default to no grace and preserve all existing fields when saved again.
+Done when: old data still loads unchanged and new grace settings round-trip through save/load.
+Step 7 — Implement grace calculations
+- Partial grace: charge interest but no scheduled principal repayment.
+- Full grace: scheduled payment is zero and unpaid interest is capitalized.
+- Continue CPI on indexed tracks during grace.
+- Keep grace within the original term; after grace, amortize the then-current balance over the remaining months.
+- Handle equal-principal schedules explicitly so they neither leave a residual nor extend maturity.
+Done when: golden tests cover both grace types, both repayment methods, indexed/unlinked tracks, zero rates, boundary lengths, and capitalization; the loan still ends on its original maturity month.
+Step 8 — Separate first and representative payments
+- Keep firstPayment as the first actual payment, even when it is interest-only or zero.
+- Add representativePayment as the first normal scheduled payment after grace; without grace, it equals the first payment.
+- Use the representative payment for displayed PTI when grace applies, unless an authoritative bank rule requires otherwise.
+- Show both values in calculator and compare results.
+Done when: PTI and displayed payments use the correct values and RTL/LTR, narrow-screen tests pass.
+Phase 2 — CPI forecasts and variable-rate resets
+Step 9 — Define and validate forecast inputs
+- Keep annual CPI as the backward-compatible fallback.
+- Add optional month-indexed CPI assumptions and dated/month-indexed rate resets.
+- Reject invalid values, duplicate reset months, out-of-term resets, and paths containing non-finite numbers.
+- Use explicit user assumptions and deterministic interpolation; do not present them as official forecasts.
+Done when: the forecast model is validated and schedules without forecast inputs remain unchanged.
+Step 10 — Apply monthly assumptions in the calculation engine
+- Use one documented monthly event order: apply a rate reset, apply that month's rate, apply CPI where eligible, accrue interest, calculate the scheduled payment, apply payment, process any post-payment event, then record the closing balance.
+- Preserve the existing rule that CPI does not apply in month 1.
+- Recalculate payment using the current balance and remaining term after each reset, unless a future repayment mode explicitly preserves a fixed payment.
+- Use the same assumptions in calculator and compare.
+Done when: tests cover reset boundaries, multiple/final-month resets, CPI milestones, indexed/unlinked tracks, and interaction with grace.
+Step 11 — Expose forecast assumptions clearly
+- Add a small forecast editor for user-entered milestones and assumptions.
+- Make charts show the exact path used by the engine.
+- Label outputs as scenario projections and show the assumptions/source in chart tooltips or a text summary.
+Done when: users can understand which assumptions produced the forecast, and calculator/compare results match.
+Phase 3 — Early repayment and payoff events (internal only initially)
+Step 12 — Add full-mix and full-track payoff events
+- Support closing an entire mix or fully repaying a selected track in a selected month.
+- The event occurs after that month's scheduled payment.
+- Stop future payments for the closed mix/track and report the payoff balance separately from future payments avoided.
+- Keep the baseline schedule unchanged when no event is configured.
+Done when: tests cover first, middle, and final months; reset/CPI overlap; and no payments after closure.
+Step 13 — Add partial prepayment modes
+- Support a selected extra-principal amount with shortenTerm and reducePayment modes.
+- For Spitzer, shorten the term while retaining the scheduled payment where possible, or recalculate payments while retaining maturity for reducePayment.
+- For equal-principal, preserve the current principal installment where possible when shortening the term; recalculate remaining installments for reducePayment.
+- Return event month, pre-event payment, balance before/after the event, extra principal, new payment or maturity, amount paid to date, and resulting schedule.
+Done when: tests cover zero, valid, over-balance, and balance-equal amounts across both repayment methods and indexed/unlinked tracks.
+Step 14 — Keep payoff prototypes gated
+- Until the statutory fee engine is complete and verified, keep payoff features internal-only/test-only or behind an internal feature flag.
+- Do not call payments avoided guaranteed savings or present a fee-free result as a complete payoff quote.
+- Keep fees separate from principal, CPI, and interest.
+Done when: no public flow implies that an incomplete payoff calculation is the amount legally due.
+Phase 4 — Statutory early-repayment fee engine
+Step 15 — Verify the official rules before implementing formulas
+- Document the applicable Bank of Israel rules, fee components, exemptions, discounts, comparison-rate buckets, amendments, and examples.
+- Record source URLs and verification dates.
+- Assemble official test fixtures and match at least two or three authoritative worked examples.
+Done when: the rules and fixtures are documented well enough to implement without relying on this roadmap as a legal specification.
+Step 16 — Implement and validate the fee engine
+- Build src/lib/prepayment.ts with each applicable fee component reported separately.
+- Verify indexed and unlinked tracks, supported payoff cases, exemptions, discounts, and rounding boundaries.
+- Reject invalid/non-finite inputs and represent unsupported cases explicitly; never return a confident-looking zero for an unsupported calculation.
+- Keep incomplete fee coverage internal-only.
+Done when: official examples match within stated rounding and incomplete cases cannot be shown as a complete statutory fee.
+Step 17 — Release the supported payoff flow
+- Connect verified fee results to payoff scenarios only for explicitly supported track types and cases.
+- Show fees as separate line items and retain the event-month convention.
+- Add UI, localization, unit, and e2e coverage for supported and unsupported states.
+Done when: public payoff output is enabled only for cases fully supported by the verified fee model.
+Phase 5 — Compare savings and break-even
+Step 18 — Add baseline-versus-candidate comparison metrics
+- Use the shared monthly schedules to calculate differences in payment, remaining balance, interest, CPI indexation, fees, and cumulative net cash flow.
+- Include fees only where Phase 4 verifies they are supported.
+- Distinguish cash-flow savings from nominal lifetime repayment differences.
+Done when: comparison totals reconcile to the underlying monthly cash flows.
+Step 19 — Add break-even analysis
+- Mark the month/year when cumulative net savings first cross zero.
+- If they never cross zero within the comparison horizon, say so explicitly.
+- Keep the compare page readable at roughly 360px and at the existing desktop test width.
+Done when: break-even results are correct for positive, negative, and never-break-even scenarios.
+Phase 6 — Refinancing workflow
+Step 20 — Model the existing mortgage separately
+- Capture each current track's balance, original terms/rate data required for fee calculation, next reset date, reset frequency, linkage, repayment method, and payoff date.
+- Mark missing document data as unknown instead of guessing.
+- Preserve historical reset calendars.
+Done when: the existing mortgage can be represented without overwriting or inventing missing details.
+Step 21 — Build and compare a proposed refinance
+- Allow users to duplicate the existing mortgage into a proposed mix without altering the original.
+- Make it explicit whether verified fees are paid in cash or capitalized into the new loan.
+- Compare old and new schedules on the same horizon, with fee-inclusive cash flows and a break-even point.
+- Do not start this phase until Phases 1–5 are stable and fee handling is verified.
+Done when: historical resets, fee treatment, cumulative savings, and break-even reconcile to the monthly cash flows.
+Phase 7 — Balloon loans and staged releases
+Step 22 — Add explicit balloon schedule types
+- Support full and partial balloons as their own schedule types; do not infer a balloon from grace fields.
+- Define which principal amortizes and which amount remains due at maturity.
+- Define contract-specific interest handling and test the maturity balance.
+Done when: balloon behavior is explicit and verified for full and partial structures.
+Step 23 — Add staged disbursement events
+- Add dated/month-indexed draw events with amount and destination track.
+- Calculate CPI and interest only on amounts already disbursed.
+- Keep the approved amount separate from the amount drawn.
+Done when: tests cover uneven draws, different dates, indexed/unlinked tracks, no draw, full draw, and balloon balances at maturity.
+Phase 8 — Advisor metrics and operational features
+Step 24 — Add verified cash-flow metrics
+- Add forecast-driven effective IRR from dated cash flows, documenting treatment of CPI and fees.
+- Consider return per shekel, duration, and market spread only after each metric has a documented definition and tested reference values.
+- Do not treat bank margin as interchangeable with market spread.
+Done when: each displayed metric has a precise definition and reconciles to the shared schedule.
+Step 25 — Add document extraction and reporting
+- Add OCR for approval documents and payoff-balance reports only after the core calculation and payoff flows are trusted.
+- Treat extracted values as untrusted candidates and require user review before they affect a calculation.
+- Add modular client reports, amortization schedules, documentation notes, and rate-expiry notifications.
+- Never fill missing financial values with guesses; reports must use the same calculations as the app.
+Done when: extracted data is reviewable and reports reconcile with on-screen calculations.
+Required checks for every step
+1. Add or update pure calculation tests before or alongside UI work.
+2. Manually verify at least two or three sample calculations where the math changes.
+3. Run focused tests, then npm test, npm run typecheck, and npm run lint when dependencies are installed.
+4. Run relevant Playwright tests and the full npm run test:e2e suite when practical.
+5. Check Hebrew RTL and English LTR, light and dark themes, and a narrow viewport around 360px.
+6. Verify old saved mixes still load and re-save without data loss.
+7. Test invalid/non-finite inputs, zero rate/CPI, maximum term, payoff near maturity, and final-payment rounding where relevant.
+8. Reconcile charts, cards, tables, and comparison results to the same calculated schedule.
+Non-negotiable rules
+- The shared monthly schedule is the source of truth; do not duplicate mortgage arithmetic in React components.
+- Preserve legacy results when no new optional feature is configured.
+- Keep MAX_TRACKS and MAX_MIXES separate.
+- Never double-count CPI indexation in balances or principal; the indexed balance already includes it.
+- Never clamp negative net principal just to make a chart look normal.
+- Keep statutory fees separate from principal, indexation, and interest.
+- Label forecasts as assumptions, not predictions or official rates.
+- A phase is not complete just because the UI looks correct: tests, compatibility, localization, accessibility, and required official sources are part of done.
