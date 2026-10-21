@@ -211,19 +211,25 @@ the main one (היוון) first.
   the payment-by-payment sum, cover the reductions, all three exemptions, the
   reset split, the rate addition and the allocation order, and reproduce the
   BOI's published worked example (see the gate below). E2e covers pricing, the
-  per-track exit-station waiver, the payoff order, the past-term empty state
-  and the English locale.
+  per-track exit-station waiver, the payoff order, the past-term empty state,
+  the optional 3(4) cap and the English locale.
 - NOT shown in the panel: the operational fee (₪60/track), the no-notice fee (up
   to 0.1%) and the CPI compensation fee. `prepaymentExtras` computes all three
   under their statutory caps and the unit tests pin them, but they stay out of
   the panel: they are caps rather than quotes, and two of them depend on facts
   the panel does not ask (notice given, day of the month). They are named in the
   panel's disclaimer and belong on top of `fee`.
-- NOT applied in the panel: section 3(4)'s origination-rate cap. The formula
-  and its tests are there, but the calculator does not know the loan's
-  origination date or the average rate then, so passing today's table would
-  invent C. Leaving the cap off can overstate the fee, never understate it. The
-  panel says so. Feeding it needs the deferred origination-date data model.
+- Section 3(4)'s origination-rate cap is optional and per track. A collapsed
+  "תקרת ריבית מקורית (סעיף 3(4))" block under the fee table asks for the BOI
+  average rate for that track's type and term on the origination date. A value
+  below the contractual rate becomes C, the formula discounts at `min(R, C)`,
+  and the fee (and its rate addition and payoff order) drops. Blank keeps the
+  uncapped estimate; a value above the contractual rate changes nothing.
+- The panel never invents C from today's table: the average at origination is a
+  fact the calculator does not hold, so the field is an explicit, optional
+  input. The disclaimer says the uncapped estimate can only be too high, never
+  too low. E2e enters a lower value, checks the fee falls, then enters one above
+  the contractual rate and checks the fee returns.
 
 **Gate (closed).** The BOI's published worked example is reproduced exactly:
 ₪500,000, 5% nominal contractual vs 4% nominal average over 120 months gives
@@ -415,8 +421,7 @@ in this model indexation is folded into the principal column, so a combined
 "interest + indexation" row would count the indexation twice against סך ירידת
 הקרן. The indexation is instead named in that card's caption (and the donut
 shows the three-way split). Say the word if the combined figure is wanted anyway
-as a labelled cut. Section 3(4)'s origination-rate cap is the only item left
-open, and it needs an origination-rate input the calculator does not collect.
+as a labelled cut.
 
 ---
 
@@ -431,5 +436,6 @@ open, and it needs an origination-rate input the calculator does not collect.
    reproduces exactly.
 6. **Item 5** (resets and forecast) - shipped with the approved +/-1pp and flat
    CPI assumptions. The approval date and the per-track מרווח שוק are now also
-   persisted with a saved mix. The only piece left is section 3(4)'s
-   origination-rate cap, which needs an input the calculator does not collect.
+   persisted with a saved mix. Item 3's 3(4) cap now has its optional per-track
+   input, so the roadmap's items are all shipped. What could still follow is
+   filling C automatically from a dated BOI history if one is ever added.

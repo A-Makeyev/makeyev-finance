@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@/router'
 import { useCalculatorViewModel } from './useCalculatorViewModel'
@@ -52,9 +52,11 @@ const clampYears = (value: number): number => Math.min(MAX_YEARS, Math.max(1, va
  * The היוון fee is the statutory core. The operational fee (up to ₪60 per
  * track), the no-notice fee (up to 0.1%) and the CPI compensation for indexed
  * loans repaid on days 1-15 are not modelled; the panel's note says they are
- * charged on top. Section 3(4)'s origination-rate cap is not applied either:
- * the calculator does not know the loan's origination date or the average rate
- * then, so the estimate may be higher than the actual fee, never lower.
+ * charged on top. Section 3(4)'s origination-rate cap is optional: the user can
+ * enter the BOI average rate for a track's term on the origination date, and
+ * the formula then discounts at the lower of that and the contractual rate.
+ * With no value the cap is left off, so the estimate may be higher than the
+ * actual fee, never lower.
  */
 export function PrepaymentSection() {
   const { t } = useTranslation()
@@ -67,6 +69,18 @@ export function PrepaymentSection() {
   const [manualMarketText, setManualMarketText] = useState('')
   const [onExitStation, setOnExitStation] = useState(false)
   const [partialText, setPartialText] = useState('')
+  /** Optional section 3(4) origination average per track, keyed by row id. */
+  const [capRateTexts, setCapRateTexts] = useState<Record<string, string>>({})
+
+  const capRateFor = useCallback(
+    (rowId: string): number | undefined => {
+      const raw = capRateTexts[rowId]
+      if (raw === undefined || raw.trim() === '') return undefined
+      const parsed = Number.parseFloat(raw)
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
+    },
+    [capRateTexts],
+  )
 
   const prepayYears = clampYears(Number.parseFloat(prepayYearsText) || DEFAULT_PREPAY_YEARS)
   const prepayMonths = Math.round(prepayYears * 12)
@@ -120,11 +134,13 @@ export function PrepaymentSection() {
       ]
       const remainingYears = remainingMonths / 12
       const marketRate = marketRateFor(track, remainingYears)
+      const rowId = `${track.type}-${index}`
       const breakdown = prepaymentFee({
         payments,
         balance,
         annualRatePercent: track.annualRatePercent,
         marketRatePercent: marketRate,
+        originationAverageRatePercent: capRateFor(rowId),
         type: track.type,
         indexed: track.isIndexed,
         annualInflation,
@@ -132,7 +148,7 @@ export function PrepaymentSection() {
         onExitStation,
       })
       result.push({
-        id: `${track.type}-${index}`,
+        id: rowId,
         type: track.type,
         balance,
         marketRate,
@@ -147,7 +163,7 @@ export function PrepaymentSection() {
       })
     }
     return result
-  }, [tracks, annualInflation, prepayMonths, manualMarket, onExitStation, rates.data])
+  }, [tracks, annualInflation, prepayMonths, manualMarket, onExitStation, rates.data, capRateFor])
 
   const totalFee = rows.reduce((sum, row) => sum + row.breakdown.fee, 0)
   const partialAmount = Number.parseFloat(partialText.replace(/[,\s₪]/g, '')) || 0
@@ -285,6 +301,40 @@ export function PrepaymentSection() {
               </tfoot>
             </table>
           </div>
+
+          <details className="prepayment-note prepayment-cap" data-testid="prepayment-cap">
+            <summary>
+              <span className="collapse-caret" aria-hidden="true" />
+              {t('calculator.prepayment.capTitle')}
+            </summary>
+            <p className="prepayment-note-lead">{t('calculator.prepayment.capLead')}</p>
+            <div className="prepayment-cap-grid">
+              {rows.map((row) => (
+                <label className="input-group prepayment-field" key={row.id}>
+                  {t(`calculator.trackTypes.${row.type}`)}
+                  <span className="input-wrap">
+                    <input
+                      id={`prepayment-cap-${row.id}`}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={0.01}
+                      value={capRateTexts[row.id] ?? ''}
+                      onChange={(event) => {
+                        const value = event.target.value
+                        setCapRateTexts((current) => ({ ...current, [row.id]: value }))
+                      }}
+                      placeholder={t('calculator.prepayment.capRatePlaceholder')}
+                      aria-label={`${t('calculator.prepayment.capRateLabel')} ${trackName(row.id)}`}
+                      data-testid={`prepayment-cap-${row.type}`}
+                    />
+                    <span aria-hidden="true">%</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="prepayment-note-disclaimer">{t('calculator.prepayment.capNote')}</p>
+          </details>
 
           {partialAmount > 0 && (
             <div className="prepayment-order" data-testid="prepayment-order">

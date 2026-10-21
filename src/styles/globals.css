@@ -6703,6 +6703,25 @@ e #name,
   padding-top: 12px;
 }
 
+/* Section 3(4)'s optional origination-rate inputs: one compact field per
+   priced track, two across on a wide panel and stacked on a phone. */
+.prepayment-cap {
+  margin-top: 4px;
+}
+
+.prepayment-cap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  margin-block: 6px 12px;
+}
+
+@media (max-width: 650px) {
+  .prepayment-cap-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1000px) {
   .prepayment-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -640,7 +640,14 @@ export const en: { translation: Translation } = {
           'The comparison rate comes from the Bank of Israel average-rate table for {{date}} and is converted to a monthly rate on an effective annual basis.',
         marketRateFallback: 'The Bank of Israel average rate could not be loaded, so the estimate uses {{rate}}%.',
         marketRateLink: 'The average-rate table',
-        note: 'The estimate covers the discounting (היוון) component only. An operational fee, a no-notice fee (up to 0.1% of the amount repaid) and a CPI compensation fee on index-linked tracks are charged on top. The section 3(4) cap based on the average rate when the loan was taken is not applied, because the calculator does not know that date or rate, so the estimate may be higher than the actual fee. Your bank decides the actual fee.',
+        capTitle: 'Origination-rate cap (section 3(4))',
+        capLead:
+          'If you know the Bank of Israel average rate for the track type and term on the day the loan was taken, enter it for that track. The cap replaces the calculation only when that average is below the track rate.',
+        capRateLabel: 'Origination average rate',
+        capRatePlaceholder: 'Not known',
+        capNote:
+          'With no value the cap is not applied, so the fee may be higher than the one actually charged, never lower.',
+        note: 'The estimate covers the discounting (היוון) component only. An operational fee, a no-notice fee (up to 0.1% of the amount repaid) and a CPI compensation fee on index-linked tracks are charged on top. The section 3(4) cap applies only when you enter the average rate on the origination date; with no value it is left off, so the estimate may be higher than the actual fee. Your bank decides the actual fee.',
         empty: 'Nothing is left to repay on that date: no track still carries a balance.',
       },
       forecast: {

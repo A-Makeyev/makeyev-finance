@@ -35,6 +35,24 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     expect(total).toBeGreaterThanOrEqual(fixedAtOne)
   })
 
+  test('caps the fee at the origination average rate when one is entered', async ({ calc }) => {
+    await calc.page.getByTestId('prepayment-market-rate').fill('2')
+    const before = await amountOf(calc.page.getByTestId('prepayment-fee-fixed'))
+    expect(before).toBeGreaterThan(0)
+
+    // Section 3(4): discount at the lower of the contractual rate and the
+    // average rate at origination, so a lower C shrinks the fee.
+    await calc.page.getByTestId('prepayment-cap').locator('summary').click()
+    await calc.page.getByTestId('prepayment-cap-fixed').fill('3')
+    const capped = await amountOf(calc.page.getByTestId('prepayment-fee-fixed'))
+    expect(capped).toBeGreaterThan(0)
+    expect(capped).toBeLessThan(before)
+
+    // An average above the contractual rate is not a cap; the fee comes back.
+    await calc.page.getByTestId('prepayment-cap-fixed').fill('9')
+    expect(await amountOf(calc.page.getByTestId('prepayment-fee-fixed'))).toBeCloseTo(before, 0)
+  })
+
   test('waives only the five-year reset track at an exit station', async ({ calc }) => {
     await calc.page.getByTestId('prepayment-market-rate').fill('2')
     const before = await amountOf(calc.page.getByTestId('prepayment-total'))
