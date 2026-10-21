@@ -85,6 +85,12 @@ export interface TrackState {
   amountText: string
   yearsText: string
   rateText: string
+  /**
+   * Optional market margin (מרווח שוק) the user entered for this track, in
+   * percentage points. Display only: the effective rate stays in `rateText`,
+   * so no amortization figure depends on it. Blank/absent means not entered.
+   */
+  marginText?: string
   method: AmortizationMethod
   /** Legacy dataset.autoRate - live-rate seeding is allowed until user edits. */
   isAutoRate: boolean
@@ -109,6 +115,8 @@ export interface SavedTrackInput {
   amountText: string
   yearsText: string
   rateText: string
+  /** Optional display-only market margin; absent on mixes saved before it. */
+  marginText?: string
   method: AmortizationMethod
 }
 
@@ -143,6 +151,12 @@ export interface SavedMixScenario {
   renovationAmountText: string
   otherExpenses: Array<Pick<OtherExpense, 'label' | 'amountText' | 'oneTimeAmountText'>>
   ptiThresholdPercent: number
+  /**
+   * The אישור עקרוני date the offer was priced on. Optional because mixes
+   * saved before it was persisted have no date; `loadSavedMix` treats a missing
+   * or invalid value as "no date".
+   */
+  approvalDateText?: string
 }
 
 /** Per-track payback metric (total repaid ÷ principal) for the results display. */
@@ -150,6 +164,8 @@ export interface TrackPayback {
   type: TrackType
   amount: number
   paybackRatio: number
+  /** The user-entered market margin for this track, or null when not entered. */
+  marketMarginPercent: number | null
 }
 
 /** One track's own yearly schedule for the schedule section. */
@@ -159,6 +175,13 @@ export interface TrackSchedule {
   rows: TrackScheduleRow[]
   /** Per-month payment rows (monthly view). */
   monthlyRows: MonthlyRow[]
+  /** Annual rate the track was computed at (percent) - prepayment-fee input. */
+  annualRatePercent: number
+  method: AmortizationMethod
+  /** CPI-linked tracks are compared on the real basis by the fee formula. */
+  isIndexed: boolean
+  /** Full term in years, for the remaining-term bucket of the market rate. */
+  years: number
 }
 
 export interface CalculatorSnapshot {
@@ -214,6 +237,8 @@ export interface CalculatorSnapshot {
   trackPaybacks: TrackPayback[]
   /** Per-track yearly schedules, one table per entered track. */
   scheduleTracks: TrackSchedule[]
+  /** Annual CPI change the schedules were built with (decimal, e.g. 0.02). */
+  annualInflation: number
   /** Combined per-month payment rows across all entered tracks (monthly view). */
   scheduleMonthlyRows: CombinedMonthlyRow[]
   /**
@@ -267,6 +292,7 @@ function trackFromValues(
     amountText: displayAmount,
     yearsText: String(values.years ?? selectedYears),
     rateText: rateValue,
+    marginText: '',
     method: 'spitzer',
     isAutoRate: Boolean(rateValue),
     loanShareMemory: null,
@@ -406,6 +432,7 @@ export interface CalculatorActions {
   commitTrackYearsBlur(id: string): void
   commitTrackRateBlur(id: string): void
   updateTrackRate(id: string, raw: string): void
+  updateTrackMargin(id: string, raw: string): void
   changeTrackType(id: string, type: TrackType): void
   changeTrackMethod(id: string, method: AmortizationMethod): void
   loadPreset(presetId: PresetId): void
@@ -460,6 +487,7 @@ export function serializeMix(mix: Pick<CalculatorData, 'tracks' | 'termYears'>):
       amountText: track.amountText,
       yearsText: track.yearsText,
       rateText: track.rateText,
+      marginText: track.marginText ?? '',
       method: track.method,
     })),
   })
@@ -478,6 +506,7 @@ export function serializeSavableTracks(tracks: TrackState[]): SavedTrackInput[] 
       amountText: track.amountText,
       yearsText: track.yearsText,
       rateText: track.rateText,
+      marginText: track.marginText ?? '',
       method: track.method,
     }))
 }
@@ -500,6 +529,7 @@ export function serializeScenario(
     | 'renovationAmountText'
     | 'otherExpenses'
     | 'ptiThresholdPercent'
+    | 'approvalDateText'
   >,
 ): SavedMixScenario {
   return {
@@ -518,6 +548,7 @@ export function serializeScenario(
       oneTimeAmountText,
     })),
     ptiThresholdPercent: s.ptiThresholdPercent,
+    approvalDateText: s.approvalDateText,
   }
 }
 
@@ -540,6 +571,7 @@ type PersistedMixSource = Pick<
   | 'renovationAmountText'
   | 'otherExpenses'
   | 'ptiThresholdPercent'
+  | 'approvalDateText'
 >
 
 /**
@@ -591,6 +623,7 @@ const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   avgPaybackRatio: 0,
   trackPaybacks: [],
   scheduleTracks: [],
+  annualInflation: FALLBACK_INFLATION,
   scheduleMonthlyRows: [],
   totalPrincipalPaid: 0,
   peakPaymentYear: 0,
@@ -1011,6 +1044,7 @@ function recalculate(s: CalculatorState): void {
       avgPaybackRatio: 0,
       trackPaybacks: [],
       scheduleTracks: [],
+      annualInflation: inflation,
       scheduleMonthlyRows: [],
       totalPrincipalPaid: 0,
       peakPaymentYear: 0,
@@ -1040,6 +1074,9 @@ function recalculate(s: CalculatorState): void {
   }
 
   const validResults = enteredResults.filter(Boolean) as TrackResult[]
+  // The entered tracks, in the same order as `validResults`, so each result
+  // can carry its own display-only market margin.
+  const enteredTracks = enteredIndexes.map((index) => s.tracks[index])
   const totalPrincipal = validResults.reduce((sum, result) => sum + result.principal, 0)
   const variablePrincipal = validResults
     .filter((result) => result.isVariable)
@@ -1132,17 +1169,29 @@ function recalculate(s: CalculatorState): void {
     avgInterestRate: averageInterestRate(validResults),
     weightedAvgInterestRate: calculateWeightedAvgInterestRate(validResults),
     avgPaybackRatio: averagePaybackRatio(validResults),
-    trackPaybacks: validResults.map((result) => ({
-      type: result.type,
-      amount: result.principal,
-      paybackRatio: result.paybackRatio,
-    })),
+    trackPaybacks: validResults.map((result, index) => {
+      const margin = Number(enteredTracks[index]?.marginText)
+      return {
+        type: result.type,
+        amount: result.principal,
+        paybackRatio: result.paybackRatio,
+        marketMarginPercent:
+          Number.isFinite(margin) && (enteredTracks[index]?.marginText ?? '').trim() !== ''
+            ? Math.max(0, margin)
+            : null,
+      }
+    }),
     scheduleTracks: validResults.map((result) => ({
       type: result.type,
       amount: result.principal,
       rows: buildTrackScheduleRows(result),
       monthlyRows: result.monthlyRows,
+      annualRatePercent: result.annualRatePercent,
+      method: result.method,
+      isIndexed: result.isIndexed,
+      years: result.years,
     })),
+    annualInflation: inflation,
     scheduleMonthlyRows: combinedMonthlyRows,
     totalPrincipalPaid,
     peakPaymentYear: peakYear,
@@ -1669,6 +1718,17 @@ export const useCalculatorStore = create<CalculatorStore>()(
       })
     },
 
+    updateTrackMargin: (id, raw) => {
+      set((s) => {
+        const track = s.tracks.find((t) => t.id === id)
+        if (!track) return
+        track.marginText = raw
+        // Display-only for the money math, but the per-track results row
+        // carries it, so rebuild the snapshot the same way any edit does.
+        recalculate(s)
+      })
+    },
+
     changeTrackType: (id, type) => {
       set((s) => {
         const track = s.tracks.find((t) => t.id === id)
@@ -1733,6 +1793,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
           amountText: track.amountText,
           yearsText: track.yearsText,
           rateText: track.rateText,
+          marginText: track.marginText ?? '',
           method: track.method,
           isAutoRate: Boolean(track.rateText.trim()),
           loanShareMemory: null,
@@ -1742,9 +1803,12 @@ export const useCalculatorStore = create<CalculatorStore>()(
         s.startingPointDirty = false
         s.loadedMixId = id ?? null
         s.loadedMixLabel = id ? (label ?? null) : null
-        // The אישור עקרוני date is not persisted with a mix, so it must not
-        // carry over from whatever was in the editor before this load.
-        s.approvalDateText = ''
+        // The date belongs to the saved offer. An older mix has none (or a
+        // value that predates validation), so fall back to "no date" rather
+        // than carrying the previous editor's offer forward.
+        const savedApprovalDate = scenario?.approvalDateText ?? ''
+        s.approvalDateText =
+          parseDateOnly(savedApprovalDate) === null ? '' : savedApprovalDate.trim()
         if (scenario) {
           // Restore the saved scenario verbatim: the user-entered text fields,
           // the choice fields, and the expenses (fresh ids). recalculate()

@@ -25,6 +25,8 @@ import { PresetSelector } from './PresetSelector'
 import { TrackForm } from './TrackForm'
 import { ResultsCards } from './ResultsCards'
 import { ScheduleSection } from './ScheduleSection'
+import { PrepaymentSection } from './PrepaymentSection'
+import { ForecastSection } from './ForecastSection'
 import { useCalculatorViewModel, type NoteLine } from './useCalculatorViewModel'
 
 /**
@@ -369,6 +371,37 @@ export function CalculatorPage() {
 
           <form id="mortgage-form" noValidate onSubmit={handleSubmit}>
             <div className="starting-point">
+              {/* אישור עקרוני approval date: the rate quoted in a pre-approval
+                  holds for a fixed window (Bank of Israel), so the calculator
+                  reports how long the quoted rates are still good for. It sits
+                  before the loan amount on the same row - the offer's date
+                  frames the loan it priced. It is reported, never
+                  auto-corrected, and is persisted with the saved offer - the
+                  hint says so. htmlFor names the input directly: the tooltip's "?" button
+                  is the label's first labelable descendant, so nesting alone
+                  would hand the label to it (see the term slider). */}
+              <div className="starting-approval" data-testid="rate-validity-row">
+                <label className="input-group rate-validity-field" htmlFor="approval-date">
+                  <span className="label-help-row">
+                    <span className="label-help-text">{t('calculator.approvalDateLabel')}</span>
+                    <HelpTooltip
+                      label={t('calculator.help.approvalDateAria')}
+                      content={t('calculator.help.approvalDate')}
+                      testId="help-approval-date"
+                    />
+                  </span>
+                  <span className="input-wrap">
+                    <input
+                      id="approval-date"
+                      type="date"
+                      value={store.approvalDateText}
+                      onChange={(event) => store.setApprovalDate(event.target.value)}
+                      data-testid="approval-date"
+                    />
+                  </span>
+                </label>
+              </div>
+
               <label className="starting-amount">
                 {t('calculator.startingAmountLabel')}
                 <MoneyInput
@@ -422,6 +455,19 @@ export function CalculatorPage() {
                 </button>
                 <SaveMixButton />
               </div>
+
+              {/* The validity status sits on its own full-width line inside
+                  the row so a long chip can never push the loan fields or the
+                  actions onto another line. It renders only with a date. */}
+              {store.approvalDateText && (
+                <div className="starting-approval-status">
+                  <RateValidityChip
+                    approvalDate={store.approvalDateText}
+                    testId="rate-validity-chip"
+                    className="rate-validity-row-chip"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="limits-row">
@@ -476,41 +522,6 @@ export function CalculatorPage() {
                   testId="monthly-income"
                 />
               </label>
-            </div>
-
-            {/* אישור עקרוני approval date: the rate quoted in a pre-approval
-                holds for a fixed window (Bank of Israel), so the calculator
-                reports how long the quoted rates are still good for. It is
-                reported, never auto-corrected, and is not part of a saved mix -
-                the hint says so. htmlFor names the input directly: the
-                tooltip's "?" button is the label's first labelable
-                descendant, so nesting alone would hand the label to it (see
-                the term slider). */}
-            <div className="rate-validity-row" data-testid="rate-validity-row">
-              <label className="input-group rate-validity-field" htmlFor="approval-date">
-                <span className="label-help-row">
-                  <span className="label-help-text">{t('calculator.approvalDateLabel')}</span>
-                  <HelpTooltip
-                    label={t('calculator.help.approvalDateAria')}
-                    content={t('calculator.help.approvalDate')}
-                    testId="help-approval-date"
-                  />
-                </span>
-                <span className="input-wrap">
-                  <input
-                    id="approval-date"
-                    type="date"
-                    value={store.approvalDateText}
-                    onChange={(event) => store.setApprovalDate(event.target.value)}
-                    data-testid="approval-date"
-                  />
-                </span>
-              </label>
-              <RateValidityChip
-                approvalDate={store.approvalDateText}
-                testId="rate-validity-chip"
-                className="rate-validity-row-chip"
-              />
             </div>
 
             {/* Transaction costs (realtor / lawyer / appraiser) - market
@@ -869,6 +880,15 @@ export function CalculatorPage() {
         </div>
 
         <ScheduleSection />
+
+        {/* Early-repayment fee: priced off the schedule above (the remaining
+            payments are the formula's own input), so it sits right after it. */}
+        <PrepaymentSection />
+
+        {/* Forward-looking scenarios: the reset chart and the interest vs
+            indexation forecast both read the same mix, and both assumptions
+            are stated in the panel. */}
+        <ForecastSection />
       </main>
 
       <AppModal

@@ -21,18 +21,19 @@ test.describe('mortgage comparison - /compare', () => {
     calc,
     page,
   }) => {
-    // The calculator's ₪1,000,000 recommended mix at 15y shows ₪7,772 first
-    // payment - the live BOI key rate the mocks return (4.5) + the 1.5 margin
-    // = 6.0 prime - and ₪7,772 only holds at 6.0, so waiting on it also waits
-    // for the prime to land BEFORE the comparison is seeded. The comparison
-    // then prices that same mix: the average payment (golden: total
-    // 1,451,762.66 / 180 = 8,065.35) and the recommended net income at the 33%
-    // ceiling (ceil(8065.35/0.33/500)·500 = 24,500). This is deliberately NOT
-    // the 8,012 the DIRECT-visit test below asserts: that visit never fetches
-    // BOI and so keeps the 5.75 fallback prime, while this one carries the
-    // calculator's live 6.0 rate over.
+    // The calculator's ₪1,000,000 recommended mix at 15y settles at an ₪8,323
+    // average payment - the live BOI key rate the mocks return (4.5) + the 1.5
+    // margin = 6.0 prime - and ₪8,323 only holds at 6.0 with the mocked CPI, so
+    // waiting on it also waits for the prime to land BEFORE the comparison is
+    // seeded. The comparison then prices that same mix with its own (fallback)
+    // inflation: the average payment (golden: total 1,451,762.66 / 180 =
+    // 8,065.35) and the recommended net income at the 33% ceiling
+    // (ceil(8065.35/0.33/500)·500 = 24,500). This is deliberately NOT the 8,012
+    // the DIRECT-visit test below asserts: that visit never fetches BOI and so
+    // keeps the 5.75 fallback prime, while this one carries the calculator's
+    // live 6.0 rate over.
     await calc.goto()
-    await expect(calc.monthlyPayment).toHaveText(ils(7_772))
+    await expect(calc.avgMonthlyPayment).toHaveText(ils(8_323))
     await calc.page.getByTestId('open-comparison').click()
     await expect(calc.page.getByTestId('compare-shell')).toBeVisible()
     await expect(page.getByTestId('compare-metric-avgPayment-1')).toContainText(ils(8_065))

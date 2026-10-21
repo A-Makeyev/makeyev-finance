@@ -442,6 +442,7 @@ export const en: { translation: Translation } = {
         yearsLabel: 'Term',
         yearsSuffix: 'years',
         rateLabel: 'Rate',
+        marginLabel: 'Market margin',
         methodLabel: 'Amortization',
         methodSpitzer: 'Spitzer',
         methodEqualPrincipal: 'Equal principal',
@@ -478,7 +479,7 @@ export const en: { translation: Translation } = {
           'A ready-made mix fills the tracks with a fixed split between fixed, prime and variable-indexed tracks, as a starting point to tweak. The article explains what each mix contains.',
         approvalDateAria: 'More about how long a pre-approval rate holds',
         approvalDate:
-          'Per the Bank of Israel, a rate in a pre-approval holds for 24 days from issue. The date is for this calculation only and is not saved with the mix.',
+          'Per the Bank of Israel, a rate in a pre-approval holds for 24 days from issue. The date is saved with the mix and drives the rate-validity calculation.',
       },
       trackTypes: {
         prime: 'Prime',
@@ -496,7 +497,6 @@ export const en: { translation: Translation } = {
         many: '{{count}} tracks',
       },
       results: {
-        firstPaymentCard: 'First monthly payment',
         highestPaymentDefault: 'Highest estimated monthly payment',
         highestCaption: 'Largest payment across the whole term, per indexation',
         highestCaptionWithYear: 'The payment reaches its peak in year {{year}}',
@@ -512,6 +512,7 @@ export const en: { translation: Translation } = {
         overpayCaption: 'How much extra you repay on top of the principal',
         avgPaymentCard: 'Average payment',
         avgPaymentCaption: 'Total cost divided evenly across every month of the term',
+        firstPaymentNote: 'First monthly payment: {{payment}}',
         interestShareCard: 'Interest of first payment',
         interestShareCaption: 'Early annuity payments go mostly to interest, not principal',
         balance5yCard: 'Balance after 5 years',
@@ -530,6 +531,7 @@ export const en: { translation: Translation } = {
         principalDeclineCaption: 'The principal paid back over the whole term',
         principalDeclineCaptionIndexed:
           'The principal repaid plus {{indexation}} of indexation',
+        marketMarginLine: 'Market margin: {{percent}}%',
         avgRateCard: 'Average interest rate',
         avgRateCaption: 'Simple average of track rates; loan-weighted: {{weighted}}%',
         avgPaybackCard: 'Average payback ratio',
@@ -541,8 +543,6 @@ export const en: { translation: Translation } = {
         showLess: 'Show less',
         gotIt: 'Got it',
         details: {
-          firstPayment:
-            'The payment you make in the first month after taking the mortgage, based on every track, amount and rate you entered. With a Spitzer schedule the payment stays constant, while variable or CPI-indexed tracks may change over time. This is the starting point for planning your monthly budget.',
           totalInterest:
             'The total amount you pay the bank beyond the principal ~ the interest accrued on the loan over the whole term. Higher rates or longer terms mean more total interest. To reduce it: raise your down payment, shorten the term, or get a better rate.',
           totalPayment:
@@ -610,6 +610,75 @@ export const en: { translation: Translation } = {
         axisMonthlyPayment: 'Monthly payment',
         axisBalance: 'Balance',
         axisYear: 'Year',
+      },
+      prepayment: {
+        heading: 'Early-repayment fee',
+        lead: 'An estimate of the discounting (היוון) fee if you repay the mortgage on the date you pick, using the Bank of Israel formula.',
+        prepayYearsLabel: 'Repayment date (years into the loan)',
+        yearsSuffix: 'years',
+        marketRateLabel: 'Annual comparison rate',
+        marketRatePlaceholder: 'From the BOI table',
+        partialLabel: 'Partial prepayment amount (optional)',
+        exitStation: 'Repaid at an exit station (rate-reset date)',
+        table: {
+          track: 'Track',
+          balance: 'Outstanding principal',
+          marketRate: 'Comparison rate',
+          fee: 'Discounting fee',
+          rateAddition: 'Rate addition for comparison',
+        },
+        totalLabel: 'Total discounting fee',
+        orderTitle: 'Cheapest payoff order: which track to repay first',
+        orderLine: '{{amount}} of {{track}} · fee {{fee}}',
+        orderTotal: 'For {{amount}} · fee {{fee}}',
+        exempt: {
+          prime: 'Exempt (prime)',
+          frequentReset: 'Exempt (variable rate)',
+          exitStation: 'Exempt (exit station)',
+        },
+        marketRateSource:
+          'The comparison rate comes from the Bank of Israel average-rate table for {{date}} and is converted to a monthly rate on an effective annual basis.',
+        marketRateFallback: 'The Bank of Israel average rate could not be loaded, so the estimate uses {{rate}}%.',
+        marketRateLink: 'The average-rate table',
+        note: 'The estimate covers the discounting (היוון) component only. An operational fee, a no-notice fee (up to 0.1% of the amount repaid) and a CPI compensation fee on index-linked tracks are charged on top. The section 3(4) cap based on the average rate when the loan was taken is not applied, because the calculator does not know that date or rate, so the estimate may be higher than the actual fee. Your bank decides the actual fee.',
+        empty: 'Nothing is left to repay on that date: no track still carries a balance.',
+      },
+      forecast: {
+        heading: 'Rate and CPI forecast',
+        lead: 'Two assumptions are shown up front: at every reset of a five-year variable track the rate moves by ±{{step}} percentage point (pp) in each scenario, and the CPI rises at a flat {{cpi}}% a year.',
+        resetHeading: 'Monthly payment by rate scenario',
+        resetLead:
+          'The monthly payment at the start of each year. Resets are counted from the start of the mortgage and are also marked with vertical lines.',
+        resetYears: 'Rate resets in years {{years}}.',
+        noReset:
+          'No rate reset falls inside the loan term, so all scenarios are identical. Only five-year variable tracks have a contractual reset date.',
+        costHeading: 'Cumulative interest and indexation',
+        costLead:
+          'What has accrued from the start of the loan through the end of each year on the base rate path: interest paid and CPI added to the principal, at a flat {{cpi}}% a year.',
+        noIndexation:
+          'The mix has no CPI-indexed track, so there is no indexation to show. The line shows cumulative interest only.',
+        tableSummary: 'Show the data as a table',
+        tableYear: 'Year',
+        tableInterest: 'Cumulative interest',
+        tableIndexation: 'Cumulative indexation',
+        resetTableAria: 'Monthly payment by year and rate scenario',
+        costTableAria: 'Cumulative interest and indexation by year',
+        scenarios: {
+          base: 'Rates unchanged',
+          up: 'A {{step}} pp rise at every reset',
+          down: 'A {{step}} pp fall at every reset',
+        },
+        series: {
+          interest: 'Cumulative interest',
+          indexation: 'Cumulative indexation',
+        },
+        yearLabel: 'Year {{year}}',
+        axisPayment: 'Monthly payment',
+        axisCumulative: 'Cumulative amount',
+        chartResetAria: 'Monthly payment by rate scenario, with reset dates marked',
+        chartCostAria: 'Cumulative interest and indexation over the term',
+        disclaimer:
+          'The forecast is an illustration only, not a forecast of rates or the CPI. The actual rate, reset dates and CPI may differ, and the monthly payment is recalculated at every reset. It is not financial advice.',
       },
       dynamicNotes: {
         indexedLabel: 'Highest payment',
@@ -708,7 +777,7 @@ export const en: { translation: Translation } = {
         granularityMonthly: 'Monthly',
         granularityYearly: 'Yearly',
         monthHeader: 'Year · Month',
-        monthTotalHeader: 'Total months',
+        monthPaymentHeader: 'Monthly payment',
         yearHeader: 'Year',
         paymentHeader: 'Payment',
         principalHeader: 'Principal',

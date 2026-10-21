@@ -52,9 +52,9 @@ test.describe('mortgage calculator - tracks and allocation', () => {
     await track.rate().fill('9.99')
     await expect(track.rate()).toHaveValue('9.99')
 
-    const before = await calc.monthlyPayment.textContent()
+    const before = await calc.avgMonthlyPayment.textContent()
     await track.rate().fill('4.0')
-    const after = await calc.monthlyPayment.textContent()
+    const after = await calc.avgMonthlyPayment.textContent()
     expect(after).not.toBe(before)
     await expect(track.rate()).toHaveValue(/^4(\.0)?$/)
   })
@@ -103,7 +103,7 @@ test.describe('mortgage calculator - tracks and allocation', () => {
     await expect(calc.track(1).amount()).toHaveValue('108,128')
     await expect(calc.track(2).amount()).toHaveValue('56,667')
     await expect(calc.track(3).amount()).toHaveValue('5,206')
-    await expect(calc.monthlyPayment).not.toHaveText('₪0')
+    await expect(calc.avgMonthlyPayment).not.toHaveText('₪0')
   })
 
   test('auto-fix without a pinned property shrinks the loan total', async ({ calc }) => {

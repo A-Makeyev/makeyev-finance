@@ -31,7 +31,7 @@ test.describe('mortgage calculator - amortization schedule', () => {
         areas: svg.querySelectorAll('path.chart-area').length,
         titles: [...svg.querySelectorAll('text.chart-axis-title')].map((n) => n.textContent),
         xLabels: [...svg.querySelectorAll('text.chart-tick')]
-          .filter((n) => n.getAttribute('y') === '296')
+          .filter((n) => n.getAttribute('y') === '524')
           .map((n) => n.textContent)
       }
     })()`

@@ -9,8 +9,10 @@ test.describe('mortgage calculator - core UI flows', () => {
 
   test('renders the recommended mix (תמהיל מומלץ) by default', async ({ calc }) => {
     // ₪1,000,000 split prime 400k / fixed 340k / variableIndexed5y 260k,
-    // 15y Spitzer → ₪7,772/month (default term is 15)
-    await expect(calc.monthlyPayment).toHaveText(ils(7_772))
+    // 15y Spitzer → ₪8,323 average monthly payment (default term is 15; the
+    // indexed track's CPI drift, mocked at 3.5%/year, lifts it above the
+    // first payment the summary still reports).
+    await expect(calc.avgMonthlyPayment).toHaveText(ils(8_323))
     await expect(calc.preset('basket4')).toHaveAttribute('aria-pressed', 'true')
     await expect(calc.track(1).type()).toHaveValue('prime')
     await expect(calc.track(1).amount()).toHaveValue('400,000')

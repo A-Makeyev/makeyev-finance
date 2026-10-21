@@ -1,0 +1,273 @@
+import { useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { formatCurrency } from '@/lib/format'
+import { formatAxisShekel, niceRange, niceTicks, svgRound, xAxisTicks } from '@/lib/charts'
+import { useTooltipClamp } from '@/hooks/useTooltipClamp'
+
+/** One plotted point: a 1-based loan year and its value. */
+export interface ForecastSeriesPoint {
+  year: number
+  value: number
+}
+
+/** One line in a forecast chart. */
+export interface ForecastSeries {
+  id: string
+  label: string
+  color: string
+  points: ForecastSeriesPoint[]
+  /**
+   * Draw as a step (horizontal until the next year, then vertical). Payment
+   * paths use this so a rate reset reads as a jump, not a slope.
+   */
+  step?: boolean
+}
+
+interface ForecastChartProps {
+  series: ForecastSeries[]
+  ariaLabel: string
+  /** Rotated y-axis caption (e.g. monthly payment / cumulative amount). */
+  axisTitle: string
+  /** Years to mark with a vertical dashed line (rate-reset years). */
+  markers?: number[]
+  /**
+   * Anchor the value axis at 0 (cost paths) or zoom to the data range
+   * (payment paths). A payment path on a zero axis compresses a 1pp reset
+   * into a few pixels, which hides the very step the chart exists to show;
+   * the zoomed axis keeps the real shekel labels, so the range stays explicit.
+   */
+  zeroBased?: boolean
+  /**
+   * Axis-label formatter. A zoomed payment axis needs a decimal ("₪7.8K");
+   * the default whole-K formatter rounds every label to the same "₪8K".
+   */
+  formatTick?: (value: number) => string
+  testId: string
+}
+
+// Same 900x520 family as the other schedule charts, so the panel's charts line
+// up. The plot keeps a zero baseline: payment and cost paths both start at 0.
+const WIDTH = 900
+const HEIGHT = 520
+const MARGIN = { top: 40, right: 88, bottom: 84, left: 88 }
+const INNER_W = WIDTH - MARGIN.left - MARGIN.right
+const INNER_H = HEIGHT - MARGIN.top - MARGIN.bottom
+
+/**
+ * Multi-line forecast plot. Lines are drawn in reverse legend order, so the
+ * first (reference) series sits on top of the scenario lines. Hover snaps to
+ * a year and shows every series there; the chart is `role="img"` and the
+ * panel always renders the same figures as an expandable table.
+ */
+export function ForecastChart({
+  series,
+  ariaLabel,
+  axisTitle,
+  markers = [],
+  zeroBased = true,
+  formatTick = formatAxisShekel,
+  testId,
+}: ForecastChartProps) {
+  const { t } = useTranslation()
+  const [activeYear, setActiveYear] = useState<number | null>(null)
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const plotRef = useRef<HTMLDivElement | null>(null)
+  useTooltipClamp(tooltipRef, plotRef, activeYear)
+
+  const geometry = useMemo(() => {
+    const nonEmpty = series.filter((entry) => entry.points.length > 0)
+    if (nonEmpty.length === 0) return null
+    const maxYear = Math.max(...nonEmpty.flatMap((entry) => entry.points.map((point) => point.year)))
+    const values = nonEmpty.flatMap((entry) => entry.points.map((point) => Math.max(0, point.value)))
+    const maxValue = Math.max(...values)
+    if (!(maxValue > 0)) return null
+
+    let axisMin = 0
+    let axisMax = maxValue
+    let ticks = niceTicks(maxValue)
+    if (!zeroBased) {
+      const minValue = Math.min(...values)
+      const padding = Math.max((maxValue - minValue) * 0.08, maxValue * 0.01, 1)
+      const range = niceRange(Math.max(0, minValue - padding), maxValue + padding)
+      axisMin = range.axisMin
+      axisMax = range.axisMax
+      ticks = range.ticks
+    }
+
+    const step = maxYear > 1 ? INNER_W / (maxYear - 1) : INNER_W
+    const x = (year: number) =>
+      svgRound(maxYear > 1 ? MARGIN.left + (year - 1) * step : MARGIN.left + INNER_W / 2)
+    const y = (value: number) =>
+      svgRound(
+        MARGIN.top +
+          INNER_H * (1 - (Math.max(axisMin, Math.min(axisMax, value)) - axisMin) / (axisMax - axisMin)),
+      )
+    return { nonEmpty, maxYear, axisMin, axisMax, step, ticks, x, y }
+  }, [series, zeroBased])
+
+  if (!geometry) return null
+  const { nonEmpty, maxYear, step, ticks, x, y } = geometry
+  const xTicks = xAxisTicks(maxYear, false)
+  const markerYears = Array.from(new Set(markers)).filter(
+    (year) => year >= 1 && year <= maxYear,
+  )
+
+  const pathFor = (entry: ForecastSeries): string =>
+    entry.points
+      .map((point, index) => {
+        const px = x(point.year)
+        const py = y(point.value)
+        if (index === 0) return `M ${px} ${py}`
+        if (entry.step) {
+          return `L ${px} ${y(entry.points[index - 1].value)} L ${px} ${py}`
+        }
+        return `L ${px} ${py}`
+      })
+      .join(' ')
+
+  const handleMove = (event: React.MouseEvent<SVGSVGElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const svgX = ((event.clientX - bounds.left) / bounds.width) * WIDTH
+    const year = Math.round((svgX - MARGIN.left) / Math.max(step, 1e-9)) + 1
+    setActiveYear(Math.max(1, Math.min(maxYear, year)))
+  }
+
+  const activeRows =
+    activeYear !== null
+      ? nonEmpty
+          .map((entry) => ({
+            entry,
+            point: entry.points.find((point) => point.year === activeYear),
+          }))
+          .filter((row): row is { entry: ForecastSeries; point: ForecastSeriesPoint } =>
+            row.point !== undefined,
+          )
+      : []
+
+  return (
+    <div className="forecast-chart" data-testid={testId}>
+      <div className="chart-legend" aria-hidden="true">
+        {nonEmpty.map((entry) => (
+          <span key={entry.id} className="chart-legend-item">
+            <i className="chart-swatch" style={{ background: entry.color }} />
+            <span className="chart-legend-name">{entry.label}</span>
+          </span>
+        ))}
+      </div>
+      <div className="forecast-plot" ref={plotRef}>
+        <svg
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          direction="ltr"
+          role="img"
+          aria-label={ariaLabel}
+          onMouseMove={handleMove}
+          onMouseLeave={() => setActiveYear(null)}
+          onClick={handleMove}
+        >
+          {ticks.map((tick) => (
+            <g key={tick}>
+              <line
+                x1={MARGIN.left}
+                x2={WIDTH - MARGIN.right}
+                y1={y(tick)}
+                y2={y(tick)}
+                className="chart-grid"
+              />
+              <text
+                x={MARGIN.left - 8}
+                y={y(tick)}
+                dy="0.32em"
+                className="chart-tick chart-tick-end"
+              >
+                {formatTick(tick)}
+              </text>
+            </g>
+          ))}
+
+          {markerYears.map((year) => (
+            <line
+              key={`marker-${year}`}
+              x1={x(year)}
+              x2={x(year)}
+              y1={MARGIN.top}
+              y2={MARGIN.top + INNER_H}
+              className="forecast-reset-line"
+              aria-hidden="true"
+            />
+          ))}
+
+          {xTicks.map((tick) => (
+            <g key={`x-${tick.index}`}>
+              <line
+                x1={x(tick.index + 1)}
+                x2={x(tick.index + 1)}
+                y1={MARGIN.top + INNER_H}
+                y2={MARGIN.top + INNER_H + (tick.label === null ? 4 : 7)}
+                className={tick.label === null ? 'chart-minor-tick' : 'chart-major-tick'}
+              />
+              {tick.label !== null && (
+                <text x={x(tick.index + 1)} y={HEIGHT - 34} className="chart-tick">
+                  {tick.label}
+                </text>
+              )}
+            </g>
+          ))}
+
+          {/* Reverse legend order keeps the reference series drawn last (on top). */}
+          {[...nonEmpty].reverse().map((entry) => (
+            <path
+              key={entry.id}
+              d={pathFor(entry)}
+              stroke={entry.color}
+              className="chart-line-track"
+            />
+          ))}
+
+          {activeYear !== null &&
+            activeRows.map(({ entry, point }) => (
+              <circle
+                key={`dot-${entry.id}`}
+                cx={x(activeYear)}
+                cy={y(point.value)}
+                r={4.5}
+                fill={entry.color}
+                className="chart-dot-track"
+              />
+            ))}
+
+          <text
+            x={10}
+            y={MARGIN.top + INNER_H / 2}
+            className="chart-axis-title chart-axis-title-rot"
+            transform={`rotate(-90 10 ${MARGIN.top + INNER_H / 2})`}
+          >
+            {axisTitle}
+          </text>
+          <text x={44} y={12} className="chart-axis-title chart-axis-title-above">
+            {axisTitle}
+          </text>
+          <text x={MARGIN.left + INNER_W / 2} y={HEIGHT - 6} className="chart-axis-title">
+            {t('calculator.charts.axisYear')}
+          </text>
+        </svg>
+
+        {activeYear !== null && activeRows.length > 0 && (
+          <div
+            ref={tooltipRef}
+            className="chart-tooltip forecast-tooltip"
+            role="status"
+            style={{ left: `${(x(activeYear) / WIDTH) * 100}%` }}
+          >
+            <strong>{t('calculator.forecast.yearLabel', { year: activeYear })}</strong>
+            {activeRows.map(({ entry, point }) => (
+              <span key={`tt-${entry.id}`} className="chart-tooltip-row">
+                <i className="chart-tooltip-swatch" style={{ background: entry.color }} />
+                {entry.label}: {formatCurrency(point.value)}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

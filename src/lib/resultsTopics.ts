@@ -16,7 +16,6 @@ import type { PaymentLabelKind } from '@/lib/amortization'
  * language they happened to be added in.
  */
 export const RESULTS_TOPIC_IDS = [
-  'firstPayment',
   'totalInterest',
   'totalPayment',
   'rateUp',
@@ -45,7 +44,6 @@ export function isResultsTopicId(value: string): value is ResultsTopicId {
 
 /** Translation key of each plain card label, keyed by topic id. */
 const CARD_LABEL_KEYS: Record<PlainTopicId, string> = {
-  firstPayment: 'calculator.results.firstPaymentCard',
   totalInterest: 'calculator.results.totalInterestCard',
   rateUp: 'calculator.results.rateUpCard',
   rateDown: 'calculator.results.rateDownCard',

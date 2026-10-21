@@ -158,6 +158,94 @@ describe('computeTrackResult - equal principal (קרן שווה)', () => {
   })
 })
 
+describe('computeTrackResult - rate-reset steps', () => {
+  const base = {
+    principal: 100_000,
+    years: 10,
+    annualRatePercent: 5,
+    type: 'variable5y',
+    method: 'spitzer',
+  } as const
+
+  it('is byte-identical to the plain result without reset inputs', () => {
+    const plain = computeTrackResult(base)
+    const empty = computeTrackResult({ ...base, rateResetMonths: [], rateStepPercent: 0 })
+    const zeroStep = computeTrackResult({ ...base, rateResetMonths: [61], rateStepPercent: 0 })
+    expect(empty).toStrictEqual(plain)
+    expect(zeroStep).toStrictEqual(plain)
+  })
+
+  it('steps a +1pp scenario at month 61 and reprices the rest', () => {
+    const result = computeTrackResult({
+      ...base,
+      rateResetMonths: [61],
+      rateStepPercent: 1,
+    })!
+    // First 60 months at 5%, month 61 onward at 6%.
+    expect(result.firstPayment).toBeCloseTo(1060.6552, 4)
+    const month60 = result.monthlyRows[59]
+    const month61 = result.monthlyRows[60]
+    expect(month60.closing).toBeCloseTo(56_204.8657, 4)
+    // Month 61 payment = annuity on the remaining 60 months at 6%/12.
+    expect(month61.paid).toBeCloseTo(1086.5975, 4)
+    // One step only: month 62 carries the same payment (no indexation).
+    expect(result.monthlyRows[61].paid).toBeCloseTo(month61.paid, 6)
+  })
+
+  it('floors a -1pp scenario at a 0% rate', () => {
+    const result = computeTrackResult({
+      principal: 100_000,
+      years: 10,
+      annualRatePercent: 0.5,
+      type: 'variable5y',
+      method: 'spitzer',
+      rateResetMonths: [61],
+      rateStepPercent: -1,
+    })!
+    // Block two runs at 0%: payment = remaining balance over 60 months and
+    // the interest part is exactly zero.
+    const month61 = result.monthlyRows[60]
+    expect(month61.interest).toBe(0)
+    expect(month61.paid).toBeCloseTo(50_624.8373 / 60, 4)
+  })
+
+  it('applies the step cumulatively at every listed reset', () => {
+    const one = computeTrackResult({
+      ...base,
+      years: 10,
+      rateResetMonths: [61],
+      rateStepPercent: 1,
+    })!
+    const two = computeTrackResult({
+      ...base,
+      years: 15,
+      rateResetMonths: [61, 121],
+      rateStepPercent: 1,
+    })!
+    // In the 15-year run month 121 is priced at 7% on its own balance.
+    const month120 = two.monthlyRows[119]
+    const month121 = two.monthlyRows[120]
+    const expected = (month120.closing * (0.07 / 12)) / (1 - Math.pow(1 + 0.07 / 12, -60))
+    expect(month121.paid).toBeCloseTo(expected, 4)
+    // A 10-year run has no month 121 to compare.
+    expect(one.monthlyRows).toHaveLength(120)
+  })
+
+  it('keeps the principal share fixed for equal-principal tracks', () => {
+    const result = computeTrackResult({
+      ...base,
+      method: 'equalPrincipal',
+      rateResetMonths: [61],
+      rateStepPercent: 1,
+    })!
+    const first = result.monthlyRows[0]
+    const previousClosing = result.monthlyRows[59].closing
+    const month61 = result.monthlyRows[60]
+    expect(month61.principal).toBeCloseTo(first.principal, 6)
+    expect(month61.interest).toBeCloseTo((previousClosing * 0.06) / 12, 6)
+  })
+})
+
 describe('computeTrackResult - CPI-indexed tracks', () => {
   it('inflates the balance month-over-month from month 2', () => {
     const inflation = 0.12

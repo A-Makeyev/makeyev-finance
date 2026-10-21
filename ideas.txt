@@ -18,26 +18,11 @@ Ideas for my business
 Use REA to inspect https://www.smartnpv.co.il/. Clone this website for me.
 
 
-there are images in examples folder, go over them deeply, see what can u implament and improve in our app
 
 when we leave compare page with changes, need modal prompt to save or discard like in calculator, also can we add the compare details in our profile like we save mixes? 
 
 
-Docs: docs/roadmap.md item 4 now records the shipped slice and the corrected source decision: the official workbooks, not the BOI series database.
 
-Remaining roadmap work:
-1. Item 3: early-repayment fee calculator (the flagship, L, high risk)
-- BOI formula in src/lib/prepayment.ts
-- Per-track balance, remaining term, original rate, market comparison rate from item 4, repayment method, exit-station exemption
-- Per-track fee, cheapest partial-prepayment order, annual-rate equivalent
-- Must be checked against the BOI's published example before shipping
-2. Item 5: rate-reset step chart + forecast (M-L, product decision needed)
-- Needs agreement on which forward assumptions to show: rate movement per reset, and an inflation path
-- Both must be visible in the UI and covered by the disclaimer
-3. Deferred data-model changes (deliberately not done)
-- Persist the approval date with a saved mix (item 2)
-- Add an optional per-track market-margin field (item 6)
-- Dedicated indexation card / compare-table indexation column (item 1)
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

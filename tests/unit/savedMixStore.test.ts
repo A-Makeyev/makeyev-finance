@@ -172,6 +172,26 @@ describe('loadSavedMix', () => {
     expect(useCalculatorStore.getState().startingAmountText).toBe(derived)
   })
 
+  it('round-trips the display-only market margin and exposes it on the track', () => {
+    useCalculatorStore
+      .getState()
+      .loadSavedMix([{ ...fixed('100,000', '30', '4.8'), marginText: '1.4' }], 30)
+
+    const state = useCalculatorStore.getState()
+    expect(state.tracks[0].marginText).toBe('1.4')
+    expect(state.snapshot.trackPaybacks[0].marketMarginPercent).toBe(1.4)
+    expect(isMixDirty(state)).toBe(false)
+  })
+
+  it('treats an edited margin as unsaved work and saves it in the mix baseline', () => {
+    useCalculatorStore.getState().loadSavedMix([fixed('100,000', '30', '4.8')], 30)
+    const id = useCalculatorStore.getState().tracks[0].id
+    expect(isMixDirty(useCalculatorStore.getState())).toBe(false)
+    useCalculatorStore.getState().updateTrackMargin(id, '0.9')
+    expect(isMixDirty(useCalculatorStore.getState())).toBe(true)
+    expect(useCalculatorStore.getState().snapshot.trackPaybacks[0].marketMarginPercent).toBe(0.9)
+  })
+
   it('gives every loaded track a fresh editor id', () => {
     // Same payload twice: ids come from the editor, not from the saved mix,
     // so two loads of the same mix never share track ids.
@@ -230,8 +250,10 @@ describe('loadSavedMix with a scenario', () => {
   })
 
   it('round-trips what serializeScenario captures', () => {
+    useCalculatorStore.getState().setApprovalDate('2026-03-02')
     const original = useCalculatorStore.getState()
     const captured = serializeScenario(original)
+    expect(captured.approvalDateText).toBe('2026-03-02')
 
     useCalculatorStore.getState().reset()
     useCalculatorStore.getState().loadSavedMix([fixed('100,000', '30', '4.8')], 30, captured)
@@ -242,6 +264,7 @@ describe('loadSavedMix with a scenario', () => {
     expect(restored.incomeText).toBe(original.incomeText)
     expect(restored.purpose).toBe(original.purpose)
     expect(restored.ptiThresholdPercent).toBe(original.ptiThresholdPercent)
+    expect(restored.approvalDateText).toBe('2026-03-02')
   })
 })
 

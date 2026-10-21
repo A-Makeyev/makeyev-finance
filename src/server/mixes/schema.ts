@@ -7,6 +7,7 @@ import {
   PTI_MIN_THRESHOLD,
   TRACK_TYPES,
 } from '@/lib/amortization'
+import { parseDateOnly } from '@/lib/rateValidity'
 
 /**
  * The persisted shape of a saved mortgage mix, and the validation of anything
@@ -53,6 +54,20 @@ export const savedTrackSchema = z
     amountText: z.string().max(20).regex(AMOUNT_TEXT),
     yearsText: z.string().max(4).regex(YEARS_TEXT),
     rateText: z.string().max(8).regex(RATE_TEXT),
+    /**
+     * Optional display-only market margin. Blank is "not entered". It never
+     * feeds the amortization math, so accepting it cannot change a stored
+     * schedule. Optional so mixes saved before it still validate and load.
+     */
+    marginText: z
+      .string()
+      .max(8)
+      .regex(RATE_TEXT)
+      .refine(
+        (value) => value === '' || (Number.isFinite(Number(value)) && Number(value) <= MAX_RATE_PERCENT),
+        { message: 'track margin is out of range' },
+      )
+      .optional(),
     method: z.enum(AMORTIZATION_METHODS),
   })
   .refine((track) => Number.isFinite(amountValue(track.amountText)) && amountValue(track.amountText) > 0, {
@@ -105,6 +120,19 @@ export const savedMixScenarioSchema = z.object({
     .number()
     .min(PTI_MIN_THRESHOLD * 100)
     .max(PTI_MAX_THRESHOLD * 100),
+  /**
+   * The אישור עקרוני date this offer was priced on. Blank means the user did
+   * not enter one. Optional so mixes saved before it was persisted still load.
+   * Only a real date-only string is accepted; the store already sanitises it,
+   * but the server never trusts that.
+   */
+  approvalDateText: z
+    .string()
+    .max(10)
+    .refine((value) => value === '' || parseDateOnly(value) !== null, {
+      message: 'approval date must be blank or a real YYYY-MM-DD date',
+    })
+    .optional(),
 })
 
 export const savedMixInputSchema = z.object({

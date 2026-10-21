@@ -168,6 +168,18 @@ export interface TrackComputationInput {
   type: TrackType
   method: AmortizationMethod
   annualInflation?: number
+  /**
+   * 1-based month indices at which the annual rate steps by
+   * `rateStepPercent` (e.g. [61, 121] for five-year resets). Omitted means
+   * the rate never changes, so every existing caller keeps its old result.
+   */
+  rateResetMonths?: readonly number[]
+  /**
+   * Signed change in percentage points applied at EACH reset, cumulatively.
+   * +1 means the second five-year block runs one point above the first, the
+   * third two points above it, and so on. The stepped rate is floored at 0.
+   */
+  rateStepPercent?: number
 }
 
 export interface YearlyRow {
@@ -243,8 +255,13 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
   }
 
   const inflationRate = input.annualInflation ?? FALLBACK_INFLATION
-  const monthlyRate = annualRatePercent / 100 / 12
+  let monthlyRate = annualRatePercent / 100 / 12
   const monthlyInflation = Math.pow(1 + inflationRate, 1 / 12)
+  // Reset steps: `nextResetIndex` walks the sorted reset months once, so the
+  // monthly loop stays O(months) even on a 30-year schedule.
+  const resetMonths = input.rateResetMonths ?? []
+  const rateStepPercent = input.rateStepPercent ?? 0
+  let nextResetIndex = 0
 
   let balance = principal
   let totalPaid = 0
@@ -262,6 +279,19 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
   let yearIndexation = 0
 
   for (let month = 1; month <= months; month++) {
+    // A reset changes the rate from its month onward (month 61 starts the
+    // second five-year block). The stepped rate is cumulative and floored at
+    // zero, so a -1pp scenario can never produce a negative rate.
+    if (rateStepPercent !== 0) {
+      while (nextResetIndex < resetMonths.length && month >= resetMonths[nextResetIndex]) {
+        nextResetIndex++
+      }
+      if (nextResetIndex > 0) {
+        const steppedPercent = annualRatePercent + nextResetIndex * rateStepPercent
+        monthlyRate = Math.max(0, steppedPercent) / 100 / 12
+      }
+    }
+
     // CPI-indexed balances inflate month-over-month starting month 2. The
     // amount the index adds to the debt is the month's הצמדה - captured here
     // and reported on its own, never folded into interest or principal.

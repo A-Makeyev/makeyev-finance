@@ -30,10 +30,19 @@ interface AmortizationChartProps {
 
 // SVG geometry: generous margins so no label ever clips - the left/right
 // margins hold the ₪ axis labels, the bottom holds the year row. The chart
-// draws strictly left-to-right (chronological) even on the RTL page.
-const WIDTH = 720
-const HEIGHT = 330
-const MARGIN = { top: 30, right: 70, bottom: 74, left: 76 }
+// draws strictly left-to-right (chronological) even on the RTL page. The
+// viewBox matches the per-track chart's (900×560): both views share the
+// schedule band's width, so equal viewBoxes give equal rendered heights and
+// the table below stays put when the user switches between them.
+//
+// The right margin is wider than the left one because that side carries three
+// things in a row: the plot edge, the balance ticks (the widest, "₪250K", is
+// ~56px) and then the rotated יתרה axis title. At the left margin the title
+// kept ~56px clear of the ticks; on the right it was left with ~6px, so the
+// extra 20px here pulls the numbers back from the title (feedback request).
+const WIDTH = 900
+const HEIGHT = 560
+const MARGIN = { top: 44, right: 108, bottom: 92, left: 88 }
 const INNER_W = WIDTH - MARGIN.left - MARGIN.right
 const INNER_H = HEIGHT - MARGIN.top - MARGIN.bottom
 /** Above this many periods, bars become a continuous area. */
@@ -198,7 +207,7 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
               className={tick.label === null ? 'chart-minor-tick' : 'chart-major-tick'}
             />
             {tick.label !== null && (
-              <text x={x(tick.index)} y={HEIGHT - 34} className="chart-tick">
+              <text x={x(tick.index)} y={HEIGHT - 36} className="chart-tick">
                 {tick.label}
               </text>
             )}
@@ -313,14 +322,14 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
 
         {/* Small-screen stand-ins for the rotated titles: short horizontal
             captions above the axis numbers, shown on screens ≤800px (CSS). */}
-        <text x={38} y={8} className="chart-axis-title chart-axis-title-above">
+        <text x={38} y={12} className="chart-axis-title chart-axis-title-above">
           {paymentAxisLabel}
         </text>
-        <text x={685} y={8} className="chart-axis-title chart-axis-title-above">
+        <text x={WIDTH - 44} y={12} className="chart-axis-title chart-axis-title-above">
           {t('calculator.charts.axisBalance')}
         </text>
 
-        <text x={MARGIN.left + INNER_W / 2} y={HEIGHT - 6} className="chart-axis-title">
+        <text x={MARGIN.left + INNER_W / 2} y={HEIGHT - 8} className="chart-axis-title">
           {t('calculator.charts.axisYear')}
         </text>
       </svg>

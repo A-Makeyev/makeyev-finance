@@ -4,11 +4,10 @@ import { expect, type Locator, type Page } from '@playwright/test'
   readonly page: Page
   /** The calculator panel's own heading (its scroll landing spot). */
   readonly panelHeading: Locator
-  readonly monthlyPayment: Locator
+  readonly avgMonthlyPayment: Locator
   readonly highestPayment: Locator
   readonly totalInterest: Locator
   readonly totalPayment: Locator
-  readonly paymentNote: Locator
   readonly formError: Locator
   /** Merged good/bad/info summary notes (capital note + regulatory warnings). */
   readonly summaryNotes: Locator
@@ -61,6 +60,8 @@ import { expect, type Locator, type Page } from '@playwright/test'
   readonly saveMixDuplicate: Locator
   /** The "unsaved mix" confirm raised before leaving an edited calculator. */
   readonly unsavedDialog: Locator
+  /** The rate-reset and CPI forecast panel (may be absent for a fixed mix). */
+  readonly forecast: ForecastPanel
   readonly unsavedSave: Locator
   readonly unsavedStay: Locator
   readonly unsavedLeave: Locator
@@ -68,11 +69,10 @@ import { expect, type Locator, type Page } from '@playwright/test'
   constructor(page: Page) {
     this.page = page
     this.panelHeading = page.getByTestId('panel-heading')
-    this.monthlyPayment = page.getByTestId('monthly-payment')
+    this.avgMonthlyPayment = page.getByTestId('avg-monthly-payment')
     this.highestPayment = page.getByTestId('highest-payment')
     this.totalInterest = page.getByTestId('total-interest')
     this.totalPayment = page.getByTestId('total-payment')
-    this.paymentNote = page.getByTestId('payment-note')
     this.formError = page.getByTestId('form-error')
     this.summaryNotes = page.getByTestId('summary-notes')
     this.autofixButton = page.getByTestId('autofix-mix')
@@ -113,6 +113,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
     this.unsavedSave = page.getByTestId('unsaved-mix-save')
     this.unsavedStay = page.getByTestId('unsaved-mix-stay')
     this.unsavedLeave = page.getByTestId('unsaved-mix-leave')
+    this.forecast = new ForecastPanel(page)
   }
 
   /**
@@ -136,7 +137,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
 
   async goto(): Promise<void> {
     await this.page.goto('/calculators')
-    await expect(this.monthlyPayment).toBeVisible()
+    await expect(this.avgMonthlyPayment).toBeVisible()
     // The calculator is server-rendered and interactive only after hydration;
     // wait for the marker so controlled inputs are wired before we act.
     // String form: the e2e tsconfig has no DOM lib.
@@ -341,6 +342,11 @@ import { expect, type Locator, type Page } from '@playwright/test'
     await this.page.getByTestId(testId).click()
     await expect(this.page.getByTestId('results-card-modal')).toBeVisible()
   }
+
+  /** The display-only market-margin line under a track's payback ratio. */
+  marketMargin(index: number): Locator {
+    return this.page.getByTestId(`track-market-margin-${index}`)
+  }
 }
 
 export class TrackPanel {
@@ -362,6 +368,9 @@ export class TrackPanel {
   }
   rate(): Locator {
     return this.root(this.index).getByTestId(`track-rate-${this.index}`)
+  }
+  margin(): Locator {
+    return this.root(this.index).getByTestId(`track-margin-${this.index}`)
   }
   type(): Locator {
     return this.root(this.index).getByTestId(`track-type-${this.index}`)
@@ -387,5 +396,77 @@ export class TrackPanel {
 
   async removeTrack(): Promise<void> {
     await this.remove().click()
+  }
+}
+
+/**
+ * The rate-reset step chart and the cumulative cost forecast. Its `<details>`
+ * tables carry the exact figures the charts plot, so a spec asserts on those
+ * rather than trying to read SVG geometry.
+ */
+export class ForecastPanel {
+  readonly root: Locator
+  readonly heading: Locator
+  readonly lead: Locator
+  readonly resetChart: Locator
+  readonly costChart: Locator
+  readonly resetCaption: Locator
+  readonly noResetNote: Locator
+  readonly noIndexationNote: Locator
+  readonly resetTable: Locator
+  readonly costTable: Locator
+  readonly resetRows: Locator
+  readonly disclaimer: Locator
+
+  constructor(page: Page) {
+    this.root = page.getByTestId('forecast-section')
+    this.heading = this.root.locator('h2')
+    this.lead = this.root.locator('.forecast-lead')
+    this.resetChart = page.getByTestId('forecast-reset-chart')
+    this.costChart = page.getByTestId('forecast-cost-chart')
+    this.resetCaption = page.getByTestId('forecast-reset-caption')
+    this.noResetNote = page.getByTestId('forecast-no-reset')
+    this.noIndexationNote = page.getByTestId('forecast-no-indexation')
+    this.resetTable = page.getByTestId('forecast-reset-table')
+    this.costTable = page.getByTestId('forecast-cost-table')
+    this.resetRows = this.resetTable.locator('tr.is-reset')
+    this.disclaimer = this.root.locator('.forecast-disclaimer')
+  }
+
+  async scrollTo(): Promise<void> {
+    await this.root.scrollIntoViewIfNeeded()
+  }
+
+  async openResetTable(): Promise<void> {
+    await this.resetTable.locator('summary').click()
+    await expect(this.resetTable.locator('table')).toBeVisible()
+  }
+
+  async openCostTable(): Promise<void> {
+    await this.costTable.locator('summary').click()
+    await expect(this.costTable.locator('table')).toBeVisible()
+  }
+
+  /** The base / +1pp / -1pp payments at the start of `year` (1-based). */
+  async resetPayments(year: number): Promise<{ base: number; up: number; down: number }> {
+    const amounts = await this.rowAmounts(this.resetTable, year)
+    return { base: amounts[0] ?? 0, up: amounts[1] ?? 0, down: amounts[2] ?? 0 }
+  }
+
+  /** The base path's cumulative interest (and indexation, when present). */
+  async costTotals(year: number): Promise<{ interest: number; indexation: number }> {
+    const amounts = await this.rowAmounts(this.costTable, year)
+    return { interest: amounts[0] ?? 0, indexation: amounts[1] ?? 0 }
+  }
+
+  private async rowAmounts(table: Locator, year: number): Promise<number[]> {
+    const cells = await table.locator('tbody tr').nth(year - 1).locator('td').all()
+    return Promise.all(cells.map((cell) => this.amountOf(cell)))
+  }
+
+  /** Reads a money cell as a number (₪, commas, RTL marks and all). */
+  private async amountOf(cell: Locator): Promise<number> {
+    const text = (await cell.innerText()).replace(/[^\d.]/g, '')
+    return Number.parseFloat(text) || 0
   }
 }

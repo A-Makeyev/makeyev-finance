@@ -666,7 +666,7 @@ img {
 /* The saved-mix card renders the SAME donut as the calculator
    (TrackMixDonut), centered with the term phrase above it, at a smaller size
    and without the legend (the card lists the tracks as text beside it).
-   Scoped with two classes so it can shrink `.mix-donut svg`'s 280px width. */
+   Scoped with two classes so it can shrink `.mix-donut svg`'s base width. */
 .saved-mix-donut {
   display: flex;
   flex: 0 0 auto;
@@ -4166,10 +4166,10 @@ e #name,
 }
 
 .starting-point {
-  display: grid;
-  grid-template-columns: minmax(180px, 230px) minmax(200px, 320px) auto;
-  gap: 28px;
-  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 20px 24px;
   padding-bottom: 24px;
   margin-bottom: 22px;
   border-bottom: 1px solid var(--calc-line);
@@ -4178,6 +4178,51 @@ e #name,
 .starting-point>label {
   display: flex;
   flex-direction: column;
+}
+
+/* אישור עקרוני approval date: the offer's date on the starting row, before
+   the loan amount. The date field keeps its intrinsic width; the validity
+   status renders on its own full-width line below the row (see
+   .starting-approval-status). */
+.starting-approval {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.starting-approval-status {
+  flex: 0 0 100%;
+  display: flex;
+  /* start = right in Hebrew, left in English, like the row above it */
+  justify-content: flex-start;
+  /* The row's 20px flex gap already separates the fields; pull the status
+     line closer to the date it belongs to. */
+  margin-top: -12px;
+}
+
+.starting-approval .rate-validity-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.starting-approval .input-wrap {
+  margin-top: 7px;
+}
+
+.starting-amount {
+  flex: 0 0 170px;
+}
+
+.term-slider {
+  flex: 1 1 240px;
+  min-width: 180px;
+}
+
+.starting-actions {
+  flex: 0 0 auto;
 }
 
 .limits-row {
@@ -4200,29 +4245,61 @@ e #name,
   margin-top: 7px;
 }
 
-/* אישור עקרוני approval date: one field on its own row under the limits row,
-   with the rate-validity chip beside it. The row wraps rather than squeezing
-   the date control, whose intrinsic width is modest but not zero. */
-.rate-validity-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 10px 18px;
-  padding-bottom: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--calc-line);
-}
-
+/* The approval field keeps its own usable width inside the starting row. */
 .rate-validity-field {
   flex: 0 1 220px;
   min-width: 0;
 }
 
 /* The panel's blanket input rule stretches a field to 100%; a native date
-   control has its own usable width, so let it keep it. */
+   control has its own usable width, so let it keep it. The negative block
+   margin cancels the ~2px that Chrome draws a date control taller than a
+   text field at the same padding (its inner date fields outgrow a text line),
+   so the loan-amount field beside it sets the frame height of both - at every
+   breakpoint, since the responsive padding still applies. */
 .rate-validity-field .input-wrap input[type='date'] {
   width: auto;
   min-width: 0;
+  margin-block: -1px;
+}
+
+/* The native calendar button is drawn at the control's own inline end - the
+   right, since a date control is LTR even on the Hebrew page - while every
+   other field's ₪ suffix sits at the page's inline end (left in Hebrew). In
+   Hebrew move the button there and give the field start padding: enough to
+   clear the button plus a readable gap, so the date never crowds it.
+   Physical properties on purpose: the control's LTR direction would mirror
+   logical ones straight back to the right. */
+:root[dir='rtl'] .rate-validity-field .input-wrap input[type='date'] {
+  position: relative;
+  padding-left: 42px;
+  /* The date itself rides the far end of the field, opposite the button, like
+     the ₪ fields put their amount opposite the symbol. The control is LTR, so
+     `start` would keep the date glued to the button on the left. */
+  text-align: right;
+}
+
+:root[dir='rtl'] .rate-validity-field .input-wrap input[type='date']::-webkit-calendar-picker-indicator {
+  position: absolute;
+  left: 8px;
+  right: auto;
+  cursor: pointer;
+}
+
+/* Tint the button like those ₪ suffixes (teal on the field, not the UA's dark
+   glyph). A background-image replaces the UA icon in place, so the button
+   keeps its click target either way. */
+.rate-validity-field .input-wrap input[type='date']::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23087f78' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3.5' y='5.5' width='17' height='15' rx='2'/%3E%3Cpath d='M3.5 10.5h17M8 3.5v4M16 3.5v4'/%3E%3C/svg%3E");
+  background-size: 17px 17px;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* The UA dims the glyph; the tint has to read as strongly as the suffix. */
+  opacity: 1;
+}
+
+:root[data-theme='dark'] .rate-validity-field .input-wrap input[type='date']::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338d3c4' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3.5' y='5.5' width='17' height='15' rx='2'/%3E%3Cpath d='M3.5 10.5h17M8 3.5v4M16 3.5v4'/%3E%3C/svg%3E");
 }
 
 /* The status chip itself: colour carries the urgency. Shared with the compare
@@ -4807,8 +4884,7 @@ e #name,
 }
 
 .starting-amount .input-wrap {
-  max-width: 190px;
-  height: 50px;
+  max-width: 160px;
   box-sizing: border-box;
 }
 
@@ -5018,9 +5094,10 @@ e #name,
 
 .mortgage-track {
   display: grid;
-  /* Columns: type (wider), amount, years, rate, method - the track-type field
-     gets extra room while years/rate are trimmed so the full row stays snug. */
-  grid-template-columns: 2fr 1fr 0.8fr 0.8fr 1fr;
+  /* Columns: type (wider), amount, years, rate, margin, method - the track-type
+     field gets extra room while years/rate/margin are trimmed so the full row
+     stays snug. The margin is optional display-only. */
+  grid-template-columns: 2fr 1fr 0.8fr 0.8fr 0.8fr 1fr;
   gap: 14px;
   position: relative;
   border: 1px solid var(--calc-line);
@@ -6051,14 +6128,15 @@ e #name,
   text-anchor: middle;
 }
 
-/* Total/schedule chart: keep axis numbers & text a touch smaller than the
-   per-track chart (which has its own override below). */
+/* Total/schedule chart: the per-track chart shares the same 900×560 viewBox,
+   and both bump their tick size so the axis numbers still read at the band's
+   rendered width. */
 .amort-chart .chart-tick {
-  font-size: 10px;
+  font-size: 17px;
 }
 
 .amort-chart .chart-axis-title {
-  font-size: 10px;
+  font-size: 15px;
 }
 
 /* The per-track chart's viewBox is wider (900 vs 720), so its labels would
@@ -6267,6 +6345,14 @@ e #name,
   min-width: 0;
 }
 
+/* The band's rows are top-aligned, which left the donut hanging at the top of
+   the much taller chart. Center it on the chart's height instead (the ring's
+   own center then lands on the middle gridline), so the band reads as one
+   figure rather than two stacked ones (feedback request). */
+.schedule-chart-band .mix-donut {
+  align-self: center;
+}
+
 /* The band forces LTR for its layout, so the combined chart restores the page
    direction for its legend and tooltip, exactly like the per-track chart. */
 .schedule-chart-band .amort-chart .chart-legend,
@@ -6294,8 +6380,8 @@ e #name,
 }
 
 .mix-donut svg {
-  width: 280px;
-  max-width: min(280px, 60vw);
+  width: 240px;
+  max-width: min(240px, 60vw);
   height: auto;
   flex: none;
 }
@@ -6308,19 +6394,19 @@ e #name,
 }
 
 .donut-center-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   fill: var(--calc-muted);
 }
 
 .donut-center-value {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   fill: var(--calc-teal-dark);
 }
 
 .donut-slice-label {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   fill: white;
   pointer-events: none;
@@ -6490,13 +6576,348 @@ e #name,
   padding: 34px 40px;
 }
 
+/* The schedule block reads a touch larger than the other section headings:
+   its title, track mix summary and view toggle are the entry point to the
+   table below. */
+.schedule-section .section-heading h2 {
+  font-size: 1.9rem;
+}
+
+/* ---------------------------------------------------------------------
+   EARLY-REPAYMENT FEE (עמלת פירעון מוקדם)
+   Its own panel under the schedule, sharing .schedule-section's shell (paper,
+   border, shadow and the responsive paddings) - only the controls, the
+   per-track table and the payoff-order list need their own rules.
+   --------------------------------------------------------------------- */
+.prepayment-calc {
+  margin-top: 26px;
+}
+
+.prepayment-lead {
+  color: var(--calc-muted);
+  font-size: 1rem;
+  max-width: 460px;
+  margin: 0;
+}
+
+.prepayment-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 18px;
+  align-items: end;
+  padding-bottom: 20px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--calc-line);
+}
+
+.prepayment-field {
+  color: var(--calc-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  min-width: 0;
+}
+
+/* The panel's blanket field rule is scoped to .calculator-panel, so these
+   inputs need the same reset to sit in an .input-wrap like the others. */
+.prepayment-calc .input-wrap input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--calc-ink);
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 12px;
+}
+
+.prepayment-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  color: var(--calc-muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.prepayment-checkbox input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--calc-teal);
+}
+
+/* The total is the answer the reader came for: teal, bold, no bottom rule. */
+.prepayment-table tfoot th,
+.prepayment-table tfoot td {
+  border-bottom: 0;
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+}
+
+.prepayment-order {
+  margin-top: 18px;
+  padding: 16px 18px;
+  background: var(--calc-soft);
+  border-inline-start: 3px solid var(--calc-teal);
+}
+
+.prepayment-order-title {
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 0 0 8px;
+}
+
+.prepayment-order ol {
+  margin: 0;
+  padding-inline-start: 20px;
+  color: var(--calc-ink);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.prepayment-order-total {
+  margin: 8px 0 0;
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.prepayment-empty {
+  color: var(--calc-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.prepayment-note-line {
+  color: var(--calc-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 14px 0 0;
+}
+
+.prepayment-disclaimer {
+  border-top: 1px solid var(--calc-line);
+  padding-top: 12px;
+}
+
+@media (max-width: 1000px) {
+  .prepayment-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .prepayment-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .prepayment-checkbox {
+    padding-bottom: 0;
+  }
+
+  /* The fee and its rate equivalent are the answer; the balance and the
+     comparison rate are supporting columns. Drop those two on a phone so the
+     fee stops hiding behind a horizontal scroll with no visible affordance. */
+  .prepayment-table th:nth-child(2),
+  .prepayment-table td:nth-child(2),
+  .prepayment-table th:nth-child(3),
+  .prepayment-table td:nth-child(3) {
+    display: none;
+  }
+
+  .prepayment-table th,
+  .prepayment-table td {
+    padding: 10px 8px;
+  }
+
+  /* Long headers wrap instead of forcing the table past the panel. */
+  .prepayment-table th {
+    white-space: normal;
+    vertical-align: bottom;
+  }
+
+  .prepayment-table th:first-child,
+  .prepayment-table td:first-child {
+    white-space: normal;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   RATE-RESET + CPI FORECAST
+   Its own panel under the early-repayment fee, sharing .schedule-section's
+   shell. Two cards hold one chart and one expandable table each; the panel
+   only renders when the mix has a contractual reset or an indexed track.
+   --------------------------------------------------------------------- */
+.forecast-section {
+  margin-top: 26px;
+}
+
+.forecast-lead {
+  color: var(--calc-muted);
+  font-size: 1rem;
+  max-width: 580px;
+  margin: 0;
+}
+
+.forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.forecast-card {
+  min-width: 0;
+  padding: 18px 20px 12px;
+  border: 1px solid var(--calc-line);
+  background: var(--calc-soft);
+}
+
+.forecast-card h3 {
+  margin: 0 0 6px;
+  color: var(--calc-teal-dark);
+  font-size: 1.05rem;
+}
+
+.forecast-card-lead {
+  margin: 0 0 6px;
+  color: var(--calc-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.forecast-chart {
+  display: flex;
+  flex-direction: column;
+  padding-top: 6px;
+}
+
+.forecast-chart .chart-legend {
+  padding: 4px 8px 12px;
+  font-size: 0.82rem;
+}
+
+.forecast-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* The forecast chart sits in a half-width card, so its 900-unit viewBox
+   renders smaller than the schedule charts; the tick size compensates. */
+.forecast-chart .chart-tick {
+  font-size: 20px;
+}
+
+.forecast-plot {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Rate-reset years: dashed vertical guides behind the lines. */
+.forecast-reset-line {
+  stroke: var(--calc-teal);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 5;
+  opacity: 0.55;
+}
+
+.forecast-caption {
+  margin: 4px 0 8px;
+  color: var(--calc-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.forecast-empty {
+  margin: 8px 0 12px;
+  color: var(--calc-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.forecast-table-details {
+  margin-top: 8px;
+  border-top: 1px solid var(--calc-line);
+}
+
+.forecast-table-details>summary {
+  padding: 10px 0;
+  color: var(--calc-teal-dark);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.forecast-table {
+  font-size: 0.85rem;
+}
+
+.forecast-table th,
+.forecast-table td {
+  padding: 8px 10px;
+}
+
+.forecast-table th {
+  white-space: normal;
+}
+
+/* Reset years line up with the chart's vertical guides. */
+.forecast-table tr.is-reset th,
+.forecast-table tr.is-reset td {
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+}
+
+.forecast-disclaimer {
+  border-top: 1px solid var(--calc-line);
+  padding-top: 12px;
+}
+
+@media (max-width: 1000px) {
+  .forecast-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .forecast-chart .chart-tick {
+    font-size: 24px;
+  }
+
+  .forecast-chart .chart-axis-title,
+  .forecast-chart .chart-axis-title-above {
+    font-size: 19px;
+  }
+
+  .forecast-chart .chart-legend {
+    gap: 6px 12px;
+    font-size: 0.78rem;
+  }
+
+  .forecast-table {
+    font-size: 0.8rem;
+  }
+
+  .forecast-table th,
+  .forecast-table td {
+    padding: 8px 6px;
+  }
+}
+
 .section-heading h2 {
   margin-bottom: 25px;
 }
 
 #schedule-summary {
   color: var(--calc-muted);
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .table-wrap {
@@ -6619,10 +7040,15 @@ e #name,
   margin: 0;
 }
 
-/* Total / per-track and yearly / monthly schedule view toggles. */
+/* Total / per-track and yearly / monthly schedule view toggles. Equal-width
+   columns keep the two labels the same size ("משולב" is shorter than
+   "לפי מסלול"), so the control - and the table under it - never shifts when
+   the selected view changes. */
 .schedule-view-toggle,
 .schedule-granularity-toggle {
-  display: inline-flex;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   border: 1px solid var(--calc-line);
   border-radius: 6px;
   overflow: hidden;
@@ -6634,12 +7060,12 @@ e #name,
 }
 
 .schedule-view-button {
-  padding: 8px 18px;
+  padding: 9px 20px;
   background: var(--calc-field);
   border: 0;
   border-inline-end: 1px solid var(--calc-line);
   color: var(--calc-muted);
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -6660,6 +7086,16 @@ e #name,
 /* One yearly table per track (added Step 3). */
 .schedule-track+.schedule-track {
   margin-top: 28px;
+}
+
+/* Combined view: reserve the per-track heading slot so both views place their
+   first table at the same y - toggling must not move the table below. */
+.schedule-total-table {
+  min-width: 0;
+}
+
+.schedule-total-heading {
+  visibility: hidden;
 }
 
 .schedule-track-heading {
@@ -6700,6 +7136,35 @@ td {
   padding: 14px;
   font-size: 0.95rem;
   border-bottom: 1px solid var(--calc-line);
+}
+
+/* The trailing two numeric columns (annual payment and balance) hold the
+   widest figures, so give them extra breathing room from the neighbouring
+   numbers. */
+.schedule-content th:nth-last-child(-n + 2),
+.schedule-content td:nth-last-child(-n + 2) {
+  padding-inline: 20px;
+}
+
+/* The last column (יתרה) starts next to the annual-payment column, not next
+   to the table's edge, so its start padding only stacks on the gap that
+   column already keeps - which left the balance figures visibly farther from
+   their neighbours than the annual payment ones. Move that 20px to the outer
+   edge instead (so the column keeps its width and the other columns' spacing
+   is untouched) and both trailing columns read the same distance from the
+   numbers beside them. */
+.schedule-content th:last-child,
+.schedule-content td:last-child {
+  padding-inline-start: 0;
+  padding-inline-end: 24px;
+  /* The last column faces the charts beside the table (the mix donut above
+     it, the cost donut in the asides column), not the annual-payment numbers.
+     Align its figures to the inline end so they sit on that side, a grid gap
+     plus 24px from the chart instead of leaving the whole cell's width
+     between them. Logical alignment flips with the direction: left in
+     Hebrew, right in English, always toward the graph. */
+  text-align: end;
+  text-indent: 0;
 }
 
 tbody tr:hover {
@@ -6813,6 +7278,10 @@ tbody tr:hover {
     margin-bottom: 18px;
   }
 
+  .schedule-section .section-heading h2 {
+    font-size: 1.65rem;
+  }
+
   .panel-heading-actions {
     margin-bottom: 38px;
   }
@@ -6853,7 +7322,6 @@ tbody tr:hover {
     height: 40px;
   }
 
-  .starting-amount .input-wrap,
   .term-slider-wrap,
   .starting-calculate-button {
     height: 45px;
@@ -7015,6 +7483,10 @@ tbody tr:hover {
   .mortgage-track .input-group:nth-of-type(5) {
     grid-column: 5 / 7;
   }
+
+  .mortgage-track .input-group:nth-of-type(6) {
+    grid-column: 1 / 7;
+  }
 }
 
 @media (max-width: 900px) {
@@ -7052,8 +7524,17 @@ tbody tr:hover {
   }
 
   .starting-point {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
     gap: 18px;
+  }
+
+  .starting-approval,
+  .starting-amount,
+  .term-slider,
+  .starting-actions {
+    flex: 0 0 auto;
+    width: 100%;
   }
 
   .starting-amount,
@@ -7079,7 +7560,7 @@ tbody tr:hover {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  /* The primary (first monthly payment) card gets the full row so the
+  /* The primary (average monthly payment) card gets the full row so the
      headline number and its note breathe at the narrowest layout. */
   .primary-result {
     grid-column: 1 / -1;
@@ -7133,6 +7614,13 @@ tbody tr:hover {
     display: block;
     font-size: 15px;
   }
+
+  /* The forecast chart keeps the same rule: the rotated side title is hidden
+     here, so its horizontal stand-in has to be shown. */
+  .forecast-chart .chart-axis-title-above {
+    display: block;
+    font-size: 15px;
+  }
 }
 
 @media (max-width: 650px) {
@@ -7157,6 +7645,10 @@ tbody tr:hover {
   .panel-heading h2,
   .section-heading h2 {
     font-size: 1.4rem;
+  }
+
+  .schedule-section .section-heading h2 {
+    font-size: 1.5rem;
   }
 
   .calculator-panel input,
@@ -7185,7 +7677,6 @@ tbody tr:hover {
     font-size: 0.85rem;
   }
 
-  .starting-amount .input-wrap,
   .term-slider-wrap,
   .starting-calculate-button {
     height: 42px;
@@ -7241,7 +7732,7 @@ tbody tr:hover {
   }
 
   #schedule-summary {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
   }
 
   th {
@@ -7289,6 +7780,10 @@ tbody tr:hover {
   }
 
   .per-track-chart .chart-axis-title-above {
+    font-size: 19px;
+  }
+
+  .forecast-chart .chart-axis-title-above {
     font-size: 19px;
   }
 
@@ -7343,7 +7838,8 @@ tbody tr:hover {
   .mortgage-track .input-group:nth-of-type(2),
   .mortgage-track .input-group:nth-of-type(3),
   .mortgage-track .input-group:nth-of-type(4),
-  .mortgage-track .input-group:nth-of-type(5) {
+  .mortgage-track .input-group:nth-of-type(5),
+  .mortgage-track .input-group:nth-of-type(6) {
     grid-column: auto;
   }
 
@@ -7389,6 +7885,15 @@ tbody tr:hover {
   }
 
   .per-track-chart .chart-axis-title-above {
+    font-size: 22px;
+  }
+
+  .forecast-chart .chart-tick {
+    font-size: 26px;
+  }
+
+  .forecast-chart .chart-axis-title,
+  .forecast-chart .chart-axis-title-above {
     font-size: 22px;
   }
 

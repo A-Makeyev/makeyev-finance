@@ -34,6 +34,55 @@ export function formatAxisShekel(value: number): string {
 }
 
 /**
+ * Detailed axis label for a ZOOMED axis: keeps one decimal on the K scale
+ * (₪7.6K / ₪8K / ₪8.4K). The default `formatAxisShekel` rounds every value in
+ * a 7.6K-8.4K window to "₪8K", which makes a payment-reset chart unreadable.
+ */
+export function formatAxisShekelDetailed(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return '₪0'
+  if (Math.abs(value) >= 1_000_000) {
+    const millions = value / 1_000_000
+    return `₪${Number.isInteger(millions) ? millions : millions.toFixed(2)}M`
+  }
+  if (Math.abs(value) >= 1_000) {
+    const thousands = value / 1_000
+    return `₪${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}K`
+  }
+  return `₪${Math.round(value)}`
+}
+
+/**
+ * Round ticks for an axis that does NOT start at zero (a zoomed payment
+ * chart). Picks a nice 1/2/2.5/5×10ⁿ step for the range, then expands the
+ * bounds outward to whole steps so both end labels are round. A degenerate
+ * range still returns two distinct bounds, so a caller can never divide by a
+ * zero span.
+ */
+export function niceRange(
+  min: number,
+  max: number,
+  targetCount = 4,
+): { axisMin: number; axisMax: number; ticks: number[] } {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || !(max > min)) {
+    const upper = Number.isFinite(min) ? min + Math.max(1, Math.abs(min) * 0.01) : 1
+    const lower = Number.isFinite(min) ? min : 0
+    return { axisMin: lower, axisMax: upper, ticks: [lower, upper] }
+  }
+  const rawStep = (max - min) / Math.max(1, targetCount)
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)))
+  const residual = rawStep / magnitude
+  const factor = residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 2.5 ? 2.5 : residual <= 5 ? 5 : 10
+  const step = factor * magnitude
+  const axisMin = Math.floor(min / step) * step
+  const axisMax = Math.ceil(max / step) * step
+  const ticks: number[] = []
+  for (let tick = axisMin; tick <= axisMax + step * 1e-9; tick += step) {
+    ticks.push(Number(tick.toFixed(6)))
+  }
+  return { axisMin, axisMax, ticks }
+}
+
+/**
  * "Nice" axis ticks from 0 to `max` (inclusive): picks a step from the
  * 1/2/2.5/5×10ⁿ families so labels stay round. Always returns 0 first, plus
  * `max` itself only when it sits on the grid or clears the last round tick

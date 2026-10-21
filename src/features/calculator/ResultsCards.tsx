@@ -57,7 +57,7 @@ interface CardDef {
   labelClassName?: string
   /** Featured trio stays visible; the extras cascade via the show-all toggle. */
   featured?: boolean
-  /** Teal-gradient headline styling - only the first-payment card gets it. */
+  /** Teal-gradient headline styling - only the average-payment card gets it. */
   primary?: boolean
   /** "Read more" link shown at the bottom of the explanation dialog. */
   link: LinkKey
@@ -67,13 +67,13 @@ interface CardDef {
 
 /**
  * Results grid, ordered left-to-right in three logical rows of five:
- * 1. The monthly payment story - today's payment (first, highest/current,
- *    average) and its sensitivity to variable-rate moves (±1 point).
+ * 1. The monthly payment story - the average payment (headline) and today's
+ *    payment sensitivity to variable-rate moves (±1 point).
  * 2. The full-term cost - total repayments, interest, cost-of-credit %,
  *    payback ratio and the average rate behind them.
  * 3. Planning details - effective rate, annuity interest mechanics,
  *    5-year horizon figures and the normalized per-₪100k payment.
- * The three headline cards (first payment, total interest, total payments)
+ * The three headline cards (average payment, total interest, total payments)
  * stay visible with a "show all" toggle beside them - below the grid while
  * it is expanded. The extra cards fade in one by one via their --card-index
  * stagger delay; on collapse the same animation runs reversed and the last
@@ -211,12 +211,11 @@ export function ResultsCards() {
   /** One source of truth for every card - grid cell and dialog share it. */
   const cards: CardDef[] = [
     {
-      key: 'firstPayment',
-      testId: 'monthly-payment',
-      value: vm.monthlyPayment,
-      label: t('calculator.results.firstPaymentCard'),
-      caption: vm.paymentNote,
-      captionTestId: 'payment-note',
+      key: 'avgPayment',
+      testId: 'avg-monthly-payment',
+      value: vm.avgMonthlyPayment,
+      label: t('calculator.results.avgPaymentCard'),
+      caption: t('calculator.results.avgPaymentCaption'),
       featured: true,
       primary: true,
       link: 'guide',
@@ -281,15 +280,6 @@ export function ResultsCards() {
       index: 2,
     },
     {
-      key: 'avgPayment',
-      testId: 'avg-monthly-payment',
-      value: vm.avgMonthlyPayment,
-      label: t('calculator.results.avgPaymentCard'),
-      caption: t('calculator.results.avgPaymentCaption'),
-      link: 'guide',
-      index: 3,
-    },
-    {
       key: 'overpayPercent',
       testId: 'overpay-percent',
       value: vm.overpayPercent,
@@ -297,7 +287,7 @@ export function ResultsCards() {
       label: t('calculator.results.overpayCard'),
       caption: t('calculator.results.overpayCaption'),
       link: 'interest',
-      index: 4,
+      index: 3,
     },
     {
       key: 'avgPayback',
@@ -306,7 +296,7 @@ export function ResultsCards() {
       label: t('calculator.results.avgPaybackCard'),
       caption: t('calculator.results.avgPaybackCaption'),
       link: 'compare',
-      index: 5,
+      index: 4,
     },
     {
       key: 'avgRate',
@@ -316,7 +306,7 @@ export function ResultsCards() {
       label: t('calculator.results.avgRateCard'),
       caption: t('calculator.results.avgRateCaption', { weighted: vm.weightedAvgRate }),
       link: 'rates',
-      index: 6,
+      index: 5,
     },
     {
       key: 'effRate',
@@ -326,7 +316,7 @@ export function ResultsCards() {
       label: t('calculator.results.effRateCard'),
       caption: t('calculator.results.effRateCaption', { nominal: vm.avgRate }),
       link: 'interest',
-      index: 7,
+      index: 6,
     },
     {
       key: 'interestShare',
@@ -336,7 +326,7 @@ export function ResultsCards() {
       label: t('calculator.results.interestShareCard'),
       caption: t('calculator.results.interestShareCaption'),
       link: 'guide',
-      index: 8,
+      index: 7,
     },
     {
       key: 'fiveYInterest',
@@ -346,7 +336,7 @@ export function ResultsCards() {
       label: t('calculator.results.fiveYInterestCard'),
       caption: t('calculator.results.fiveYInterestCaption'),
       link: 'guide',
-      index: 9,
+      index: 8,
     },
     {
       key: 'balance5y',
@@ -355,7 +345,7 @@ export function ResultsCards() {
       label: t('calculator.results.balance5yCard'),
       caption: t('calculator.results.balance5yCaption'),
       link: 'guide',
-      index: 10,
+      index: 9,
     },
     {
       key: 'per100k',
@@ -364,7 +354,7 @@ export function ResultsCards() {
       label: t('calculator.results.per100kCard'),
       caption: t('calculator.results.per100kCaption'),
       link: 'compare',
-      index: 11,
+      index: 10,
     },
     {
       // The debt the payments clear (the principal column, so nominal plus CPI
@@ -375,7 +365,7 @@ export function ResultsCards() {
       label: t('calculator.results.principalDeclineCard'),
       caption: vm.principalDeclineCaption,
       link: 'cpi',
-      index: 12,
+      index: 11,
     },
   ] // The dialog reads straight from the live card definition, so it always
   // shows the current values and language while open. Content follows
@@ -489,6 +479,17 @@ export function ResultsCards() {
             <p className="mt-4 text-[17px] leading-relaxed text-[var(--calc-ink)]">
               {t(`calculator.results.details.${openCard.key}`)}
             </p>
+            {/* The average-payment card explains itself through the average,
+                but the first payment is the number people plan their cash
+                flow around - name it here instead of giving it its own card. */}
+            {openCard.key === 'avgPayment' && (
+              <p
+                data-testid="avg-payment-first-payment"
+                className="mt-3 text-[15px] font-semibold leading-relaxed text-[var(--calc-teal-dark)]"
+              >
+                {t('calculator.results.firstPaymentNote', { payment: vm.monthlyPayment })}
+              </p>
+            )}
             <div className="mt-3 text-[14px] font-semibold leading-relaxed text-[var(--calc-muted)]">
               {openCard.caption}
             </div>

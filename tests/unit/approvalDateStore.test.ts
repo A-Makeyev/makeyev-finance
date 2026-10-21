@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { isMixDirty, useCalculatorStore } from '@/stores/calculatorStore'
+import {
+  isMixDirty,
+  useCalculatorStore,
+  type SavedMixScenario,
+} from '@/stores/calculatorStore'
 import { seedFromCalculator, useComparisonStore } from '@/stores/comparisonStore'
 
 /**
  * Store wiring for the אישור עקרוני approval date (rate validity). The window
  * itself is hand-checked in rateValidity.test.ts; these cover the plumbing the
  * UI depends on: sanitising input, clearing the date where a different offer
- * begins, keeping it out of the saved-mix dirty state, and carrying it from the
- * calculator into the comparison's first mix.
+ * begins, persisting it with a saved offer (and treating it as unsaved work),
+ * and carrying it from the calculator into the comparison's first mix.
  */
 
 beforeEach(() => {
@@ -17,6 +21,40 @@ beforeEach(() => {
 
 function seededScenarioDate(index: number): string {
   return useComparisonStore.getState().scenarios[index].approvalDateText
+}
+
+function savedScenario(approvalDateText?: string): SavedMixScenario {
+  return {
+    startingAmountText: '1,000,000',
+    propertyValueText: '1,500,000',
+    capitalText: '500,000',
+    incomeText: '25,000',
+    purpose: 'first',
+    realtorPercentText: '2',
+    lawyerPercentText: '',
+    appraiserFeeText: '',
+    renovationAmountText: '',
+    otherExpenses: [],
+    ptiThresholdPercent: 33,
+    approvalDateText,
+  }
+}
+
+function loadWithScenario(scenario: SavedMixScenario): void {
+  const before = useCalculatorStore.getState()
+  useCalculatorStore.getState().loadSavedMix(
+    before.tracks.map((track) => ({
+      type: track.type,
+      amountText: track.amountText,
+      yearsText: track.yearsText,
+      rateText: track.rateText,
+      method: track.method,
+    })),
+    before.termYears,
+    scenario,
+    'mix-1',
+    'משכנתא',
+  )
 }
 
 describe('calculator store: the אישור עקרוני date', () => {
@@ -39,9 +77,12 @@ describe('calculator store: the אישור עקרוני date', () => {
     expect(useCalculatorStore.getState().approvalDateText).toBe('')
   })
 
-  it('does not mark the mix dirty: the date is not part of a saved mix', () => {
+  it('marks the mix dirty: the date is part of the saved offer', () => {
     expect(isMixDirty(useCalculatorStore.getState())).toBe(false)
     useCalculatorStore.getState().setApprovalDate('2026-01-01')
+    expect(isMixDirty(useCalculatorStore.getState())).toBe(true)
+    // Saving the offer records the date in the baseline, so it goes clean.
+    useCalculatorStore.getState().markMixSaved()
     expect(isMixDirty(useCalculatorStore.getState())).toBe(false)
   })
 
@@ -57,7 +98,7 @@ describe('calculator store: the אישור עקרוני date', () => {
     expect(useCalculatorStore.getState().approvalDateText).toBe('')
   })
 
-  it('clears when a saved mix is loaded (a mix carries no date)', () => {
+  it('clears when an older mix with no scenario is loaded', () => {
     const before = useCalculatorStore.getState()
     useCalculatorStore.getState().setApprovalDate('2026-01-01')
     useCalculatorStore.getState().loadSavedMix(
@@ -75,6 +116,24 @@ describe('calculator store: the אישור עקרוני date', () => {
     )
     expect(useCalculatorStore.getState().approvalDateText).toBe('')
     expect(useCalculatorStore.getState().loadedMixId).toBe('mix-1')
+  })
+
+  it('restores the date stored with the saved offer', () => {
+    loadWithScenario(savedScenario('2026-03-02'))
+    expect(useCalculatorStore.getState().approvalDateText).toBe('2026-03-02')
+    expect(isMixDirty(useCalculatorStore.getState())).toBe(false)
+  })
+
+  it('restores no date for an older scenario without the field', () => {
+    useCalculatorStore.getState().setApprovalDate('2026-01-01')
+    loadWithScenario(savedScenario())
+    expect(useCalculatorStore.getState().approvalDateText).toBe('')
+    expect(isMixDirty(useCalculatorStore.getState())).toBe(false)
+  })
+
+  it('refuses a stored value that is not a real date', () => {
+    loadWithScenario(savedScenario('2026-02-30'))
+    expect(useCalculatorStore.getState().approvalDateText).toBe('')
   })
 })
 

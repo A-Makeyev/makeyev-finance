@@ -64,6 +64,25 @@ describe('savedMixInputSchema', () => {
     ).toBe(false)
   })
 
+  it('accepts a blank or in-range market margin, and rejects junk', () => {
+    for (const marginText of [undefined, '', '0', '1.4', '100']) {
+      expect(
+        savedMixInputSchema.safeParse({
+          ...validMix,
+          tracks: [{ ...track, marginText }],
+        }).success,
+      ).toBe(true)
+    }
+    for (const marginText of ['abc', '-1', '101', '1.2.3']) {
+      expect(
+        savedMixInputSchema.safeParse({
+          ...validMix,
+          tracks: [{ ...track, marginText }],
+        }).success,
+      ).toBe(false)
+    }
+  })
+
   it('rejects amount text that is not the calculator format', () => {
     expect(
       savedMixInputSchema.safeParse({ ...validMix, tracks: [{ ...track, amountText: '12 345' }] })
@@ -156,6 +175,28 @@ describe('savedMixInputSchema scenario', () => {
     expect(savedMixInputSchema.safeParse(withPti(PTI_MAX_THRESHOLD * 100)).success).toBe(true)
     expect(savedMixInputSchema.safeParse(withPti(PTI_MIN_THRESHOLD * 100 - 0.1)).success).toBe(false)
     expect(savedMixInputSchema.safeParse(withPti(PTI_MAX_THRESHOLD * 100 + 0.1)).success).toBe(false)
+  })
+
+  it('accepts a blank or a real approval date', () => {
+    for (const approvalDateText of ['', '2026-03-02']) {
+      expect(
+        savedMixInputSchema.safeParse({
+          ...validMix,
+          scenario: { ...scenario, approvalDateText },
+        }).success,
+      ).toBe(true)
+    }
+  })
+
+  it('rejects an impossible or malformed approval date', () => {
+    for (const approvalDateText of ['2026-02-30', '02/03/2026', '2026-3-2', '2026-03-02 ']) {
+      expect(
+        savedMixInputSchema.safeParse({
+          ...validMix,
+          scenario: { ...scenario, approvalDateText },
+        }).success,
+      ).toBe(false)
+    }
   })
 
   it('rejects scenario amounts that are not the calculator format', () => {

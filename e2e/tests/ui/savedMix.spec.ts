@@ -89,7 +89,7 @@ test.describe('saved mixes', () => {
     // The saved mixes are private, so signed out there is nothing to load -
     // but the link must degrade to the normal calculator, never an error page.
     await mockedPage.goto('/calculators?mix=507f1f77bcf86cd799439011')
-    await expect(calc.monthlyPayment).toBeVisible()
+    await expect(calc.avgMonthlyPayment).toBeVisible()
   })
 
   test('a ?mix= deep link restores the saved mix and its scenario', async ({ mockedPage, calc }) => {
@@ -100,7 +100,14 @@ test.describe('saved mixes', () => {
       label: 'Loaded mix',
       termYears: 27,
       tracks: [
-        { type: 'fixed', amountText: '250,000', yearsText: '27', rateText: '4.8', method: 'spitzer' },
+        {
+          type: 'fixed',
+          amountText: '250,000',
+          yearsText: '27',
+          rateText: '4.8',
+          marginText: '1.2',
+          method: 'spitzer',
+        },
       ],
       scenario: {
         startingAmountText: '250,000',
@@ -114,6 +121,7 @@ test.describe('saved mixes', () => {
         renovationAmountText: '',
         otherExpenses: [],
         ptiThresholdPercent: 33,
+        approvalDateText: '2026-03-02',
       },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -135,9 +143,52 @@ test.describe('saved mixes', () => {
     // calculator defaults (a blank property value, a 15-year term).
     await expect(calc.propertyValue).toHaveValue('1,500,000')
     await expect(calc.termSlider).toHaveValue('27')
+    // The approval date and the display-only market margin are part of the
+    // saved offer, so they come back with it.
+    await expect(calc.approvalDate).toHaveValue('2026-03-02')
+    await expect(calc.track(1).margin()).toHaveValue('1.2')
+    // The margin decomposes that track's rate in the schedule's payback aside.
+    await expect(calc.marketMargin(1)).toContainText('1.2')
     // Loading from the profile lands on the calculator's own heading, not at
     // the top of the page.
     await expect(calc.panelHeading).toBeInViewport()
+  })
+
+  test('a new saved mix carries the approval date', async ({ mockedPage, calc }) => {
+    await mockGetSessionUser(mockedPage)
+    const created = savedMixFixture('507f1f77bcf86cd799439011', 'First home')
+    const posted: { approvalDateText: string | null } = { approvalDateText: null }
+    await mockedPage.route('**/api/mixes', (route) => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ mixes: [], max: 4 }),
+        })
+      }
+      if (route.request().method() === 'POST') {
+        const body = route.request().postDataJSON() as {
+          scenario?: { approvalDateText?: string }
+        }
+        posted.approvalDateText = body.scenario?.approvalDateText ?? null
+        return route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({ mix: created }),
+        })
+      }
+      return route.continue()
+    })
+
+    await calc.goto()
+    // The date is now saved work, so entering it alone brings the save action
+    // back even though the tracks are untouched.
+    await calc.setApprovalDate('2026-03-02')
+    await calc.saveMix.click()
+    await expect(calc.saveMixModal).toBeVisible()
+    await calc.saveMixConfirm.click()
+
+    await expect.poll(() => posted.approvalDateText).toBe('2026-03-02')
   })
 
   test('the action row sits beside Show payments and never overflows a phone', async ({
@@ -451,6 +502,7 @@ test.describe('saved mixes', () => {
         renovationAmountText: '',
         otherExpenses: [],
         ptiThresholdPercent: 33,
+        approvalDateText: '',
       },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

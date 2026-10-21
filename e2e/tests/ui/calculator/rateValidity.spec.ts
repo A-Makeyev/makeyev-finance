@@ -120,6 +120,10 @@ test.describe('mortgage comparison - אישור עקרוני rate validity', () 
     await calc.goto()
     await calc.setApprovalDate('2026-01-01')
     await calc.page.getByTestId('open-comparison').click()
+    // The date is part of the saved offer now, so entering it alone counts as
+    // unsaved work and the leave guard asks first.
+    await expect(calc.unsavedDialog).toBeVisible()
+    await calc.unsavedLeave.click()
     await expect(page.getByTestId('compare-shell')).toBeVisible()
 
     await expect(page.getByTestId('compare-approval-date-1')).toHaveValue('2026-01-01')
@@ -136,6 +140,9 @@ test.describe('mortgage comparison - אישור עקרוני rate validity', () 
   test('each mix carries its own date and status', async ({ page }) => {
     await page.goto('/compare')
     await expect(page.getByTestId('compare-shell')).toBeVisible()
+    // The shell renders before hydration; filling earlier leaves the controlled
+    // date inputs on their server defaults.
+    await page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
 
     await page.getByTestId('compare-approval-date-1').fill(dateOnly(-30))
     await page.getByTestId('compare-approval-date-2').fill(dateOnly(0))
@@ -167,6 +174,7 @@ test.describe('mortgage comparison - אישור עקרוני rate validity', () 
   test('fits a 360px phone without a sideways scroll', async ({ page }) => {
     await page.goto('/compare')
     await expect(page.getByTestId('compare-shell')).toBeVisible()
+    await page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
     await page.setViewportSize({ width: 360, height: 900 })
     await page.getByTestId('compare-approval-date-1').fill(dateOnly(-30))
     await expect(page.getByTestId('compare-approval-chip-1')).toBeVisible()

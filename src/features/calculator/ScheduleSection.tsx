@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCalculatorViewModel } from './useCalculatorViewModel'
-import { formatCurrency, formatRatio, parseAmountText } from '@/lib/format'
+import { formatCurrency, formatRatePercent, formatRatio, parseAmountText } from '@/lib/format'
 import { AmortizationChart } from './AmortizationChart'
 import { PerTrackChart } from './PerTrackChart'
 import { TrackMixDonut, type TrackShare } from './TrackMixDonut'
@@ -35,11 +35,9 @@ export function ScheduleSection() {
     { id: 'monthly', label: t('calculator.schedule.granularityMonthly') },
   ]
 
-  // "year · month (total month)" - e.g. "1 · 12 (12)" or "2 · 1 (13)": the
-  // parentheses hold the running month count of the loan (1-12 in year 1,
-  // 13-24 in year 2, ... up to years*12).
+  // "year · month" - e.g. "1 · 12" or "2 · 1": the year of the loan and the
+  // month within it.
   const monthLabel = (year: number, month: number): string => `${year} · ${month}`
-  const totalMonth = (year: number, month: number): number => (year - 1) * 12 + month
   // With no loan entered there are no rows to render - hide the header-only
   // table and show the empty note instead (same as the per-track view).
   const hasTotalRows =
@@ -151,53 +149,65 @@ export function ScheduleSection() {
       <div className="schedule-content">
         {view === 'total' ? (
           hasTotalRows ? (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>
-                      {granularity === 'monthly'
-                        ? t('calculator.schedule.monthHeader')
-                        : t('calculator.schedule.yearHeader')}
-                    </th>
-                    {granularity === 'monthly' && (
-                      <th>{t('calculator.schedule.monthTotalHeader')}</th>
-                    )}
-                    <th>{t('calculator.schedule.principalHeader')}</th>
-                    {vm.hasIndexation && <th>{t('calculator.schedule.indexationHeader')}</th>}
-                    <th>{t('calculator.schedule.interestHeader')}</th>
-                    {granularity === 'yearly' && (
-                      <th>{t('calculator.schedule.annualPaymentHeader')}</th>
-                    )}
-                    <th>{t('calculator.schedule.balanceHeader')}</th>
-                  </tr>
-                </thead>
-                <tbody id="schedule-body" data-testid="schedule-body">
-                  {granularity === 'monthly'
-                    ? vm.visibleMonthlyRows.map((row) => (
-                        <tr key={`${row.year}-${row.month}`}>
-                          <td data-testid={`schedule-year-${row.year}-month-${row.month}`}>
-                            {monthLabel(row.year, row.month)}
-                          </td>
-                          <td>{totalMonth(row.year, row.month)}</td>
-                          <td>{formatCurrency(row.principal)}</td>
-                          {vm.hasIndexation && <td>{formatCurrency(row.indexation)}</td>}
-                          <td>{formatCurrency(row.interest)}</td>
-                          <td>{formatCurrency(row.closing)}</td>
-                        </tr>
-                      ))
-                    : vm.visibleScheduleRows.map((row) => (
-                        <tr key={row.year}>
-                          <td data-testid={`schedule-year-${row.year}`}>{row.year}</td>
-                          <td>{formatCurrency(row.principal)}</td>
-                          {vm.hasIndexation && <td>{formatCurrency(row.indexation)}</td>}
-                          <td>{formatCurrency(row.interest)}</td>
-                          <td>{formatCurrency(row.paid)}</td>
-                          <td>{formatCurrency(row.closing)}</td>
-                        </tr>
-                      ))}
-                </tbody>
-              </table>
+            /* The per-track view puts a track heading above each table. The
+               combined view has no heading of its own, but reserves the same
+               slot invisibly so switching views leaves the table below at the
+               exact same height instead of jumping. */
+            <div className="schedule-total-table">
+              <h3
+                className="schedule-track-heading schedule-total-heading"
+                aria-hidden="true"
+              >
+                &nbsp;
+              </h3>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>
+                        {granularity === 'monthly'
+                          ? t('calculator.schedule.monthHeader')
+                          : t('calculator.schedule.yearHeader')}
+                      </th>
+                      {granularity === 'monthly' && (
+                        <th>{t('calculator.schedule.monthPaymentHeader')}</th>
+                      )}
+                      <th>{t('calculator.schedule.principalHeader')}</th>
+                      {vm.hasIndexation && <th>{t('calculator.schedule.indexationHeader')}</th>}
+                      <th>{t('calculator.schedule.interestHeader')}</th>
+                      {granularity === 'yearly' && (
+                        <th>{t('calculator.schedule.annualPaymentHeader')}</th>
+                      )}
+                      <th>{t('calculator.schedule.balanceHeader')}</th>
+                    </tr>
+                  </thead>
+                  <tbody id="schedule-body" data-testid="schedule-body">
+                    {granularity === 'monthly'
+                      ? vm.visibleMonthlyRows.map((row) => (
+                          <tr key={`${row.year}-${row.month}`}>
+                            <td data-testid={`schedule-year-${row.year}-month-${row.month}`}>
+                              {monthLabel(row.year, row.month)}
+                            </td>
+                            <td>{formatCurrency(row.paid)}</td>
+                            <td>{formatCurrency(row.principal)}</td>
+                            {vm.hasIndexation && <td>{formatCurrency(row.indexation)}</td>}
+                            <td>{formatCurrency(row.interest)}</td>
+                            <td>{formatCurrency(row.closing)}</td>
+                          </tr>
+                        ))
+                      : vm.visibleScheduleRows.map((row) => (
+                          <tr key={row.year}>
+                            <td data-testid={`schedule-year-${row.year}`}>{row.year}</td>
+                            <td>{formatCurrency(row.principal)}</td>
+                            {vm.hasIndexation && <td>{formatCurrency(row.indexation)}</td>}
+                            <td>{formatCurrency(row.interest)}</td>
+                            <td>{formatCurrency(row.paid)}</td>
+                            <td>{formatCurrency(row.closing)}</td>
+                          </tr>
+                        ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             <p className="schedule-empty">{t('calculator.emptyNote')}</p>
@@ -230,7 +240,7 @@ export function ScheduleSection() {
                             ? t('calculator.schedule.monthHeader')
                             : t('calculator.schedule.yearHeader')}
                         </th>
-                        {granularity === 'monthly' && <th>{t('calculator.schedule.monthTotalHeader')}</th>}
+                        {granularity === 'monthly' && <th>{t('calculator.schedule.monthPaymentHeader')}</th>}
                         <th>{t('calculator.schedule.principalHeader')}</th>
                         {vm.hasIndexation && <th>{t('calculator.schedule.indexationHeader')}</th>}
                         <th>{t('calculator.schedule.interestHeader')}</th>
@@ -247,7 +257,7 @@ export function ScheduleSection() {
                               <td data-testid={`schedule-year-${row.year}-month-${row.month}`}>
                                 {monthLabel(row.year, row.month)}
                               </td>
-                              <td>{totalMonth(row.year, row.month)}</td>
+                              <td>{formatCurrency(row.paid)}</td>
                               <td>{formatCurrency(row.principal)}</td>
                               {vm.hasIndexation && <td>{formatCurrency(row.indexation)}</td>}
                               <td>{formatCurrency(row.interest)}</td>
@@ -298,6 +308,13 @@ export function ScheduleSection() {
               <span>
                 {formatCurrency(entry.amount)} · {formatRatio(entry.paybackRatio)}
               </span>
+              {entry.marketMarginPercent !== null && (
+                <span data-testid={`track-market-margin-${index + 1}`}>
+                  {t('calculator.results.marketMarginLine', {
+                    percent: formatRatePercent(entry.marketMarginPercent),
+                  })}
+                </span>
+              )}
             </aside>
           ))}
         </div>

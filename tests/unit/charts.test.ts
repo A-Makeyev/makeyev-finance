@@ -4,7 +4,9 @@ import {
   arcPath,
   donutSegments,
   formatAxisShekel,
+  formatAxisShekelDetailed,
   midAngle,
+  niceRange,
   niceTicks,
   svgRound,
   xAxisTicks,
@@ -45,6 +47,65 @@ describe('formatAxisShekel', () => {
 
   it('rounds thousands away from sub-1000 noise', () => {
     expect(formatAxisShekel(333_333)).toBe('₪333K')
+  })
+})
+
+describe('formatAxisShekelDetailed', () => {
+  it('keeps one decimal on the K scale for a zoomed axis', () => {
+    expect(formatAxisShekelDetailed(7_600)).toBe('₪7.6K')
+    expect(formatAxisShekelDetailed(7_800)).toBe('₪7.8K')
+    expect(formatAxisShekelDetailed(8_000)).toBe('₪8K')
+    expect(formatAxisShekelDetailed(8_400)).toBe('₪8.4K')
+  })
+
+  it('keeps two decimals on the M scale', () => {
+    expect(formatAxisShekelDetailed(1_250_000)).toBe('₪1.25M')
+    expect(formatAxisShekelDetailed(2_000_000)).toBe('₪2M')
+    expect(formatAxisShekelDetailed(750)).toBe('₪750')
+    expect(formatAxisShekelDetailed(0)).toBe('₪0')
+    expect(formatAxisShekelDetailed(Number.NaN)).toBe('₪0')
+  })
+
+  it('does not repeat a label across a typical payment band', () => {
+    const range = niceRange(7_600, 8_400)
+    const labels = range.ticks.map((tick) => formatAxisShekelDetailed(tick))
+    expect(new Set(labels).size).toBe(labels.length)
+  })
+})
+
+describe('niceRange', () => {
+  it('rounds a zoomed payment band outward to whole steps', () => {
+    expect(niceRange(7_600, 8_400)).toEqual({
+      axisMin: 7_600,
+      axisMax: 8_400,
+      ticks: [7_600, 7_800, 8_000, 8_200, 8_400],
+    })
+  })
+
+  it('expands a band that starts between steps', () => {
+    // 7,700-8,300 still lands on a 200 step, so the bounds grow to 7,600/8,400.
+    expect(niceRange(7_700, 8_300)).toEqual({
+      axisMin: 7_600,
+      axisMax: 8_400,
+      ticks: [7_600, 7_800, 8_000, 8_200, 8_400],
+    })
+  })
+
+  it('handles a range that begins at zero', () => {
+    expect(niceRange(0, 1_000, 4)).toEqual({
+      axisMin: 0,
+      axisMax: 1_000,
+      ticks: [0, 250, 500, 750, 1_000],
+    })
+  })
+
+  it('never returns a zero span for degenerate input', () => {
+    const equal = niceRange(5, 5)
+    expect(equal.axisMax).toBeGreaterThan(equal.axisMin)
+    expect(equal.ticks).toHaveLength(2)
+    const inverted = niceRange(10, 5)
+    expect(inverted.axisMax).toBeGreaterThan(inverted.axisMin)
+    expect(inverted.ticks).toHaveLength(2)
   })
 })
 

@@ -136,42 +136,24 @@ export function useCalculatorViewModel() {
   // real money, so only then are they shown.
   const hasIndexation = snapshot.summaryTypes.some(isIndexedType)
 
-  const countText =
-    snapshot.enteredCount === 1
-      ? t('calculator.counts.one')
-      : snapshot.enteredCount === 2
-        ? t('calculator.counts.two')
-        : snapshot.enteredCount === 3
-          ? t('calculator.counts.three')
-          : t('calculator.counts.many', { count: snapshot.enteredCount })
-
   let highestLabelText = t('calculator.results.highestPaymentDefault')
-  let dynamicNote = ''
   const label = snapshot.highestLabel
   if (label) {
     switch (label.kind satisfies PaymentLabelKind) {
       case 'indexed':
         highestLabelText = t('calculator.dynamicNotes.indexedLabel')
-        dynamicNote = t('calculator.dynamicNotes.indexedNote')
         break
       case 'equalPrincipal':
         highestLabelText = t('calculator.dynamicNotes.equalPrincipalLabel')
-        dynamicNote = t('calculator.dynamicNotes.equalPrincipalNote')
         break
       case 'variable':
         highestLabelText = t('calculator.dynamicNotes.variableLabel')
-        dynamicNote = label.hasFiveYearVariable
-          ? t('calculator.dynamicNotes.variableFiveYearNote')
-          : t('calculator.dynamicNotes.variableNote')
         break
       case 'fixed':
         highestLabelText = t('calculator.dynamicNotes.fixedLabel')
-        dynamicNote = t('calculator.dynamicNotes.fixedNote')
         break
     }
   }
-
-  const paymentNote = snapshot.isEmpty ? t('calculator.emptyNote') : `${countText} · ${dynamicNote}`
 
   const purposeLabels: Record<PropertyPurpose, string> = {
     first: t('calculator.warnings.purposeFirst'),
@@ -824,7 +806,6 @@ export function useCalculatorViewModel() {
     totalPaymentCaption: hasIndexation
       ? t('calculator.results.totalPaymentCaptionIndexed')
       : t('calculator.results.totalPaymentCaption'),
-    paymentNote,
     avgRate: formatRatePercent(snapshot.avgInterestRate),
     weightedAvgRate: formatRatePercent(snapshot.weightedAvgInterestRate),
     totalLoanAmount: formatCurrency(

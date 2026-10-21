@@ -70,6 +70,22 @@ export function bucketIdsFor(kind: AverageRateKind): AverageRateBucketId[] {
   return AVERAGE_RATE_BUCKETS[kind].map((bucket) => bucket.id)
 }
 
+/**
+ * The bucket a given loan term falls in, for picking the comparison rate of a
+ * track with that many years left. Bounds include their upper end and exclude
+ * the lower one (the BOI's own reading of the table), so 5 years lands in
+ * "up to 5" and 5.5 in "5-10". Null when no bucket covers the term.
+ */
+export function bucketForYears(kind: AverageRateKind, years: number): AverageRateBucketId | null {
+  if (!Number.isFinite(years)) return null
+  for (const bucket of AVERAGE_RATE_BUCKETS[kind]) {
+    const aboveLower = bucket.fromYears === null || years > bucket.fromYears
+    const upToUpper = bucket.toYears === null || years <= bucket.toYears
+    if (aboveLower && upToUpper) return bucket.id
+  }
+  return null
+}
+
 export interface AverageRateRow {
   /** Date the rate takes effect, date-only 'YYYY-MM-DD'. */
   validFrom: string
