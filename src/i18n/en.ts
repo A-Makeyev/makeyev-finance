@@ -604,6 +604,8 @@ export const en: { translation: Translation } = {
         perTrackAria: 'Per-track balance comparison over the term',
         mixTotalLabel: 'Total mortgage',
         costCenterLabel: 'interest',
+        costSliceLine: '{{label}}: {{amount}}, {{percent}}%',
+        costTotalLine: 'Total repayments: {{amount}}',
         yearLabel: 'Year {{year}}',
         monthLabel: 'Month {{month}}',
         axisPayment: 'Annual payment',

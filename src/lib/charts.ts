@@ -22,10 +22,20 @@ export function svgRound(value: number): number {
 }
 
 /** Short ₪ label for chart axes: ₪1.5M / ₪250K / ₪750 - never full digits. */
-export function formatAxisShekel(value: number): string {
+export function formatAxisShekel(
+  value: number,
+  opts?: { compact?: boolean },
+): string {
   if (!Number.isFinite(value) || value === 0) return '₪0'
   if (Math.abs(value) >= 1_000_000) {
     const millions = value / 1_000_000
+    if (opts?.compact) {
+      // Whole millions only: the donut centre shows the total in a small
+      // hole, and "₪1M" / "₪2M" already conveys the magnitude there (the
+      // exact figure is in the legend below). Round, so 1.96M does not
+      // print as "₪1.96M".
+      return `₪${Math.round(millions)}M`
+    }
     const text = Number.isInteger(millions) ? String(millions) : millions.toFixed(1)
     return `₪${text}M`
   }
@@ -243,14 +253,17 @@ export function arcPath(
 ): string {
   const sweep = endAngle - startAngle
   const clampedEnd = sweep >= Math.PI * 2 ? startAngle + Math.PI * 2 - 1e-4 : endAngle
-  const x0 = cx + rOuter * Math.cos(startAngle)
-  const y0 = cy + rOuter * Math.sin(startAngle)
-  const x1 = cx + rOuter * Math.cos(clampedEnd)
-  const y1 = cy + rOuter * Math.sin(clampedEnd)
-  const x2 = cx + rInner * Math.cos(clampedEnd)
-  const y2 = cy + rInner * Math.sin(clampedEnd)
-  const x3 = cx + rInner * Math.cos(startAngle)
-  const y3 = cy + rInner * Math.sin(startAngle)
+  // Every point goes through svgRound for the same reason as svgRound itself:
+  // cos/sin are not required to be correctly rounded, so a path built from them
+  // can differ in the last bit between the Node render and the browser one.
+  const x0 = svgRound(cx + rOuter * Math.cos(startAngle))
+  const y0 = svgRound(cy + rOuter * Math.sin(startAngle))
+  const x1 = svgRound(cx + rOuter * Math.cos(clampedEnd))
+  const y1 = svgRound(cy + rOuter * Math.sin(clampedEnd))
+  const x2 = svgRound(cx + rInner * Math.cos(clampedEnd))
+  const y2 = svgRound(cy + rInner * Math.sin(clampedEnd))
+  const x3 = svgRound(cx + rInner * Math.cos(startAngle))
+  const y3 = svgRound(cy + rInner * Math.sin(startAngle))
   const largeArc = clampedEnd - startAngle > Math.PI ? 1 : 0
   return [
     `M ${x0} ${y0}`,

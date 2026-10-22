@@ -593,6 +593,8 @@ export const he = {
         perTrackAria: 'השוואת יתרת המסלולים לאורך התקופה',
         mixTotalLabel: 'סך המשכנתא',
         costCenterLabel: 'ריבית',
+        costSliceLine: '{{label}}: {{amount}}, {{percent}}%',
+        costTotalLine: 'סך התשלומים: {{amount}}',
         yearLabel: 'שנה {{year}}',
         monthLabel: 'חודש {{month}}',
         axisPayment: 'תשלום שנתי',

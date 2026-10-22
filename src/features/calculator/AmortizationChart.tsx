@@ -9,6 +9,7 @@ import {
   xAxisTicks,
 } from '@/lib/charts'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
+import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 
 /** One chart-ready period row - mapped from the schedule table's source. */
 export interface ChartPeriodRow {
@@ -58,7 +59,11 @@ const MAX_BARS = 40
 export function AmortizationChart({ rows, periodLabel, monthly = false }: AmortizationChartProps) {
   const { t } = useTranslation()
   const [active, setActive] = useState<number | null>(null)
-  // Tooltip element + chart container, for the edge-clamp hook.
+  // Whether the pointer is on the plot right now. `active` deliberately
+  // outlives it, so the callout still has a period to show while it fades out.
+  const [hovering, setHovering] = useState(false)
+  const showTooltip = useTooltipPresence(hovering && active !== null)
+  // Tooltip element + plot box, for the edge-clamp hook.
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const plotRef = useRef<HTMLDivElement | null>(null)
   // Re-clamp whenever the tooltip re-anchors to another period.
@@ -103,6 +108,12 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
   const barWidth = svgRound(Math.min(30, slot * 0.66))
 
   const activeRow = active !== null ? rows[active] : null
+  // The tooltip hangs just above the balance line at the hovered period - the
+  // line is the curve being read, and the payment bars behind it are a tall
+  // block on every period, so anchoring to those would pin the callout near
+  // the top of the chart. It deliberately does NOT follow the pointer: the
+  // callout belongs to the graph, not to the cursor.
+  const activeAnchorY = activeRow ? yBalance(activeRow.balance) : MARGIN.top
   const xTicks = xAxisTicks(rows.length, monthly)
   // The payments axis is a DIFFERENT scale per granularity: a yearly row
   // carries the 12 monthly payments of its year, a monthly row one payment.
@@ -121,10 +132,11 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
     const relative = ((event.clientX - bounds.left) / bounds.width) * WIDTH - MARGIN.left
     const index = Math.floor((relative - pad) / Math.max(slot, 1e-9))
     setActive(Math.max(0, Math.min(rows.length - 1, index)))
+    setHovering(true)
   }
 
   return (
-    <div className="amort-chart" data-testid="amortization-chart" ref={plotRef}>
+    <div className="amort-chart" data-testid="amortization-chart">
       <div className="chart-legend" aria-hidden="true">
         <span className="chart-legend-item">
           <i className="chart-swatch chart-swatch-principal" />{' '}
@@ -140,228 +152,239 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
         </span>
       </div>
 
-      <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        direction="ltr"
-        role="img"
-        aria-label={t('calculator.charts.amortAria')}
-        onMouseMove={handleMove}
-        onMouseLeave={() => setActive(null)}
-        onClick={handleMove}
-      >
-        {/* Horizontal grid + left (payments) axis. */}
-        {paymentTicks.map((tick) => (
-          <g key={`p-${tick}`}>
-            <line
-              x1={MARGIN.left}
-              x2={WIDTH - MARGIN.right}
-              y1={yPayment(tick)}
-              y2={yPayment(tick)}
-              className="chart-grid"
-            />
-            <text
-              x={MARGIN.left - 10}
-              y={yPayment(tick)}
-              dy="0.32em"
-              className="chart-tick chart-tick-end"
-            >
-              {formatAxisShekel(tick)}
-            </text>
-          </g>
-        ))}
-
-        {/* Right (balance) axis - the overlay line's scale. Its ticks get
-            their own faint dashed grid, tinted with the balance color, so a
-            reader can tell which axis drives which series: solid grid =
-            payments bars, dashed = the balance line. Both grids share the
-            same rows (aligned dual-axis ticks). */}
-        {balanceTicks.map((tick) => (
-          <g key={`b-${tick}`}>
-            <line
-              x1={MARGIN.left}
-              x2={WIDTH - MARGIN.right}
-              y1={yBalance(tick)}
-              y2={yBalance(tick)}
-              className="chart-grid chart-grid-balance"
-            />
-            <text
-              x={WIDTH - MARGIN.right + 10}
-              y={yBalance(tick)}
-              dy="0.32em"
-              className="chart-tick chart-tick-balance"
-            >
-              {formatAxisShekel(tick)}
-            </text>
-          </g>
-        ))}
-
-        {/* X ticks: every year when it fits (minor ticks otherwise), always
-            evenly spaced and chronological left to right. */}
-        {xTicks.map((tick) => (
-          <g key={`x-${tick.index}`}>
-            <line
-              x1={x(tick.index)}
-              x2={x(tick.index)}
-              y1={MARGIN.top + INNER_H}
-              y2={MARGIN.top + INNER_H + (tick.label === null ? 4 : 7)}
-              className={tick.label === null ? 'chart-minor-tick' : 'chart-major-tick'}
-            />
-            {tick.label !== null && (
-              <text x={x(tick.index)} y={HEIGHT - 36} className="chart-tick">
-                {tick.label}
+      <div className="amort-plot" ref={plotRef}>
+        <svg
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          direction="ltr"
+          role="img"
+          aria-label={t('calculator.charts.amortAria')}
+          onMouseMove={handleMove}
+          onMouseLeave={() => setHovering(false)}
+          onClick={handleMove}
+        >
+          {/* Horizontal grid + left (payments) axis. */}
+          {paymentTicks.map((tick) => (
+            <g key={`p-${tick}`}>
+              <line
+                x1={MARGIN.left}
+                x2={WIDTH - MARGIN.right}
+                y1={yPayment(tick)}
+                y2={yPayment(tick)}
+                className="chart-grid"
+              />
+              <text
+                x={MARGIN.left - 10}
+                y={yPayment(tick)}
+                dy="0.32em"
+                className="chart-tick chart-tick-end"
+              >
+                {formatAxisShekel(tick)}
               </text>
-            )}
-          </g>
-        ))}
+            </g>
+          ))}
 
-        {useBars
-          ? rows.map((row, index) => {
-              const principalTop = yPayment(row.principal)
-              const interestTop = yPayment(row.principal + row.interest)
-              const isActive = active === index
-              return (
-                <g
-                  key={row.period}
-                  className={isActive ? 'chart-bar-group-active' : undefined}
-                  // Explicit user-unit transform origin (bar center-x, baseline)
-                  // so the scale pivots at the bar's base - the same technique
-                  // the donut uses. Avoids transform-box: fill-box, which makes
-                  // Chromium re-rasterize the whole SVG (flickering text).
-                  style={{ transformOrigin: `${x(index)}px ${MARGIN.top + INNER_H}px` }}
-                >
-                  <rect
-                    x={x(index) - barWidth / 2}
-                    y={principalTop}
-                    width={barWidth}
-                    height={MARGIN.top + INNER_H - principalTop}
-                    className="chart-bar chart-bar-principal"
-                  />
-                  <rect
-                    x={x(index) - barWidth / 2}
-                    y={interestTop}
-                    width={barWidth}
-                    height={Math.max(0, principalTop - interestTop)}
-                    className="chart-bar chart-bar-interest"
-                  />
-                </g>
-              )
-            })
-          : (() => {
-              // Continuous area for long (monthly) horizons: stack edges only.
-              const principalEdge = rows
-                .map(
-                  (row, index) =>
-                    `${index === 0 ? 'M' : 'L'} ${x(index)} ${yPayment(row.principal)}`,
+          {/* Right (balance) axis - the overlay line's scale. Its ticks get
+              their own faint dashed grid, tinted with the balance color, so a
+              reader can tell which axis drives which series: solid grid =
+              payments bars, dashed = the balance line. Both grids share the
+              same rows (aligned dual-axis ticks). */}
+          {balanceTicks.map((tick) => (
+            <g key={`b-${tick}`}>
+              <line
+                x1={MARGIN.left}
+                x2={WIDTH - MARGIN.right}
+                y1={yBalance(tick)}
+                y2={yBalance(tick)}
+                className="chart-grid chart-grid-balance"
+              />
+              <text
+                x={WIDTH - MARGIN.right + 10}
+                y={yBalance(tick)}
+                dy="0.32em"
+                className="chart-tick chart-tick-balance"
+              >
+                {formatAxisShekel(tick)}
+              </text>
+            </g>
+          ))}
+
+          {/* X ticks: every year when it fits (minor ticks otherwise), always
+              evenly spaced and chronological left to right. */}
+          {xTicks.map((tick) => (
+            <g key={`x-${tick.index}`}>
+              <line
+                x1={x(tick.index)}
+                x2={x(tick.index)}
+                y1={MARGIN.top + INNER_H}
+                y2={MARGIN.top + INNER_H + (tick.label === null ? 4 : 7)}
+                className={tick.label === null ? 'chart-minor-tick' : 'chart-major-tick'}
+              />
+              {tick.label !== null && (
+                <text x={x(tick.index)} y={HEIGHT - 36} className="chart-tick">
+                  {tick.label}
+                </text>
+              )}
+            </g>
+          ))}
+
+          {useBars
+            ? rows.map((row, index) => {
+                const principalTop = yPayment(row.principal)
+                const interestTop = yPayment(row.principal + row.interest)
+                const isActive = hovering && active === index
+                return (
+                  <g
+                    key={row.period}
+                    className={isActive ? 'chart-bar-group-active' : undefined}
+                    // Explicit user-unit transform origin (bar center-x, baseline)
+                    // so the scale pivots at the bar's base - the same technique
+                    // the donut uses. Avoids transform-box: fill-box, which makes
+                    // Chromium re-rasterize the whole SVG (flickering text).
+                    style={{ transformOrigin: `${x(index)}px ${MARGIN.top + INNER_H}px` }}
+                  >
+                    <rect
+                      x={x(index) - barWidth / 2}
+                      y={principalTop}
+                      width={barWidth}
+                      height={MARGIN.top + INNER_H - principalTop}
+                      className="chart-bar chart-bar-principal"
+                    />
+                    <rect
+                      x={x(index) - barWidth / 2}
+                      y={interestTop}
+                      width={barWidth}
+                      height={Math.max(0, principalTop - interestTop)}
+                      className="chart-bar chart-bar-interest"
+                    />
+                  </g>
                 )
-                .join(' ')
-              const interestEdge = rows
-                .map(
-                  (row, index) =>
-                    `${index === 0 ? 'M' : 'L'} ${x(index)} ${yPayment(row.principal + row.interest)}`,
+              })
+            : (() => {
+                // Continuous area for long (monthly) horizons: stack edges only.
+                const principalEdge = rows
+                  .map(
+                    (row, index) =>
+                      `${index === 0 ? 'M' : 'L'} ${x(index)} ${yPayment(row.principal)}`,
+                  )
+                  .join(' ')
+                const interestEdge = rows
+                  .map(
+                    (row, index) =>
+                      `${index === 0 ? 'M' : 'L'} ${x(index)} ${yPayment(row.principal + row.interest)}`,
+                  )
+                  .join(' ')
+                const baseline = MARGIN.top + INNER_H
+                const balanceEdge = rows
+                  .map(
+                    (row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${yBalance(row.balance)}`,
+                  )
+                  .join(' ')
+                return (
+                  <>
+                    <path
+                      d={`${principalEdge} L ${x(rows.length - 1)} ${baseline} L ${x(0)} ${baseline} Z`}
+                      className="chart-area chart-area-principal"
+                    />
+                    <path
+                      d={`${interestEdge} L ${x(rows.length - 1)} ${baseline} L ${x(0)} ${baseline} Z`}
+                      className="chart-area chart-area-interest"
+                    />
+                    <path d={balanceEdge} className="chart-line" />
+                  </>
                 )
-                .join(' ')
-              const baseline = MARGIN.top + INNER_H
-              const balanceEdge = rows
+              })()}
+
+          {useBars && (
+            <path
+              d={rows
                 .map(
                   (row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${yBalance(row.balance)}`,
                 )
-                .join(' ')
-              return (
-                <>
-                  <path
-                    d={`${principalEdge} L ${x(rows.length - 1)} ${baseline} L ${x(0)} ${baseline} Z`}
-                    className="chart-area chart-area-principal"
-                  />
-                  <path
-                    d={`${interestEdge} L ${x(rows.length - 1)} ${baseline} L ${x(0)} ${baseline} Z`}
-                    className="chart-area chart-area-interest"
-                  />
-                  <path d={balanceEdge} className="chart-line" />
-                </>
-              )
-            })()}
+                .join(' ')}
+              className="chart-line"
+            />
+          )}
 
-        {useBars && (
-          <path
-            d={rows
-              .map(
-                (row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${yBalance(row.balance)}`,
-              )
-              .join(' ')}
-            className="chart-line"
-          />
+          {/* Hover/tap marker on the balance line. */}
+          {hovering && activeRow && (
+            <circle cx={x(active!)} cy={yBalance(activeRow.balance)} r={4} className="chart-dot" />
+          )}
+
+          {/* Axis titles: rotated vertically at the outer edges, left = payment
+              (annual or monthly, per the mode), right = balance; the bottom title
+              stays "year" in BOTH modes, because that is what the labeled ticks
+              are in both - the monthly tab plots months but labels year
+              boundaries, and each hovered point names its own month. The chart
+              SVG is LTR so these use logical positions, labels stay Hebrew. */}
+          <text
+            x={16}
+            y={MARGIN.top + INNER_H / 2}
+            className="chart-axis-title chart-axis-title-rot"
+            transform={`rotate(-90 16 ${MARGIN.top + INNER_H / 2})`}
+          >
+            {paymentAxisLabel}
+          </text>
+          <text
+            x={WIDTH - 16}
+            y={MARGIN.top + INNER_H / 2}
+            className="chart-axis-title chart-axis-title-rot"
+            transform={`rotate(90 ${WIDTH - 16} ${MARGIN.top + INNER_H / 2})`}
+          >
+            {t('calculator.charts.axisBalance')}
+          </text>
+
+          {/* Small-screen stand-ins for the rotated titles: short horizontal
+              captions above the axis numbers, shown on screens ≤800px (CSS). */}
+          <text x={38} y={12} className="chart-axis-title chart-axis-title-above">
+            {paymentAxisLabel}
+          </text>
+          <text x={WIDTH - 44} y={12} className="chart-axis-title chart-axis-title-above">
+            {t('calculator.charts.axisBalance')}
+          </text>
+
+          <text x={MARGIN.left + INNER_W / 2} y={HEIGHT - 8} className="chart-axis-title">
+            {t('calculator.charts.axisYear')}
+          </text>
+        </svg>
+
+        {showTooltip && activeRow && (
+          <div
+            ref={tooltipRef}
+            className="chart-tooltip"
+            data-open={hovering}
+            role="status"
+            style={{
+              // Physical `left`, not insetInlineStart: the SVG is LTR while the
+              // page is RTL, so the logical property would mirror the position.
+              // The clamp hook adjusts the transform near the plot edges so
+              // the whole tooltip stays on screen. `translate` (a separate
+              // property from `transform`) lifts the callout above the hovered
+              // point without fighting that clamp.
+              left: `${svgRound((x(active!) / WIDTH) * 100)}%`,
+              // Percent of the plot box, which is exactly the SVG: the tooltip
+              // is positioned against `.amort-plot`, not the whole chart, so a
+              // viewBox y in [0, HEIGHT] maps straight onto it.
+              top: `${svgRound((activeAnchorY / HEIGHT) * 100)}%`,
+              // Bottom edge just clear of the point, with a small gap.
+              translate: '0 calc(-100% - 10px)',
+            }}
+          >
+            <strong>{periodLabel(activeRow.period)}</strong>
+            <span>
+              {t('calculator.schedule.principalHeader')}: {formatCurrency(activeRow.principal)}
+            </span>
+            <span>
+              {t('calculator.schedule.interestHeader')}: {formatCurrency(activeRow.interest)}
+            </span>
+            <span>
+              {t('calculator.schedule.balanceHeader')}: {formatCurrency(activeRow.balance)}
+            </span>
+            <span>
+              {paymentTooltipLabel}: {formatCurrency(activeRow.payment)}
+            </span>
+          </div>
         )}
-
-        {/* Hover/tap marker on the balance line. */}
-        {activeRow && (
-          <circle cx={x(active!)} cy={yBalance(activeRow.balance)} r={4} className="chart-dot" />
-        )}
-
-        {/* Axis titles: rotated vertically at the outer edges, left = payment
-            (annual or monthly, per the mode), right = balance; the bottom title
-            stays "year" in BOTH modes, because that is what the labeled ticks
-            are in both - the monthly tab plots months but labels year
-            boundaries, and each hovered point names its own month. The chart
-            SVG is LTR so these use logical positions, labels stay Hebrew. */}
-        <text
-          x={16}
-          y={MARGIN.top + INNER_H / 2}
-          className="chart-axis-title chart-axis-title-rot"
-          transform={`rotate(-90 16 ${MARGIN.top + INNER_H / 2})`}
-        >
-          {paymentAxisLabel}
-        </text>
-        <text
-          x={WIDTH - 16}
-          y={MARGIN.top + INNER_H / 2}
-          className="chart-axis-title chart-axis-title-rot"
-          transform={`rotate(90 ${WIDTH - 16} ${MARGIN.top + INNER_H / 2})`}
-        >
-          {t('calculator.charts.axisBalance')}
-        </text>
-
-        {/* Small-screen stand-ins for the rotated titles: short horizontal
-            captions above the axis numbers, shown on screens ≤800px (CSS). */}
-        <text x={38} y={12} className="chart-axis-title chart-axis-title-above">
-          {paymentAxisLabel}
-        </text>
-        <text x={WIDTH - 44} y={12} className="chart-axis-title chart-axis-title-above">
-          {t('calculator.charts.axisBalance')}
-        </text>
-
-        <text x={MARGIN.left + INNER_W / 2} y={HEIGHT - 8} className="chart-axis-title">
-          {t('calculator.charts.axisYear')}
-        </text>
-      </svg>
-
-      {activeRow && (
-        <div
-          ref={tooltipRef}
-          className="chart-tooltip"
-          role="status"
-          style={{
-            // Physical `left`, not insetInlineStart: the SVG is LTR while the
-            // page is RTL, so the logical property would mirror the position.
-            // The clamp hook adjusts the transform near the plot edges so
-            // the whole tooltip stays on screen.
-            left: `${svgRound((x(active!) / WIDTH) * 100)}%`,
-          }}
-        >
-          <strong>{periodLabel(activeRow.period)}</strong>
-          <span>
-            {t('calculator.schedule.principalHeader')}: {formatCurrency(activeRow.principal)}
-          </span>
-          <span>
-            {t('calculator.schedule.interestHeader')}: {formatCurrency(activeRow.interest)}
-          </span>
-          <span>
-            {t('calculator.schedule.balanceHeader')}: {formatCurrency(activeRow.balance)}
-          </span>
-          <span>
-            {paymentTooltipLabel}: {formatCurrency(activeRow.payment)}
-          </span>
-        </div>
-      )}
+      </div>
     </div>
   )
 }

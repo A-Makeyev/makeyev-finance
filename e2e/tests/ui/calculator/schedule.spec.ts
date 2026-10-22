@@ -129,6 +129,379 @@ test.describe('mortgage calculator - amortization schedule', () => {
     await expect(calc.page.locator('[data-testid^="schedule-year-"]')).toHaveCount(15)
   })
 
+  test('the cost donut prints each slice share inside the slice, readable in both themes', async ({
+    calc,
+  }) => {
+    // The share used to live only in the hover callout. It now also sits inside
+    // the slice from 8% up, and the ink is picked PER SLICE: white reads on the
+    // teal and purple fills but only 2.2:1 on the gold interest slice, so that
+    // one takes near-black. This probe reads the rendered colors and measures
+    // contrast, so a palette or token change that kills legibility fails here.
+    const probe = `(() => {
+      const donut = document.querySelector('[data-testid="total-cost-donut"]')
+      if (!donut) return null
+      const luminance = (color) => {
+        const [r, g, b] = color.match(/[\\d.]+/g).map(Number)
+        const channel = (value) => {
+          const ratio = value / 255
+          return ratio <= 0.03928 ? ratio / 12.92 : Math.pow((ratio + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+      }
+      const contrast = (one, other) => {
+        const [light, dark] = [luminance(one), luminance(other)].sort((a, b) => b - a)
+        return (light + 0.05) / (dark + 0.05)
+      }
+      const amounts = [...donut.querySelectorAll('.cost-legend-item strong')].map((node) =>
+        Number(node.textContent.replace(/[^\\d]/g, '')),
+      )
+      const total = amounts.reduce((sum, amount) => sum + amount, 0)
+      return {
+        slices: [...donut.querySelectorAll('svg g.mix-slice')].map((group, index) => {
+          const text = group.querySelector('text.donut-slice-label')
+          const path = group.querySelector('path')
+          return {
+            share: total > 0 ? Math.round((amounts[index] / total) * 100) : 0,
+            label: text ? text.textContent : null,
+            contrast: text
+              ? Number(
+                  contrast(getComputedStyle(path).fill, getComputedStyle(text).fill).toFixed(2),
+                )
+              : null,
+          }
+        }),
+      }
+    })()`
+
+    type DonutShares = {
+      slices: { share: number; label: string | null; contrast: number | null }[]
+    } | null
+
+    const expectSharesInSlices = (donut: DonutShares, theme: string) => {
+      expect(donut, `cost donut rendered (${theme})`).not.toBeNull()
+      expect(donut!.slices.length).toBeGreaterThanOrEqual(2)
+      for (const slice of donut!.slices) {
+        if (slice.share < 8) {
+          // Too thin to hold a number; the hover callout still carries it.
+          expect(slice.label, `${theme}: thin slice stays unlabeled`).toBeNull()
+          continue
+        }
+        expect(slice.label, `${theme}: ${slice.share}% slice label`).toBe(`${slice.share}%`)
+        // AA for normal text: the number has to be readable on its own fill.
+        expect(slice.contrast, `${theme}: ${slice.share}% label contrast`).toBeGreaterThanOrEqual(
+          4.5,
+        )
+      }
+    }
+
+    expectSharesInSlices((await calc.page.evaluate(probe)) as DonutShares, 'light')
+
+    // Dark mode brightens all three fills, so every label has to flip to dark
+    // ink there - the theme white would be 2.6:1 on the teal slice.
+    await calc.page.evaluate(() => localStorage.setItem('site_theme', 'dark'))
+    await calc.goto()
+    await expect(calc.page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    expectSharesInSlices((await calc.page.evaluate(probe)) as DonutShares, 'dark')
+  })
+
+  test('the cost donut repeats each slice share as text for the legend and for assistive tech', async ({
+    calc,
+  }) => {
+    // A donut is a picture. The legend carries the shares visually, and a
+    // visually-hidden list repeats the same figures for a screen reader, wired
+    // to the SVG through aria-describedby - otherwise the chart announces as a
+    // title with no data in it. The list must be visually hidden, not
+    // display:none, or assistive tech would not see it either.
+    const probe = `(() => {
+      const root = document.querySelector('[data-testid="total-cost-donut"]')
+      if (!root) return null
+      const digits = (text) => [...(text || '')].filter((char) => char >= '0' && char <= '9').join('')
+      const svg = root.querySelector('svg')
+      const describedBy = svg ? svg.getAttribute('aria-describedby') : null
+      const list = describedBy ? root.querySelector('[id="' + describedBy + '"]') : null
+      const style = list ? getComputedStyle(list) : null
+      return {
+        legend: [...root.querySelectorAll('.cost-legend-item')].map((row) => {
+          const amount = row.querySelector('strong')
+          const share = row.querySelector('.cost-legend-share')
+          return {
+            amount: Number(digits(amount ? amount.textContent : '')),
+            share: ((share ? share.textContent : '') || '').trim(),
+          }
+        }),
+        items: list ? [...list.querySelectorAll('li')].map((li) => li.textContent) : null,
+        wired: !!list && list.getAttribute('data-testid') === 'total-cost-donut-summary',
+        hidden:
+          !!style &&
+          style.position === 'absolute' &&
+          list.getBoundingClientRect().width <= 1,
+      }
+    })()`
+
+    type CostLegendProbe = {
+      legend: { amount: number; share: string }[]
+      items: string[] | null
+      wired: boolean
+      hidden: boolean
+    } | null
+
+    const data = (await calc.page.evaluate(probe)) as CostLegendProbe
+    expect(data, 'cost donut rendered').not.toBeNull()
+    const { legend, items, wired, hidden } = data!
+
+    expect(legend.length).toBeGreaterThanOrEqual(2)
+    expect(wired, 'the SVG describes itself with the text list').toBe(true)
+    expect(hidden, 'the text list is visually hidden, never display:none').toBe(true)
+    expect(items, 'text list rendered').not.toBeNull()
+    expect(items!.length, 'one line per slice plus the total').toBe(legend.length + 1)
+
+    const total = legend.reduce((sum, row) => sum + row.amount, 0)
+    legend.forEach((row, index) => {
+      const share = total > 0 ? Math.round((row.amount / total) * 100) : 0
+      // The legend and the text list have to agree with the ring, and with
+      // each other: one rounding, one source.
+      expect(row.share, `legend share ${index}`).toBe(`${share}%`)
+      expect(items![index], `summary share ${index}`).toContain(`${share}%`)
+      expect(items![index], `summary amount ${index}`).toContain(
+        row.amount.toLocaleString('en-US'),
+      )
+    })
+    expect(items![items!.length - 1], 'summary total').toContain(total.toLocaleString('en-US'))
+  })
+
+  test('the donut pair renders both rings and their text at the same scale', async ({ calc }) => {
+    // Side by side, the two donuts are read as one comparison. They used to
+    // disagree twice over: the mix ring was 11% larger at the same width, and
+    // its 320-unit canvas made every label render smaller than the cost
+    // donut's 170-unit one. Both now share the 170-unit canvas in the pair.
+    await calc.page.setViewportSize({ width: 900, height: 1000 })
+    const cost = calc.page.getByTestId('total-cost-donut')
+    await expect(cost).toBeVisible()
+    await expect(calc.page.locator('[data-testid="track-mix-donut"] svg')).toHaveAttribute(
+      'viewBox',
+      '0 0 170 170',
+    )
+
+    type TextStyle = { size: string; weight: string; color: string }
+    type ProbeSide = {
+      svgWidth: number
+      ring: number
+      slice: { height: number }
+      label: { height: number }
+      value: { height: number; width: number }
+      valueText: string
+      legendName: TextStyle
+      legendNumber: TextStyle
+    }
+
+    const probe = (await calc.page.evaluate(`(() => {
+      const measure = (selector) => {
+        const root = document.querySelector(selector)
+        const svg = root.querySelector('svg')
+        const svgRect = svg.getBoundingClientRect()
+        const paths = [...svg.querySelectorAll('g.mix-slice path')]
+        const union = paths.reduce(
+          (acc, path) => {
+            const box = path.getBoundingClientRect()
+            return {
+              left: Math.min(acc.left, box.left),
+              right: Math.max(acc.right, box.right),
+              top: Math.min(acc.top, box.top),
+              bottom: Math.max(acc.bottom, box.bottom),
+            }
+          },
+          { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity },
+        )
+        const text = (query) => {
+          const el = svg.querySelector(query)
+          if (!el) return null
+          const box = el.getBoundingClientRect()
+          return { width: box.width, height: box.height, font: getComputedStyle(el).fontSize }
+        }
+        const styleOf = (el) => {
+          if (!el) return null
+          const style = getComputedStyle(el)
+          return { size: style.fontSize, weight: style.fontWeight, color: style.color }
+        }
+        const valueEl = svg.querySelector('text.donut-center-value')
+        return {
+          svgWidth: svgRect.width,
+          viewBox: svg.getAttribute('viewBox'),
+          ring: union.right - union.left,
+          slice: text('text.donut-slice-label'),
+          label: text('text.donut-center-label'),
+          value: text('text.donut-center-value'),
+          valueText: valueEl ? valueEl.textContent.trim() : '',
+          legendName: styleOf(root.querySelector('.mix-legend-name, .cost-legend-name')),
+          legendNumber: styleOf(root.querySelector('.mix-legend-amount, .cost-legend-item strong')),
+        }
+      }
+      return {
+        cost: measure('[data-testid="total-cost-donut"]'),
+        mix: measure('[data-testid="track-mix-donut"]'),
+      }
+    })()`)) as { cost: ProbeSide; mix: ProbeSide }
+
+    const { cost: costSide, mix } = probe
+
+    // Same canvas, same rendered width, same ring diameter.
+    expect(costSide.svgWidth).toBeCloseTo(mix.svgWidth, 0)
+    expect(costSide.ring).toBeCloseTo(mix.ring, 0)
+    // Same text scale: equal glyph heights for the share, the centre label
+    // and the centre figure.
+    expect(costSide.slice.height).toBeCloseTo(mix.slice.height, 0)
+    expect(costSide.label.height).toBeCloseTo(mix.label.height, 0)
+    expect(costSide.value.height).toBeCloseTo(mix.value.height, 0)
+
+    // The centre figure can be full size because the mix total is compact:
+    // ₪1M rather than ₪1,000,000, with the exact amounts in the legend.
+    expect(mix.valueText).toMatch(/^₪[\d.]+M$/)
+    expect(mix.value.width).toBeLessThan(mix.svgWidth * 0.5)
+
+    // Both legends share one typographic scale: same size, weight and ink for
+    // the name line and for the numbers.
+    expect(costSide.legendName).toEqual(mix.legendName)
+    expect(costSide.legendNumber).toEqual(mix.legendNumber)
+  })
+
+  test('chart tooltips hang just above the hovered data, not at the pointer', async ({ calc }) => {
+    // The callout belongs to the graph: its bottom edge sits a fixed 10px above
+    // the hovered point, and moving the cursor up or down inside one period
+    // cannot move it. It used to track the pointer's height, which left it
+    // wherever the cursor happened to be rather than on the line being read.
+    const readTip = (selector: string) =>
+      calc.page.evaluate(
+        `(() => {
+          const root = document.querySelector('${selector}')
+          if (!root) return null
+          const svg = root.querySelector('svg')
+          const tip = root.querySelector('.chart-tooltip')
+          if (!tip) return null
+          const vbH = Number(svg.getAttribute('viewBox').split(' ')[3])
+          const svgRect = svg.getBoundingClientRect()
+          const plotRect = svg.parentElement.getBoundingClientRect()
+          const tipRect = tip.getBoundingClientRect()
+          const dots = [
+            ...root.querySelectorAll(
+              'circle.chart-dot, circle.chart-dot-track, circle.forecast-hover-dot',
+            ),
+          ]
+          const anchorY = dots.length
+            ? Math.min(...dots.map((dot) => Number(dot.getAttribute('cy'))))
+            : null
+          // Measured from the plot's top edge, so a scroll between the two
+          // hovers cannot masquerade as the tooltip moving.
+          return {
+            top: tipRect.top - plotRect.top,
+            bottom: tipRect.bottom - plotRect.top,
+            plotHeight: plotRect.height,
+            anchorPx: anchorY === null ? null : (anchorY / vbH) * svgRect.height,
+          }
+        })()`,
+      )
+
+    type TipProbe = {
+      top: number
+      bottom: number
+      plotHeight: number
+      anchorPx: number | null
+    } | null
+
+    const hoverAt = async (selector: string, xFraction: number, yFraction: number) => {
+      const svg = calc.page.locator(`${selector} svg`)
+      await svg.scrollIntoViewIfNeeded()
+      const box = (await svg.boundingBox())!
+      await svg.hover({ position: { x: box.width * xFraction, y: box.height * yFraction } })
+      return (await readTip(selector)) as TipProbe
+    }
+
+    const expectDataAnchored = async (selector: string, name: string) => {
+      const lowered = await hoverAt(selector, 0.5, 0.8)
+      const raised = await hoverAt(selector, 0.5, 0.2)
+      expect(lowered, `${name}: tooltip rendered`).not.toBeNull()
+      expect(raised, `${name}: tooltip rendered`).not.toBeNull()
+      // Same period, very different pointer heights: the callout must not move.
+      expect(raised!.top, `${name}: pointer height is ignored`).toBeCloseTo(lowered!.top, 0)
+      expect(raised!.bottom, `${name}: pointer height is ignored`).toBeCloseTo(lowered!.bottom, 0)
+      // Never outside the plot, even when the point sits near its top edge.
+      expect(lowered!.top, `${name}: stays inside the plot`).toBeGreaterThanOrEqual(-0.5)
+      expect(lowered!.bottom, `${name}: stays inside the plot`).toBeLessThanOrEqual(
+        lowered!.plotHeight + 0.5,
+      )
+      // And when there is room above the point, the gap is the fixed 10px.
+      if (lowered!.anchorPx !== null && lowered!.top > 1) {
+        expect(lowered!.bottom, `${name}: hangs 10px above the data`).toBeCloseTo(
+          lowered!.anchorPx - 10,
+          0,
+        )
+      }
+    }
+
+    await expectDataAnchored('[data-testid="amortization-chart"]', 'amortization')
+
+    // The callout fades: it is a live element while hovering, and the CSS
+    // transition on opacity is what runs when it closes. Without the transition
+    // it would still snap in and out.
+    const amortTip = calc.page.locator('[data-testid="amortization-chart"] .chart-tooltip')
+    await expect(amortTip).toHaveAttribute('data-open', 'true')
+    const fade = await amortTip.evaluate((element) => {
+      const style = getComputedStyle(element)
+      return { property: style.transitionProperty, seconds: parseFloat(style.transitionDuration) }
+    })
+    expect(fade.property, 'opacity is the animated property').toContain('opacity')
+    expect(fade.seconds, 'the fade has a duration').toBeGreaterThan(0)
+    // Moving off the chart clears it - the hold for the fade must not leave a
+    // stale callout behind.
+    await calc.page.mouse.move(0, 0)
+    await expect(amortTip).toHaveCount(0)
+
+    await calc.page.getByTestId('schedule-view-separate').click()
+    await expectDataAnchored('[data-testid="per-track-chart"]', 'per-track')
+    // The forecast charts share the same contract, hover dots included: the
+    // callout hangs above the highest dot at the hovered year.
+    await calc.forecast.scrollTo()
+    await expectDataAnchored('[data-testid="forecast-reset-chart"]', 'forecast')
+  })
+
+  test.describe('narrow screens', () => {
+    test.use({ language: 'english', viewport: { width: 360, height: 800 } })
+
+    test('the per-track tooltip wraps inside the plot instead of hanging past it', async ({
+      localizedCalc,
+    }) => {
+      // One row per track, so in English on a phone the callout used to be
+      // wider than the plot it is anchored in. It is now capped at the plot
+      // width and the rows wrap; no content may be lost doing so.
+      await localizedCalc.goto()
+      await localizedCalc.page.getByTestId('schedule-view-separate').click()
+      const svg = localizedCalc.page.locator('[data-testid="per-track-chart"] svg')
+      await svg.scrollIntoViewIfNeeded()
+      const box = (await svg.boundingBox())!
+      await svg.hover({ position: { x: box.width * 0.5, y: box.height * 0.6 } })
+
+      const tip = localizedCalc.page.locator('[data-testid="per-track-chart"] .chart-tooltip')
+      await expect(tip).toBeVisible()
+      await expect(tip.locator('.chart-tooltip-row')).toHaveCount(3)
+
+      const probe = (await localizedCalc.page.evaluate(`(() => {
+        const root = document.querySelector('[data-testid="per-track-chart"]')
+        const svg = root.querySelector('svg')
+        const plot = svg.parentElement.getBoundingClientRect()
+        const tip = root.querySelector('.chart-tooltip').getBoundingClientRect()
+        return {
+          plotWidth: plot.width,
+          tipWidth: tip.width,
+          insidePlot: tip.left >= plot.left - 0.5 && tip.right <= plot.right + 0.5,
+        }
+      })()`)) as { plotWidth: number; tipWidth: number; insidePlot: boolean }
+
+      expect(probe.tipWidth, 'never wider than the plot').toBeLessThanOrEqual(
+        probe.plotWidth + 0.5,
+      )
+      expect(probe.insidePlot, 'the whole callout stays inside the plot').toBe(true)
+    })
+  })
+
   test('the chart hydrates without a server/client mismatch', async ({ calc }) => {
     // The calculator is prerendered, so anything the server and the browser
     // render differently surfaces here as a React hydration error. The chart is

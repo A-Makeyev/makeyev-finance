@@ -54,13 +54,17 @@ export function ActionFormModal({ open, onOpenChange }: ActionFormModalProps) {
         // family as the valid fields and the send button.
         contentClassName="no-scrollbar max-w-[500px] !rounded-2xl !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
       >
-        <div className="p-6 pb-5" dir={isHebrew ? 'rtl' : 'ltr'}>
+        {/* Responsive scale: the form modal is the tallest dialog on the
+            site, so on a phone its padding and headline step down to keep the
+            fields and the send button in view without scrolling past a
+            desktop-sized header. */}
+        <div className="p-4 pb-4 sm:p-6 sm:pb-5" dir={isHebrew ? 'rtl' : 'ltr'}>
           {/* Header */}
-          <div className={`mb-4 ${isHebrew ? 'text-right' : 'text-left'}`}>
-            <h1 className="text-[28px] font-bold leading-tight text-ink">
+          <div className={`mb-3 sm:mb-4 ${isHebrew ? 'text-right' : 'text-left'}`}>
+            <h1 className="text-[22px] font-bold leading-tight text-ink sm:text-[28px]">
               {t('contact.actionModal.title')}
             </h1>
-            <p className="mt-1 text-[17px] font-medium text-soft-blue">
+            <p className="mt-1 text-[15px] font-medium text-soft-blue sm:text-[17px]">
               {t('contact.actionModal.subtitle')}
             </p>
           </div>

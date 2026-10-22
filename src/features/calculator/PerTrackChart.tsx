@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
 import { formatAxisShekel, niceTicks, xAxisTicks } from '@/lib/charts'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
+import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 import { TRACK_TYPE_COLORS } from './trackColors'
 import type { TrackSchedule } from '@/stores/calculatorStore'
 
@@ -61,6 +62,10 @@ export function PerTrackChart({
 }) {
   const { t } = useTranslation()
   const [hover, setHover] = useState<HoverState | null>(null)
+  // Whether the pointer is on the plot right now. `hover` deliberately
+  // outlives it, so the callout still has content while it fades out.
+  const [hovering, setHovering] = useState(false)
+  const showTooltip = useTooltipPresence(hovering && hover !== null)
   // Tooltip element + plot container, for the edge-clamp hook.
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const plotRef = useRef<HTMLDivElement | null>(null)
@@ -122,7 +127,19 @@ export function PerTrackChart({
       }
     })
     setHover({ index: clamped, nearestTrack })
+    setHovering(true)
   }
+
+  // Vertical anchor: just above the highest line at the hovered period. The
+  // callout belongs to the graph, not to the pointer, so moving the cursor up
+  // and down inside one period leaves it where it is.
+  const hoveredYs = hover
+    ? nonEmpty.flatMap((entry) => {
+        const point = entry.series[hover.index]
+        return point ? [y(Math.max(0, point.balance))] : []
+      })
+    : []
+  const hoverAnchorY = hoveredYs.length > 0 ? Math.min(...hoveredYs) : MARGIN.top
 
   // Reorder for the tooltip: nearest track first, the rest in track order.
   const orderedPoints =
@@ -157,7 +174,7 @@ export function PerTrackChart({
           role="img"
           aria-label={t('calculator.charts.perTrackAria')}
           onMouseMove={handleMove}
-          onMouseLeave={() => setHover(null)}
+          onMouseLeave={() => setHovering(false)}
           onClick={handleMove}
         >
           {ticks.map((tick) => (
@@ -207,21 +224,22 @@ export function PerTrackChart({
                 )
                 .join(' ')}
               stroke={TRACK_TYPE_COLORS[entry.track.type]}
-              className={`chart-line-track${hover?.nearestTrack === trackIndex ? ' is-active' : ''}`}
+              className={`chart-line-track${hovering && hover?.nearestTrack === trackIndex ? ' is-active' : ''}`}
             />
           ))}
 
           {/* Hover markers on every surviving line at the hovered period. */}
-          {activePoints.map(({ track, trackIndex, point }) => (
-            <circle
-              key={`dot-${trackIndex}-${track.type}`}
-              cx={x(hover!.index)}
-              cy={y(Math.max(0, point.balance))}
-              r={4.5}
-              fill={TRACK_TYPE_COLORS[track.type]}
-              className="chart-dot-track"
-            />
-          ))}
+          {hovering &&
+            activePoints.map(({ track, trackIndex, point }) => (
+              <circle
+                key={`dot-${trackIndex}-${track.type}`}
+                cx={x(hover!.index)}
+                cy={y(Math.max(0, point.balance))}
+                r={4.5}
+                fill={TRACK_TYPE_COLORS[track.type]}
+                className="chart-dot-track"
+              />
+            ))}
 
           {/* Axis titles: balance rotated vertically at the left edge, period
               title at the bottom ("year" in both modes, since that is what the
@@ -248,17 +266,23 @@ export function PerTrackChart({
 
         {/* Hover tooltip: the hovered period plus every track's balance there,
             nearest track first - mirrors the amortization chart's tooltip. */}
-        {hover !== null && orderedPoints.length > 0 && (
+        {showTooltip && hover !== null && orderedPoints.length > 0 && (
           <div
             ref={tooltipRef}
             className="chart-tooltip"
+            data-open={hovering}
             role="status"
             style={{
               // Physical `left`, not insetInlineStart: the SVG is LTR while
               // the page may be RTL, so the logical property would mirror it.
               // The clamp hook adjusts the transform near the plot edges so
-              // the whole tooltip stays on screen.
+              // the whole tooltip stays on screen. `translate` (a separate
+              // property from `transform`) lifts the callout above the hovered
+              // line without fighting that clamp.
               left: `${(x(hover.index) / WIDTH) * 100}%`,
+              top: `${(hoverAnchorY / HEIGHT) * 100}%`,
+              // Bottom edge just clear of the line, with a small gap.
+              translate: '0 calc(-100% - 10px)',
             }}
           >
             <strong>

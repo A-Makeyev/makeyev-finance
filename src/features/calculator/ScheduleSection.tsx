@@ -7,6 +7,7 @@ import { PerTrackChart } from './PerTrackChart'
 import { TrackMixDonut, type TrackShare } from './TrackMixDonut'
 import { TotalCostDonut } from './TotalCostDonut'
 import { useCalculatorStore } from '@/stores/calculatorStore'
+import { useMediaQuery } from '@/hooks/useScrolled'
 
 type ScheduleView = 'total' | 'separate'
 type ScheduleGranularity = 'monthly' | 'yearly'
@@ -78,6 +79,43 @@ export function ScheduleSection() {
     amount: Math.max(0, parseAmountText(track.amountText)),
   }))
 
+  // Matches the CSS breakpoint that stacks the chart band and gives the
+  // tables the full panel width. On a narrow panel the cost donut moves out
+  // of the asides column and into the band beside the mix donut, so the two
+  // rings sit together above the tables instead of the cost split sitting
+  // alone beneath them.
+  const narrowLayout = useMediaQuery('(max-width: 1000px)')
+
+  // Total repaid = nominal principal + indexation + interest, so the nominal
+  // principal is totalPaid minus the other two (exact, not a rounding of the
+  // loan: the principal column telescopes to nominal + indexation over the
+  // term).
+  const costDonut = (
+    <TotalCostDonut
+      principal={
+        vm.snapshot.totals.totalPaid -
+        vm.snapshot.totals.totalInterest -
+        vm.snapshot.totals.totalIndexation
+      }
+      indexation={vm.snapshot.totals.totalIndexation}
+      totalInterest={vm.snapshot.totals.totalInterest}
+    />
+  )
+  // Side by side with the cost donut, the mix ring switches to the cost
+  // donut's 170-unit canvas so one set of font sizes renders identically in
+  // both. The media query starts false and flips after mount, so the server
+  // and the first client render agree (no hydration mismatch).
+  const mixDonut = mixShares.some((share) => share.amount > 0) ? (
+    <TrackMixDonut shares={mixShares} size={narrowLayout ? 170 : undefined} />
+  ) : null
+  // The band only exists while there is a chart to show. Without one there is
+  // nothing to pair the cost donut with, so it stays in the asides.
+  const hasChartBand =
+    view === 'total'
+      ? hasTotalRows && chartRows.length > 0
+      : vm.visibleScheduleTracks.length > 0
+  const donutInBand = narrowLayout && hasChartBand
+
   return (
     <section className="schedule-section">
       <div className="section-heading">
@@ -132,14 +170,20 @@ export function ScheduleSection() {
           both views, so the donut stays put when switching tabs. */}
       {view === 'total' && hasTotalRows && chartRows.length > 0 && (
         <div className="schedule-chart-band">
-          {mixShares.some((share) => share.amount > 0) && <TrackMixDonut shares={mixShares} />}
+          <div className="schedule-donut-pair">
+            {donutInBand && costDonut}
+            {mixDonut}
+          </div>
           <AmortizationChart rows={chartRows} periodLabel={periodLabel} monthly={granularity === 'monthly'} />
         </div>
       )}
 
       {view === 'separate' && vm.visibleScheduleTracks.length > 0 && (
         <div className="schedule-chart-band">
-          {mixShares.some((share) => share.amount > 0) && <TrackMixDonut shares={mixShares} />}
+          <div className="schedule-donut-pair">
+            {donutInBand && costDonut}
+            {mixDonut}
+          </div>
           {/* Same granularity as the per-track tables below it: one point per
               month when the monthly tab is on, matching the total view. */}
           <PerTrackChart tracks={vm.visibleScheduleTracks} monthly={granularity === 'monthly'} />
@@ -283,19 +327,7 @@ export function ScheduleSection() {
         )}
 
         <div className="schedule-asides">
-          {/* Total repaid = nominal principal + indexation + interest, so the
-              nominal principal is totalPaid minus the other two (exact, not a
-              rounding of the loan: the principal column telescopes to
-              nominal + indexation over the term). */}
-          <TotalCostDonut
-            principal={
-              vm.snapshot.totals.totalPaid -
-              vm.snapshot.totals.totalInterest -
-              vm.snapshot.totals.totalIndexation
-            }
-            indexation={vm.snapshot.totals.totalIndexation}
-            totalInterest={vm.snapshot.totals.totalInterest}
-          />
+          {!donutInBand && costDonut}
           <p className="schedule-asides-title">{t('calculator.results.paybackPerTrackTitle')}</p>
           {vm.trackPaybacks.length === 0 && (
             <aside className="schedule-aside">

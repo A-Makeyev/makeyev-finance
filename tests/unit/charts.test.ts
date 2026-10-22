@@ -48,6 +48,14 @@ describe('formatAxisShekel', () => {
   it('rounds thousands away from sub-1000 noise', () => {
     expect(formatAxisShekel(333_333)).toBe('₪333K')
   })
+
+  it('compact mode rounds to whole millions for the donut centre', () => {
+    expect(formatAxisShekel(1_000_000, { compact: true })).toBe('₪1M')
+    expect(formatAxisShekel(1_960_000, { compact: true })).toBe('₪2M')
+    expect(formatAxisShekel(2_400_000, { compact: true })).toBe('₪2M')
+    // Below a million it is already short, so it keeps the normal form.
+    expect(formatAxisShekel(250_000, { compact: true })).toBe('₪250K')
+  })
 })
 
 describe('formatAxisShekelDetailed', () => {
@@ -269,6 +277,17 @@ describe('arcPath', () => {
     // Endpoints differ by the tiny clamp, so the arc renders.
     expect(path).toContain(`A 10 10 0 1 1`)
     expect(path).not.toBe('')
+  })
+
+  it('rounds every coordinate, so the server and client paths match byte for byte', () => {
+    // Math.cos/sin are not required to be correctly rounded, so an unrounded
+    // path can carry a different last bit on Node than in the browser - which
+    // React reports as a hydration mismatch even though the shape is identical.
+    const path = arcPath(85, 85, 75, 46, 0.1234, 2.3456)
+    const decimals = path
+      .match(/-?\d+(?:\.\d+)?/g)!
+      .map((value) => (value.split('.')[1] ?? '').length)
+    expect(Math.max(...decimals)).toBeLessThanOrEqual(3)
   })
 })
 

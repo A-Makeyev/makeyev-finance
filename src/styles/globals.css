@@ -254,6 +254,13 @@ strong {
   --cost-donut-principal: #087f78;
   --cost-donut-indexation: #7b5cc4;
   --cost-donut-interest: #e0a63c;
+  /* Ink for the share printed inside each cost-donut slice. Tied to those
+     fills, not to the ink tokens (which flip the other way): white clears AA
+     on the teal (4.9:1) and purple (5.0:1) slices but is only 2.2:1 on the
+     gold one, so the interest slice takes near-black (7.7:1). */
+  --cost-donut-principal-ink: #ffffff;
+  --cost-donut-indexation-ink: #ffffff;
+  --cost-donut-interest-ink: #14201e;
   /* Comparison chart: one color per mix (up to MAX_TRACKS scenarios), picked to
      stay distinct and readable on the card surface in this theme. */
   --series-1: #0f766e;
@@ -1339,6 +1346,21 @@ img {
    out of the dialog - keep it at 100% inside any dialog. */
 [role='dialog'] #submit-form {
   width: 100% !important;
+}
+
+/* The action modal stacks three fields, the callback chips and the send
+   button, so on a phone the contact page's roomy field rhythm is what pushes
+   the button past the fold. Tighten only the dialog's copy - the standalone
+   contact form keeps its spacing. Same 640px step as the modal's own
+   Tailwind sm: scale. */
+@media (max-width: 640px) {
+  [data-testid='action-form-modal'] .field-island {
+    margin-bottom: 12px;
+  }
+
+  [data-testid='action-form-modal'] textarea {
+    min-height: 96px;
+  }
 }
 
 .modal-actions {
@@ -6265,6 +6287,17 @@ e #name,
   stroke-width: 2;
 }
 
+/* Hover marker on every forecast series at the hovered year, so the callout
+   anchored above them visibly points at that year. The ring keeps a constant
+   thickness instead of shrinking with the viewBox: the forecast cards are
+   narrower than the schedule chart, where a scaled 2px ring came out at 1px. */
+.forecast-hover-dot {
+  stroke: white;
+  stroke-width: 2.5px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
 .chart-tooltip {
   position: absolute;
   top: 8px;
@@ -6283,6 +6316,28 @@ e #name,
   pointer-events: none;
   white-space: nowrap;
   z-index: 2;
+  /* Fade in on mount, fade out once the owner closes it. The callout is held
+     mounted for TOOLTIP_FADE_MS by useTooltipPresence, otherwise it would
+     unmount before the exit transition could run. */
+  animation: chart-tooltip-in 160ms ease;
+  transition: opacity 160ms ease;
+}
+
+.chart-tooltip[data-open='false'] {
+  opacity: 0;
+}
+
+@keyframes chart-tooltip-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-tooltip {
+    animation: none;
+    transition: none;
+  }
 }
 
 .chart-tooltip strong {
@@ -6297,6 +6352,13 @@ e #name,
    legend above). */
 .per-track-chart .chart-tooltip {
   direction: rtl;
+  /* The callout lists one row per track, so on a phone it can be wider than
+     the plot itself. Cap it at the plot's width (its positioning box) and let
+     the rows wrap; on a wide plot the max-content width fits, so nothing
+     wraps there. */
+  width: max-content;
+  max-width: 100%;
+  white-space: normal;
 }
 
 :root[dir='ltr'] .per-track-chart .chart-tooltip {
@@ -6317,8 +6379,13 @@ e #name,
   border-radius: 2px;
 }
 
-.amort-chart {
+/* The plot (the SVG only, below the legend) is the hover tooltip's
+   positioning box, so the tooltip's `top` in percent maps straight onto the
+   viewBox and the callout lands just above the data point. */
+.amort-plot {
   position: relative;
+  width: 100%;
+  min-width: 0;
 }
 
 /* Schedule chart band (both the combined and per-track views): the mix donut
@@ -6353,6 +6420,14 @@ e #name,
   align-self: center;
 }
 
+/* Wrapper for the donuts that share the band. Wide screens only show the mix
+   donut, so it stays transparent and the band's own flex layout is untouched;
+   the narrow layout in the ≤1000px block turns it into the pair that holds
+   both rings. */
+.schedule-donut-pair {
+  display: contents;
+}
+
 /* The band forces LTR for its layout, so the combined chart restores the page
    direction for its legend and tooltip, exactly like the per-track chart. */
 .schedule-chart-band .amort-chart .chart-legend,
@@ -6380,8 +6455,8 @@ e #name,
 }
 
 .mix-donut svg {
-  width: 240px;
-  max-width: min(240px, 60vw);
+  width: 280px;
+  max-width: min(280px, 60vw);
   height: auto;
   flex: none;
 }
@@ -6394,7 +6469,7 @@ e #name,
 }
 
 .donut-center-label {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
   fill: var(--calc-muted);
 }
@@ -6405,8 +6480,21 @@ e #name,
   fill: var(--calc-teal-dark);
 }
 
+/* The mix donut's centre figure is compact (₪M, not ₪1,000,000), so it can
+   run larger than the cost donut's interest % without overflowing its hole.
+   Tighten the default from 24px down to 20px so the pair and the narrow saved-mix
+   card do not blow past their hole, and only the wider standalone mix canvas (240px)
+   still gets the larger 24px treatment. */
+.mix-donut text.donut-center-value[data-compact="true"] {
+  font-size: 20px;
+}
+
+.mix-donut:not(.saved-mix-donut-chart):not(.schedule-donut-pair .mix-donut) text.donut-center-value[data-compact="true"] {
+  font-size: 24px;
+}
+
 .donut-slice-label {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   fill: white;
   pointer-events: none;
@@ -6544,9 +6632,33 @@ e #name,
   margin: 0 0 14px;
 }
 
+/* The ring's own positioning context: the hover callout is placed as a
+   percentage of the rendered ring, so it lands against the hovered slice at
+   any size (asides column or the narrow donut pair). */
+.cost-donut-plot {
+  position: relative;
+}
+
 .cost-donut svg {
-  width: 150px;
+  width: 190px;
   height: auto;
+}
+
+/* The in-slice share and the centre pair are sized in viewBox units, so their
+   rendered size follows the ring's own width: 12/12/18 units read ~13.4px /
+   ~13.4px / ~20px at the 190px asides ring, matching the larger mix canvas.
+   The pair overrides these for its own ring width, so the two placements read
+   at the same scale. */
+.cost-donut .donut-slice-label {
+  font-size: 12px;
+}
+
+.cost-donut .donut-center-label {
+  font-size: 12px;
+}
+
+.cost-donut .donut-center-value {
+  font-size: 18px;
 }
 
 .cost-legend {
@@ -6566,6 +6678,29 @@ e #name,
 .cost-legend-item strong {
   color: var(--calc-ink);
   margin-inline-start: auto;
+}
+
+/* The share sits in its own column after the amount, so the ₪ figures still
+   line up down the legend whatever the percentage's width. It takes the ink,
+   not the muted hint color: muted is 4.2:1 on this paper, under AA for 13px
+   text, and this number is data rather than a label. */
+.cost-legend-share {
+  color: var(--calc-ink);
+  font-variant-numeric: tabular-nums;
+  min-inline-size: 4ch;
+  text-align: end;
+}
+
+/* The chart band forces LTR for its layout, so the narrow donut pair restores
+   the page direction for the cost donut's legend - same treatment as the mix
+   legend, so the color chip sits on the reading-start side (right in
+   Hebrew). */
+.schedule-donut-pair .cost-legend {
+  direction: rtl;
+}
+
+:root[dir='ltr'] .schedule-donut-pair .cost-legend {
+  direction: ltr;
 }
 
 /* =========================
@@ -6697,22 +6832,34 @@ e #name,
 }
 
 /* Section 3(4)'s optional origination-rate inputs: one compact field per
-   priced track, two across on a wide panel and stacked on a phone. */
+   priced track, all of them (MAX_TRACKS) on a single row. */
 .prepayment-cap {
   margin-top: 4px;
 }
 
 .prepayment-cap-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
   margin-block: 6px 12px;
 }
 
-@media (max-width: 650px) {
-  .prepayment-cap-grid {
-    grid-template-columns: 1fr;
-  }
+/* Smaller than the panel's standard fields - these are optional percentages
+   inside a collapsed note under the fee table, not primary inputs. */
+.prepayment-cap-grid .prepayment-field {
+  font-size: 0.85rem;
+}
+
+.prepayment-cap-grid .input-wrap input {
+  font-size: 0.85rem;
+  padding: 8px 10px;
+}
+
+/* Three fields share one row, so the % suffix only needs a token gap - the
+   standard 15px on each side would eat most of a phone-width field. */
+.prepayment-cap-grid .input-wrap span {
+  padding: 0 7px;
+  font-size: 0.85rem;
 }
 
 @media (max-width: 1000px) {
@@ -6945,6 +7092,13 @@ e #name,
   white-space: normal;
 }
 
+/* The year cells are row headers, not column headers: they take the body
+   rows' hairline instead of the teal header rule, which otherwise draws a
+   colored line under every single year. */
+.forecast-table tbody th {
+  border-bottom: 1px solid var(--calc-line);
+}
+
 /* Reset years line up with the chart's vertical guides. */
 .forecast-table tr.is-reset th,
 .forecast-table tr.is-reset td {
@@ -7101,19 +7255,25 @@ e #name,
 }
 
 /* Per-track payback card: one aside per track, name on top with the
-   amount · payback ratio underneath (feedback request: slightly larger). */
-.schedule-aside-payback strong {
-  display: block;
-  color: var(--calc-teal-dark);
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin: 0 0 4px;
+   amount · payback ratio underneath. These are a summary beside the table,
+   so they stay compact - the asides column stacks up to three of them plus
+   the cost donut. */
+.schedule-aside.schedule-aside-payback {
+  padding: 10px 12px;
 }
 
-.schedule-aside-payback span {
+.schedule-aside.schedule-aside-payback strong {
+  display: block;
+  color: var(--calc-teal-dark);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.schedule-aside.schedule-aside-payback span {
   display: block;
   color: var(--calc-ink);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   margin: 0;
 }
 
@@ -7537,6 +7697,113 @@ tbody tr:hover {
     width: 100%;
   }
 
+  /* Narrow panel: the tables take the full width, and the asides column
+     (per-track payback summaries) moves under them as one compact row
+     instead of a 220px strip that squeezed the table. */
+  .schedule-content {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-asides {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .schedule-asides-title {
+    flex-basis: 100%;
+    margin: 4px 0 0;
+  }
+
+  .schedule-asides .schedule-aside {
+    flex: 0 1 240px;
+  }
+
+  /* The cost donut joins the mix donut above the tables, so both read as one
+     figure band instead of the cost split sitting alone under the schedule. */
+  .schedule-donut-pair {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    /* Wide gap between the rings, closing up on a phone so the pair still
+       fits side by side. */
+    gap: clamp(18px, 6vw, 48px);
+    width: 100%;
+  }
+
+  .schedule-donut-pair .mix-donut,
+  .schedule-donut-pair .cost-donut {
+    justify-items: center;
+    margin: 0;
+  }
+
+  /* Same ring size for both, so the pair reads as one comparison. The rings
+     stay big (260px on a tablet, and they stack at ~260px on a phone as
+     well), but their labels are sized in viewBox units, so the pair uses
+     smaller units than the desktop rings to keep the rendered text at the
+     same ~13px / ~19px as everywhere else. 80vw only steps in below ~325px,
+     where a 260px ring would no longer fit the column. */
+  .schedule-donut-pair .mix-donut svg,
+  .schedule-donut-pair .cost-donut svg {
+    width: min(260px, 80vw);
+    max-width: none;
+  }
+
+  /* One type scale across both rings, matched to the 260px ring: 8.5 units
+     read ~13px for the share and the centre caption, 12.5 units ~19px for
+     the centre figure. The mix's compact-value rule is repeated here because
+     it is more specific than a plain .donut-center-value override. */
+  .schedule-donut-pair .donut-slice-label {
+    font-size: 8.5px;
+  }
+
+  .schedule-donut-pair .donut-center-label {
+    font-size: 8.5px;
+  }
+
+  .schedule-donut-pair .donut-center-value {
+    font-size: 12.5px;
+  }
+
+  .schedule-donut-pair .mix-donut text.donut-center-value[data-compact="true"] {
+    font-size: 12.5px;
+  }
+
+  /* The legend is centered under the ring instead of stretched across the
+     column: fit-content keeps each row's chip and text together, and the
+     auto margins put that block in the middle of the donut. */
+  .schedule-donut-pair .mix-legend {
+    min-width: 0;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
+  /* One type scale for both legends under the pair: an ink 0.9rem name line at
+     700, then the numbers at 0.85rem in ink at 600. The cost legend used to sit
+     a size below the mix's and flip the emphasis (muted label, ink amount);
+     ink on the numbers also keeps the muted 4.2:1 from carrying data. */
+  .schedule-donut-pair .mix-legend-name,
+  .schedule-donut-pair .cost-legend-name {
+    color: var(--calc-ink);
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .schedule-donut-pair .mix-legend-amount,
+  .schedule-donut-pair .cost-legend-item strong,
+  .schedule-donut-pair .cost-legend-share {
+    color: var(--calc-ink);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  /* Match the mix legend's row rhythm, so the two blocks read at one density. */
+  .schedule-donut-pair .cost-legend {
+    gap: 8px;
+  }
+
   .mortgage-track {
     grid-template-columns: repeat(6, 1fr);
   }
@@ -7621,10 +7888,6 @@ tbody tr:hover {
 
   .calculate-button {
     width: 100%;
-  }
-
-  .schedule-content {
-    grid-template-columns: 1fr;
   }
 
   /* Stacked heading: space the track-type summary (פריים · קבועה לא צמודה ·
@@ -7867,11 +8130,11 @@ tbody tr:hover {
   /* Donut center numbers shrink with the same viewBox scaling - bump them
      so the total / interest% stay readable on phones. */
   .donut-center-label {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .donut-center-value {
-    font-size: 23px;
+    font-size: 20px;
   }
 }
 
@@ -7975,15 +8238,15 @@ tbody tr:hover {
   }
 
   .donut-center-label {
-    font-size: 16px;
+    font-size: 17px;
   }
 
   .donut-center-value {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .donut-slice-label {
-    font-size: 18px;
+    font-size: 17px;
   }
 
   /* Contact: the fixed 60px side margins waste a third of the screen on
@@ -8098,6 +8361,11 @@ tbody tr:hover {
   --cost-donut-principal: #12b3a5;
   --cost-donut-indexation: #a68ae0;
   --cost-donut-interest: #f0b95c;
+  /* All three fills brighten here, so white falls to 2.6:1 / 2.9:1 / 1.8:1 on
+     them and every in-slice label flips to dark ink (6.5:1, 6.5:1, 9.6:1). */
+  --cost-donut-principal-ink: #0d1f1c;
+  --cost-donut-indexation-ink: #171126;
+  --cost-donut-interest-ink: #241a06;
   /* Comparison chart series brighten a step so a thin line stays legible on the
      dark card surface. */
   --series-1: #2cd4c6;

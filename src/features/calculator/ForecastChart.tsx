@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
 import { formatAxisShekel, niceRange, niceTicks, svgRound, xAxisTicks } from '@/lib/charts'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
+import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 
 /** One plotted point: a 1-based loan year and its value. */
 export interface ForecastSeriesPoint {
@@ -73,6 +74,10 @@ export function ForecastChart({
 }: ForecastChartProps) {
   const { t } = useTranslation()
   const [activeYear, setActiveYear] = useState<number | null>(null)
+  // Whether the pointer is on the plot right now. `activeYear` deliberately
+  // outlives it, so the callout still has a year to show while it fades out.
+  const [hovering, setHovering] = useState(false)
+  const showTooltip = useTooltipPresence(hovering && activeYear !== null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const plotRef = useRef<HTMLDivElement | null>(null)
   useTooltipClamp(tooltipRef, plotRef, activeYear)
@@ -133,6 +138,7 @@ export function ForecastChart({
     const svgX = ((event.clientX - bounds.left) / bounds.width) * WIDTH
     const year = Math.round((svgX - MARGIN.left) / Math.max(step, 1e-9)) + 1
     setActiveYear(Math.max(1, Math.min(maxYear, year)))
+    setHovering(true)
   }
 
   const activeRows =
@@ -146,6 +152,11 @@ export function ForecastChart({
             row.point !== undefined,
           )
       : []
+
+  // The tooltip hangs just above the highest series at the hovered year, so it
+  // points at the graph instead of trailing the pointer.
+  const activeYs = activeRows.map(({ point }) => y(point.value))
+  const anchorY = activeYs.length > 0 ? Math.min(...activeYs) : MARGIN.top
 
   return (
     <div className="forecast-chart" data-testid={testId}>
@@ -164,7 +175,7 @@ export function ForecastChart({
           role="img"
           aria-label={ariaLabel}
           onMouseMove={handleMove}
-          onMouseLeave={() => setActiveYear(null)}
+          onMouseLeave={() => setHovering(false)}
           onClick={handleMove}
         >
           {ticks.map((tick) => (
@@ -226,15 +237,16 @@ export function ForecastChart({
             />
           ))}
 
-          {activeYear !== null &&
+          {hovering &&
+            activeYear !== null &&
             activeRows.map(({ entry, point }) => (
               <circle
                 key={`dot-${entry.id}`}
                 cx={x(activeYear)}
                 cy={y(point.value)}
-                r={4.5}
+                r={5}
                 fill={entry.color}
-                className="chart-dot-track"
+                className="forecast-hover-dot"
               />
             ))}
 
@@ -254,12 +266,19 @@ export function ForecastChart({
           </text>
         </svg>
 
-        {activeYear !== null && activeRows.length > 0 && (
+        {showTooltip && activeYear !== null && activeRows.length > 0 && (
           <div
             ref={tooltipRef}
             className="chart-tooltip forecast-tooltip"
+            data-open={hovering}
             role="status"
-            style={{ left: `${(x(activeYear) / WIDTH) * 100}%` }}
+            style={{
+              left: `${(x(activeYear) / WIDTH) * 100}%`,
+              // `translate` composes with the clamp hook's `transform`.
+              top: `${(anchorY / HEIGHT) * 100}%`,
+              // Bottom edge just clear of the line, with a small gap.
+              translate: '0 calc(-100% - 10px)',
+            }}
           >
             <strong>{t('calculator.forecast.yearLabel', { year: activeYear })}</strong>
             {activeRows.map(({ entry, point }) => (

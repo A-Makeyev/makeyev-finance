@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
-import { arcPath, donutSegments, midAngle } from '@/lib/charts'
+import { arcPath, donutSegments, formatAxisShekel, midAngle, svgRound } from '@/lib/charts'
+import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 import { TRACK_TYPE_COLORS } from './trackColors'
 import type { TrackType } from '@/lib/amortization'
 
@@ -45,6 +46,10 @@ export function TrackMixDonut({
 }) {
   const { t } = useTranslation()
   const [active, setActive] = useState<number | null>(null)
+  // Whether a slice is under the pointer right now. `active` outlives it so
+  // the callout keeps its slice while it fades out.
+  const [hovering, setHovering] = useState(false)
+  const showTooltip = useTooltipPresence(hovering && active !== null)
   const total = shares.reduce((sum, share) => sum + Math.max(0, share.amount), 0)
   const segments = donutSegments(shares.map((share) => share.amount))
   const activeShare = active !== null ? shares[active] : null
@@ -114,7 +119,7 @@ export function TrackMixDonut({
             const mid = midAngle(insetStart, insetEnd)
             const labelRadius = (rOuter + rInner) / 2
             const percent = Math.round(segment.fraction * 100)
-            const isActive = active === index
+            const isActive = hovering && active === index
             // The slice and its % label share one animated group, so the
             // number scales out (from the donut center) with the slice.
             return (
@@ -122,8 +127,11 @@ export function TrackMixDonut({
                 key={share.trackId}
                 className={`mix-slice${isActive ? ' mix-slice-active' : ''}`}
                 style={{ transformOrigin: `${center}px ${center}px` }}
-                onMouseEnter={() => setActive(index)}
-                onMouseLeave={() => setActive(null)}
+                onMouseEnter={() => {
+                  setActive(index)
+                  setHovering(true)
+                }}
+                onMouseLeave={() => setHovering(false)}
               >
                 <path
                   d={arcPath(center, center, rOuter, rInner, insetStart, insetEnd)}
@@ -131,8 +139,12 @@ export function TrackMixDonut({
                 />
                 {percent >= 8 && (
                   <text
-                    x={center + labelRadius * Math.cos(mid)}
-                    y={center + labelRadius * Math.sin(mid)}
+                    // Rounded like every other chart coordinate: Math.cos/sin
+                    // are not required to be correctly rounded, so Node and
+                    // the browser can differ in the last bit and React reports
+                    // the serialized attribute as a hydration mismatch.
+                    x={svgRound(center + labelRadius * Math.cos(mid))}
+                    y={svgRound(center + labelRadius * Math.sin(mid))}
                     className="donut-slice-label"
                   >
                     {percent}%
@@ -141,20 +153,36 @@ export function TrackMixDonut({
               </g>
             )
           })}
-          <text x={center} y={center - 6} className="donut-center-label">
+          {/* The two centre lines are spaced in em, not viewBox units: the
+              pair's 170-unit canvas and the desktop's 320-unit one scale the
+              same geometry differently, so fixed offsets rendered them almost
+              touching on the wide ring and far apart on the pair. em follows
+              each line's own (responsive) font size, which is already tuned
+              to render the same px at both sizes. */}
+          <text x={center} y={center} dy="-0.6em" className="donut-center-label">
             {t('calculator.charts.mixTotalLabel')}
           </text>
-          <text x={center} y={center + 14} className="donut-center-value">
-            {formatCurrency(total)}
+          {/* Compact total: the exact amounts for every track are in the
+              legend below, so the centre rounds to whole millions (₪1M
+              instead of ₪1,000,000) and can use a larger figure. */}
+          <text
+            x={center}
+            y={center}
+            dy="0.75em"
+            className="donut-center-value"
+            data-compact="true"
+          >
+            {formatAxisShekel(total, { compact: true })}
           </text>
         </svg>
 
-        {activeShare && activeAngle !== null && (
+        {showTooltip && activeShare && activeAngle !== null && (
           <div
             className="chart-tooltip mix-slice-tooltip"
+            data-open={hovering}
             role="status"
             data-side={tipSide}
-            style={{ left: `${tipLeft}%`, top: `${tipTop}%` }}
+            style={{ left: `${svgRound(tipLeft)}%`, top: `${svgRound(tipTop)}%` }}
           >
             <strong>{t(`calculator.trackTypes.${activeShare.type}`)}</strong>
             <span>
