@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@/router'
 import { ScrollCue } from '@/components/layout/ScrollCue'
 import {
+  FALLBACK_INFLATION,
   LAWYER_MINIMUM_FEE,
   MAX_TRACKS,
   MAX_YEARS,
@@ -28,12 +29,16 @@ import { FlipSelect } from '@/components/ui/FlipSelect'
 import { TermSlider } from '@/components/ui/TermSlider'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { RateValidityChip } from '@/components/ui/RateValidityChip'
+import { averageRateForTerm, FALLBACK_MARKET_RATE_PERCENT, type AverageRateKind } from '@/lib/averageRates'
+import { FORECAST_STEP_PERCENT } from '@/lib/forecast'
+import { prepaymentFeeByYear } from '@/lib/prepaymentProjection'
 import { formatDateOnly, rateValidityStatus } from '@/lib/rateValidity'
+import { useAverageRates } from '@/services/rates'
 import { useMediaQuery } from '@/hooks/useScrolled'
 import { useComparisonStore } from '@/stores/comparisonStore'
 import { TrackMixDonut } from '@/features/calculator/TrackMixDonut'
 import { sharedInputSuggestions, type ScenarioResult } from './computeScenario'
-import { CompareTrendChart, type TrendSeries } from './CompareTrendChart'
+import { CompareTrendChart, type RateScenarioGroup, type TrendSeries } from './CompareTrendChart'
 import { ScheduleTable } from './ScheduleTable'
 
 /**
@@ -68,6 +73,9 @@ interface MetricDef {
   isCurrency?: boolean
 }
 
+/** One color per mix, matching the trend gallery's series tokens. */
+const MIX_COLORS = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)']
+
 /** The lawyer floor, VAT-inclusive, shown in the floor note (calculator parity). */
 const LAWYER_FLOOR_WITH_VAT = formatGroupedNumber(Math.round(LAWYER_MINIMUM_FEE * (1 + VAT_RATE)))
 
@@ -81,6 +89,9 @@ export function ComparePage() {
   const shared = useComparisonStore((s) => s.shared)
   const results = useComparisonStore((s) => s.results)
   const fee = useComparisonStore((s) => s.fee)
+  // The same BOI average table the calculator's prepayment panel reads, so
+  // both pages price the fee from one current comparison rate.
+  const rates = useAverageRates()
   // The single fixed expense row (monthly + one-time): the page keeps exactly
   // one, so index 0 is always present (default inputs and reset both seed it).
   const expense = shared.otherExpenses[0]
@@ -292,9 +303,48 @@ export function ComparePage() {
   }, [results, t])
 
   /**
+   * Early-repayment fee per scenario, at the end of every loan year, from the
+   * same projection the calculator's prepayment panel uses. One map per
+   * scenario (year -> total fee across its tracks) so the chart series below
+   * can attach the fee to the schedule row with the same year.
+   */
+  const prepaymentTrends = useMemo(
+    () =>
+      results.map((result) => {
+        const byYear = new Map<number, number>()
+        if (result.prepaymentTracks.length === 0) return byYear
+        const termMonths = result.prepaymentTracks.reduce(
+          (longest, track) => Math.max(longest, track.monthlyRows.length),
+          0,
+        )
+        const lastYear = Math.max(1, Math.floor((termMonths - 1) / 12))
+        const series = prepaymentFeeByYear(result.prepaymentTracks, lastYear, {
+          marketRateFor: (track, remainingYears) => {
+            const kind: AverageRateKind = track.isIndexed ? 'indexed' : 'nonIndexed'
+            return averageRateForTerm(
+              rates.data?.tables,
+              kind,
+              remainingYears,
+              FALLBACK_MARKET_RATE_PERCENT,
+            )
+          },
+          annualInflation: FALLBACK_INFLATION,
+        })
+        for (const trackSeries of series) {
+          for (const point of trackSeries.points) {
+            byYear.set(point.year, (byYear.get(point.year) ?? 0) + point.value)
+          }
+        }
+        return byYear
+      }),
+    [results, rates.data],
+  )
+
+  /**
    * The combined chart's series: one line per PRICED mix (empty and
    * error-gated scenarios have no schedule to draw). The label is the mix's
-   * own name, matching its result card.
+   * own name, matching its result card. The schedule rows carry the
+   * scenario's fee for that year, so the chart and the table share one series.
    */
   const trendSeries = useMemo<TrendSeries[]>(
     () =>
@@ -302,9 +352,88 @@ export function ComparePage() {
         if (result.isEmpty || result.error) return []
         const label =
           scenarios[index]?.label.trim() || t('compare.scenarioUntitle', { index: index + 1 })
-        return [{ label, schedule: result.schedule }]
+        return [
+          {
+            label,
+            // The fee is attached only for years the projection priced: the
+            // last year of a schedule has no fee row (the loan is over), and
+            // a zero there would draw a misleading drop to the axis.
+            schedule: result.schedule.map((row) => {
+              const prepaymentFee = prepaymentTrends[index]?.get(row.year)
+              return prepaymentFee === undefined ? row : { ...row, prepaymentFee }
+            }),
+          },
+        ]
       }),
+    [results, scenarios, prepaymentTrends, t],
+  )
+
+  /**
+   * The rate panel's mixes: every priced scenario with a payment path. A mix
+   * without a contractual reset still contributes its base path (the no-change
+   * scenario), so the panel never drops a compared mix, and it never disappears
+   * just because the term is shorter than the first reset. The order and colors
+   * match the trend gallery, so a mix keeps one color across the page.
+   */
+  const rateMixes = useMemo(
+    () =>
+      results
+        .flatMap((result, index) => {
+          if (result.isEmpty || result.error) return []
+          return [{ result, index }]
+        })
+        .map((entry, mixIndex) => ({
+          ...entry,
+          mixIndex,
+          label:
+            scenarios[entry.index]?.label.trim() ||
+            t('compare.scenarioUntitle', { index: entry.index + 1 }),
+          color: MIX_COLORS[mixIndex % MIX_COLORS.length],
+        }))
+        .filter((mix) => (mix.result.forecast.scenarios[0]?.points.length ?? 0) > 0),
     [results, scenarios, t],
+  )
+
+  const step = FORECAST_STEP_PERCENT
+  const scenarioLabel = (id: 'base' | 'up' | 'down'): string =>
+    t(`calculator.forecast.scenarios.${id}`, { step })
+
+  /**
+   * One base path per mix, plus the +step and -step paths only for a mix that
+   * actually resets. Without a reset those two paths lie exactly on the base
+   * line, so drawing them would stack three strokes and read as noise.
+   */
+  const rateGroups = useMemo<RateScenarioGroup[]>(() => {
+    if (rateMixes.length === 0) return []
+    return rateMixes.map((mix) => {
+      const { forecast } = mix.result
+      const scenarios = forecast.hasResetTracks
+        ? forecast.scenarios
+        : forecast.scenarios.filter((scenario) => scenario.id === 'base')
+      return {
+        key: String(mix.index),
+        label: mix.label,
+        color: mix.color,
+        paths: scenarios.map((scenario) => ({
+          id: scenario.id,
+          label: scenarioLabel(scenario.id),
+          dash: scenario.id === 'up' ? 'dashed' : scenario.id === 'down' ? 'dotted' : undefined,
+          points: scenario.points.map((point) => ({ year: point.year, value: point.payment })),
+        })),
+        resetYears: mix.result.forecast.resetYears,
+      }
+    })
+    // scenarioLabel is derived from t and step, both already in the deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rateMixes, t, step])
+
+  /** Years in which any compared mix resets its rate, marked on the chart. */
+  const resetYears = useMemo(
+    () =>
+      [...new Set(rateMixes.flatMap((mix) => mix.result.forecast.resetYears))].sort(
+        (left, right) => left - right,
+      ),
+    [rateMixes],
   )
 
   /** Regulatory status summary for one scenario, as short pass/fail lines. */
@@ -704,7 +833,11 @@ export function ComparePage() {
                 className="compare-mix-donut-chart"
               />
             </div>
-            <ScheduleTable rows={result.schedule} testIdPrefix={`compare-schedule-${index + 1}`} />
+            <ScheduleTable
+              rows={result.schedule}
+              testIdPrefix={`compare-schedule-${index + 1}`}
+              label={label}
+            />
           </>
         )}
       </article>
@@ -1024,14 +1157,23 @@ export function ComparePage() {
 
         {/* Comparison charts: one per metric, two per row, each drawing every
             priced mix so they can be read against each other (payment as the
-            calculator's stacked columns). Lives below the cards, full width. */}
+            calculator's stacked columns). The rate-reset panel joins the
+            gallery directly after the fee curve. Lives below the cards, full
+            width. */}
         <section
           className="compare-trends"
           data-testid="compare-trends"
           aria-label={t('compare.chartsHeading')}
         >
           <h2>{t('compare.chartsHeading')}</h2>
-          <CompareTrendChart series={trendSeries} />
+          <CompareTrendChart
+            series={trendSeries}
+            rateScenarios={
+              rateGroups.length > 0
+                ? { groups: rateGroups, markers: resetYears, step }
+                : undefined
+            }
+          />
         </section>
 
         <p className="compare-disclaimer">{t('compare.disclaimer')}</p>

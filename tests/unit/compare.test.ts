@@ -172,6 +172,65 @@ describe('computeScenario - chart series', () => {
     }
   })
 
+  it('carries the per-track schedules the prepayment chart projects', () => {
+    const result = computeScenario([track()], baseInputs)
+    expect(result.prepaymentTracks).toHaveLength(1)
+    expect(result.prepaymentTracks[0]).toMatchObject({
+      id: 'fixed-0',
+      type: 'fixed',
+      annualRatePercent: 4.5,
+      isIndexed: false,
+      method: 'spitzer',
+    })
+    const monthly = result.prepaymentTracks[0].monthlyRows
+    expect(monthly).toHaveLength(180)
+    // Month 12 closes exactly where the yearly table's first row does.
+    expect(monthly[11].closing).toBeCloseTo(result.schedule[0].closing, 6)
+  })
+
+  it('builds the rate scenarios the calculator would draw for the same mix', () => {
+    // A half-fixed, half-five-year mix: the variable half carries the reset.
+    const result = computeScenario(
+      [
+        track({ amountText: '500,000' }),
+        track({ type: 'variable5y', amountText: '500,000' }),
+      ],
+      baseInputs,
+    )
+    expect(result.error).toBeNull()
+    expect(result.forecast.hasResetTracks).toBe(true)
+    // A 15-year five-year track resets at months 61 and 121: years 6 and 11.
+    expect(result.forecast.resetYears).toEqual([6, 11])
+    expect(result.forecast.scenarios.map((scenario) => scenario.id)).toEqual([
+      'base',
+      'up',
+      'down',
+    ])
+    const [base, up, down] = result.forecast.scenarios
+    // The base path starts at the mix's own first payment and runs the term.
+    expect(base.points[0].payment).toBeCloseTo(result.totals.firstPayment, 6)
+    expect(base.points).toHaveLength(result.schedule.length)
+    // Before the first reset all three paths are the same payment.
+    expect(up.points[0].payment).toBeCloseTo(base.points[0].payment, 6)
+    expect(down.points[0].payment).toBeCloseTo(base.points[0].payment, 6)
+    // From the reset year on, +1pp pays more and -1pp pays less.
+    expect(up.points[5].payment).toBeGreaterThan(base.points[5].payment)
+    expect(down.points[5].payment).toBeLessThan(base.points[5].payment)
+    // The paths do not swap back as the balance shrinks.
+    expect(up.points[10].payment).toBeGreaterThan(up.points[5].payment)
+  })
+
+  it('a scenario with nothing priced carries no rate scenarios', () => {
+    expect(computeScenario([], baseInputs).forecast).toEqual({
+      scenarios: [],
+      resetYears: [],
+      hasIndexation: false,
+      hasResetTracks: false,
+    })
+    // A fixed-only mix has no contractual reset, so the section stays out.
+    expect(computeScenario([track()], baseInputs).forecast.hasResetTracks).toBe(false)
+  })
+
   it('builds the yearly schedule rows the table and charts read', () => {
     const result = computeScenario([track()], baseInputs)
     expect(result.schedule).toHaveLength(15)

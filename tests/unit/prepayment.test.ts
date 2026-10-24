@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { computeTrackResult, type AmortizationMethod, type TrackType } from '@/lib/amortization'
+import {
+  computeTrackResult,
+  type AmortizationMethod,
+  type TrackResult,
+  type TrackType,
+} from '@/lib/amortization'
 import {
   ageDiscountFor,
   feeAsAnnualRateAddition,
   cheapestPrepaymentOrder,
   deflatePayments,
+  partialPrepaymentOutcomes,
+  type PartialPrepaymentTrack,
   periodicFromEffectiveAnnual,
   periodicFromNominalAnnual,
   prepaymentExtras,
@@ -13,6 +20,11 @@ import {
   roundAgorot,
   streamToRateReset,
 } from '@/lib/prepayment'
+import {
+  prepaymentFeeByYear,
+  prepaymentFeeRows,
+  type PrepaymentProjectionTrack,
+} from '@/lib/prepaymentProjection'
 
 const PRINCIPAL = 400_000
 const YEARS = 20
@@ -163,6 +175,29 @@ describe('prepayment - the BOI worked example', () => {
       monthsSinceOrigination: 0,
     })
     expect(fee.grossFee).toBeCloseTo(23_805.47, 2)
+  })
+
+  it('reports whether the cap actually lowered the discounted rate', () => {
+    // The panel shows this per field: a typed cap that cannot bite (no value,
+    // or an average at/above the contractual rate) leaves the fee untouched,
+    // and the reader needs to know that rather than wonder about the input.
+    expect(prepaymentFee({ ...base, monthsSinceOrigination: 0 }).capApplied).toBe(false)
+
+    const capped = prepaymentFee({
+      ...base,
+      originationAverageRatePercent: 4.5,
+      originationAverageRateIsEffective: false,
+      monthsSinceOrigination: 0,
+    })
+    expect(capped.capApplied).toBe(true)
+
+    const aboveContractual = prepaymentFee({
+      ...base,
+      originationAverageRatePercent: 6,
+      originationAverageRateIsEffective: false,
+      monthsSinceOrigination: 0,
+    })
+    expect(aboveContractual.capApplied).toBe(false)
   })
 })
 
@@ -620,5 +655,271 @@ describe('prepayment - operational, notice and CPI components', () => {
       cpiCompensationFee: 0,
       total: 0,
     })
+  })
+})
+
+describe('prepayment - the shared fee projection', () => {
+  function projectionTrack(result: TrackResult, id = `${result.type}-0`): PrepaymentProjectionTrack {
+    return {
+      id,
+      type: result.type,
+      monthlyRows: result.monthlyRows,
+      annualRatePercent: result.annualRatePercent,
+      isIndexed: result.isIndexed,
+      method: result.method,
+    }
+  }
+
+  it('prices the same balance and payment the schedule shows', () => {
+    const result = schedule({ rate: 5, years: 20 })
+    const rows = prepaymentFeeRows([projectionTrack(result)], 60, {
+      marketRateFor: () => 2,
+      annualInflation: 0.02,
+    })
+    expect(rows).toHaveLength(1)
+    const row = rows[0]
+    expect(row.balance).toBeCloseTo(result.monthlyRows[59].closing, 6)
+    expect(row.nextPayment).toBeCloseTo(result.monthlyRows[60].paid, 6)
+    expect(row.remainingMonths).toBe(180)
+    expect(row.marketRate).toBe(2)
+    // No cap on the schedule basis: PV at the contractual rate is the balance.
+    expect(row.breakdown.contractualPresentValue).toBeCloseTo(row.balance, 2)
+    expect(row.breakdown.capApplied).toBe(false)
+    expect(row.breakdown.fee).toBeGreaterThan(0)
+    expect(row.rateAddition).toBeGreaterThan(0)
+  })
+
+  it('builds the by-year series from the same month rows', () => {
+    const result = schedule({ rate: 5, years: 15 })
+    const track = projectionTrack(result)
+    const options = { marketRateFor: () => 2, annualInflation: 0.02 }
+    const series = prepaymentFeeByYear([track], 14, options)
+    expect(series).toHaveLength(1)
+    expect(series[0].points).toHaveLength(14)
+    expect(series[0].points[0]).toEqual({
+      year: 1,
+      value: prepaymentFeeRows([track], 12, options)[0].breakdown.fee,
+    })
+    expect(series[0].points[13]).toEqual({
+      year: 14,
+      value: prepaymentFeeRows([track], 168, options)[0].breakdown.fee,
+    })
+  })
+
+  it('passes the comparison rate the remaining term and the cap through', () => {
+    const result = schedule({ rate: 5, years: 20 })
+    const remaining: number[] = []
+    const rows = prepaymentFeeRows([projectionTrack(result)], 60, {
+      marketRateFor: (_track, years) => {
+        remaining.push(years)
+        return 2
+      },
+      annualInflation: 0.02,
+      capRateFor: () => 3,
+    })
+    expect(remaining).toEqual([15])
+    expect(rows[0].breakdown.capApplied).toBe(true)
+    expect(rows[0].breakdown.fee).toBeLessThan(
+      prepaymentFeeRows([projectionTrack(result)], 60, {
+        marketRateFor: () => 2,
+        annualInflation: 0.02,
+      })[0].breakdown.fee,
+    )
+  })
+
+  it('keeps the exit-station waiver on a five-year reset track', () => {
+    const result = schedule({ rate: 3, years: 20, type: 'variableIndexed5y' })
+    const row = prepaymentFeeRows([projectionTrack(result)], 60, {
+      marketRateFor: () => 2,
+      annualInflation: 0.02,
+      onExitStation: true,
+    })[0]
+    expect(row.breakdown.exemptReason).toBe('exitStation')
+    expect(row.breakdown.fee).toBe(0)
+  })
+})
+
+describe('prepayment - the two outcomes of a partial prepayment', () => {
+  const PAID_MONTHS = 60
+
+  /** The remaining-schedule inputs, taken from the rows the panel renders. */
+  function atMonth(result: TrackResult, amount: number): PartialPrepaymentTrack {
+    const next = result.monthlyRows[PAID_MONTHS]
+    return {
+      balance: result.monthlyRows[PAID_MONTHS - 1].closing,
+      amount,
+      nextPayment: next.paid,
+      nextPrincipal: next.principal,
+      annualRatePercent: result.annualRatePercent,
+      remainingMonths: result.monthlyRows.length - PAID_MONTHS,
+      method: result.method,
+      indexed: result.isIndexed,
+    }
+  }
+
+  const remainingPaid = (result: TrackResult): number =>
+    result.monthlyRows.slice(PAID_MONTHS).reduce((sum, row) => sum + row.paid, 0)
+  const remainingInterest = (result: TrackResult): number =>
+    result.monthlyRows.slice(PAID_MONTHS).reduce((sum, row) => sum + row.interest, 0)
+
+  it('reads the unchanged result straight off the remaining schedule', () => {
+    const result = schedule({ rate: 5, years: 20 })
+    const input = atMonth(result, 0)
+    const outcomes = partialPrepaymentOutcomes([input], 0.02)
+
+    expect(outcomes.unchanged.monthlyPayment).toBeCloseTo(result.monthlyRows[PAID_MONTHS].paid, 6)
+    expect(outcomes.unchanged.months).toBe(180)
+    expect(outcomes.unchanged.totalPaid).toBeCloseTo(remainingPaid(result), 4)
+    expect(outcomes.unchanged.totalInterest).toBeCloseTo(remainingInterest(result), 4)
+    // No amount means the two modes have nothing to do.
+    expect(outcomes.shortenTerm).toEqual(outcomes.unchanged)
+    expect(outcomes.reducePayment).toEqual(outcomes.unchanged)
+  })
+
+  it('keeps the payment and shortens the term, or keeps the term and lowers the payment', () => {
+    const result = schedule({ rate: 5, years: 20 })
+    const input = atMonth(result, 100_000)
+    const outcomes = partialPrepaymentOutcomes([input], 0.02)
+    const after = input.balance - input.amount
+    const monthlyRate = periodicFromNominalAnnual(5)
+
+    // Retaining the payment: the same 5% payment clears the lower balance
+    // sooner; the last payment absorbs the remainder.
+    const expectedMonths = Math.ceil(
+      -Math.log(1 - (after * monthlyRate) / input.nextPayment) / Math.log(1 + monthlyRate) - 1e-9,
+    )
+    expect(outcomes.shortenTerm.monthlyPayment).toBeCloseTo(input.nextPayment, 6)
+    expect(outcomes.shortenTerm.months).toBe(expectedMonths)
+    // Hand-checked fixture: ₪333,819.45 at 5% over 180 months, ₪100,000
+    // repaid, ₪2,639.82 kept -> 111 months instead of 180.
+    expect(outcomes.shortenTerm.months).toBe(111)
+    expect(outcomes.shortenTerm.months).toBeLessThan(180)
+
+    // Retaining the maturity: a fresh 180-month annuity on the lower balance.
+    const expectedPayment = (after * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -180))
+    expect(outcomes.reducePayment.monthlyPayment).toBeCloseTo(expectedPayment, 6)
+    expect(outcomes.reducePayment.monthlyPayment).toBeCloseTo(1849.03, 2)
+    expect(outcomes.reducePayment.months).toBe(180)
+    expect(outcomes.reducePayment.monthlyPayment).toBeLessThan(input.nextPayment)
+
+    // Shortening the term saves the interest that the lower payment keeps paying.
+    expect(outcomes.shortenTerm.totalInterest).toBeLessThan(outcomes.reducePayment.totalInterest)
+  })
+
+  it('shortens an equal-principal loan by keeping its principal installment', () => {
+    const result = schedule({ rate: 5, years: 20, method: 'equalPrincipal' })
+    const input = atMonth(result, 120_000)
+    const outcomes = partialPrepaymentOutcomes([input], 0.02)
+    const after = input.balance - input.amount
+    const monthlyRate = periodicFromNominalAnnual(5)
+
+    expect(outcomes.shortenTerm.months).toBe(
+      Math.ceil(after / input.nextPrincipal - 1e-9),
+    )
+    expect(outcomes.shortenTerm.months).toBeLessThan(180)
+    // The principal installment is kept, so the payment falls only by the
+    // interest the repaid principal no longer accrues.
+    expect(outcomes.shortenTerm.monthlyPayment).toBeCloseTo(
+      input.nextPrincipal + after * monthlyRate,
+      6,
+    )
+
+    // The same maturity keeps the principal installment at after / 180.
+    expect(outcomes.reducePayment.months).toBe(180)
+    expect(outcomes.reducePayment.monthlyPayment).toBeCloseTo(
+      after / 180 + after * monthlyRate,
+      6,
+    )
+  })
+
+  it('keeps the CPI assumption in the indexed model', () => {
+    const result = schedule({
+      rate: 3,
+      years: 20,
+      type: 'fixedIndexed',
+      annualInflation: 0.02,
+    })
+    const input = atMonth(result, 100_000)
+    const outcomes = partialPrepaymentOutcomes([input], 0.02)
+    const after = input.balance - input.amount
+    const monthlyInflation = Math.pow(1.02, 1 / 12)
+    const monthlyRate = periodicFromNominalAnnual(3)
+
+    expect(outcomes.unchanged.monthlyPayment).toBeCloseTo(result.monthlyRows[PAID_MONTHS].paid, 6)
+    expect(outcomes.unchanged.totalPaid).toBeCloseTo(remainingPaid(result), 4)
+    expect(outcomes.unchanged.totalInterest).toBeCloseTo(remainingInterest(result), 4)
+
+    // The lowered payment is the real annuity, indexed one month forward.
+    const realPayment = (after * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -180))
+    expect(outcomes.reducePayment.monthlyPayment).toBeCloseTo(
+      realPayment * monthlyInflation,
+      6,
+    )
+    expect(outcomes.reducePayment.monthlyPayment).toBeLessThan(outcomes.unchanged.monthlyPayment)
+    expect(outcomes.shortenTerm.months).toBeLessThan(180)
+    expect(outcomes.shortenTerm.months).toBeGreaterThan(0)
+
+    for (const mode of Object.values(outcomes)) {
+      for (const value of Object.values(mode)) expect(Number.isFinite(value)).toBe(true)
+    }
+  })
+
+  it('handles a zero rate without a division by zero', () => {
+    const result = schedule({ rate: 0, years: 20 })
+    const input = atMonth(result, 100_000)
+    const outcomes = partialPrepaymentOutcomes([input], 0.02)
+    const after = input.balance - input.amount
+
+    expect(outcomes.reducePayment.monthlyPayment).toBeCloseTo(after / 180, 6)
+    expect(outcomes.reducePayment.months).toBe(180)
+    expect(outcomes.shortenTerm.months).toBe(Math.ceil(after / input.nextPayment - 1e-9))
+    expect(outcomes.shortenTerm.totalInterest).toBe(0)
+    expect(outcomes.reducePayment.totalInterest).toBe(0)
+  })
+
+  it('zeroes both modes on a full payoff and ignores malformed rows', () => {
+    const result = schedule({ rate: 5, years: 20 })
+    const input = atMonth(result, 0)
+    const zero = { monthlyPayment: 0, months: 0, totalPaid: 0, totalInterest: 0 }
+
+    // An amount above the balance repays the track outright.
+    const full = partialPrepaymentOutcomes([{ ...input, amount: input.balance + 50_000 }], 0.02)
+    expect(full.shortenTerm).toEqual(zero)
+    expect(full.reducePayment).toEqual(zero)
+
+    // A non-finite row cannot produce a confident-looking term.
+    const broken = partialPrepaymentOutcomes([{ ...input, balance: Number.NaN }], 0.02)
+    expect(broken.unchanged).toEqual(zero)
+    expect(broken.shortenTerm).toEqual(zero)
+
+    expect(partialPrepaymentOutcomes([], 0.02)).toEqual({
+      unchanged: zero,
+      shortenTerm: zero,
+      reducePayment: zero,
+    })
+  })
+
+  it('sums payments and takes the longest term across tracks', () => {
+    const fixed = schedule({ rate: 5, years: 20 })
+    const indexed = schedule({
+      rate: 3,
+      years: 15,
+      type: 'fixedIndexed',
+      annualInflation: 0.02,
+    })
+    const first = atMonth(fixed, 50_000)
+    const second = atMonth(indexed, 50_000)
+    const together = partialPrepaymentOutcomes([first, second], 0.02)
+    const aloneFirst = partialPrepaymentOutcomes([first], 0.02)
+    const aloneSecond = partialPrepaymentOutcomes([second], 0.02)
+
+    expect(together.shortenTerm.monthlyPayment).toBeCloseTo(
+      aloneFirst.shortenTerm.monthlyPayment + aloneSecond.shortenTerm.monthlyPayment,
+      6,
+    )
+    expect(together.shortenTerm.months).toBe(
+      Math.max(aloneFirst.shortenTerm.months, aloneSecond.shortenTerm.months),
+    )
+    expect(together.reducePayment.months).toBe(180)
   })
 })

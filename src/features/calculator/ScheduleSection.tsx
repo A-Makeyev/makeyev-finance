@@ -54,6 +54,7 @@ export function ScheduleSection() {
       ? vm.visibleMonthlyRows.map((row) => ({
           period: (row.year - 1) * 12 + row.month,
           principal: row.principal,
+          indexation: row.indexation,
           interest: row.interest,
           balance: row.closing,
           payment: row.paid,
@@ -61,6 +62,7 @@ export function ScheduleSection() {
       : vm.visibleScheduleRows.map((row) => ({
           period: row.year,
           principal: row.principal,
+          indexation: row.indexation,
           interest: row.interest,
           balance: row.closing,
           payment: row.paid,
@@ -106,7 +108,11 @@ export function ScheduleSection() {
   // both. The media query starts false and flips after mount, so the server
   // and the first client render agree (no hydration mismatch).
   const mixDonut = mixShares.some((share) => share.amount > 0) ? (
-    <TrackMixDonut shares={mixShares} size={narrowLayout ? 170 : undefined} />
+    <TrackMixDonut
+      shares={mixShares}
+      size={narrowLayout ? 170 : undefined}
+      className="schedule-mix-donut"
+    />
   ) : null
   // The band only exists while there is a chart to show. Without one there is
   // nothing to pair the cost donut with, so it stays in the asides.
@@ -204,7 +210,14 @@ export function ScheduleSection() {
               >
                 &nbsp;
               </h3>
-              <div className="table-wrap">
+              {/* The scrollbar is hidden, so the scroller is a focusable region:
+                  Tab reaches it and the keyboard scrolls it. */}
+              <div
+                className="table-wrap"
+                role="region"
+                aria-label={t('calculator.schedule.heading')}
+                tabIndex={0}
+              >
                 <table>
                   <thead>
                     <tr>
@@ -275,7 +288,14 @@ export function ScheduleSection() {
                     </span>
                   )}
                 </h3>
-                <div className="table-wrap">
+                <div
+                  className="table-wrap"
+                  role="region"
+                  aria-label={t('calculator.schedule.trackTableAria', {
+                    track: t(`calculator.trackTypes.${track.type}`),
+                  })}
+                  tabIndex={0}
+                >
                   <table>
                     <thead>
                       <tr>

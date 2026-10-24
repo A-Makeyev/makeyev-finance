@@ -22,6 +22,12 @@ export interface ForecastSeries {
    * paths use this so a rate reset reads as a jump, not a slope.
    */
   step?: boolean
+  /**
+   * Dash the line. The comparison page draws one group of paths per mix in the
+   * mix's own color, so the scenario is told apart by the stroke, not by a
+   * color that would have to be invented per mix and path.
+   */
+  dash?: 'dashed' | 'dotted'
 }
 
 interface ForecastChartProps {
@@ -29,8 +35,25 @@ interface ForecastChartProps {
   ariaLabel: string
   /** Rotated y-axis caption (e.g. monthly payment / cumulative amount). */
   axisTitle: string
+  /**
+   * X of that rotated caption in viewBox units. The default keeps it out by the
+   * chart's edge; a narrower chart can pull it in toward the tick labels.
+   */
+  axisTitleX?: number
   /** Years to mark with a vertical dashed line (rate-reset years). */
   markers?: number[]
+  /**
+   * A year the reader has picked elsewhere (the prepayment date slider): drawn
+   * as a solid accent guide with a dot per series, so the chosen year is
+   * visible without hovering.
+   */
+  selectedYear?: number
+  /**
+   * Called with the year under the cursor when the plot is clicked. Charts
+   * whose x axis is a choice (the prepayment date) turn a click into that
+   * choice; without it a click only serves the hover tooltip.
+   */
+  onSelectYear?: (year: number) => void
   /**
    * Anchor the value axis at 0 (cost paths) or zoom to the data range
    * (payment paths). A payment path on a zero axis compresses a 1pp reset
@@ -57,6 +80,9 @@ const MARGIN = { top: 40, right: 88, bottom: 84, left: 120 }
 const INNER_W = WIDTH - MARGIN.left - MARGIN.right
 const INNER_H = HEIGHT - MARGIN.top - MARGIN.bottom
 
+/** Stroke patterns for the optional per-series dash (undefined = solid). */
+const DASH_ARRAYS = { solid: undefined, dashed: '9 6', dotted: '2 6' } as const
+
 /**
  * Multi-line forecast plot. Lines are drawn in reverse legend order, so the
  * first (reference) series sits on top of the scenario lines. Hover snaps to
@@ -67,7 +93,10 @@ export function ForecastChart({
   series,
   ariaLabel,
   axisTitle,
+  axisTitleX = 10,
   markers = [],
+  selectedYear,
+  onSelectYear,
   zeroBased = true,
   formatTick = formatAxisShekel,
   testId,
@@ -88,11 +117,14 @@ export function ForecastChart({
     const maxYear = Math.max(...nonEmpty.flatMap((entry) => entry.points.map((point) => point.year)))
     const values = nonEmpty.flatMap((entry) => entry.points.map((point) => Math.max(0, point.value)))
     const maxValue = Math.max(...values)
-    if (!(maxValue > 0)) return null
+    if (!Number.isFinite(maxValue)) return null
 
     let axisMin = 0
-    let axisMax = maxValue
-    let ticks = niceTicks(maxValue)
+    // An all-zero chart (every fee is zero at the current rates) still draws a
+    // flat baseline. Returning null here used to remove the chart entirely,
+    // which reads as a bug: the zero line is the answer, not a missing plot.
+    let axisMax = maxValue > 0 ? maxValue : 1
+    let ticks = niceTicks(axisMax)
     if (!zeroBased) {
       const minValue = Math.min(...values)
       const padding = Math.max((maxValue - minValue) * 0.08, maxValue * 0.01, 1)
@@ -119,6 +151,19 @@ export function ForecastChart({
   const markerYears = Array.from(new Set(markers)).filter(
     (year) => year >= 1 && year <= maxYear,
   )
+  // The year picked outside the chart, when it falls inside the plot. Series
+  // that do not reach it simply get no dot.
+  const pickedYear =
+    selectedYear !== undefined && selectedYear >= 1 && selectedYear <= maxYear
+      ? Math.round(selectedYear)
+      : null
+  const pickedPoints =
+    pickedYear === null
+      ? []
+      : nonEmpty.flatMap((entry) => {
+          const point = entry.points.find((candidate) => candidate.year === pickedYear)
+          return point ? [{ entry, point }] : []
+        })
 
   const pathFor = (entry: ForecastSeries): string =>
     entry.points
@@ -133,12 +178,24 @@ export function ForecastChart({
       })
       .join(' ')
 
-  const handleMove = (event: React.MouseEvent<SVGSVGElement>) => {
+  /** The loan year under the pointer, clamped into the plot. */
+  const yearAt = (event: React.MouseEvent<SVGSVGElement>): number => {
     const bounds = event.currentTarget.getBoundingClientRect()
     const svgX = ((event.clientX - bounds.left) / bounds.width) * WIDTH
     const year = Math.round((svgX - MARGIN.left) / Math.max(step, 1e-9)) + 1
-    setActiveYear(Math.max(1, Math.min(maxYear, year)))
+    return Math.max(1, Math.min(maxYear, year))
+  }
+
+  const handleMove = (event: React.MouseEvent<SVGSVGElement>) => {
+    setActiveYear(yearAt(event))
     setHovering(true)
+  }
+
+  const handleClick = (event: React.MouseEvent<SVGSVGElement>) => {
+    const year = yearAt(event)
+    setActiveYear(year)
+    setHovering(true)
+    onSelectYear?.(year)
   }
 
   const activeRows =
@@ -163,7 +220,23 @@ export function ForecastChart({
       <div className="chart-legend" aria-hidden="true">
         {nonEmpty.map((entry) => (
           <span key={entry.id} className="chart-legend-item">
-            <i className="chart-swatch" style={{ background: entry.color }} />
+            {entry.dash ? (
+              // A dashed path gets a swatch in the same stroke, so the legend
+              // matches the line instead of implying a color per entry.
+              <svg className="chart-swatch chart-swatch-line" width="18" height="12">
+                <line
+                  x1="0"
+                  y1="6"
+                  x2="18"
+                  y2="6"
+                  stroke={entry.color}
+                  strokeWidth="2.5"
+                  strokeDasharray={DASH_ARRAYS[entry.dash]}
+                />
+              </svg>
+            ) : (
+              <i className="chart-swatch" style={{ background: entry.color }} />
+            )}
             <span className="chart-legend-name">{entry.label}</span>
           </span>
         ))}
@@ -176,7 +249,7 @@ export function ForecastChart({
           aria-label={ariaLabel}
           onMouseMove={handleMove}
           onMouseLeave={() => setHovering(false)}
-          onClick={handleMove}
+          onClick={handleClick}
         >
           {ticks.map((tick) => (
             <g key={tick}>
@@ -210,6 +283,17 @@ export function ForecastChart({
             />
           ))}
 
+          {pickedYear !== null && (
+            <line
+              x1={x(pickedYear)}
+              x2={x(pickedYear)}
+              y1={MARGIN.top}
+              y2={MARGIN.top + INNER_H}
+              className="forecast-selected-line"
+              aria-hidden="true"
+            />
+          )}
+
           {xTicks.map((tick) => (
             <g key={`x-${tick.index}`}>
               <line
@@ -233,7 +317,19 @@ export function ForecastChart({
               key={entry.id}
               d={pathFor(entry)}
               stroke={entry.color}
+              strokeDasharray={DASH_ARRAYS[entry.dash ?? 'solid']}
               className="chart-line-track"
+            />
+          ))}
+
+          {pickedPoints.map(({ entry, point }) => (
+            <circle
+              key={`picked-${entry.id}`}
+              cx={x(point.year)}
+              cy={y(point.value)}
+              r={4.5}
+              fill={entry.color}
+              className="forecast-selected-dot"
             />
           ))}
 
@@ -251,10 +347,10 @@ export function ForecastChart({
             ))}
 
           <text
-            x={10}
+            x={axisTitleX}
             y={MARGIN.top + INNER_H / 2}
             className="chart-axis-title chart-axis-title-rot"
-            transform={`rotate(-90 10 ${MARGIN.top + INNER_H / 2})`}
+            transform={`rotate(-90 ${axisTitleX} ${MARGIN.top + INNER_H / 2})`}
           >
             {axisTitle}
           </text>

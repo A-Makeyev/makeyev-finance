@@ -46,7 +46,7 @@ const samplePassword = process.env.SEED_PASSWORD ?? SAMPLE_PASSWORD_DEFAULT
 
 const uri = process.env.MONGODB_URI
 if (!uri) {
-  console.error('[seed] MONGODB_URI is not set. Add it to .env (server-only; see SECURITY.md).')
+  console.error('[seed] MONGODB_URI is not set. Add it to .env (server-only; see docs/SECURITY.md).')
   process.exit(1)
 }
 

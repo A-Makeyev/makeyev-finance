@@ -881,14 +881,15 @@ export function CalculatorPage() {
 
         <ScheduleSection />
 
-        {/* Early-repayment fee: priced off the schedule above (the remaining
-            payments are the formula's own input), so it sits right after it. */}
-        <PrepaymentSection />
-
         {/* Forward-looking scenarios: the reset chart and the interest vs
             indexation forecast both read the same mix, and both assumptions
             are stated in the panel. */}
         <ForecastSection />
+
+        {/* Early-repayment fee: priced off the schedule above (the remaining
+            payments are the formula's own input). It follows the forecast
+            section, which reads the same mix's resets and indexation. */}
+        <PrepaymentSection />
       </main>
 
       <AppModal

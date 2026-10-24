@@ -8,7 +8,7 @@ import { z } from 'zod'
  * bundler prefix. All of these are PUBLIC by design - they are baked into the
  * client bundle either way (the bare spellings are inlined via `next.config.ts`
  * `env`; see the note there). Server-only secrets must never live here. See
- * SECURITY.md for the extraction ledger from the legacy codebase.
+ * docs/SECURITY.md for the extraction ledger from the legacy codebase.
  *
  * Mail has no client variables at all now: the browser calls our own
  * `/api/contact`, and Resend is reached from the server only.

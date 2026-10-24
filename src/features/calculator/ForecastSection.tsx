@@ -77,8 +77,9 @@ function useWholeRowTable() {
  *
  * The reset chart plots the combined payment at the start of each year under
  * the base, +1pp and -1pp paths; the cost chart plots the base path's
- * cumulative interest against cumulative indexation. Both charts have a
- * `<details>` table with the exact figures.
+ * cumulative interest against cumulative indexation. Under each chart the
+ * exact figures are always visible as a table - the chart is never the only
+ * way to read them, and there is no toggle to open.
  *
  * A mix with neither a contractual reset nor an indexed track has nothing
  * forward-looking to add (its schedule is already fully deterministic), so
@@ -191,8 +192,7 @@ export function ForecastSection() {
           )}
 
           {forecast.hasResetTracks && (
-            <details className="forecast-table-details" data-testid="forecast-reset-table" open>
-              <summary>{t('calculator.forecast.tableSummary')}</summary>
+            <div className="forecast-table-block" data-testid="forecast-reset-table">
               <div className="table-wrap forecast-table-scroll no-scrollbar" ref={resetTableRef}>
                 <table
                   className="forecast-table"
@@ -228,7 +228,7 @@ export function ForecastSection() {
                   </tbody>
                 </table>
               </div>
-            </details>
+            </div>
           )}
         </article>
 
@@ -254,8 +254,7 @@ export function ForecastSection() {
             </p>
           )}
 
-          <details className="forecast-table-details" data-testid="forecast-cost-table" open>
-            <summary>{t('calculator.forecast.tableSummary')}</summary>
+          <div className="forecast-table-block" data-testid="forecast-cost-table">
             <div className="table-wrap forecast-table-scroll no-scrollbar" ref={costTableRef}>
               <table
                 className="forecast-table"
@@ -283,7 +282,7 @@ export function ForecastSection() {
                 </tbody>
               </table>
             </div>
-          </details>
+          </div>
         </article>
       </div>
 

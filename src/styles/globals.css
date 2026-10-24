@@ -330,6 +330,20 @@ body {
   background-color: var(--soft-blue);
 }
 
+/* Inner scrollers (tables, chart legends, panels) keep scrolling by wheel,
+   touch and keyboard but never show a bar. The document's own scrollbar stays
+   visible, so the page still reads as scrollable at a glance. */
+html * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
 .remove-highlight {
   user-select: none;
   -ms-user-select: none;
@@ -342,6 +356,35 @@ body {
 
 .remove-highlight:focus {
   outline: none !important;
+}
+
+/* Inner scrollers (tables, chart legends, panels) keep scrolling by wheel,
+   touch and keyboard but never show a bar. The document's own scrollbar stays
+   visible, so the page still reads as scrollable at a glance. */
+html * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+/* Inner scrollers beneath the prepayment fee card's chart (the chart area
+   and its table) keep scrolling free but never show a bar. This is scoped to
+   the card so the page-level scrollbar and the other panels' scrollbars stay
+   visible. */
+.prepayment-chart-area * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.prepayment-chart-area *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
 
 .hidden {
@@ -4152,13 +4195,15 @@ e #name,
 }
 
 .calculator-panel,
-.schedule-section {
+.schedule-section,
+.prepayment-section {
   background: var(--calc-paper);
   border: 1px solid rgba(8, 127, 120, 0.14);
   box-shadow: 0 20px 55px rgba(22, 50, 53, 0.1);
 }
 
-.calculator-panel {
+.calculator-panel,
+.prepayment-section {
   padding: 38px 44px 42px;
 }
 
@@ -5870,7 +5915,12 @@ e #name,
   transition:
     opacity 0s linear,
     color 0.2s ease;
+  /* If the toggle sits under a results card's focus rectangle the browser
+     lets it go at the screen edge instead. */
 }
+
+/* Confirmed: the toggle's reveal uses the 0.4s ease-out in .is-visible; the
+   hide is instant via the 0s in the base rule. */
 
 .results-toggle.is-visible {
   opacity: 1;
@@ -6104,12 +6154,24 @@ e #name,
   flex: none;
 }
 
+/* A dashed legend swatch carries the stroke instead of a filled square. */
+.chart-swatch-line {
+  width: 18px;
+  height: 12px;
+  overflow: visible;
+}
+
 .chart-swatch-principal {
   background: var(--chart-principal, #0aa89f);
 }
 
 .chart-swatch-interest {
   background: var(--chart-interest, #d2762e);
+}
+
+/* Indexation keeps the cost-donut / forecast-line purple everywhere. */
+.chart-swatch-indexation {
+  background: var(--cost-donut-indexation, #7b5cc4);
 }
 
 .chart-swatch-balance {
@@ -6215,10 +6277,22 @@ e #name,
   fill: var(--chart-principal, #0aa89f);
 }
 
+.chart-bar-indexation,
+.chart-area-indexation {
+  fill: var(--cost-donut-indexation, #7b5cc4);
+}
+
 .chart-bar-interest,
 .chart-area-interest {
   fill: var(--chart-interest, #d2762e);
   fill-opacity: 0.9;
+}
+
+/* Drawn only when net principal dips below zero; anchors the negative band. */
+.chart-zero-line {
+  stroke: var(--calc-muted);
+  stroke-width: 1.2;
+  opacity: 0.55;
 }
 
 .chart-bar-group-active {
@@ -6489,8 +6563,63 @@ e #name,
   font-size: 20px;
 }
 
-.mix-donut:not(.saved-mix-donut-chart):not(.schedule-donut-pair .mix-donut) text.donut-center-value[data-compact="true"] {
+.mix-donut:not(.saved-mix-donut-chart):not(.schedule-donut-pair .mix-donut):not(.schedule-mix-donut) text.donut-center-value[data-compact="true"] {
   font-size: 24px;
+}
+
+/* Wide schedule band: the mix ring matches the asides cost ring (190px), and
+   the chart takes the freed width. The mix text sizes live in the 320-unit
+   viewBox, so they grow in units to keep the same rendered px at the smaller
+   ring. The narrow pair keeps its own 260px scale below. */
+@media (min-width: 1001px) {
+  .schedule-chart-band .schedule-mix-donut svg {
+    width: 190px;
+    max-width: 190px;
+  }
+
+  .schedule-chart-band .schedule-mix-donut .donut-slice-label,
+  .schedule-chart-band .schedule-mix-donut .donut-center-label {
+    font-size: 22px;
+  }
+
+  .schedule-chart-band .schedule-mix-donut .donut-center-value,
+  .schedule-chart-band .schedule-mix-donut text.donut-center-value[data-compact="true"] {
+    font-size: 34px;
+  }
+
+  /* Ring centered over its own legend, not parked on the column's reading
+     edge: the legend is wider than the 190px ring, and its outward shift
+     (below) would otherwise leave the ring off-centre against it. */
+  .schedule-chart-band .schedule-mix-donut {
+    justify-items: center;
+  }
+
+  /* Each slice's row sits centered under the ring too, so the ring and its
+     key read as one figure in the middle of the column rather than a centred
+     ring over a right-aligned (left-aligned in English) list. */
+  /* Every row spans the widest one, so the color chips line up in a column
+     instead of stepping in and out with each row's width; the block itself
+     stays centered under the ring. */
+  .schedule-chart-band .schedule-mix-donut .mix-legend,
+  :root[dir='ltr'] .schedule-chart-band .schedule-mix-donut .mix-legend {
+    transform: none;
+    min-width: 0;
+    justify-items: stretch;
+  }
+
+  /* One text column across the rows: both lines start at the chip side, so a
+     shorter amount still begins under its own name instead of drifting to the
+     middle of the column. */
+  .schedule-chart-band .schedule-mix-donut .mix-legend-text {
+    flex: 1;
+  }
+
+  /* Hebrew: the ring otherwise sits flush on the panel's left edge while the
+     chart keeps its 26px gap, so the block leans out of the card. Nudged right
+     (translated, not margined, so the chart keeps its width). */
+  :root[dir='rtl'] .schedule-chart-band .schedule-mix-donut {
+    transform: translateX(12px);
+  }
 }
 
 .donut-slice-label {
@@ -6728,11 +6857,28 @@ e #name,
   margin-top: 26px;
 }
 
+/* When the prepayment years input is over the section's limit, it fades out
+   for the same duration the section will take to re-render, so the switch
+   from a valid to an invalid date reads as a transition rather than an
+   instant cut. The input is re-rendered with the over-limit value after the
+   exit so the user's text stays in the field. */
+/* One line under the heading: what the panel prices and from where. */
+.prepayment-lead {
+  margin: -14px 0 22px;
+  max-inline-size: 820px;
+  color: var(--calc-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 .prepayment-controls {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   gap: 18px;
-  align-items: end;
+  /* The fields carry a hint under the input, the checkbox does not: align the
+     tops so every label sits on one line, then push the checkbox down to the
+     input row by hand. */
+  align-items: start;
   padding-bottom: 20px;
   margin-bottom: 18px;
   border-bottom: 1px solid var(--calc-line);
@@ -6743,6 +6889,17 @@ e #name,
   font-size: 0.95rem;
   font-weight: 600;
   min-width: 0;
+}
+
+/* The caption under a control: the accepted range, the rate source, why the
+   partial amount is there. Quieter than the label it belongs to. */
+.prepayment-field-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--calc-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 /* The panel's blanket field rule is scoped to .calculator-panel, so these
@@ -6763,7 +6920,10 @@ e #name,
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-bottom: 12px;
+  /* Centre it in its grid row instead of nudging it down by a fixed amount:
+     beside a field it lands on the input's middle line, and alone on a
+     stacked phone row it needs no offset at all. */
+  align-self: center;
   color: var(--calc-muted);
   font-size: 0.95rem;
   cursor: pointer;
@@ -6784,6 +6944,388 @@ e #name,
   font-weight: 700;
 }
 
+/* Money columns line up digit for digit down the table. */
+.prepayment-table .prepayment-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Compact status pill inside a cell (exempt / no fee / capped by 3(4)). */
+.prepayment-chip {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 2px 8px;
+  border: 1px solid var(--calc-line);
+  border-radius: 999px;
+  color: var(--calc-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+/* A chip that opens a row's cell, so it carries no extra start gap. */
+.prepayment-chip:first-child,
+.prepayment-table td>.prepayment-chip:only-child {
+  margin-inline-start: 0;
+}
+
+.prepayment-chip.is-exempt {
+  color: var(--calc-teal-dark);
+  border-color: color-mix(in srgb, var(--calc-teal) 35%, transparent);
+  background: var(--calc-note);
+}
+
+/* Three headline numbers above the table: the fee, its basis, and its share. */
+.prepayment-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.prepayment-stat {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--calc-soft);
+  border-inline-start: 3px solid var(--calc-line);
+}
+
+.prepayment-stat.is-primary {
+  background: var(--calc-note);
+  border-inline-start-color: var(--calc-teal);
+}
+
+.prepayment-stat-label {
+  color: var(--calc-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.prepayment-stat strong {
+  color: var(--calc-ink);
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.prepayment-stat.is-primary strong {
+  color: var(--calc-teal-dark);
+}
+
+/* Fee-by-date chart: sits directly on the panel like the schedule graph below
+   the schedule table - no card of its own, so the chart and its table read as
+   one part of the page rather than a boxed widget. */
+.prepayment-chart-card {
+  display: grid;
+  /* Graph and table share the row on wide screens; the graph leads the reading
+     direction (right in Hebrew, left in English), and the table scrolls inside
+     the same row height instead of stretching the card. */
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  column-gap: 18px;
+  row-gap: 8px;
+  align-items: stretch;
+  margin-bottom: 20px;
+  will-change: transform, opacity;
+}
+
+/* Same-year appear/disappear: a short fade (120ms) plus a small drop so
+   the block can land without being invisible the moment it renders. The entry
+   class is applied by the parent on the render that shows the block, so a
+   year that leaves and comes back still animates both ways. */
+.prepayment-chart-card-enter {
+  animation: prepayment-graph-enter 180ms ease-out;
+  animation-fill-mode: both;
+}
+
+.prepayment-chart-card-leave {
+  animation: prepayment-graph-leave 160ms ease-in;
+  animation-fill-mode: both;
+}
+
+
+.prepayment-chart-card-reflow {
+  /* The card's disappearance had already started when React removed the card's
+     own node on the same render: the key swap below lets the browser run the
+     full leave before it re-renders the place anew. */
+  animation: prepayment-graph-enter 160ms ease-out;
+  animation-fill-mode: both;
+  animation-delay: 160ms;
+}
+
+.prepayment-chart-card-reflow[data-with-chart] {
+  /* The chart box is visible. */
+}
+
+.prepayment-chart-card-reflow.before-enter {
+  /* During the leave animation (-160ms to 0ms) the card keeps its pre-render
+     size so the switch from .prefetch (static placeholder) to the real chart
+     doesn't visibly jump. */
+  position: absolute;
+  inset: 0;
+}
+
+.prepayment-chart-card-reflow.after-enter {
+  /* After the card's done entering, restore its grid placement so it stops
+     being pulled out of flow and starts participating in layout again - but only
+     once, after the leave animation's start. A re-render that removes and
+     re-enters the same year re-applies .before-enter on the entering card, so
+     pairing it with this class keeps the two-phase enter/leave defined below. */
+  position: static;
+
+  /* Keep the card in flow while we re-enter so the grid doesn't collapse to a
+     zero-height placeholder before the new chart paints. */
+  grid-column: 1;
+  grid-row: 2;
+}
+
+@keyframes prepayment-graph-enter {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes prepayment-graph-leave {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+}
+
+.prepayment-chart-head {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.prepayment-chart-head h3 {
+  margin: 0 0 6px;
+  color: var(--calc-teal-dark);
+  font-size: 1.05rem;
+}
+
+.prepayment-chart-lead {
+  margin: 0;
+  max-inline-size: 780px;
+  color: var(--calc-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Directly under the plot (the grid's first column), not centred across the
+   whole card below the table: it is the graph's own instruction. */
+.prepayment-chart-caption {
+  grid-column: 1;
+  grid-row: 3;
+  margin: 0;
+  color: var(--calc-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.prepayment-chart {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.prepayment-chart .chart-legend {
+  flex-wrap: nowrap;
+  gap: 6px 8px;
+  padding: 4px 0 12px;
+  font-size: 0.78rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.prepayment-chart .chart-legend::-webkit-scrollbar {
+  display: none;
+}
+
+.prepayment-chart .chart-legend-item {
+  flex: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .prepayment-chart .chart-legend {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
+.prepayment-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  /* A click on the plot picks that repayment year. */
+  cursor: pointer;
+}
+
+/* The fee chart reuses ForecastChart, but unlike the forecast cards it spans
+   the whole panel instead of half of it. Left full width, its 900-unit viewBox
+   (and the forecast cards' 26px ticks, sized for their half-width columns)
+   renders roughly twice the schedule graph's labels. Cap the plot near the
+   schedule chart's width and pin its text to the same size tier, so the two
+   graphs read as one family. Narrow screens never hit the cap. */
+.prepayment-chart .chart-tick {
+  font-size: 20px;
+}
+
+.prepayment-chart .chart-axis-title {
+  font-size: 17px;
+}
+
+/* Higher specificity than .forecast-chart .chart-tick, which also matches the
+   fee chart's SVG and would otherwise win on wide screens. */
+@media (min-width: 1001px) {
+  .prepayment-chart .forecast-chart .chart-tick {
+    font-size: 17px;
+  }
+
+  /* Both captions (the rotated "עמלת היוון" and the bottom "שנה") take the
+     panel's 17px tier instead of a step below it, so they read at the same
+     weight as the fee chart's numbers. */
+  .prepayment-chart .forecast-chart .chart-axis-title,
+  .prepayment-chart .forecast-chart .chart-axis-title-rot {
+    font-size: 17px;
+  }
+}
+
+.prepayment-chart-plot {
+  position: relative;
+  width: 100%;
+  max-inline-size: 760px;
+  margin-inline: auto;
+  min-width: 0;
+}
+
+/* The chart's figures as a table (a chart should never be the only way to
+   read the numbers). It shares the row with the plot: the absolutely
+   positioned scroller takes its height from the chart column, so a long
+   schedule scrolls instead of making the whole card taller. */
+.prepayment-chart-details {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The table takes the panel's own surface - the schedule table's treatment -
+   so it never reads as a bright white block beside the chart. */
+.prepayment-chart-table {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background: transparent;
+  will-change: scroll-position;
+}
+
+/* Inner scrollers (tables, chart legends, panels) keep scrolling by wheel,
+   touch and keyboard but never show a bar. The document's own scrollbar stays
+   visible, so the page still reads as scrollable at a glance. */
+.prepayment-chart-table * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.prepayment-chart-table *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+.prepayment-chart-table:focus-visible {
+  outline: 2px var(--soft-blue);
+  outline-offset: -2px;
+}
+
+.prepayment-chart-table table {
+  width: 100%;
+  min-width: 320px;
+}
+
+.prepayment-chart-table th,
+.prepayment-chart-table td {
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The header stays put while the fee rows scroll under it. */
+.prepayment-chart-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--calc-paper);
+}
+
+.prepayment-chart-table thead th.unused {
+  display: none;
+}
+
+/* Phones and small tablets stack the pair: the chart first, then the table
+   with its own bounded scroll area. */
+@media (max-width: 900px) {
+  .prepayment-chart-card {
+    grid-template-columns: 1fr;
+  }
+
+  .prepayment-chart-card-enter {
+    animation: prepayment-graph-enter-mobile 200ms ease-out;
+  }
+
+  @keyframes prepayment-graph-enter-mobile {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .prepayment-chart-head,
+  .prepayment-chart {
+    grid-column: 1;
+  }
+
+  .prepayment-chart-caption {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .prepayment-chart-details {
+    grid-column: 1;
+    grid-row: 4;
+    position: static;
+  }
+
+  .prepayment-chart-table {
+    position: static;
+    max-height: 360px;
+  }
+}
+
+
+/* Cheapest payoff order for a partial prepayment. Laid out as a grid rather
+   than a run of "1,234 ₪ from track X · fee 5 ₪" sentences: the sentence form
+   mixed right-to-left text with currency, so neither the amounts nor the fees
+   lined up from row to row. Here the rank, the track and the two figures are
+   columns, and every figure gets the same width and end alignment. */
 .prepayment-order {
   margin-top: 18px;
   padding: 16px 18px;
@@ -6795,28 +7337,264 @@ e #name,
   color: var(--calc-teal-dark);
   font-weight: 700;
   font-size: 1rem;
-  margin: 0 0 8px;
+  margin: 0 0 4px;
 }
 
-.prepayment-order ol {
+.prepayment-order-lead {
+  margin: 0 0 10px;
+  color: var(--calc-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.prepayment-order-list {
   margin: 0;
-  padding-inline-start: 20px;
-  color: var(--calc-ink);
-  font-size: 0.95rem;
-  line-height: 1.7;
+  padding: 0;
+  list-style: none;
 }
 
-.prepayment-order-total {
-  margin: 8px 0 0;
+.prepayment-order-row {
+  display: grid;
+  /* Rank, track, then the two figure columns - four children, four columns,
+     so nothing wraps onto a second line. */
+  grid-template-columns: 20px minmax(0, 1fr) minmax(104px, auto) minmax(104px, auto);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--calc-line);
+  color: var(--calc-ink);
+  font-size: 0.92rem;
+}
+
+.prepayment-order-row.is-total {
+  border-top: 2px solid var(--calc-teal);
   color: var(--calc-teal-dark);
   font-weight: 700;
-  font-size: 0.95rem;
 }
 
+/* Soft ring rather than a filled teal disc: `--calc-teal` carries white text
+   at ~3:1 in dark mode, while the brighter `--calc-teal-dark` on this note
+   fill stays readable in both themes. */
+.prepayment-order-rank {
+  display: grid;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--calc-teal) 40%, transparent);
+  background: var(--calc-note);
+  color: var(--calc-teal-dark);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.prepayment-order-name {
+  min-width: 0;
+}
+
+.prepayment-order-note {
+  color: var(--calc-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.prepayment-order-name>.prepayment-order-note {
+  display: block;
+}
+
+/* Two figures held in their own column pair: the captions differ in length,
+   so both cells take the same minimum width and align their value to the end
+   - the numbers then form two straight columns down the list. */
+.prepayment-order-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  min-inline-size: 104px;
+  text-align: end;
+}
+
+.prepayment-order-caption {
+  color: var(--calc-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.prepayment-order-value {
+  color: var(--calc-ink);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.prepayment-order-row.is-total .prepayment-order-value {
+  color: var(--calc-teal-dark);
+}
+
+.prepayment-order-capped {
+  margin: 10px 0 0;
+  color: var(--calc-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* The partial amount's two legal outcomes: finish earlier, or keep the end
+   date and lower the payment. Its own card, separate from the payoff order
+   above, because the outcomes split the amount by balance rather than by that
+   order. Two inner cards so the trade-off reads side by side. */
+
+.prepayment-outcomes {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--calc-line);
+  background: var(--calc-soft);
+}
+
+.prepayment-outcomes-title {
+  margin: 0 0 4px;
+  color: var(--calc-teal-dark);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.prepayment-outcomes-lead {
+  margin: 0 0 10px;
+  color: var(--calc-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.prepayment-outcomes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  overflow: hidden;
+  contain: layout;
+}
+
+.prepayment-outcome {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid var(--calc-line);
+  background: var(--calc-field);
+  opacity: 0;
+  transform: translateY(6px);
+  animation: prepayment-outcome-appear 260ms ease-out;
+  animation-fill-mode: both;
+}
+
+.prepayment-outcome.enter {
+  animation-name: prepayment-outcome-appear;
+}
+
+.prepayment-outcome.leave {
+  animation-name: prepayment-outcome-leave;
+  animation-duration: 320ms;
+  animation-timing-function: ease-in;
+}
+
+@keyframes prepayment-outcome-appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes prepayment-outcome-leave {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.prepayment-outcome h4 {
+  margin: 0 0 2px;
+  color: var(--calc-teal-dark);
+  font-size: 0.88rem;
+}
+
+.prepayment-outcome-payment {
+  color: var(--calc-ink);
+  font-size: 1.02rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+.prepayment-outcome-line {
+  color: var(--calc-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.prepayment-outcomes-note {
+  margin: 9px 0 0;
+  color: var(--calc-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+/* The date picked is past every track's last payment. A boxed callout, not a
+   bare line: it replaces the whole result area and carries the fix (jump to
+   the last date with a balance), with the controls still above it so the
+   reader can simply change the year instead. */
 .prepayment-empty {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  background: var(--calc-note);
+  border: 1px solid var(--calc-line);
+  border-inline-start: 3px solid var(--calc-teal);
+}
+
+.prepayment-empty strong {
+  color: var(--calc-teal-dark);
+  font-size: 0.98rem;
+}
+
+.prepayment-empty p {
+  margin: 0;
+  color: var(--calc-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.prepayment-empty-action {
+  margin-top: 4px;
+  padding: 7px 14px;
+  border: 1px dashed var(--calc-accent);
+  background: transparent;
+  color: var(--calc-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.prepayment-empty-action:hover {
+  background: var(--calc-accent);
+  color: #fff;
+}
+
+/* No mix entered at all: nothing to price, so only the sentence shows. */
+.prepayment-empty-note {
+  margin: 0;
   color: var(--calc-muted);
   font-size: 0.9rem;
-  margin: 0;
 }
 
 .prepayment-note-line {
@@ -6839,9 +7617,19 @@ e #name,
 
 .prepayment-cap-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* One column per priced track, capped at three (set by the component). */
+  grid-template-columns: repeat(var(--cap-columns, 3), minmax(0, 1fr));
   gap: 10px;
   margin-block: 6px 12px;
+}
+
+/* Names the tracks that are absent from the cap grid, so a two-field grid
+   under a three-track mix never reads as a missing input. */
+.prepayment-cap-exempt {
+  margin: 0 0 10px;
+  color: var(--calc-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
 }
 
 /* Smaller than the panel's standard fields - these are optional percentages
@@ -6862,6 +7650,23 @@ e #name,
   font-size: 0.85rem;
 }
 
+/* Live answer under a cap field: whether the entered rate changed anything.
+   Without it an entry that cannot bite (an average above the track's rate, or
+   the track's fee already zero) looks like a broken input. */
+.prepayment-cap-status {
+  display: block;
+  margin-top: 6px;
+  color: var(--calc-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.prepayment-cap-status[data-active='true'] {
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+}
+
 @media (max-width: 1000px) {
   .prepayment-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6873,8 +7678,32 @@ e #name,
     grid-template-columns: 1fr;
   }
 
-  .prepayment-checkbox {
-    padding-bottom: 0;
+  .prepayment-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .prepayment-outcomes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* The cap fields go one per row: the hint under each needs the width. */
+  .prepayment-cap-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Amount and fee drop under the track name, each captioned, so a phone
+     keeps the two aligned columns instead of a run-on sentence. */
+  .prepayment-order-row {
+    grid-template-columns: 20px minmax(0, 1fr);
+    row-gap: 6px;
+  }
+
+  .prepayment-order-figure {
+    grid-column: 2;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    min-inline-size: 0;
   }
 
   /* The fee and its rate equivalent are the answer; the balance and the
@@ -7022,6 +7851,24 @@ e #name,
   opacity: 0.55;
 }
 
+/* The year chosen OUTSIDE the chart (the prepayment date field): a solid guide
+   with a dot per series, so the pick stays visible without hovering. */
+.forecast-selected-line {
+  stroke: var(--calc-teal-dark);
+  stroke-width: 1.6;
+  stroke-dasharray: 6 4;
+  opacity: 0.75;
+}
+
+.forecast-selected-dot {
+  /* Same treatment as the hover dots: a white ring that keeps its thickness
+     whatever the viewBox scales to. */
+  stroke: white;
+  stroke-width: 2.5px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
 .forecast-caption {
   margin: 16px 0 8px;
   color: var(--calc-muted);
@@ -7036,35 +7883,27 @@ e #name,
   line-height: 1.6;
 }
 
-.forecast-table-details {
+/* The exact figures under the chart, always visible: no collapse toggle, just
+   the table the chart plots. Same treatment as the schedule table - the card's
+   own surface and hairlines, not a white box of its own. */
+.forecast-table-block {
   margin-top: 8px;
-  border-top: 1px solid var(--calc-line);
 }
 
-.forecast-table-details>summary {
-  padding: 10px 0;
-  color: var(--calc-teal-dark);
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* Same box as the chart above: the aspect ratio matches the SVG's 900x520
-   viewBox, so the table viewport is exactly the plot's height and scrolls
-   through the years instead of making the card taller. */
+/* The viewport keeps the plot's height; the rows fill it exactly (see
+   useWholeRowTable in the component). */
 .forecast-table-scroll {
   aspect-ratio: 900 / 520;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border: 1px solid var(--calc-line);
-  background: var(--calc-field);
+  background: transparent;
 }
 
 .forecast-table-scroll thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--calc-field);
+  background: var(--calc-soft);
 }
 
 .forecast-table {
@@ -7162,6 +8001,15 @@ e #name,
 
 .table-wrap::-webkit-scrollbar {
   display: none;
+}
+
+/* With the bar hidden, a focused scroller is the only sign of where the
+   keyboard went: the schedule tables and the compare payments table take the
+   same ring as the rates table (.rates-table-wrap:focus-visible below). */
+.table-wrap:focus-visible,
+.payments-table-scroll:focus-visible {
+  outline: 2px solid var(--soft-blue);
+  outline-offset: -2px;
 }
 
 /* Scrollable schedule table: cap the height so long schedules (30 years, or
@@ -7778,6 +8626,14 @@ tbody tr:hover {
     width: fit-content;
     max-width: 100%;
     margin-inline: auto;
+    /* Rows share one width, so the color chips line up in a column - same as
+       the wide band's legend. */
+    justify-items: stretch;
+  }
+
+  /* Name and amount both start at the chip side in that one text column. */
+  .schedule-donut-pair .mix-legend-text {
+    flex: 1;
   }
 
   /* One type scale for both legends under the pair: an ink 0.9rem name line at
@@ -9714,6 +10570,10 @@ html[dir='rtl'] .comment-text {
   );
 }
 
+.compare-trend-swatch-indexation {
+  background: var(--cost-donut-indexation, #7b5cc4);
+}
+
 /* One visual language per metric so the five panels never read as copies:
    balance is a filled area, cumulative paid a line with year dots, cumulative
    interest a dashed line, cumulative indexation a dotted line. */
@@ -9800,6 +10660,17 @@ html[dir='rtl'] .comment-text {
   stroke: none;
 }
 
+.compare-trend-bar-indexation {
+  fill: var(--cost-donut-indexation, #7b5cc4);
+}
+
+/* Interior zero line for a composition whose net principal is negative. */
+.compare-trend-zero-line {
+  stroke: var(--calc-muted);
+  stroke-width: 1.2;
+  opacity: 0.55;
+}
+
 .compare-trend-tick-end {
   text-anchor: end;
 }
@@ -9809,6 +10680,76 @@ html[dir='rtl'] .comment-text {
   stroke-width: 2.75;
   stroke-linejoin: round;
   stroke-linecap: round;
+}
+
+/* Rate scenarios: one no-change line per mix, with the +step and -step paths
+   as a shaded band around it. The fill is the mix color (set inline), kept
+   light enough that overlapping mixes still read as separate colors. */
+.compare-rate-band {
+  stroke: none;
+  fill-opacity: 0.16;
+}
+
+:root[data-theme='dark'] .compare-rate-band {
+  fill-opacity: 0.2;
+}
+
+/* The no-change path is the reference, so it sits a little heavier than the
+   two scenario paths used to. */
+.compare-rate-base {
+  stroke-width: 3;
+}
+
+/* A generic band swatch for the inline key; the mix colors are named in the
+   gallery's shared legend above. */
+.compare-rate-band-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.22;
+  flex: none;
+}
+
+/* Explains why a fixed, prime or fixed-indexed mix has no shaded range: only
+   contractual five-year resets are stepped, so those mixes' scenarios are
+   identical and the chart draws one line. */
+.compare-trend-note {
+  margin: 8px 0 4px;
+  color: var(--calc-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* Per-mix reset dates under the rate chart's key. Kept on one wrapping line at
+   wide widths and one item per line on a phone. */
+.compare-rate-mix-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  color: var(--calc-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.compare-rate-mix-list li {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  min-width: 0;
+}
+
+.compare-rate-mix-label {
+  font-weight: 700;
+}
+
+.compare-rate-mix-resets {
+  color: var(--calc-muted);
 }
 
 .compare-trend-dot {
@@ -9851,6 +10792,17 @@ html[dir='rtl'] .comment-text {
   gap: 7px;
   font-weight: 600;
   color: var(--calc-teal-dark);
+}
+
+/* The composition tooltip names three segments per mix, so it may wrap
+   instead of growing wider than the plot on a phone. */
+.compare-trend-tooltip-composition {
+  white-space: normal;
+  max-width: 100%;
+}
+
+.compare-trend-tooltip-composition .compare-trend-tooltip-row {
+  flex-wrap: wrap;
 }
 
 /* Track-mix donut above the payments table. The calculator's donut keeps its
@@ -10122,6 +11074,11 @@ html[dir='rtl'] .comment-text {
   color: var(--calc-muted);
   font-size: 0.9rem;
 }
+
+/* Rate-scenario section: one compact chart in the trend gallery's own card,
+   with one color per mix and one stroke per reset path. The figures behind it
+   live in a screen-reader-only table (see RateScenarioChart), so the section
+   stays graph-only on screen. */
 
 @media (max-width: 500px) {
 

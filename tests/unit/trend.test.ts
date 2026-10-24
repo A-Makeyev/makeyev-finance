@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { trendValues, type TrendSourceRow } from '@/features/compare/trend'
+import {
+  compositionSegments,
+  trendValues,
+  type TrendSourceRow,
+} from '@/features/compare/trend'
 
 /**
  * The combined chart's per-metric series. Hand-checked golden values on a
@@ -40,6 +44,25 @@ describe('trendValues', () => {
     ])
   })
 
+  it('prepayment is the fee at each year end, not a cumulative series', () => {
+    const withFees: TrendSourceRow[] = [
+      { ...rows[0], prepaymentFee: 500 },
+      { ...rows[1], prepaymentFee: 300 },
+    ]
+    expect(trendValues(withFees, 'prepayment')).toEqual([
+      { year: 1, value: 500 },
+      { year: 2, value: 300 },
+    ])
+    // An unpriced row is a gap, not a zero: the schedule's last year has no
+    // fee row, so the curve must end at the last priced year.
+    expect(trendValues(rows, 'prepayment')).toEqual([])
+    const pricedOnce: TrendSourceRow[] = [
+      { ...rows[0], prepaymentFee: 500 },
+      { ...rows[1] },
+    ]
+    expect(trendValues(pricedOnce, 'prepayment')).toEqual([{ year: 1, value: 500 }])
+  })
+
   it('an empty schedule has no points', () => {
     expect(trendValues([], 'payment')).toEqual([])
     expect(trendValues([], 'interest')).toEqual([])
@@ -74,6 +97,60 @@ describe('trendValues', () => {
       { year: 1, value: 900 },
       { year: 2, value: 1900 },
     ])
+  })
+})
+
+describe('compositionSegments', () => {
+  it('splits each year into net principal, indexation and interest (monthly)', () => {
+    const indexed: TrendSourceRow[] = [
+      { year: 1, paid: 12000, principal: 8000, indexation: 900, interest: 4000, closing: 92900 },
+      { year: 2, paid: 12400, principal: 8600, indexation: 1000, interest: 3800, closing: 85300 },
+    ]
+    expect(compositionSegments(indexed)).toEqual([
+      {
+        year: 1,
+        principalNet: 7100 / 12,
+        indexation: 900 / 12,
+        interest: 4000 / 12,
+        payment: 12000 / 12,
+      },
+      {
+        year: 2,
+        principalNet: 7600 / 12,
+        indexation: 1000 / 12,
+        interest: 3800 / 12,
+        payment: 12400 / 12,
+      },
+    ])
+  })
+
+  it('keeps a negative net principal and still reconciles to the payment', () => {
+    const underwater: TrendSourceRow[] = [
+      { year: 1, paid: 600, principal: 500, indexation: 800, interest: 100, closing: 700 },
+    ]
+    const [segment] = compositionSegments(underwater)
+    expect(segment.principalNet).toBe(-300 / 12)
+    expect(segment.indexation).toBe(800 / 12)
+    expect(segment.interest).toBe(100 / 12)
+    expect(segment.principalNet + segment.indexation + segment.interest).toBeCloseTo(
+      segment.payment,
+      9,
+    )
+  })
+
+  it('leaves a non-indexed schedule as principal plus interest', () => {
+    const [first] = compositionSegments(rows)
+    expect(first).toEqual({
+      year: 1,
+      principalNet: 8000 / 12,
+      indexation: 0,
+      interest: 4000 / 12,
+      payment: 12000 / 12,
+    })
+  })
+
+  it('an empty schedule has no segments', () => {
+    expect(compositionSegments([])).toEqual([])
   })
 })
 

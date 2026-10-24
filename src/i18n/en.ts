@@ -183,7 +183,7 @@ export const en: { translation: Translation } = {
           },
           reset: {
             title: 'Resets more than once a year: an exit point at every reset',
-            text: 'A track whose rate resets every two, three or five years has an exit point: at every rate reset you can repay it without the discounting penalty (עמלת היוון). That exemption covers the discounting penalty; small operational fees may still apply on these tracks.',
+            text: 'A track whose rate resets every two, three or five years has an exit point: at every rate reset you can repay it without the discounting penalty (עמלת היוון). That exemption covers the discounting penalty; small operational fees may still apply.',
           },
           fixed: {
             title: 'Fixed-rate tracks: no exemption',
@@ -592,14 +592,9 @@ export const en: { translation: Translation } = {
             url: '/rates',
           },
           cpi: {
-            label: 'Consumer Price Index – Israel Central Bureau of Statistics',
-            url: 'https://www.cbs.gov.il/en/subjects/Pages/consumer-price-index.aspx',
-          },
-        },
-      },
+            label: 'Consumer Price Index - Israel Central Bureau of Statistics',
+            url: 'https://www.cbs.gov.il/en/subjects/Pages/consumer-price-index.aspx',        },
       charts: {
-        amortAria: 'Amortization chart: principal and interest per period with the loan balance',
-        mixAria: 'Track-mix donut chart',
         costAria: 'Principal, indexation and interest over the full term',
         perTrackAria: 'Per-track balance comparison over the term',
         mixTotalLabel: 'Total mortgage',
@@ -610,16 +605,24 @@ export const en: { translation: Translation } = {
         monthLabel: 'Month {{month}}',
         axisPayment: 'Annual payment',
         axisMonthlyPayment: 'Monthly payment',
-        axisBalance: 'Balance',
-        axisYear: 'Year',
+        axisBalance: 'Balance',        axisYear: 'Year',        },
       },
-      prepayment: {
-        heading: 'Early-repayment fee',
-        prepayYearsLabel: 'Repayment date (years into the loan)',
-        yearsSuffix: 'years',
-        marketRateLabel: 'Annual comparison rate',
+      },
+      },
+
+
+          heading: 'Early-repayment fee',
+          lead:
+            'An estimate of the discounting fee the bank would charge to repay the mortgage on the date you pick, track by track, using the Bank of Israel formula. Every figure comes from the amortization schedule above.',
+          prepayYearsLabel: 'Repayment date (years from the mortgage)',
+          yearsSuffix: 'years',          yearsHint: 'Year 1 to {{max}} - the last year with a balance',
+          marketRateLabel: 'Annual comparison rate',
+
         marketRatePlaceholder: 'From the BOI table',
-        partialLabel: 'Partial prepayment amount (optional)',
+        marketRateManual: 'Your own rate, for every track',
+        marketRateSuggestedNote: 'Suggested comparison rate from the latest BOI table: {{rate}}.',
+        partialLabel: 'Partial prepayment amount',
+        partialHint: 'For the cheapest payoff order',
         exitStation: 'Repaid at an exit station (rate-reset date)',
         table: {
           track: 'Track',
@@ -629,9 +632,32 @@ export const en: { translation: Translation } = {
           rateAddition: 'Rate addition for comparison',
         },
         totalLabel: 'Total discounting fee',
+        stats: {
+          total: 'Total discounting fee',
+          balance: 'Balance to repay',
+          share: 'Fee of the balance',
+        },
+        noFee: 'No fee',
+        noFeeWhy:
+          'The comparison rate is not below this track’s rate, so early repayment carries no discounting fee here.',
+        capped: 'Capped',
+        chartTitle: 'Discounting fee by repayment date',
+        chartLead:
+          'Later in the schedule the balance is smaller and the fee falls; each rate reset of a five-year variable track steps it down. An exempt track stays on zero all the way.',
+        chartCaption: 'Click the chart to pick a repayment date',
+        chartAria: 'Discounting fee per track by repayment year',
+        chartAxisFee: 'Discounting fee',
+        chartTableSummary: 'Show the data as a table',
+        chartTableAria: 'Discounting fee per track by repayment year',
+        chartTableYear: 'Year',
         orderTitle: 'Cheapest payoff order: which track to repay first',
-        orderLine: '{{amount}} of {{track}} · fee {{fee}}',
-        orderTotal: 'For {{amount}} · fee {{fee}}',
+        orderLead:
+          'The fee is charged in the same fee-to-balance ratio on every track, so the amount goes from the cheapest shekel to the dearest.',
+        orderAmount: 'Amount',
+        orderFee: 'Fee',
+        orderTotalLabel: 'Total prepayment',
+        orderPartial:
+          'The amount entered is above the total balance, so the calculation covers {{allocated}} only.',
         exempt: {
           prime: 'Exempt (prime)',
           frequentReset: 'Exempt (variable rate)',
@@ -644,12 +670,40 @@ export const en: { translation: Translation } = {
         capTitle: 'Origination-rate cap (section 3(4))',
         capLead:
           'If you know the Bank of Israel average rate for the track type and term on the day the loan was taken, enter it for that track. The cap replaces the calculation only when that average is below the track rate.',
+        capExempt:
+          'Exempt tracks are not shown here: {{tracks}}. Their fee is zero whatever the origination average was, so an input there would have nothing to change.',
         capRateLabel: 'Origination average rate',
         capRatePlaceholder: 'Not known',
+        capStatusActive: 'Cap applied: this track’s fee is {{fee}}',
+        capStatusIdle: 'No effect: the cap is not below the track’s rate',
         capNote:
-          'With no value the cap is not applied, so the fee may be higher than the one actually charged, never lower.',
-        note: 'The estimate refers to the repayment date you pick and uses the Bank of Israel formula. It covers the discounting (היוון) component only: an operational fee, a no-notice fee (up to 0.1% of the amount repaid) and a CPI compensation fee on index-linked tracks are charged on top. The section 3(4) cap applies only when you enter the average rate on the origination date; with no value it is left off, so the estimate may be higher than the actual fee. Your bank decides the actual fee.',
-        empty: 'Nothing is left to repay on that date: no track still carries a balance.',
+          'With no value the cap is not applied, so the fee may be higher than the one actually charged, never lower. Exempt tracks are not listed here because their fee is zero either way.',
+        note: 'The estimate is for the date you choose, using the Bank of Israel formula. It covers the discounting (היוון) component only: an operational fee, a no-notice fee (up to 0.1% of the amount repaid) and a CPI compensation fee on index-linked tracks are charged on top. The section 3(4) cap applies only when you enter the average rate on the origination date; with no value it is left off, so the estimate may be higher than the actual fee. Your bank decides the actual fee.',
+        emptyTitle: 'Nothing left to repay on that date',
+        empty:
+          'By year {{years}} no track still carries a balance: the mortgage ends before that, and the last date with something to repay is year {{last}}.',
+        emptyAction: 'Set the date to year {{years}}',
+        emptyMix: 'Add a track to the mortgage to estimate the early-repayment fee.',
+        outcomes: {
+          title: 'What the amount does',
+          lead:
+            'The amount is spread across the tracks in proportion to their balances. One way finishes earlier; the other keeps the end date and lowers the monthly payment.',
+          shortenTitle: 'Finish earlier',
+          shortenPayment: 'Payment after: {{amount}}',
+          shortenTerm: 'Term: {{from}} to {{to}}',
+          lowerTitle: 'Lower the payment',
+          lowerPayment: 'Payment after: {{amount}}',
+          lowerWas: 'Instead of {{amount}}',
+          lowerTerm: 'Term stays {{term}}',
+          interestLeft: 'Interest left: {{amount}}',
+          note: 'The fee above is not included. The model continues at the current rate and the calculator’s CPI assumption; actual rate resets and index changes will move the result.',
+          termYear: '1 year',
+          termYears: '{{years}} years',
+          termMonth: '1 month',
+          termMonths: '{{months}} months',
+          termJoin: ', ',
+          termNow: 'now',
+        },
       },
       forecast: {
         heading: 'Rate and CPI forecast',
@@ -663,7 +717,6 @@ export const en: { translation: Translation } = {
         costLead: 'What has accrued from the start of the loan through the end of each year on the base rate path.',
         noIndexation:
           'The mix has no CPI-indexed track, so there is no indexation to show. The line shows cumulative interest only.',
-        tableSummary: 'Show the data as a table',
         tableYear: 'Year',
         tableInterest: 'Cumulative interest',
         tableIndexation: 'Cumulative indexation',
@@ -795,6 +848,7 @@ export const en: { translation: Translation } = {
         asideCaption: 'Sum of payments in the first 12 months',
         paybackHeader: 'Payback ratio',
         paybackRatioLabel: 'Payback ratio',
+        trackTableAria: 'Payment schedule · {{track}}',
         expandToYears: 'Show breakdown for {{years}} years',
         collapseToFifteen: 'Show first 15 years',
       },
@@ -859,11 +913,12 @@ export const en: { translation: Translation } = {
       chartsHeading: 'Payments over time',
       mixDonutTitle: 'Track mix composition',
       paymentTrendTitle: 'Monthly payment over time',
-      paymentCompositionTitle: 'Monthly payment composition: principal and interest',
+      paymentCompositionTitle: 'Monthly payment composition: principal, indexation and interest',
       totalPaymentsTitle: 'Total payments accumulated',
       remainingBalanceTitle: 'Remaining balance over time',
       cumulativeInterestTitle: 'Cumulative interest over time',
       cumulativeIndexationTitle: 'Cumulative indexation over time',
+      prepaymentFeeTitle: 'Early-repayment fee over time',
       chartAria: '{{mode}} chart by year',
       chartsEmpty: 'Add tracks to see charts',
       trendLegendAria: 'Mixes',
@@ -871,6 +926,20 @@ export const en: { translation: Translation } = {
       axisTotalPaid: 'Total paid',
       axisCumulativeInterest: 'Cumulative interest',
       axisCumulativeIndexation: 'Cumulative indexation',
+      axisPrepaymentFee: 'Discounting fee',
+      rateScenariosTitle: 'Monthly payment by rate scenario',
+      rateScenariosAria:
+        'Monthly payment by rate scenario for every mix, with a shaded scenario range and reset dates marked',
+      rateScenarioRange: 'Range: ±{{step}} pp',
+      rateResetListAria: 'Rate reset years by mix',
+      rateMixResetYears: 'Rate resets: {{years}}',
+      rateMixNoReset: 'No rate reset',
+      rateScenarioPartialNote:
+        'The range is shown only for mixes with a five-year variable track. A mix without one stays a single line, even if it is CPI-indexed.',
+      rateScenarioNoResetNote:
+        'No rate reset falls inside the term, so every scenario is identical and each mix draws a single line.',
+      rateSeriesLabel: '{{mix}}: {{scenario}}',
+      rateTableAria: 'Monthly payment by year and rate scenario for {{mix}}',
       scheduleTitle: 'Payments schedule',
       disclaimer:
         'This comparison uses the same calculations as the main calculator and is a general estimate only - not an offer or loan approval.',

@@ -21,26 +21,32 @@ export function svgRound(value: number): number {
   return Math.round(value * 1000) / 1000
 }
 
-/** Short ₪ label for chart axes: ₪1.5M / ₪250K / ₪750 - never full digits. */
+/**
+ * Short ₪ label for chart axes: ₪1.5M / ₪250K / ₪750 - never full digits.
+ * A negative tick (the composition chart below zero) keeps its sign in front
+ * of the currency symbol.
+ */
 export function formatAxisShekel(
   value: number,
   opts?: { compact?: boolean },
 ): string {
   if (!Number.isFinite(value) || value === 0) return '₪0'
-  if (Math.abs(value) >= 1_000_000) {
-    const millions = value / 1_000_000
+  const sign = value < 0 ? '-' : ''
+  const magnitude = Math.abs(value)
+  if (magnitude >= 1_000_000) {
+    const millions = magnitude / 1_000_000
     if (opts?.compact) {
       // Whole millions only: the donut centre shows the total in a small
       // hole, and "₪1M" / "₪2M" already conveys the magnitude there (the
       // exact figure is in the legend below). Round, so 1.96M does not
       // print as "₪1.96M".
-      return `₪${Math.round(millions)}M`
+      return `${sign}₪${Math.round(millions)}M`
     }
     const text = Number.isInteger(millions) ? String(millions) : millions.toFixed(1)
-    return `₪${text}M`
+    return `${sign}₪${text}M`
   }
-  if (Math.abs(value) >= 1_000) return `₪${Math.round(value / 1_000)}K`
-  return `₪${Math.round(value)}`
+  if (magnitude >= 1_000) return `${sign}₪${Math.round(magnitude / 1_000)}K`
+  return `${sign}₪${Math.round(magnitude)}`
 }
 
 /**
@@ -50,15 +56,17 @@ export function formatAxisShekel(
  */
 export function formatAxisShekelDetailed(value: number): string {
   if (!Number.isFinite(value) || value === 0) return '₪0'
-  if (Math.abs(value) >= 1_000_000) {
-    const millions = value / 1_000_000
-    return `₪${Number.isInteger(millions) ? millions : millions.toFixed(2)}M`
+  const sign = value < 0 ? '-' : ''
+  const magnitude = Math.abs(value)
+  if (magnitude >= 1_000_000) {
+    const millions = magnitude / 1_000_000
+    return `${sign}₪${Number.isInteger(millions) ? millions : millions.toFixed(2)}M`
   }
-  if (Math.abs(value) >= 1_000) {
-    const thousands = value / 1_000
-    return `₪${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}K`
+  if (magnitude >= 1_000) {
+    const thousands = magnitude / 1_000
+    return `${sign}₪${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}K`
   }
-  return `₪${Math.round(value)}`
+  return `${sign}₪${Math.round(magnitude)}`
 }
 
 /**

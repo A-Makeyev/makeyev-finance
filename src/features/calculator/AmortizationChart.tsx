@@ -4,10 +4,12 @@ import { formatCurrency } from '@/lib/format'
 import {
   alignedDualTicks,
   formatAxisShekel,
+  niceRange,
   niceTicks,
   svgRound,
   xAxisTicks,
 } from '@/lib/charts'
+import { paymentComposition } from '@/lib/amortization'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 
@@ -16,6 +18,8 @@ export interface ChartPeriodRow {
   /** Year number, or the running month count in the monthly view. */
   period: number
   principal: number
+  /** CPI drift added to the balance in the period (0 for a non-indexed mix). */
+  indexation: number
   interest: number
   balance: number
   payment: number
@@ -50,11 +54,16 @@ const INNER_H = HEIGHT - MARGIN.top - MARGIN.bottom
 const MAX_BARS = 40
 
 /**
- * Amortization chart: stacked קרן/ריבית bars (or a continuous area for the
- * monthly horizon) with the remaining יתרה overlaid on a second axis. The
- * two axes share one gridline count (alignedDualTicks) so the solid
- * payments grid and the dashed balance grid sit on the same rows. Fed from
- * the exact rows the schedule table renders - same source of truth.
+ * Amortization chart: stacked קרן נטו / הצמדה / ריבית bars (or a continuous
+ * area for the monthly horizon) with the remaining יתרה overlaid on a second
+ * axis. The split comes from the shared `paymentComposition` helper: `קרן` is
+ * the principal payment net of the period's CPI drift, so the three segments
+ * reconcile to the actual payment. A negative net principal (indexation grew
+ * the debt faster than the principal was repaid) is drawn below the zero line
+ * instead of being clamped. The two axes share one gridline count
+ * (alignedDualTicks) when there is no negative segment, so the solid payments
+ * grid and the dashed balance grid sit on the same rows. Fed from the exact
+ * rows the schedule table renders - same source of truth.
  */
 export function AmortizationChart({ rows, periodLabel, monthly = false }: AmortizationChartProps) {
   const { t } = useTranslation()
@@ -71,9 +80,14 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
 
   const geometry = useMemo(() => {
     if (rows.length === 0) return null
+    const components = rows.map(paymentComposition)
     const maxPayment = Math.max(...rows.map((row) => row.payment))
     const maxBalance = Math.max(...rows.map((row) => row.balance))
     if (maxPayment <= 0) return null
+    // A negative net principal has to keep its own space below zero: clamping
+    // it would make the three segments stop adding up to the payment.
+    const minNet = Math.min(0, ...components.map((component) => component.netPrincipal))
+    const hasNegativeNet = minNet < 0
     // Bars occupy evenly spaced slots across a plot that is inset by `pad`
     // on both edges, so the first and last bar keep clear of the plot edges.
     // The inset is applied to the whole range - never to individual bars -
@@ -90,24 +104,71 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
     // solid payments grid and the dashed balance grid coincide. Scale tops
     // are a round step at or above the data max (headroom); the fallback
     // (degenerate balance, e.g. all zero) keeps the old independent scales.
-    const aligned = alignedDualTicks(maxPayment, maxBalance)
-    const scaleMaxPayment = aligned ? aligned.scaleMaxPayment : maxPayment
-    const scaleMaxBalance = aligned ? aligned.scaleMaxBalance : maxBalance
+    // A negative net principal cannot use the zero-based alignment, so that
+    // case takes a ranged payments axis and anchors the balance axis at the
+    // same zero line.
+    const aligned = hasNegativeNet ? null : alignedDualTicks(maxPayment, maxBalance)
+    const range = hasNegativeNet ? niceRange(minNet, maxPayment) : null
+    const scaleMinPayment = range ? range.axisMin : 0
+    const scaleMaxPayment = range
+      ? range.axisMax
+      : aligned
+        ? aligned.scaleMaxPayment
+        : maxPayment
+    const scaleMaxBalance = aligned
+      ? aligned.scaleMaxBalance
+      : Math.max(maxBalance, 1e-9)
     const yPayment = (value: number) =>
-      svgRound(MARGIN.top + INNER_H * (1 - value / scaleMaxPayment))
+      svgRound(
+        MARGIN.top +
+          INNER_H *
+          (1 - (value - scaleMinPayment) / (scaleMaxPayment - scaleMinPayment)),
+      )
+    const zeroY = yPayment(0)
+    // The balance axis starts at the payments zero line in both modes, so the
+    // dashed grid never crosses the solid one at a second baseline.
     const yBalance = (value: number) =>
-      svgRound(MARGIN.top + INNER_H * (1 - value / scaleMaxBalance))
-    return { maxPayment, maxBalance, aligned, slot, pad, x, yPayment, yBalance }
+      svgRound(zeroY - (value / scaleMaxBalance) * (zeroY - MARGIN.top))
+    return {
+      components,
+      maxPayment,
+      maxBalance,
+      aligned,
+      range,
+      slot,
+      pad,
+      x,
+      yPayment,
+      yBalance,
+      zeroY,
+    }
   }, [rows])
 
   if (!geometry) return null
-  const { maxPayment, maxBalance, aligned, slot, pad, x, yPayment, yBalance } = geometry
-  const paymentTicks = aligned ? aligned.paymentTicks : niceTicks(maxPayment)
+  const {
+    components,
+    maxPayment,
+    maxBalance,
+    aligned,
+    range,
+    slot,
+    pad,
+    x,
+    yPayment,
+    yBalance,
+    zeroY,
+  } = geometry
+  const paymentTicks = range ? range.ticks : aligned ? aligned.paymentTicks : niceTicks(maxPayment)
   const balanceTicks = aligned ? aligned.balanceTicks : niceTicks(maxBalance)
   const useBars = rows.length <= MAX_BARS
   const barWidth = svgRound(Math.min(30, slot * 0.66))
+  // The indexation segment is shown only when the mix actually carries it, so
+  // a non-indexed schedule keeps its original two-segment picture.
+  const hasIndexation = rows.some((row) => row.indexation > 0)
+  const hasNegativeNet = range !== null
 
   const activeRow = active !== null ? rows[active] : null
+  const activeComponent = active !== null ? components[active] : null
   // The tooltip hangs just above the balance line at the hovered period - the
   // line is the curve being read, and the payment bars behind it are a tall
   // block on every period, so anchoring to those would pin the callout near
@@ -140,8 +201,14 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
       <div className="chart-legend" aria-hidden="true">
         <span className="chart-legend-item">
           <i className="chart-swatch chart-swatch-principal" />{' '}
-          {t('calculator.schedule.principalHeader')}
+          {t('calculator.charts.netPrincipalLabel')}
         </span>
+        {hasIndexation && (
+          <span className="chart-legend-item">
+            <i className="chart-swatch chart-swatch-indexation" />{' '}
+            {t('calculator.schedule.indexationHeader')}
+          </span>
+        )}
         <span className="chart-legend-item">
           <i className="chart-swatch chart-swatch-interest" />{' '}
           {t('calculator.schedule.interestHeader')}
@@ -229,8 +296,13 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
 
           {useBars
             ? rows.map((row, index) => {
-                const principalTop = yPayment(row.principal)
-                const interestTop = yPayment(row.principal + row.interest)
+                const component = components[index]
+                // Each segment is a band between two stacked edges; drawing a
+                // band (rather than a rect up from the baseline) keeps the
+                // stack honest even when net principal is negative.
+                const netTop = yPayment(component.netPrincipal)
+                const principalTop = yPayment(component.netPrincipal + component.indexation)
+                const paymentTop = yPayment(row.payment)
                 const isActive = hovering && active === index
                 return (
                   <g
@@ -240,40 +312,57 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
                     // so the scale pivots at the bar's base - the same technique
                     // the donut uses. Avoids transform-box: fill-box, which makes
                     // Chromium re-rasterize the whole SVG (flickering text).
-                    style={{ transformOrigin: `${x(index)}px ${MARGIN.top + INNER_H}px` }}
+                    style={{ transformOrigin: `${x(index)}px ${zeroY}px` }}
                   >
                     <rect
                       x={x(index) - barWidth / 2}
-                      y={principalTop}
+                      y={Math.min(zeroY, netTop)}
                       width={barWidth}
-                      height={MARGIN.top + INNER_H - principalTop}
+                      height={Math.abs(zeroY - netTop)}
                       className="chart-bar chart-bar-principal"
                     />
+                    {hasIndexation && (
+                      <rect
+                        x={x(index) - barWidth / 2}
+                        y={Math.min(netTop, principalTop)}
+                        width={barWidth}
+                        height={Math.abs(principalTop - netTop)}
+                        className="chart-bar chart-bar-indexation"
+                      />
+                    )}
                     <rect
                       x={x(index) - barWidth / 2}
-                      y={interestTop}
+                      y={Math.min(principalTop, paymentTop)}
                       width={barWidth}
-                      height={Math.max(0, principalTop - interestTop)}
+                      height={Math.abs(paymentTop - principalTop)}
                       className="chart-bar chart-bar-interest"
                     />
                   </g>
                 )
               })
             : (() => {
-                // Continuous area for long (monthly) horizons: stack edges only.
-                const principalEdge = rows
-                  .map(
-                    (row, index) =>
-                      `${index === 0 ? 'M' : 'L'} ${x(index)} ${yPayment(row.principal)}`,
-                  )
-                  .join(' ')
-                const interestEdge = rows
-                  .map(
-                    (row, index) =>
-                      `${index === 0 ? 'M' : 'L'} ${x(index)} ${yPayment(row.principal + row.interest)}`,
-                  )
-                  .join(' ')
-                const baseline = MARGIN.top + INNER_H
+                // Continuous area for long (monthly) horizons: draw each
+                // component as the band between its two stacked edges, so the
+                // segments never cover one another.
+                const edge = (values: number[]) =>
+                  values
+                    .map((value, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${value}`)
+                    .join(' ')
+                const band = (top: string, bottom: number[]) => {
+                  const reverse = bottom
+                    .map((value, offset) => {
+                      const index = bottom.length - 1 - offset
+                      return `L ${x(index)} ${value}`
+                    })
+                    .join(' ')
+                  return `${top} ${reverse} Z`
+                }
+                const netEdge = components.map((component) => yPayment(component.netPrincipal))
+                const principalEdge = components.map((component) =>
+                  yPayment(component.netPrincipal + component.indexation),
+                )
+                const paymentEdge = rows.map((row) => yPayment(row.payment))
+                const zeroEdge = rows.map(() => zeroY)
                 const balanceEdge = rows
                   .map(
                     (row, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${yBalance(row.balance)}`,
@@ -282,17 +371,36 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
                 return (
                   <>
                     <path
-                      d={`${principalEdge} L ${x(rows.length - 1)} ${baseline} L ${x(0)} ${baseline} Z`}
+                      d={band(edge(netEdge), zeroEdge)}
                       className="chart-area chart-area-principal"
                     />
+                    {hasIndexation && (
+                      <path
+                        d={band(edge(principalEdge), netEdge)}
+                        className="chart-area chart-area-indexation"
+                      />
+                    )}
                     <path
-                      d={`${interestEdge} L ${x(rows.length - 1)} ${baseline} L ${x(0)} ${baseline} Z`}
+                      d={band(edge(paymentEdge), principalEdge)}
                       className="chart-area chart-area-interest"
                     />
                     <path d={balanceEdge} className="chart-line" />
                   </>
                 )
               })()}
+
+          {/* The zero line is only interior when a segment dips below it. It is
+              drawn over the bars so the indexation band crossing zero cannot
+              hide the baseline. */}
+          {hasNegativeNet && (
+            <line
+              x1={MARGIN.left}
+              x2={WIDTH - MARGIN.right}
+              y1={zeroY}
+              y2={zeroY}
+              className="chart-zero-line"
+            />
+          )}
 
           {useBars && (
             <path
@@ -370,9 +478,18 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
             }}
           >
             <strong>{periodLabel(activeRow.period)}</strong>
-            <span>
-              {t('calculator.schedule.principalHeader')}: {formatCurrency(activeRow.principal)}
-            </span>
+            {activeComponent && (
+              <span>
+                {t('calculator.charts.netPrincipalLabel')}:{' '}
+                {formatCurrency(activeComponent.netPrincipal)}
+              </span>
+            )}
+            {hasIndexation && activeComponent && (
+              <span>
+                {t('calculator.schedule.indexationHeader')}:{' '}
+                {formatCurrency(activeComponent.indexation)}
+              </span>
+            )}
             <span>
               {t('calculator.schedule.interestHeader')}: {formatCurrency(activeRow.interest)}
             </span>

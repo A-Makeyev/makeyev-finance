@@ -195,6 +195,16 @@ export interface YearlyRow {
    * `sum(principal) === nominal principal + sum(indexation)`.
    */
   indexation: number
+  /**
+   * The part of this year's principal payment that covers the CPI drift, in
+   * the same shekels as `principal` (0 for non-indexed tracks). This is the
+   * repayment side of indexation, not another charge: `principal` is the full
+   * principal payment, and `principal - principalIndexation` is the principal
+   * repaid in real, CPI-adjusted terms. The two always sum back to `principal`,
+   * and over a fully amortizing loan
+   * `sum(principalIndexation) === totalIndexation`.
+   */
+  principalIndexation: number
   paid: number
   interest: number
   closing: number
@@ -209,9 +219,45 @@ export interface MonthlyRow {
   principal: number
   /** CPI drift added to the balance that month (0 for non-indexed tracks). */
   indexation: number
+  /** The part of this month's principal payment that covers the CPI drift. */
+  principalIndexation: number
   interest: number
   paid: number
   closing: number
+}
+
+/**
+ * One period's payment split for the composition charts.
+ *
+ * `indexation` is the CPI drift added to the balance in the same period (the
+ * same figure the schedule's הצמדה column shows), not a second charge on top
+ * of it. Subtracting it from the full principal payment gives the real
+ * principal repaid, so the three components always reconcile:
+ * `netPrincipal + indexation + interest === paid`.
+ *
+ * `netPrincipal` may be negative (a highly indexed, long-term loan can grow
+ * faster than its principal payment early on). Callers must not clamp it: the
+ * charts have to show the shortfall explicitly instead of hiding it.
+ */
+export interface PaymentComposition {
+  netPrincipal: number
+  indexation: number
+  interest: number
+}
+
+/**
+ * Splits one schedule row into the three components the composition charts
+ * stack. Pure and shared by the calculator and compare charts so the two can
+ * never define "קרן" differently.
+ */
+export function paymentComposition(
+  row: Pick<YearlyRow, 'principal' | 'indexation' | 'interest'>,
+): PaymentComposition {
+  return {
+    netPrincipal: row.principal - row.indexation,
+    indexation: row.indexation,
+    interest: row.interest,
+  }
 }
 
 export interface TrackResult {
@@ -274,6 +320,7 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
   const monthlyRows: MonthlyRow[] = []
   let yearOpening = principal
   let yearPrincipal = 0
+  let yearPrincipalIndexation = 0
   let yearPaid = 0
   let yearInterest = 0
   let yearIndexation = 0
@@ -319,11 +366,22 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     if (month === 1) firstPayment = payment
     highestPayment = Math.max(highestPayment, payment)
 
+    // Split the principal payment into the real principal and the part that
+    // covers CPI. With F the cumulative inflation factor, the real balance
+    // falls by principalPart / F, so the two components always sum back to
+    // principalPart. Summed over the life, the indexation component equals the
+    // CPI drift that `indexation` reports: the principal column telescopes to
+    // nominal principal + drift, and the real component telescopes to nominal
+    // principal. Non-indexed loans have F = 1 and therefore 0 here.
+    const realPrincipalPart = principalPart / indexFactor
+    const principalIndexation = principalPart - realPrincipalPart
+
     balance = Math.max(0, balance - principalPart)
     totalPaid += payment
     totalInterest += interest
     totalIndexation += indexation
     yearPrincipal += principalPart
+    yearPrincipalIndexation += principalIndexation
     yearPaid += payment
     yearInterest += interest
     yearIndexation += indexation
@@ -334,6 +392,7 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
       year: Math.ceil(month / 12),
       principal: principalPart,
       indexation,
+      principalIndexation,
       interest,
       paid: payment,
       closing: balance,
@@ -345,12 +404,14 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
         opening: yearOpening,
         principal: yearPrincipal,
         indexation: yearIndexation,
+        principalIndexation: yearPrincipalIndexation,
         paid: yearPaid,
         interest: yearInterest,
         closing: balance,
       })
       yearOpening = balance
       yearPrincipal = 0
+      yearPrincipalIndexation = 0
       yearPaid = 0
       yearInterest = 0
       yearIndexation = 0
@@ -517,6 +578,7 @@ export function combineSchedules(results: TrackResult[]): CombinedScheduleRow[] 
       opening: rows.reduce((sum, row) => sum + row.opening, 0),
       principal: rows.reduce((sum, row) => sum + row.principal, 0),
       indexation: rows.reduce((sum, row) => sum + row.indexation, 0),
+      principalIndexation: rows.reduce((sum, row) => sum + row.principalIndexation, 0),
       paid: rows.reduce((sum, row) => sum + row.paid, 0),
       interest: rows.reduce((sum, row) => sum + row.interest, 0),
       closing: rows.reduce((sum, row) => sum + row.closing, 0),
@@ -533,6 +595,8 @@ export interface CombinedMonthlyRow {
   principal: number
   /** CPI drift added to the combined balance that month (0 if none indexed). */
   indexation: number
+  /** The part of the combined principal payment that covers CPI. */
+  principalIndexation: number
   interest: number
   paid: number
   closing: number
@@ -555,6 +619,7 @@ export function combineMonthlySchedules(results: TrackResult[]): CombinedMonthly
       month: rows[0].month,
       principal: rows.reduce((sum, row) => sum + row.principal, 0),
       indexation: rows.reduce((sum, row) => sum + row.indexation, 0),
+      principalIndexation: rows.reduce((sum, row) => sum + row.principalIndexation, 0),
       paid: rows.reduce((sum, row) => sum + row.paid, 0),
       interest: rows.reduce((sum, row) => sum + row.interest, 0),
       closing: rows.reduce((sum, row) => sum + row.closing, 0),
@@ -591,6 +656,8 @@ export interface TrackScheduleRow {
   principal: number
   /** CPI drift added to the balance during the year (0 for non-indexed tracks). */
   indexation: number
+  /** The part of this year's principal payment that covers the CPI drift. */
+  principalIndexation: number
   interest: number
   balance: number
   /** The track's flat lifetime payback ratio (total repaid ÷ principal). */
@@ -607,6 +674,7 @@ export function buildTrackScheduleRows(result: TrackResult): TrackScheduleRow[] 
     paid: row.paid,
     principal: row.principal,
     indexation: row.indexation,
+    principalIndexation: row.principalIndexation,
     interest: row.interest,
     balance: row.closing,
     paybackRatio: result.paybackRatio,

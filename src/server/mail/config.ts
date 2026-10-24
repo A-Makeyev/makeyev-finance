@@ -27,7 +27,7 @@ export const DEFAULT_SENDER_NAME = 'Makeyev Finance'
  * outlook.com, ...) can never be verified at all - every send from one is
  * rejected with `validation_error` (HTTP 403). Set AUTH_EMAIL_FROM to a
  * verified domain for anything real. Documented in .env.example and
- * SECURITY.md, and reported by `npm run mail:doctor`.
+ * docs/SECURITY.md, and reported by `npm run mail:doctor`.
  */
 export const DEFAULT_AUTH_EMAIL_FROM = `${DEFAULT_SENDER_NAME} <onboarding@resend.dev>`
 

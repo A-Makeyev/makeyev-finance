@@ -230,6 +230,24 @@ the main one (היוון) first.
   input. The disclaimer says the uncapped estimate can only be too high, never
   too low. E2e enters a lower value, checks the fee falls, then enters one above
   the contractual rate and checks the fee returns.
+- A partial prepayment also carries its two legal outcomes: the amount is split
+  across tracks by balance, and the panel shows either the shortened term with
+  its payment or the unchanged maturity with a lower payment. Both use the
+  schedule's current rate and the calculator's CPI assumption, and the note
+  says so. Unit tests pin spitzer, equal-principal, indexed and zero-rate cases;
+  e2e covers both cards in Hebrew and English.
+- The fee over time is charted from the same projection, not from a second
+  model: `src/lib/prepaymentProjection.ts` prices every track at each year end
+  (month 12, 24, ...) through `prepaymentFeeRows`, so the curve, the table and
+  the panel's single-date fee share one arithmetic. The calculator draws one
+  line per track; the comparison page draws one line per mix (that mix's tracks
+  summed for the year), priced from the scenario's own schedule via the
+  `prepaymentTracks` it already carries. A zero-only chart still renders its
+  baseline instead of vanishing.
+- The comparison page shows the fee panel only when some mix owes something at
+  some year end, and only for years the projection priced: a schedule's last
+  year has no fee row (the loan is over), so the curve ends at the last priced
+  year rather than dropping to zero.
 
 **Gate (closed).** The BOI's published worked example is reproduced exactly:
 ₪500,000, 5% nominal contractual vs 4% nominal average over 120 months gives
@@ -347,6 +365,14 @@ date, no per-track market margin, and no new indexation card or column.
   indexed track (basket 1, basket 2): its schedule is already fully
   deterministic, so a forecast would only duplicate it. An indexed mix with no
   reset left keeps the cost card and explains why the reset chart is absent.
+- The comparison page reuses the same forecast for every priced mix: the rate
+  panel is one card in the trend gallery, directly next to the early-repayment
+  fee curve, at the same half-row width and 240px plot as the other metrics.
+  Each mix keeps its own color and draws its three paths (solid no change,
+  dashed +step, dotted -step), with a vertical marker at every reset year and a
+  screen-reader table per mix. A mix with no contractual reset (or a term
+  shorter than the five-year cycle) draws its no-change path alone, so the card
+  never drops a compared mix and never disappears.
 - Unit coverage: 10 forecast tests, 5 reset-step amortization tests, and chart
   helper tests for `niceRange` / `formatAxisShekelDetailed` (38 in that file).
   E2e covers both languages, the reset table's values and ordering, the no-reset

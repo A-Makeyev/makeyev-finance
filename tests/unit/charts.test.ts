@@ -49,6 +49,12 @@ describe('formatAxisShekel', () => {
     expect(formatAxisShekel(333_333)).toBe('₪333K')
   })
 
+  it('keeps the sign of a negative tick (a composition below zero)', () => {
+    expect(formatAxisShekel(-7_500)).toBe('-₪8K')
+    expect(formatAxisShekel(-300)).toBe('-₪300')
+    expect(formatAxisShekel(-1_500_000)).toBe('-₪1.5M')
+  })
+
   it('compact mode rounds to whole millions for the donut centre', () => {
     expect(formatAxisShekel(1_000_000, { compact: true })).toBe('₪1M')
     expect(formatAxisShekel(1_960_000, { compact: true })).toBe('₪2M')
@@ -72,6 +78,12 @@ describe('formatAxisShekelDetailed', () => {
     expect(formatAxisShekelDetailed(750)).toBe('₪750')
     expect(formatAxisShekelDetailed(0)).toBe('₪0')
     expect(formatAxisShekelDetailed(Number.NaN)).toBe('₪0')
+  })
+
+  it('keeps the sign of a negative detailed tick', () => {
+    expect(formatAxisShekelDetailed(-7_600)).toBe('-₪7.6K')
+    expect(formatAxisShekelDetailed(-1_250_000)).toBe('-₪1.25M')
+    expect(formatAxisShekelDetailed(-400)).toBe('-₪400')
   })
 
   it('does not repeat a label across a typical payment band', () => {

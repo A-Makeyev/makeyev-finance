@@ -17,6 +17,13 @@
 
 export const AVERAGE_RATE_KINDS = ['indexed', 'nonIndexed'] as const
 
+/**
+ * Comparison rate used when the Bank of Israel table is missing or does not
+ * cover a term. Shared by every early-repayment estimate so the calculator and
+ * the comparison cannot fall back to different numbers.
+ */
+export const FALLBACK_MARKET_RATE_PERCENT = 3.5
+
 export type AverageRateKind = (typeof AVERAGE_RATE_KINDS)[number]
 
 export type AverageRateBucketId =
@@ -122,6 +129,25 @@ export interface AverageRatesResponse {
   tables: AverageRateTablePayload[]
   /** Rows returned per table, including the current one. */
   historyRows: number
+}
+
+/**
+ * The published average rate for a loan with `years` left, or `fallback` when
+ * the table, the bucket or the value is missing. Uses the newest row, which is
+ * the same row the rates page shows at the top of each table. Shared by the
+ * calculator's prepayment panel and the comparison's fee chart so both price
+ * from one reading of the official table.
+ */
+export function averageRateForTerm(
+  tables: readonly AverageRateTablePayload[] | undefined,
+  kind: AverageRateKind,
+  years: number,
+  fallback: number,
+): number {
+  const table = tables?.find((entry) => entry.kind === kind)
+  const bucket = bucketForYears(kind, years)
+  const value = table?.rows[0] && bucket ? table.rows[0].buckets[bucket] : undefined
+  return typeof value === 'number' ? value : fallback
 }
 
 /** Grouped percent display for a rate cell; null/non-finite becomes a dash. */

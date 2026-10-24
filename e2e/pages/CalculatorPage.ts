@@ -400,9 +400,9 @@ export class TrackPanel {
 }
 
 /**
- * The rate-reset step chart and the cumulative cost forecast. Its `<details>`
- * tables carry the exact figures the charts plot, so a spec asserts on those
- * rather than trying to read SVG geometry.
+ * The rate-reset step chart and the cumulative cost forecast. The tables below
+ * the charts carry the exact figures the charts plot, so a spec asserts on
+ * those rather than trying to read SVG geometry.
  */
 export class ForecastPanel {
   readonly root: Locator
@@ -445,22 +445,6 @@ export class ForecastPanel {
 
   async scrollTo(): Promise<void> {
     await this.root.scrollIntoViewIfNeeded()
-  }
-
-  /** The tables ship open; this only opens one the user has collapsed. */
-  async openResetTable(): Promise<void> {
-    await this.ensureOpen(this.resetTable)
-  }
-
-  async openCostTable(): Promise<void> {
-    await this.ensureOpen(this.costTable)
-  }
-
-  private async ensureOpen(details: Locator): Promise<void> {
-    if (!(await details.evaluate((element) => (element as HTMLDetailsElement).open))) {
-      await details.locator('summary').click()
-    }
-    await expect(details.locator('table')).toBeVisible()
   }
 
   /** The base / +1pp / -1pp payments at the start of `year` (1-based). */

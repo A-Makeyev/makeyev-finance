@@ -21,9 +21,12 @@ export interface ScheduleTableRow {
 export function ScheduleTable({
   rows,
   testIdPrefix,
+  label,
 }: {
   rows: ScheduleTableRow[]
   testIdPrefix: string
+  /** The mix this table belongs to, so its scroll region has a unique name. */
+  label?: string
 }) {
   const { t } = useTranslation()
   if (rows.length === 0) return null
@@ -31,7 +34,15 @@ export function ScheduleTable({
   return (
     <div className="payments-table-block" data-testid={testIdPrefix}>
       <h3 className="payments-table-title">{t('compare.scheduleTitle')}</h3>
-      <div className="payments-table-scroll" data-testid={`${testIdPrefix}-scroll`}>
+      {/* The bar is hidden, so the scroller is a focusable region: Tab reaches
+          it and the keyboard scrolls the rows. */}
+      <div
+        className="payments-table-scroll"
+        role="region"
+        aria-label={label ? `${label} · ${t('compare.scheduleTitle')}` : t('compare.scheduleTitle')}
+        tabIndex={0}
+        data-testid={`${testIdPrefix}-scroll`}
+      >
         <table className="payments-table">
           <caption className="sr-only">{t('compare.scheduleTitle')}</caption>
           <thead>

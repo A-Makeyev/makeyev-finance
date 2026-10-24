@@ -170,7 +170,7 @@ Decisions confirmed with Anatoly:
   the npm beta tag while v4 carries the legacy API; Better Auth is the stable
   line and its Next peer range covers Next 16.
 - **Sign-in**: email + password now; OAuth later. Better Auth owns hashing and
-  sessions, so nothing is hand-rolled (see AGENTS.md / SECURITY.md).
+  sessions, so nothing is hand-rolled (see AGENTS.md and docs/SECURITY.md).
 - **Verification**: email verification included, sent through Resend, with the
   message localized from the same i18n files as the UI.
 - **Database**: the existing MongoDB instance. The Mongo adapter creates its
@@ -191,7 +191,7 @@ What landed:
   server-side in each protected page.
 - Navbar account control (sign in / sign out).
 - i18n: an `auth.*` block in both `he.ts` and `en.ts`, email copy included.
-- `.env.example`, `render.yaml`, `SECURITY.md` and CI updated.
+- `.env.example`, `render.yaml`, `docs/SECURITY.md` and CI updated.
 
 Direction: the Hebrew auth pages are now RTL at the document level, like every
 other Hebrew page (see "Direction follows the locale" below). The markup was

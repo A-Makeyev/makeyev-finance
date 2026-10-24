@@ -6,7 +6,7 @@ import { z } from 'zod'
  *
  * Security: MONGODB_URI and BETTER_AUTH_SECRET are server-only secrets. They
  * live in the git-ignored .env, are never prefixed NEXT_PUBLIC_, and are never
- * imported by client code (see SECURITY.md). The mail credentials live in
+ * imported by client code (see docs/SECURITY.md). The mail credentials live in
  * `src/server/mail/config.ts`; this module does not read them.
  *
  * Everything is OPTIONAL in the schema and validated at first use instead of

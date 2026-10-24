@@ -24,6 +24,7 @@ import {
   first5yInterestShare,
   firstPaymentWithRateBump,
   nextFreeTrackType,
+  paymentComposition,
   paymentPer100k,
   peakPaymentYear,
   purchaseTaxBreakdown,
@@ -439,6 +440,96 @@ describe('indexation visibility (הצמדה)', () => {
     const monthlySum = combined.reduce((sum, row) => sum + row.indexation, 0)
     expect(combined[0].indexation).toBe(0)
     expect(monthlySum).toBeCloseTo(indexed.totalIndexation, 6)
+  })
+})
+
+describe('paymentComposition (chart segment split)', () => {
+  it('splits a period into net principal, indexation and interest', () => {
+    expect(paymentComposition({ principal: 1_000, indexation: 300, interest: 400 })).toEqual({
+      netPrincipal: 700,
+      indexation: 300,
+      interest: 400,
+    })
+  })
+
+  it('keeps a negative net principal instead of clamping it', () => {
+    const split = paymentComposition({ principal: 500, indexation: 800, interest: 100 })
+    expect(split).toEqual({ netPrincipal: -300, indexation: 800, interest: 100 })
+    // The three components still reconcile to that period's payment.
+    expect(split.netPrincipal + split.indexation + split.interest).toBe(600)
+  })
+
+  it('handles a real 30-year indexed loan whose first year is underwater', () => {
+    // 1,000,000 at 3% over 30 years with 3% CPI: year one adds 27,179.65 of
+    // indexation against a 21,165.10 principal payment, so net principal is
+    // -6,014.55 - the case a clamp would hide.
+    const result = computeTrackResult({
+      principal: 1_000_000,
+      years: 30,
+      annualRatePercent: 3,
+      type: 'fixedIndexed',
+      method: 'spitzer',
+      annualInflation: 0.03,
+    })!
+    const first = paymentComposition(result.yearlyRows[0])
+    expect(first.indexation).toBeCloseTo(27_179.65, 2)
+    expect(first.netPrincipal).toBeCloseTo(-6_014.55, 2)
+    expect(first.netPrincipal + first.indexation + first.interest).toBeCloseTo(
+      result.yearlyRows[0].paid,
+      6,
+    )
+  })
+
+  it('aggregates monthly components into the yearly components', () => {
+    const result = computeTrackResult({
+      principal: 250_000,
+      years: 3,
+      annualRatePercent: 3.5,
+      type: 'variableIndexed5y',
+      method: 'spitzer',
+      annualInflation: 0.025,
+    })!
+    const monthly = result.monthlyRows.map(paymentComposition)
+    result.yearlyRows.forEach((row, yearIndex) => {
+      const year = monthly.slice(yearIndex * 12, yearIndex * 12 + 12)
+      const sum = (pick: (component: ReturnType<typeof paymentComposition>) => number) =>
+        year.reduce((total, component) => total + pick(component), 0)
+      const component = paymentComposition(row)
+      expect(component.netPrincipal).toBeCloseTo(sum((entry) => entry.netPrincipal), 6)
+      expect(component.indexation).toBeCloseTo(sum((entry) => entry.indexation), 6)
+      expect(component.interest).toBeCloseTo(sum((entry) => entry.interest), 6)
+    })
+  })
+
+  it('reconciles every month and the lifetime totals of an indexed loan', () => {
+    const result = computeTrackResult({
+      principal: 300_000,
+      years: 5,
+      annualRatePercent: 3,
+      type: 'fixedIndexed',
+      method: 'spitzer',
+      annualInflation: 0.03,
+    })!
+    for (const row of result.monthlyRows) {
+      const component = paymentComposition(row)
+      expect(component.netPrincipal + component.indexation + component.interest).toBeCloseTo(
+        row.paid,
+        6,
+      )
+    }
+    const components = result.yearlyRows.map(paymentComposition)
+    const netSum = components.reduce((sum, component) => sum + component.netPrincipal, 0)
+    const principalSum = result.yearlyRows.reduce((sum, row) => sum + row.principal, 0)
+    // Net principal plus the drift it was netted against is the full principal
+    // column, and the three lifetime components are the lifetime payment.
+    expect(netSum + result.totalIndexation).toBeCloseTo(principalSum, 3)
+    expect(netSum + result.totalIndexation + result.totalInterest).toBeCloseTo(
+      result.totalPaid,
+      3,
+    )
+    // Net principal telescopes to the nominal loan; the drift was netted out
+    // and then added back as its own segment.
+    expect(netSum).toBeCloseTo(300_000, 3)
   })
 })
 
@@ -1230,6 +1321,7 @@ describe('peakPaymentYear (advisor row)', () => {
     month: 1,
     principal: 0,
     indexation: 0,
+    principalIndexation: 0,
     interest: 0,
     paid,
     closing: 0,

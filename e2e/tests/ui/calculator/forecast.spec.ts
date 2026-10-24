@@ -16,7 +16,7 @@ test.describe('mortgage calculator - rate and CPI forecast', () => {
 
     // The default mix has a 15-year five-year variable track: years 6 and 11.
     await expect(forecast.resetCaption).toContainText('מועדי עדכון ריבית בשנים 6 ו-11')
-    await forecast.openResetTable()
+    await expect(forecast.resetTable.locator('table')).toBeVisible()
 
     // Before the first reset every path is the same rate, so the same payment.
     const before = await forecast.resetPayments(5)
@@ -41,7 +41,9 @@ test.describe('mortgage calculator - rate and CPI forecast', () => {
   test('shows cumulative interest against indexation for the base path', async ({ calc }) => {
     const forecast = calc.forecast
     await forecast.scrollTo()
-    await forecast.openCostTable()
+    // The figures are visible without opening anything: there is no toggle.
+    await expect(forecast.costTable.locator('table')).toBeVisible()
+    await expect(forecast.costTable.locator('summary')).toHaveCount(0)
     // The caption echoes whichever CPI assumption the calculator is using.
     await expect(forecast.costCaption).toHaveText(/מדד קבוע של \d+(?:\.\d+)?% בשנה/)
 
@@ -84,15 +86,16 @@ test.describe('mortgage calculator - rate and CPI forecast', () => {
     await expect(calc.forecast.root).toHaveCount(0)
   })
 
-  test('shows the data tables open, at the chart height, with their own scroll', async ({
-    calc,
-  }) => {
+  test('shows the data tables, at the chart height, with their own scroll', async ({ calc }) => {
     const forecast = calc.forecast
     await forecast.scrollTo()
 
     // No click: the exact figures are visible by default.
     await expect(forecast.resetTable.locator('table')).toBeVisible()
     await expect(forecast.costTable.locator('table')).toBeVisible()
+    // The collapse toggle is gone.
+    await expect(forecast.resetTable.locator('summary')).toHaveCount(0)
+    await expect(forecast.costTable.locator('summary')).toHaveCount(0)
 
     for (const [plot, table] of [
       [forecast.resetPlot, forecast.resetTableScroll],
@@ -151,7 +154,6 @@ test.describe('rate and CPI forecast in English (LTR)', () => {
     )
     await expect(forecast.disclaimer).toContainText('1 percentage point')
 
-    await forecast.openResetTable()
     await expect(forecast.resetTable.locator('thead')).toContainText('+1 pp')
   })
 })

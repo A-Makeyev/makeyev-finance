@@ -40,7 +40,9 @@ import {
   type PropertyPurpose,
   type TransactionCostsEstimate,
 } from '@/lib/amortization'
+import { buildForecast, type Forecast } from '@/lib/forecast'
 import { parseAmountText } from '@/lib/format'
+import type { PrepaymentProjectionTrack } from '@/lib/prepaymentProjection'
 import type { TrackState } from '@/stores/calculatorStore'
 
 /** Trimmed, display-oriented subset of CalculatorSnapshot for one scenario. */
@@ -105,6 +107,7 @@ export interface ScenarioResult {
     paid: number
     principal: number
     indexation: number
+    principalIndexation: number
     interest: number
     closing: number
   }>
@@ -114,6 +117,28 @@ export interface ScenarioResult {
    * principal and its share of the loan. Drives the donut.
    */
   mixShares: Array<{ type: string; amount: number; percent: number }>
+  /**
+   * The same per-track schedules, in the shape the shared prepayment-fee
+   * projection reads. The comparison page charts its fee curve from these, so
+   * both pages price the fee from one function instead of re-deriving a
+   * balance or a reset here.
+   */
+  prepaymentTracks: PrepaymentProjectionTrack[]
+  /**
+   * The rate-reset paths the calculator's forecast panel draws (base, +1pp and
+   * -1pp at every contractual reset, flat CPI), built from the same parsed
+   * tracks as the schedule. The comparison charts them per mix, so the two
+   * pages show one forecast of the same mix rather than two models of it.
+   */
+  forecast: Forecast
+}
+
+/** A scenario with nothing priced has no forecast paths either. */
+const EMPTY_FORECAST: Forecast = {
+  scenarios: [],
+  resetYears: [],
+  hasIndexation: false,
+  hasResetTracks: false,
 }
 
 export interface SharedBuyerInputs {
@@ -221,6 +246,8 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     balanceTrend: [],
     schedule: [],
     mixShares: [],
+    prepaymentTracks: [],
+    forecast: EMPTY_FORECAST,
   }
   if (enteredIndexes.length === 0) return emptyResult
 
@@ -301,6 +328,7 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     paid: row.paid,
     principal: row.principal,
     indexation: row.indexation,
+    principalIndexation: row.principalIndexation,
     interest: row.interest,
     closing: row.closing,
   }))
@@ -363,6 +391,30 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     balanceTrend,
     schedule: scheduleRows,
     mixShares,
+    prepaymentTracks: validResults.map((result, index) => ({
+      id: `${result.type}-${index}`,
+      type: result.type,
+      monthlyRows: result.monthlyRows,
+      annualRatePercent: result.annualRatePercent,
+      isIndexed: result.isIndexed,
+      method: result.method,
+    })),
+    // Same parsed tracks, same CPI assumption as the schedule above, so a
+    // scenario's base path is its own payment path and the two step paths are
+    // what the calculator would draw for that mix.
+    forecast: buildForecast(
+      enteredIndexes.map((index) => {
+        const track = tracks[index]
+        return {
+          principal: parseAmountText(track.amountText),
+          years: Number(track.yearsText) || 0,
+          annualRatePercent: Number(track.rateText) || 0,
+          type: track.type,
+          method: track.method,
+        }
+      }),
+      FALLBACK_INFLATION,
+    ),
   }
 }
 

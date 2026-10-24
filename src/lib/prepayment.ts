@@ -39,10 +39,9 @@
  * stream, so a five-year track is priced only to its next reset instead of as
  * if the current rate ran to the end of the loan.
  *
- * Section 3(4)'s cap needs the average rate at origination (C). It is
- * implemented and tested, but the calculator has no origination date or rate
- * to feed it, so the panel leaves it off and says so: without the cap the
- * estimate can only be too high, never too low.
+ * Section 3(4)'s cap needs the average rate at origination (C). The panel lets
+ * the reader enter C per track; without a value the cap is left off, and the
+ * breakdown's `capApplied` says whether an entered value actually bit.
  *
  * Nominal vs effective: the contractual rate the calculator holds is nominal
  * (it divides by 12), while the BOI average tables publish effective annual
@@ -59,7 +58,7 @@
  * Those are added on top of `fee`, never inside it.
  */
 
-import { FALLBACK_INFLATION, type TrackType } from './amortization'
+import { FALLBACK_INFLATION, type AmortizationMethod, type TrackType } from './amortization'
 
 /**
  * Legal reduction by loan age, from the Banking Order (2002) as amended:
@@ -299,6 +298,14 @@ export interface PrepaymentFeeBreakdown {
   contractualPresentValue: number
   /** Unrounded difference, floored at zero. */
   grossFee: number
+  /**
+   * True when section 3(4)'s origination average actually lowered the rate the
+   * payments are discounted at (C below the contractual rate). False when no
+   * average was entered or when it is at/above the contractual rate, so the
+   * contractual rate stands. The panel uses it to say whether a typed cap did
+   * anything - a cap that does not bite leaves the fee unchanged.
+   */
+  capApplied: boolean
   /** Legal reduction by loan age: 0, 0.2 or 0.3. */
   ageDiscount: number
   /** The exemption that zeroed the fee, when there is one. */
@@ -340,6 +347,7 @@ export function prepaymentFee(input: PrepaymentFeeInput): PrepaymentFeeBreakdown
     marketPresentValue: 0,
     contractualPresentValue: 0,
     grossFee: 0,
+    capApplied: false,
     ageDiscount: 0,
     exemptReason: null,
     fee: 0,
@@ -362,6 +370,7 @@ export function prepaymentFee(input: PrepaymentFeeInput): PrepaymentFeeBreakdown
   const marketRate = marketRateIsEffective
     ? periodicFromEffectiveAnnual(marketRatePercent)
     : periodicFromNominalAnnual(marketRatePercent)
+  const capApplied = originationAverageRatePercent !== undefined && originationRate < contractualRate
   const marketPresentValue = presentValue(real, marketRate)
   const contractualPresentValue = presentValue(real, loanRate)
   const grossFee = Math.max(0, marketPresentValue - contractualPresentValue)
@@ -379,6 +388,7 @@ export function prepaymentFee(input: PrepaymentFeeInput): PrepaymentFeeBreakdown
     marketPresentValue,
     contractualPresentValue,
     grossFee,
+    capApplied,
     ageDiscount,
     exemptReason,
     fee: exemptReason ? 0 : roundAgorot(grossFee * (1 - ageDiscount)),
@@ -490,5 +500,272 @@ export function cheapestPrepaymentOrder(
     allocations,
     allocated: roundAgorot(Math.max(0, amount) - Math.max(0, left)),
     totalFee: roundAgorot(totalFee),
+  }
+}
+
+/**
+ * One track's remaining schedule, in the shape the partial-prepayment
+ * outcomes need. The panel fills these in from the same rows it already
+ * renders, so the model never re-derives the balance, the payment or the
+ * method from the inputs.
+ */
+export interface PartialPrepaymentTrack {
+  /** Outstanding principal at the repayment date, after that month's payment. */
+  balance: number
+  /** The part of the partial amount allocated to this track (0 if none). */
+  amount: number
+  /** Scheduled payment for the first month after the repayment date. */
+  nextPayment: number
+  /** Principal component of that scheduled payment. */
+  nextPrincipal: number
+  /** Contractual annual rate in percent (real for an index-linked track). */
+  annualRatePercent: number
+  /** Months left on the current schedule. */
+  remainingMonths: number
+  /** Repayment method; it decides what "keep the payment" means. */
+  method: AmortizationMethod
+  /** True for CPI-linked tracks, whose balances and payments grow with the index. */
+  indexed: boolean
+}
+
+/** One method's result for the whole mix. */
+export interface PartialPrepaymentMode {
+  /** First payment after the prepayment, across the tracks in the model. */
+  monthlyPayment: number
+  /** Months until the last track is repaid (0 when everything was repaid now). */
+  months: number
+  /** Future payments over those months (the statutory fee is not included). */
+  totalPaid: number
+  /** Interest inside `totalPaid`. */
+  totalInterest: number
+}
+
+/** Both legal ways to take a partial prepayment, next to the unchanged mix. */
+export interface PartialPrepaymentOutcomes {
+  /** No prepayment: the schedule exactly as it stands after the chosen date. */
+  unchanged: PartialPrepaymentMode
+  /** The same payment basis, with the term shortened by the amount repaid. */
+  shortenTerm: PartialPrepaymentMode
+  /** The same maturity, with the payment recalculated on the lower balance. */
+  reducePayment: PartialPrepaymentMode
+}
+
+interface TrackOutcome {
+  monthlyPayment: number
+  months: number
+  totalPaid: number
+  totalInterest: number
+}
+
+const emptyOutcome = (): TrackOutcome => ({
+  monthlyPayment: 0,
+  months: 0,
+  totalPaid: 0,
+  totalInterest: 0,
+})
+
+/** Annuity payment that amortizes `balance` over `months` at a monthly rate. */
+function annuityPayment(balance: number, monthlyRate: number, months: number): number {
+  if (balance <= 0 || months <= 0) return 0
+  if (monthlyRate <= 0) return balance / months
+  return (balance * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
+}
+
+/**
+ * Months a fixed payment needs to clear `balance`. The payment itself is on
+ * the same real basis as the balance and the rate, so indexation does not
+ * enter this step; the simulation below adds it back to the nominal payments.
+ * A payment that does not cover the monthly interest never amortizes and
+ * returns 0, which the caller reports as "no result" rather than inventing a
+ * term.
+ */
+function monthsToAmortize(balance: number, monthlyRate: number, payment: number): number {
+  if (!(balance > 0) || !(payment > 0)) return 0
+  if (monthlyRate <= 0) return Math.ceil(balance / payment - 1e-9)
+  const interest = balance * monthlyRate
+  if (payment <= interest) return 0
+  return Math.max(1, Math.ceil(-Math.log(1 - interest / payment) / Math.log(1 + monthlyRate) - 1e-9))
+}
+
+/**
+ * Walk a reduced balance forward for `months` payments and report what the
+ * borrower actually pays. Two details keep this on the schedule's own
+ * convention:
+ *
+ * - The first payment is one month out, so an indexed balance grows once
+ *   before it (`monthlyInflation`, exactly as `computeTrackResult` inflates
+ *   every month after the first).
+ * - The final payment absorbs the remainder, so rounding cannot leave a
+ *   phantom balance behind.
+ *
+ * For a CPI-linked track the payment is kept on its real basis, not frozen in
+ * nominal shekels: the index still lifts the payment, which is why the panel
+ * does not call the shortened-term payment "identical" for those tracks.
+ */
+function simulateOutcome(input: {
+  balance: number
+  months: number
+  monthlyRate: number
+  monthlyInflation: number
+  method: AmortizationMethod
+  /** Real (today's money) payment for a spitzer track. */
+  realPayment: number
+  /** Real principal installment for an equal-principal track. */
+  realPrincipal: number
+}): TrackOutcome {
+  const { balance, months, monthlyRate, monthlyInflation, method } = input
+  if (!(balance > 0) || months <= 0) return emptyOutcome()
+  if (!(monthlyInflation > 0) || !Number.isFinite(monthlyInflation)) return emptyOutcome()
+  const basis = method === 'equalPrincipal' ? input.realPrincipal : input.realPayment
+  if (!(basis > 0) || !Number.isFinite(basis)) return emptyOutcome()
+
+  let remaining = balance
+  let monthlyPayment = 0
+  let totalPaid = 0
+  let totalInterest = 0
+  let paidMonths = 0
+
+  for (let month = 1; month <= months; month++) {
+    const inflationFactor = Math.pow(monthlyInflation, month)
+    remaining *= monthlyInflation
+    const interest = remaining * monthlyRate
+    let principal: number
+    let payment: number
+    if (method === 'equalPrincipal') {
+      principal = Math.min(remaining, basis * inflationFactor)
+      payment = principal + interest
+    } else {
+      const scheduled = basis * inflationFactor
+      principal = Math.min(remaining, Math.max(0, scheduled - interest))
+      payment = principal + interest
+    }
+    if (month === 1) monthlyPayment = payment
+    remaining = Math.max(0, remaining - principal)
+    totalPaid += payment
+    totalInterest += interest
+    paidMonths = month
+    if (remaining <= 0.005) break
+  }
+
+  return { monthlyPayment, months: paidMonths, totalPaid, totalInterest }
+}
+
+/** One track's unchanged, shortened and lowered results. */
+function trackOutcomes(
+  track: PartialPrepaymentTrack,
+  annualInflation: number,
+): { unchanged: TrackOutcome; shortenTerm: TrackOutcome; reducePayment: TrackOutcome } {
+  const zero = { unchanged: emptyOutcome(), shortenTerm: emptyOutcome(), reducePayment: emptyOutcome() }
+  const balance = Number.isFinite(track.balance) ? Math.max(0, track.balance) : 0
+  const months = Math.round(track.remainingMonths)
+  const rate = Number.isFinite(track.annualRatePercent) ? Math.max(0, track.annualRatePercent) : 0
+  const nextPayment = Number.isFinite(track.nextPayment) ? track.nextPayment : 0
+  const nextPrincipal = Number.isFinite(track.nextPrincipal) ? track.nextPrincipal : 0
+  if (!(balance > 0) || months <= 0) return zero
+  if (!(nextPayment > 0) || !(nextPrincipal > 0)) return zero
+
+  const monthlyRate = periodicFromNominalAnnual(rate)
+  const monthlyInflation = track.indexed ? Math.pow(1 + annualInflation, 1 / 12) : 1
+  if (!(monthlyInflation > 0) || !Number.isFinite(monthlyInflation)) return zero
+
+  // The schedule's next payment is one month out; deflate it to today's money
+  // so it can sit next to the balance, which is already in today's money.
+  const realPayment = nextPayment / monthlyInflation
+  const realPrincipal = nextPrincipal / monthlyInflation
+
+  const base = {
+    balance,
+    months,
+    monthlyRate,
+    monthlyInflation,
+    method: track.method,
+  }
+  const unchanged = simulateOutcome({ ...base, realPayment, realPrincipal })
+  const amount = Number.isFinite(track.amount) ? Math.min(Math.max(0, track.amount), balance) : 0
+  if (amount <= 0) return { unchanged, shortenTerm: unchanged, reducePayment: unchanged }
+
+  const after = Math.max(0, balance - amount)
+  if (after <= 0) return { unchanged, shortenTerm: emptyOutcome(), reducePayment: emptyOutcome() }
+
+  let shortened: TrackOutcome
+  let reduced: TrackOutcome
+  if (track.method === 'equalPrincipal') {
+    const shortenedMonths = Math.max(1, Math.ceil(after / realPrincipal - 1e-9))
+    shortened = simulateOutcome({
+      ...base,
+      balance: after,
+      months: Math.min(months, shortenedMonths),
+      realPayment,
+      realPrincipal,
+    })
+    reduced = simulateOutcome({
+      ...base,
+      balance: after,
+      realPayment,
+      realPrincipal: after / months,
+    })
+  } else {
+    const shortenedMonths = monthsToAmortize(after, monthlyRate, realPayment)
+    shortened = simulateOutcome({
+      ...base,
+      balance: after,
+      months: Math.min(months, shortenedMonths || months),
+      realPayment,
+      realPrincipal,
+    })
+    reduced = simulateOutcome({
+      ...base,
+      balance: after,
+      realPayment: annuityPayment(after, monthlyRate, months),
+      realPrincipal,
+    })
+  }
+
+  return { unchanged, shortenTerm: shortened, reducePayment: reduced }
+}
+
+/** Total a set of track results into one mode. */
+function sumOutcomes(outcomes: readonly TrackOutcome[]): PartialPrepaymentMode {
+  return outcomes.reduce<PartialPrepaymentMode>(
+    (total, outcome) => ({
+      monthlyPayment: total.monthlyPayment + outcome.monthlyPayment,
+      months: Math.max(total.months, outcome.months),
+      totalPaid: total.totalPaid + outcome.totalPaid,
+      totalInterest: total.totalInterest + outcome.totalInterest,
+    }),
+    { monthlyPayment: 0, months: 0, totalPaid: 0, totalInterest: 0 },
+  )
+}
+
+/**
+ * The two ways a partial prepayment can be applied, and the unchanged mix for
+ * comparison. The caller decides how the amount is split across tracks; this
+ * function only models what each track looks like afterwards.
+ *
+ * `shortenTerm` keeps the payment basis: a spitzer track keeps its real
+ * payment and ends earlier, an equal-principal track keeps its real principal
+ * installment and ends earlier. `reducePayment` keeps the maturity and
+ * recalculates the payment on the lower balance. For an index-linked track the
+ * index is still assumed to lift both the balance and the payment, so neither
+ * mode promises a constant nominal shekel figure. Rate resets are outside this
+ * model: it uses the schedule's current rate, the same rate the schedule above
+ * already shows.
+ *
+ * A track whose whole balance is repaid contributes zero payments and zero
+ * months. An amount of zero gives the unchanged result for both modes, and a
+ * non-finite input is treated as zero, so a malformed row can never produce a
+ * confident-looking term.
+ */
+export function partialPrepaymentOutcomes(
+  tracks: readonly PartialPrepaymentTrack[],
+  annualInflation: number = FALLBACK_INFLATION,
+): PartialPrepaymentOutcomes {
+  const inflation =
+    Number.isFinite(annualInflation) && annualInflation > -1 ? annualInflation : FALLBACK_INFLATION
+  const results = tracks.map((track) => trackOutcomes(track, inflation))
+  return {
+    unchanged: sumOutcomes(results.map((result) => result.unchanged)),
+    shortenTerm: sumOutcomes(results.map((result) => result.shortenTerm)),
+    reducePayment: sumOutcomes(results.map((result) => result.reducePayment)),
   }
 }

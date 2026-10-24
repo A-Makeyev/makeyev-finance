@@ -325,12 +325,13 @@ test.describe('mortgage comparison - /compare', () => {
     expect(overflow).toBeLessThanOrEqual(1)
   })
 
-  test('five trend charts below the cards, each comparing every priced mix', async ({ page }) => {
+  test('seven trend panels below the cards, each comparing every priced mix', async ({ page }) => {
     await page.goto('/compare')
     // Card 1 is seeded with the calculator mix; card 2 is blank. The charts live
-    // in their own section below the cards: the payment composition chart first,
-    // then the four line charts (the monthly-payment line duplicated its story
-    // and was removed).
+    // in their own gallery below the cards: the payment composition chart first,
+    // then the five line charts (the monthly-payment line duplicated its story
+    // and was removed; the prepayment fee curve was added with the calculator's
+    // own projection), and the rate-scenario panel beside the fee curve.
     await expect(page.getByTestId('compare-trend')).toBeVisible()
     await expect(page.getByTestId('compare-trends')).toContainText('תשלומים לאורך זמן')
     await expect(page.getByTestId('compare-trend-payment')).toHaveCount(0)
@@ -343,7 +344,7 @@ test.describe('mortgage comparison - /compare', () => {
     )) as string
     expect(opacity).toBe('1')
 
-    const lineMetrics = ['balance', 'total', 'interest', 'indexation']
+    const lineMetrics = ['balance', 'total', 'interest', 'indexation', 'prepayment']
     for (const metric of lineMetrics) {
       const panel = page.getByTestId(`compare-trend-${metric}`)
       await expect(panel).toBeVisible()
@@ -352,37 +353,77 @@ test.describe('mortgage comparison - /compare', () => {
     }
 
     // The composition panel mirrors the calculator's combined chart: stacked
-    // קרן/ריבית columns (bars), with a two-shade legend.
+    // קרן נטו / הצמדה / ריבית columns (bars), with a three-item legend.
     const compositionPanel = page.getByTestId('compare-trend-composition')
     await expect(compositionPanel).toBeVisible()
     await expect(compositionPanel).toContainText('הרכב התשלום החודשי')
     await expect(compositionPanel.locator('.compare-trend-line')).toHaveCount(0)
     await expect(compositionPanel.locator('.compare-trend-bar').first()).toBeVisible()
-    await expect(compositionPanel.locator('.compare-trend-inline-legend')).toContainText('קרן')
-    await expect(compositionPanel.locator('.compare-trend-inline-legend')).not.toContainText(
-      'compare.',
-    )
+    const compositionLegend = compositionPanel.locator('.compare-trend-inline-legend')
+    await expect(compositionLegend).toContainText('קרן נטו')
+    await expect(compositionLegend).toContainText('הצמדה')
+    await expect(compositionLegend).toContainText('ריבית')
+    await expect(compositionLegend).not.toContainText('compare.')
+    // The seeded mix carries an indexed track, so every year has the purple
+    // indexation segment on top of net principal.
+    expect(
+      await compositionPanel.locator('.compare-trend-bar-indexation').count(),
+    ).toBeGreaterThan(0)
+    // The same components are available as text, year by year.
+    const compositionTable = page.getByTestId('compare-trend-composition-table-0')
+    await expect(compositionTable.locator('tbody tr')).toHaveCount(15)
+    await expect(compositionTable.locator('thead')).toContainText('קרן נטו')
+    await expect(compositionTable.locator('thead')).toContainText('הצמדה')
     const oneMixBars = await compositionPanel.locator('.compare-trend-bar').count()
 
-    // The other four panels each have their own visual language, so they do
+    // The other five panels each have their own visual language, so they do
     // not read as copies: balance is a filled area, total carries a dot per
-    // year, interest is a dashed line, indexation a dotted one.
+    // year, interest is a dashed line, indexation a dotted one, and the
+    // prepayment fee is a plain line.
     await expect(page.getByTestId('compare-trend-balance').locator('.compare-trend-area')).toHaveCount(1)
     await expect(page.getByTestId('compare-trend-interest').locator('.compare-trend-line-dashed')).toHaveCount(1)
     await expect(page.getByTestId('compare-trend-indexation').locator('.compare-trend-line-dotted')).toHaveCount(1)
+    await expect(page.getByTestId('compare-trend-prepayment')).toContainText(
+      'עמלת פירעון מוקדם לאורך זמן',
+    )
     expect(
       await page.getByTestId('compare-trend-total').locator('.compare-trend-point').count(),
     ).toBeGreaterThan(0)
 
-    // The composition panel leads the gallery across the full row; the four
-    // line panels fall two per row beneath it (balance + total, then
-    // interest + indexation).
+    // The fee curve is priced at year ends from the scenario's own schedule:
+    // one dot and one vertex per PRICED year. The schedule's final year has no
+    // fee row (the loan is over), so the curve must stop before it rather than
+    // drop to zero.
+    const prepaymentPanel = page.getByTestId('compare-trend-prepayment')
+    const feeDots = await prepaymentPanel.locator('.compare-trend-point').count()
+    expect(feeDots).toBeGreaterThan(0)
+    const feeVertices = (await prepaymentPanel.locator('.compare-trend-line').evaluate((node) => {
+      const tokens = (node.getAttribute('d') ?? '').trim().split(/\s+/)
+      return Math.ceil(tokens.length / 3)
+    })) as number
+    expect(feeVertices).toBe(feeDots)
+    // The balance line spans the whole schedule, so the fee curve is exactly
+    // one vertex shorter: its final year is not priced.
+    const balanceVertices = (await page
+      .getByTestId('compare-trend-balance')
+      .locator('.compare-trend-line')
+      .evaluate((node) => {
+        const tokens = (node.getAttribute('d') ?? '').trim().split(/\s+/)
+        return Math.ceil(tokens.length / 3)
+      })) as number
+    expect(feeDots).toBe(balanceVertices - 1)
+
+    // The composition panel leads the gallery across the full row; the five
+    // line panels fall two per row beneath it (balance + total, interest +
+    // indexation, then the prepayment fee next to the rate-scenario panel).
     const box = async (metric: string) =>
       (await page.getByTestId(`compare-trend-${metric}`).boundingBox())!
     const balance = await box('balance')
     const total = await box('total')
     const interest = await box('interest')
     const indexation = await box('indexation')
+    const prepayment = await box('prepayment')
+    const rate = (await page.getByTestId('compare-rate-chart').boundingBox())!
     const composition = await box('composition')
     // Composition spans the row on its own, above the line panels.
     expect(composition.width).toBeGreaterThan(balance.width * 1.5)
@@ -395,20 +436,182 @@ test.describe('mortgage comparison - /compare', () => {
     expect(Math.abs(indexation.width - balance.width)).toBeLessThan(4)
     expect(Math.abs(indexation.y - interest.y)).toBeLessThan(4)
     expect(interest.y).toBeGreaterThan(balance.y + balance.height / 2)
+    // The fee curve starts the last row, and the rate panel is its peer on the
+    // other half: same width, same row, to its left in the RTL grid.
+    expect(Math.abs(prepayment.width - balance.width)).toBeLessThan(4)
+    expect(prepayment.y).toBeGreaterThan(indexation.y + indexation.height / 2)
+    expect(Math.abs(rate.width - balance.width)).toBeLessThan(4)
+    expect(Math.abs(rate.y - prepayment.y)).toBeLessThan(4)
+    expect(rate.x).toBeLessThan(prepayment.x)
 
     // One legend entry for the one priced mix.
     await expect(page.getByTestId('compare-trend-legend').locator('li')).toHaveCount(1)
 
     // Pricing the second scenario adds its series to EVERY chart, so the mixes
-    // are read against each other.
+    // are read against each other: five line panels times two mixes, plus the
+    // rate panel's no-change line per mix (its step paths are shaded bands).
     await page.getByTestId('compare-preset-2-basket4').click()
     await expect(page.getByTestId('compare-trend-legend').locator('li')).toHaveCount(2)
-    await expect(page.locator('.compare-trend-line')).toHaveCount(8)
+    await expect(page.getByTestId('compare-trends').locator('.compare-trend-line')).toHaveCount(12)
     for (const metric of lineMetrics) {
       await expect(page.getByTestId(`compare-trend-${metric}`).locator('.compare-trend-line')).toHaveCount(2)
     }
     // The second mix stacks its own bars alongside the first.
     expect(await compositionPanel.locator('.compare-trend-bar').count()).toBeGreaterThan(oneMixBars)
+  })
+
+  test('a long indexed mix keeps its negative net principal below zero', async ({ page }) => {
+    await page.goto('/compare')
+    // Scenario 2: the single fixed preset, turned into a fully indexed 30-year
+    // track. Its first years add more CPI drift than the principal repays, so
+    // the composition chart's y axis must extend below zero and draw the zero
+    // line instead of clamping the segment.
+    await page.getByTestId('compare-preset-2-basket1').click()
+    const type = page.getByTestId('compare-track-type-2-1')
+    await expect(async () => {
+      await type.selectOption('fixedIndexed')
+      await expect(type).toHaveValue('fixedIndexed')
+    }).toPass()
+    await page.getByTestId('compare-term-2').fill('30')
+    // The compare page prices CPI at its 2% fallback; at 6% the first years'
+    // principal payment is smaller than that drift, making net principal
+    // negative.
+    await page.getByTestId('compare-track-rate-2-1').fill('6')
+
+    const panel = page.getByTestId('compare-trend-composition')
+    await expect(panel.locator('.compare-trend-zero-line')).toHaveCount(1)
+    const probe = (await panel.evaluate(`(() => {
+      const root = document.querySelector('[data-testid="compare-trend-composition"]')
+      const svg = root.querySelector('svg')
+      return {
+        negativeTicks: [...svg.querySelectorAll('text.compare-trend-tick')].some((node) =>
+          (node.textContent || '').trim().startsWith('-₪'),
+        ),
+        indexationBars: svg.querySelectorAll('rect.compare-trend-bar-indexation').length,
+        hasNaN: svg.innerHTML.includes('NaN'),
+      }
+    })()`)) as { negativeTicks: boolean; indexationBars: number; hasNaN: boolean }
+    expect(probe.negativeTicks, 'the axis extends below zero').toBe(true)
+    expect(probe.indexationBars).toBeGreaterThan(0)
+    expect(probe.hasNaN, 'no broken geometry').toBe(false)
+    // The hidden text equivalent carries the same signed component (year one's
+    // net principal is -484 at the 2% fallback CPI and a 6% rate).
+    const table = page.getByTestId('compare-trend-composition-table-1')
+    await expect(table.locator('tbody tr').first()).toContainText('-484')
+  })
+
+  test('the rate-scenario panel is graph-only and sits beside the fee curve', async ({ page }) => {
+    await page.goto('/compare')
+    const chart = page.getByTestId('compare-rate-chart')
+    await expect(chart).toBeVisible()
+    await expect(chart).toContainText('החזר חודשי לפי תרחיש ריבית')
+
+    // A card in the trend gallery, not a section of its own: one heading level
+    // per panel and the shared mix legend above.
+    await expect(page.getByTestId('compare-trends').getByTestId('compare-rate-chart')).toHaveCount(1)
+    await expect(page.getByTestId('compare-rate-scenarios')).toHaveCount(0)
+
+    // One no-change line and one shaded +1pp/-1pp band per mix, plus a vertical
+    // marker at every contractual reset. The band replaces the two step strokes
+    // so several mixes stay readable.
+    await expect(chart.locator('.compare-trend-line')).toHaveCount(1)
+    await expect(chart.locator('.compare-rate-band')).toHaveCount(1)
+    await expect(chart.locator('.compare-rate-key span')).toHaveCount(2)
+    await expect(chart.locator('.compare-rate-key')).toContainText("טווח: ±1 נק'")
+    // Every priced mix resets, so there is no missing-range caption.
+    await expect(page.getByTestId('compare-rate-chart-note')).toHaveCount(0)
+    // The panel names each mix's own reset years next to it.
+    const resetList = chart.locator('.compare-rate-mix-list')
+    await expect(resetList.locator('li')).toHaveCount(1)
+    await expect(resetList).toContainText('עדכוני ריבית')
+    await expect(resetList).toContainText('6')
+    await expect(resetList).toContainText('11')
+    const markers = await chart.locator('.forecast-reset-line').count()
+    expect(markers).toBeGreaterThan(0)
+
+    // Graph only: the old table cards are gone from the page. The same figures
+    // stay available to screen readers as a table per mix.
+    await expect(chart.locator('.table-wrap')).toHaveCount(0)
+    const table = page.getByTestId('compare-rate-table-0')
+    await expect(table).toHaveCount(1)
+    expect(await table.locator('tbody tr').count()).toBeGreaterThan(0)
+    await expect(table.locator('tbody tr.is-reset')).toHaveCount(markers)
+    await expect(table.locator('tbody tr').first().locator('td')).toHaveCount(3)
+
+    const amounts = async (rowIndex: number) =>
+      (await table.locator('tbody tr').nth(rowIndex).locator('td').allTextContents()).map((text) =>
+        Number(text.replace(/[^\d.]/g, '')),
+      )
+
+    const firstReset = table.locator('tbody tr.is-reset').first()
+    const resetYear = Number(await firstReset.locator('th').textContent())
+    // Before the reset all three paths pay the same; at the reset year the
+    // +1pp path pays more and the -1pp path pays less.
+    const before = await amounts(resetYear - 2)
+    expect(before[1]).toBe(before[0])
+    expect(before[2]).toBe(before[0])
+    const after = await amounts(resetYear - 1)
+    expect(after[1]).toBeGreaterThan(after[0])
+    expect(after[2]).toBeLessThan(after[0])
+
+    // Pricing the second mix adds its own no-change line and range band, and
+    // its own data table, so the mixes are read against each other on one
+    // chart and share the one gallery legend.
+    await page.getByTestId('compare-preset-2-basket4').click()
+    await expect(chart.locator('.compare-trend-line')).toHaveCount(2)
+    await expect(chart.locator('.compare-rate-band')).toHaveCount(2)
+    await expect(page.getByTestId('compare-trend-legend').locator('li')).toHaveCount(2)
+    await expect(page.getByTestId('compare-rate-table-1')).toHaveCount(1)
+  })
+
+  test('keeps every mix and a short term, with a no-change path when nothing resets', async ({
+    page,
+  }) => {
+    await page.goto('/compare')
+    const chart = page.getByTestId('compare-rate-chart')
+
+    // A fixed-only second mix has no contractual reset. It still draws its base
+    // payment path, so both mixes are on the chart instead of only the first;
+    // only the first mix contributes a shaded scenario band.
+    await page.getByTestId('compare-preset-2-basket1').click()
+    await expect(chart.locator('.compare-trend-line')).toHaveCount(2)
+    await expect(chart.locator('.compare-rate-band')).toHaveCount(1)
+    await expect(page.getByTestId('compare-trend-legend').locator('li')).toHaveCount(2)
+    // The caption explains why the fixed mix has one line while the variable
+    // mix has a shaded range, and the reset list says which is which.
+    const note = page.getByTestId('compare-rate-chart-note')
+    await expect(note).toContainText('מסלול משתנה ל-5 שנים')
+    const resetList = chart.locator('.compare-rate-mix-list')
+    await expect(resetList.locator('li')).toHaveCount(2)
+    await expect(resetList).toContainText('עדכוני ריבית')
+    await expect(resetList).toContainText('ללא עדכון ריבית')
+    const secondTable = page.getByTestId('compare-rate-table-1')
+    await expect(secondTable).toHaveCount(1)
+    // Its table has only the no-change column: there is no step to price.
+    await expect(secondTable.locator('tbody tr').first().locator('td')).toHaveCount(1)
+
+    // A term shorter than the five-year reset cycle empties the reset set. The
+    // panel used to disappear; now each mix keeps its no-change path.
+    await page.getByTestId('compare-term-1').fill('4')
+    await page.getByTestId('compare-term-2').fill('4')
+    await expect(chart).toBeVisible()
+    await expect(chart.locator('.compare-trend-line')).toHaveCount(2)
+    await expect(chart.locator('.compare-rate-band')).toHaveCount(0)
+    await expect(chart.locator('.forecast-reset-line')).toHaveCount(0)
+    await expect(note).toContainText('אין מועד עדכון ריבית')
+    await expect(resetList.locator('li')).toHaveCount(2)
+    await expect(resetList).toContainText('ללא עדכון ריבית')
+    await expect(resetList).not.toContainText('עדכוני ריבית')
+    // Only the no-change line is keyed, since no step path is drawn.
+    const key = chart.locator('.compare-rate-key')
+    await expect(key.locator('span')).toHaveCount(1)
+    await expect(key).toContainText('ללא שינוי')
+    await expect(chart).not.toContainText('עלייה של')
+    // Both mixes still expose a one-column data table.
+    await expect(
+      page.getByTestId('compare-rate-table-0').locator('tbody tr').first().locator('td'),
+    ).toHaveCount(1)
+    await expect(secondTable.locator('tbody tr').first().locator('td')).toHaveCount(1)
   })
 
   test('a mix that ends early drops to the axis on the interest chart only', async ({ page }) => {
@@ -488,6 +691,19 @@ test.describe('mortgage comparison - /compare', () => {
       (node) => getComputedStyle(node).scrollbarWidth,
     )) as string
     expect(hidden).toBe('none')
+
+    // With no bar to drag, the scroller takes keyboard focus itself, and its
+    // region name says which mix's table it is.
+    const scroller = page.getByTestId('compare-schedule-1-scroll')
+    await expect(scroller).toHaveAttribute('role', 'region')
+    await expect(scroller).toHaveAttribute('tabindex', '0')
+    await scroller.scrollIntoViewIfNeeded()
+    await scroller.focus()
+    await expect(scroller).toBeFocused()
+    await page.keyboard.press('PageDown')
+    await expect
+      .poll(() => scroller.evaluate((node) => node.scrollTop))
+      .toBeGreaterThan(0)
     // The blank card has neither a table nor a donut.
     await expect(page.getByTestId('compare-schedule-2')).toHaveCount(0)
     await expect(page.getByTestId('compare-mix-donut-2')).toHaveCount(0)

@@ -16,7 +16,7 @@ function createClientPromise(): Promise<MongoClient> {
   const { MONGODB_URI } = getAuthConfig()
   if (!MONGODB_URI) {
     throw new Error(
-      '[auth] MONGODB_URI is not set. Add it to .env (server-only; see SECURITY.md).',
+      '[auth] MONGODB_URI is not set. Add it to .env (server-only; see docs/SECURITY.md).',
     )
   }
   return new MongoClient(MONGODB_URI).connect()

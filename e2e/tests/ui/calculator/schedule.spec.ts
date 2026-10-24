@@ -43,17 +43,19 @@ test.describe('mortgage calculator - amortization schedule', () => {
       xLabels: string[]
     } | null
     expect(yearly, 'chart rendered').not.toBeNull()
-    // 15 yearly rows: 15 stacked bars (principal + interest rects), no area.
-    expect(yearly!.bars).toBe(30)
+    // 15 yearly rows, each a three-segment stack (net principal + indexation +
+    // interest) because the default mix carries an indexed track.
+    expect(yearly!.bars).toBe(45)
     expect(yearly!.areas).toBe(0)
     expect(yearly!.titles).toContain('תשלום שנתי')
     expect(yearly!.xLabels).toHaveLength(15)
 
     await calc.page.getByTestId('schedule-granularity-monthly').click()
     const monthly = (await calc.page.evaluate(probe)) as typeof yearly
-    // 180 monthly rows cannot be bars: the same curve becomes two areas.
+    // 180 monthly rows cannot be bars: the same curve becomes three areas
+    // (net principal, indexation and interest).
     expect(monthly!.bars).toBe(0)
-    expect(monthly!.areas).toBe(2)
+    expect(monthly!.areas).toBe(3)
     // The payments axis is scaled to ONE payment now, so it has to say so.
     expect(monthly!.titles).toContain('תשלום חודשי')
     expect(monthly!.titles).not.toContain('תשלום שנתי')
@@ -65,6 +67,42 @@ test.describe('mortgage calculator - amortization schedule', () => {
     const tooltip = calc.page.locator('.chart-tooltip')
     await expect(tooltip).toContainText('תשלום חודשי')
     await expect(tooltip).not.toContainText('תשלום שנתי')
+  })
+
+  test('a long indexed loan draws the negative net principal below zero', async ({ calc }) => {
+    // One fully indexed track over 30 years: year one adds more CPI drift than
+    // the principal payment repays, so net principal is negative. The chart
+    // must show that shortfall under the zero line, not clamp it to 0 (which
+    // would break the segments' reconciliation to the payment).
+    await calc.track(3).remove()
+    await calc.track(2).remove()
+    await calc.track(1).setType('fixedIndexed')
+    await calc.track(1).setAmount('1,000,000')
+    await calc.termSlider.fill('30')
+
+    const chart = calc.page.getByTestId('amortization-chart')
+    await expect(chart).toBeVisible()
+    await expect(chart.locator('.chart-legend')).toContainText('הצמדה')
+    const probe = (await chart.locator('svg').evaluate(`(() => {
+      const svg = document.querySelector('[data-testid="amortization-chart"] svg')
+      return {
+        negativeTicks: [...svg.querySelectorAll('text.chart-tick')].some((node) =>
+          (node.textContent || '').trim().startsWith('-₪'),
+        ),
+        zeroLine: svg.querySelectorAll('.chart-zero-line').length,
+        indexationBars: svg.querySelectorAll('rect.chart-bar-indexation').length,
+        hasNaN: svg.innerHTML.includes('NaN'),
+      }
+    })()`)) as {
+      negativeTicks: boolean
+      zeroLine: number
+      indexationBars: number
+      hasNaN: boolean
+    }
+    expect(probe.negativeTicks, 'the axis extends below zero').toBe(true)
+    expect(probe.zeroLine, 'the zero line is drawn').toBe(1)
+    expect(probe.indexationBars, 'one indexation segment per year').toBe(30)
+    expect(probe.hasNaN, 'no broken geometry').toBe(false)
   })
 
   test('per-track chart follows the monthly tab like the total view does', async ({ calc }) => {
@@ -362,6 +400,94 @@ test.describe('mortgage calculator - amortization schedule', () => {
     // the name line and for the numbers.
     expect(costSide.legendName).toEqual(mix.legendName)
     expect(costSide.legendNumber).toEqual(mix.legendNumber)
+  })
+
+  test('the wide mix ring matches the cost ring and gives the freed width to the chart', async ({
+    calc,
+  }) => {
+    // The wide band used to draw the mix ring at 280px while the cost ring in
+    // the asides was 190px. Both now render at 190px, and the chart beside the
+    // ring takes the ~90px the ring gave up.
+    await calc.page.setViewportSize({ width: 1440, height: 1200 })
+    const mix = calc.page.locator('[data-testid="track-mix-donut"] svg')
+    const cost = calc.page.locator('[data-testid="total-cost-donut"] svg')
+    const chart = calc.page.getByTestId('amortization-chart')
+    await chart.scrollIntoViewIfNeeded()
+    const mixBox = await mix.boundingBox()
+    const costBox = await cost.boundingBox()
+    const chartBox = await chart.boundingBox()
+    expect(mixBox).not.toBeNull()
+    expect(costBox).not.toBeNull()
+    expect(chartBox).not.toBeNull()
+    expect(mixBox!.width).toBeCloseTo(190, 0)
+    expect(costBox!.width).toBeCloseTo(190, 0)
+    expect(Math.abs(mixBox!.width - costBox!.width)).toBeLessThanOrEqual(1)
+    expect(chartBox!.width).toBeGreaterThan(800)
+
+    // The ring sits in the middle of its own legend, not on the column's
+    // reading edge (the legend is wider than the 190px ring).
+    const legendBox = await calc.page
+      .locator('[data-testid="track-mix-donut"] .mix-legend')
+      .boundingBox()
+    expect(legendBox).not.toBeNull()
+    expect(mixBox!.x + mixBox!.width / 2).toBeCloseTo(legendBox!.x + legendBox!.width / 2, 0)
+
+    // Every row takes the widest row's width, so the color chips line up on
+    // one edge instead of stepping in and out, each row's name and amount
+    // start at that chip (not from the middle of the column), and the block
+    // still sits centered under the ring.
+    const rows = calc.page.locator('[data-testid="track-mix-donut"] .mix-legend-item')
+    expect(await rows.count()).toBeGreaterThan(1)
+    const ringCenter = mixBox!.x + mixBox!.width / 2
+    const legend = await calc.page
+      .locator('[data-testid="track-mix-donut"] .mix-legend')
+      .evaluate((node) => {
+        const direction = getComputedStyle(node).direction
+        const start = (box: DOMRect) => (direction === 'rtl' ? box.right : box.left)
+        return [...node.querySelectorAll('.mix-legend-item')].map((row) => {
+          const box = row.getBoundingClientRect()
+          return {
+            center: box.x + box.width / 2,
+            chip: start(row.querySelector('.chart-swatch')!.getBoundingClientRect()),
+            name: start(row.querySelector('.mix-legend-name')!.getBoundingClientRect()),
+            amount: start(row.querySelector('.mix-legend-amount')!.getBoundingClientRect()),
+          }
+        })
+      })
+    expect(legend).toHaveLength(3)
+    for (const row of legend) {
+      expect(row.center).toBeCloseTo(ringCenter, 0)
+      expect(row.chip, 'chips share one line').toBeCloseTo(legend[0].chip, 0)
+      expect(row.name, 'names share one line').toBeCloseTo(legend[0].name, 0)
+      expect(row.amount, 'amount starts under its name').toBeCloseTo(row.name, 0)
+    }
+  })
+
+  test('the schedule table takes keyboard focus and scrolls with the keyboard', async ({
+    calc,
+  }) => {
+    // The bar is hidden to keep the panel clean, so the capped scroller is a
+    // focusable region instead: Tab reaches it and the keyboard pans the rows.
+    const scroller = calc.page.locator('.schedule-content .table-wrap').first()
+    await scroller.scrollIntoViewIfNeeded()
+    await expect(scroller).toHaveAttribute('role', 'region')
+    await expect(scroller).toHaveAttribute('tabindex', '0')
+    await expect(scroller).toHaveAttribute('aria-label', /./)
+
+    const measure = await scroller.evaluate((node) => ({
+      scrollTop: node.scrollTop,
+      scrollHeight: node.scrollHeight,
+      clientHeight: node.clientHeight,
+    }))
+    expect(measure.scrollTop).toBe(0)
+    expect(measure.scrollHeight).toBeGreaterThan(measure.clientHeight)
+
+    await scroller.focus()
+    await expect(scroller).toBeFocused()
+    await calc.page.keyboard.press('PageDown')
+    await expect
+      .poll(() => scroller.evaluate((node) => node.scrollTop))
+      .toBeGreaterThan(0)
   })
 
   test('chart tooltips hang just above the hovered data, not at the pointer', async ({ calc }) => {

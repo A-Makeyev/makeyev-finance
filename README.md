@@ -77,5 +77,7 @@ e2e/                 Playwright: page objects (pom) · support/mocks.ts · tests
 ```
 
 The CSS in `src/styles/globals.css` is a verbatim port of the legacy stylesheet,
-kept as the pixel-parity contract. See `MIGRATION.md` for the phase-by-phase
-record and `SECURITY.md` for the secret-handling ledger.
+kept as the pixel-parity contract. See `docs/MIGRATION.md` for the phase-by-phase
+record and `docs/SECURITY.md` for the secret-handling ledger. The roadmap and
+master plan live in `docs/`; `AGENTS.md` stays at the repository root so coding
+agents find the project rules.
