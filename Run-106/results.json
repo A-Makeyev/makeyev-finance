@@ -1,0 +1,178 @@
+{
+  "config": {
+    "argv": [
+      "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+      "/home/runner/work/makeyev-finance/makeyev-finance/node_modules/.bin/playwright",
+      "test"
+    ],
+    "configFile": "/home/runner/work/makeyev-finance/makeyev-finance/playwright.config.ts",
+    "rootDir": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/A-Makeyev/makeyev-finance/commit/172b00747735a887daf69a67586fadb32f8d9a8a",
+        "commitHash": "172b00747735a887daf69a67586fadb32f8d9a8a",
+        "buildHref": "https://github.com/A-Makeyev/makeyev-finance/actions/runs/40126256218"
+      },
+      "gitCommit": {
+        "shortHash": "172b007",
+        "hash": "172b00747735a887daf69a67586fadb32f8d9a8a",
+        "subject": "Shorten the prepayment lead and relabel the repayment-date field",
+        "body": "Shorten the prepayment lead and relabel the repayment-date field\n\n- Hebrew prepayment lead: shorter, clearer, still says Bank of Israel\n  formula and that every figure comes from the amortization schedule.\n- Hebrew \"מועד הפירעון\" label: now \"שנים מההלוואה\" instead of\n  \"שנים מתחילת המשכנתא\".\n- English prepayment lead/follow-up wording: trimmed the same way.\n- Hebrew penalty article: drop a repeated \"עמלת\" in favor of\n  \"עמלה\", drop one over-long clause in the timing line, and make the\n  \"תחנת יציאה\" notes terser by removing the redundant fee-exemption\n  restatement.\n- i18n housekeeping: keep `trackTypes.intro` and `charts.amortAria` as\n  existing keys (removed the accidental `false`/empty stubs added to\n  those keys), and rebuild the `charts` / `prepayment` sections so\n  the Hebrew file is structurally valid TypeScript again.\n- Also reduced a stray repeated word in one English help sentence.\n\nNo behavior change to the calculator; this is copy-only.\n\n🤖 Generated with Codebuff\nCo-Authored-By: Codebuff <noreply@codebuff.com>\n",
+        "author": {
+          "name": "Anatoly Makeyev",
+          "email": "anatoly.makeyev@gmail.com",
+          "time": 1792870733000
+        },
+        "committer": {
+          "name": "Anatoly Makeyev",
+          "email": "anatoly.makeyev@gmail.com",
+          "time": 1792870733000
+        },
+        "branch": "main"
+      }
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/makeyev-finance/makeyev-finance/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/A-Makeyev/makeyev-finance/commit/172b00747735a887daf69a67586fadb32f8d9a8a",
+            "commitHash": "172b00747735a887daf69a67586fadb32f8d9a8a",
+            "buildHref": "https://github.com/A-Makeyev/makeyev-finance/actions/runs/40126256218"
+          },
+          "gitCommit": {
+            "shortHash": "172b007",
+            "hash": "172b00747735a887daf69a67586fadb32f8d9a8a",
+            "subject": "Shorten the prepayment lead and relabel the repayment-date field",
+            "body": "Shorten the prepayment lead and relabel the repayment-date field\n\n- Hebrew prepayment lead: shorter, clearer, still says Bank of Israel\n  formula and that every figure comes from the amortization schedule.\n- Hebrew \"מועד הפירעון\" label: now \"שנים מההלוואה\" instead of\n  \"שנים מתחילת המשכנתא\".\n- English prepayment lead/follow-up wording: trimmed the same way.\n- Hebrew penalty article: drop a repeated \"עמלת\" in favor of\n  \"עמלה\", drop one over-long clause in the timing line, and make the\n  \"תחנת יציאה\" notes terser by removing the redundant fee-exemption\n  restatement.\n- i18n housekeeping: keep `trackTypes.intro` and `charts.amortAria` as\n  existing keys (removed the accidental `false`/empty stubs added to\n  those keys), and rebuild the `charts` / `prepayment` sections so\n  the Hebrew file is structurally valid TypeScript again.\n- Also reduced a stray repeated word in one English help sentence.\n\nNo behavior change to the calculator; this is copy-only.\n\n🤖 Generated with Codebuff\nCo-Authored-By: Codebuff <noreply@codebuff.com>\n",
+            "author": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1792870733000
+            },
+            "committer": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1792870733000
+            },
+            "branch": "main"
+          }
+        },
+        "id": "ui-chromium",
+        "name": "ui-chromium",
+        "testDir": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/tests\\/ui\\/.*\\.spec\\.ts/"
+        ],
+        "timeout": 45000
+      },
+      {
+        "outputDir": "/home/runner/work/makeyev-finance/makeyev-finance/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/A-Makeyev/makeyev-finance/commit/172b00747735a887daf69a67586fadb32f8d9a8a",
+            "commitHash": "172b00747735a887daf69a67586fadb32f8d9a8a",
+            "buildHref": "https://github.com/A-Makeyev/makeyev-finance/actions/runs/40126256218"
+          },
+          "gitCommit": {
+            "shortHash": "172b007",
+            "hash": "172b00747735a887daf69a67586fadb32f8d9a8a",
+            "subject": "Shorten the prepayment lead and relabel the repayment-date field",
+            "body": "Shorten the prepayment lead and relabel the repayment-date field\n\n- Hebrew prepayment lead: shorter, clearer, still says Bank of Israel\n  formula and that every figure comes from the amortization schedule.\n- Hebrew \"מועד הפירעון\" label: now \"שנים מההלוואה\" instead of\n  \"שנים מתחילת המשכנתא\".\n- English prepayment lead/follow-up wording: trimmed the same way.\n- Hebrew penalty article: drop a repeated \"עמלת\" in favor of\n  \"עמלה\", drop one over-long clause in the timing line, and make the\n  \"תחנת יציאה\" notes terser by removing the redundant fee-exemption\n  restatement.\n- i18n housekeeping: keep `trackTypes.intro` and `charts.amortAria` as\n  existing keys (removed the accidental `false`/empty stubs added to\n  those keys), and rebuild the `charts` / `prepayment` sections so\n  the Hebrew file is structurally valid TypeScript again.\n- Also reduced a stray repeated word in one English help sentence.\n\nNo behavior change to the calculator; this is copy-only.\n\n🤖 Generated with Codebuff\nCo-Authored-By: Codebuff <noreply@codebuff.com>\n",
+            "author": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1792870733000
+            },
+            "committer": {
+              "name": "Anatoly Makeyev",
+              "email": "anatoly.makeyev@gmail.com",
+              "time": 1792870733000
+            },
+            "branch": "main"
+          }
+        },
+        "id": "api-chromium",
+        "name": "api-chromium",
+        "testDir": "/home/runner/work/makeyev-finance/makeyev-finance/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/tests\\/api\\/.*\\.spec\\.ts/"
+        ],
+        "timeout": 45000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-report/results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 4,
+    "webServer": {
+      "command": "npm run build && npm run start",
+      "env": {
+        "PORT": "3100",
+        "E2E_SOCIAL_PROVIDERS": "",
+        "BETTER_AUTH_SECRET": "ci_only_not_a_real_secret_0123456789abcdef"
+      },
+      "url": "http://localhost:3100",
+      "reuseExistingServer": false,
+      "timeout": 180000,
+      "stdout": "ignore",
+      "stderr": "pipe"
+    }
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "Error: Process from config.webServer was not able to start. Exit code: 1",
+      "stack": "Error: Process from config.webServer was not able to start. Exit code: 1"
+    }
+  ],
+  "stats": {
+    "startTime": "2026-10-24T19:40:38.552Z",
+    "duration": 14545.19,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
