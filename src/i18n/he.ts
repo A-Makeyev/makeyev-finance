@@ -589,6 +589,7 @@ export const he = {
       charts: {
         amortAria: 'גרף החזרים: קרן וריבית לכל תקופה עם יתרת הלוואה',
         mixAria: 'תרשים התפלגות התמהיל לפי מסלולים',
+        netPrincipalLabel: 'קרן נטו',
         costAria: 'תרשים קרן, הצמדה וריבית לכל התקופה',
         perTrackAria: 'השוואת יתרת המסלולים לאורך התקופה',
         mixTotalLabel: 'סך המשכנתא',

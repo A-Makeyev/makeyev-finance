@@ -600,6 +600,7 @@ export const en: { translation: Translation } = {
       charts: {
         amortAria: 'Amortization chart: principal and interest per period with the loan balance',
         mixAria: 'Track-mix donut chart',
+        netPrincipalLabel: 'Net principal',
         costAria: 'Principal, indexation and interest over the full term',
         perTrackAria: 'Per-track balance comparison over the term',
         mixTotalLabel: 'Total mortgage',
