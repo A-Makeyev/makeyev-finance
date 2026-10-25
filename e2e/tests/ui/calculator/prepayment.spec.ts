@@ -250,19 +250,22 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     )
   })
 
-  test('keeps the controls when the chosen date is past every track', async ({ calc }) => {
-    // The default term is 15 years, so a year-30 prepayment has nothing left
-    // to price: the section says that instead of showing a zero balance - and
-    // the date field stays usable, so the reader can simply pick another year.
-    await calc.page.getByTestId('prepayment-years').fill('30')
-    await expect(calc.page.getByTestId('prepayment-empty')).toBeVisible()
-    await expect(calc.page.getByTestId('prepayment-total')).toHaveCount(0)
-    await expect(calc.page.getByTestId('prepayment-years')).toBeVisible()
+  test('stops the date at the last year that still has a balance', async ({ calc }) => {
+    // The default term is 15 years, so the last year with something to price is
+    // 14. A year past that is pulled back to it rather than left dangling over
+    // an empty result: the field, its max and the hint all agree on 14.
+    const years = calc.page.getByTestId('prepayment-years')
+    await expect(years).toHaveAttribute('max', '14')
+    await expect(calc.page.locator('#prepayment-years-hint')).toContainText('14')
 
-    // The callout names the last date that still has a balance and offers it.
-    await calc.page.getByTestId('prepayment-empty-action').click()
-    await expect(calc.page.getByTestId('prepayment-years')).toHaveValue('14')
+    await years.fill('30')
+    await expect(years).toHaveValue('14')
+    await expect(calc.page.getByTestId('prepayment-total')).toBeVisible()
     await expect(calc.page.getByTestId('prepayment-empty')).toHaveCount(0)
+
+    // The field still takes a year inside the range, so the clamp is not a lock.
+    await years.fill('3')
+    await expect(years).toHaveValue('3')
     await expect(calc.page.getByTestId('prepayment-total')).toBeVisible()
   })
 
