@@ -22,11 +22,16 @@ test.describe('mortgage calculator - early-repayment fee', () => {
 
     // A comparison rate BELOW the contractual one has to produce a fee, and a
     // lower one still has to produce a bigger fee - the formula's whole point.
-    await calc.page.getByTestId('prepayment-market-rate').fill('2')
+    const market = calc.page.getByTestId('prepayment-market-rate')
+    await market.fill('2')
+    // What was typed stays in the field. Binding the input to the suggestion
+    // used to blank it on the first keystroke while the figures still moved.
+    await expect(market).toHaveValue('2')
     const fixedAtTwo = await amountOf(calc.page.getByTestId('prepayment-fee-fixed'))
     expect(fixedAtTwo).toBeGreaterThan(0)
 
-    await calc.page.getByTestId('prepayment-market-rate').fill('1')
+    await market.fill('1')
+    await expect(market).toHaveValue('1')
     const fixedAtOne = await amountOf(calc.page.getByTestId('prepayment-fee-fixed'))
     expect(fixedAtOne).toBeGreaterThan(fixedAtTwo)
 
@@ -69,31 +74,78 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     expect(after).toBeLessThan(before)
   })
 
-  test('puts the fee-free prime track first in the cheapest payoff order', async ({ calc }) => {
+  test('prices the reader\'s own split, cheapest track first', async ({ calc }) => {
     await calc.page.getByTestId('prepayment-market-rate').fill('2')
-    await calc.page.getByTestId('prepayment-partial').fill('700000')
+    // Two tracks, two amounts: the bank repays the tracks the reader names.
+    await calc.page.getByTestId('prepayment-allocate-prime').fill('50000')
+    await calc.page.getByTestId('prepayment-allocate-fixed').fill('100000')
 
     const order = calc.page.getByTestId('prepayment-order')
     await expect(order).toBeVisible()
     // Cheapest shekels first: the exempt prime track, then a priced one.
     await expect(order.locator('li').first()).toContainText('פריים')
-    await expect(order.locator('li').nth(1)).toBeVisible()
+    await expect(order.locator('li')).toHaveCount(3)
 
-    // Each row carries its own amount and fee (the figures are cells of a
-    // grid now, not one sentence), and the total repeats the allocated amount.
-    const firstRow = order.locator('li').first()
-    await expect(firstRow.locator('.prepayment-order-figure')).toHaveCount(2)
-    await expect(firstRow).toContainText('סכום לפירעון')
-    await expect(firstRow).toContainText('עמלת היוון')
-    const allocated = await amountOf(firstRow.locator('.prepayment-order-value').first())
-    expect(allocated).toBeGreaterThan(0)
-    await expect(order.getByTestId('prepayment-order-fee')).toBeVisible()
+    // Each row is priced on its own amount, so the exempt track stays free
+    // and the fixed track carries its own pro-rata fee.
+    expect(await amountOf(calc.page.getByTestId('prepayment-allocate-fee-prime'))).toBe(0)
+    expect(await amountOf(calc.page.getByTestId('prepayment-allocate-fee-fixed'))).toBeGreaterThan(0)
+
+    // The total is the reader's two amounts added up, fee included.
+    expect(await amountOf(calc.page.getByTestId('prepayment-order-total-amount'))).toBe(150_000)
+    expect(await amountOf(order.getByTestId('prepayment-order-fee'))).toBeGreaterThan(0)
+  })
+
+  test('spreads a total across the mixes, then moves money inside it', async ({ calc }) => {
+    await calc.page.getByTestId('prepayment-market-rate').fill('2')
+    const total = calc.page.getByTestId('prepayment-partial')
+    await total.fill('20000')
+
+    // Prime is the cheapest shekel (exempt), so the total starts there.
+    const prime = calc.page.getByTestId('prepayment-allocate-prime')
+    const fixed = calc.page.getByTestId('prepayment-allocate-fixed')
+    await expect(prime).toHaveValue('20,000')
+    expect(await amountOf(calc.page.getByTestId('prepayment-allocate-fee-prime'))).toBe(0)
+    expect(await amountOf(calc.page.getByTestId('prepayment-order-total-amount'))).toBe(20_000)
+
+    // Moving 15k to the fixed track takes it out of prime, so the total holds
+    // and the fixed share now carries the fee that prime does not.
+    await fixed.fill('15000')
+    await expect(prime).toHaveValue('5,000')
+    await expect(total).toHaveValue('20,000')
+    expect(await amountOf(calc.page.getByTestId('prepayment-allocate-fee-fixed'))).toBeGreaterThan(0)
+    expect(await amountOf(calc.page.getByTestId('prepayment-order-total-amount'))).toBe(20_000)
+
+    // Taking prime to zero leaves 5k of the total unallocated. The panel names
+    // the gap and the fill button puts it back on the cheapest track.
+    await prime.fill('0')
+    await expect(calc.page.getByTestId('prepayment-order-remaining')).toContainText('5,000')
+    await calc.page.getByTestId('prepayment-order-fill').click()
+    await expect(prime).toHaveValue('5,000')
+    await expect(calc.page.getByTestId('prepayment-order-remaining')).toHaveCount(0)
+  })
+
+  test('caps each track amount at that track balance', async ({ calc }) => {
+    const field = calc.page.getByTestId('prepayment-allocate-fixed')
+    await field.fill('99999999')
+    const typed = Number.parseFloat((await field.inputValue()).replace(/[^\d.]/g, ''))
+    const balance = await amountOf(
+      calc.page.getByTestId('prepayment-row-fixed').locator('td').nth(1),
+    )
+
+    // The field shows the balance it will actually repay, not the typed number.
+    expect(typed).toBeCloseTo(balance, 0)
+    expect(await amountOf(calc.page.getByTestId('prepayment-order-total-amount'))).toBeCloseTo(
+      balance,
+      0,
+    )
   })
 
   test('models the partial amount as a shorter term or a lower payment', async ({ calc }) => {
-    // The outcomes need an amount to act on; the field alone shows nothing.
+    // The outcomes need an amount to act on; the fields alone show nothing.
     await expect(calc.page.getByTestId('prepayment-outcomes')).toHaveCount(0)
-    await calc.page.getByTestId('prepayment-partial').fill('300000')
+    await calc.page.getByTestId('prepayment-allocate-fixed').fill('100000')
+    await calc.page.getByTestId('prepayment-allocate-variableIndexed5y').fill('100000')
 
     const shortenPayment = await amountOf(calc.page.getByTestId('prepayment-shorten-payment'))
     const lowerPayment = await amountOf(calc.page.getByTestId('prepayment-lower-payment'))
@@ -112,7 +164,7 @@ test.describe('mortgage calculator - early-repayment fee', () => {
       'ריבית שנותרה',
     )
 
-    // The amount is 30% of the mix, so every track's remaining term falls:
+    // The amount is spread over two tracks, so the remaining term falls:
     // the shortened term is genuinely shorter than the unchanged one.
     const shortenedTerm = await calc.page.getByTestId('prepayment-shorten-term').innerText()
     const unchangedTerm = await calc.page.getByTestId('prepayment-lower-term').innerText()
@@ -121,7 +173,7 @@ test.describe('mortgage calculator - early-repayment fee', () => {
 
   test('fits the two outcome cards on a 360px phone', async ({ calc }) => {
     await calc.page.setViewportSize({ width: 360, height: 900 })
-    await calc.page.getByTestId('prepayment-partial').fill('300000')
+    await calc.page.getByTestId('prepayment-allocate-fixed').fill('100000')
     const outcomes = calc.page.getByTestId('prepayment-outcomes')
     await outcomes.scrollIntoViewIfNeeded()
     await expect(outcomes).toBeVisible()
@@ -185,6 +237,15 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     await expect(table.locator('summary')).toHaveCount(0)
     await expect(table.locator('tbody tr')).toHaveCount(14)
     await expect(table.locator('tbody tr').first()).toContainText('₪')
+
+    // The year cells are row headers, so they must not inherit the table
+    // header's teal 2px accent: they carry the same hairline as the row.
+    const borderOf = (selector: string) =>
+      table
+        .locator(selector)
+        .first()
+        .evaluate((node) => getComputedStyle(node).borderBottomColor)
+    expect(await borderOf('tbody th')).toBe(await borderOf('tbody td'))
   })
 
   test('places the fee chart and its scrolling table on one row, chart on the right', async ({
@@ -297,6 +358,174 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     await expect(chart).toBeVisible()
     await expect(chart.locator('path.chart-line-track')).toHaveCount(3)
   })
+
+  test('shows the loyalty discount as a step in the fee', async ({ calc }) => {
+    await calc.page.getByTestId('prepayment-market-rate').fill('2')
+    // The section opens on year 5, where the 30% reduction applies.
+    const discount = calc.page.getByTestId('prepayment-discount')
+    await expect(discount).toBeVisible()
+    await expect(discount).toContainText('30')
+
+    const gross = await amountOf(calc.page.getByTestId('prepayment-discount-gross'))
+    const off = await amountOf(calc.page.getByTestId('prepayment-discount-amount'))
+    const after = await amountOf(calc.page.getByTestId('prepayment-discount-after'))
+    const total = await amountOf(calc.page.getByTestId('prepayment-total'))
+    expect(gross).toBeGreaterThan(0)
+    // The ladder adds up exactly, and its last line is the table's own total.
+    expect(gross - off).toBe(after)
+    expect(after).toBe(total)
+    expect(off / gross).toBeCloseTo(0.3, 1)
+
+    // Before year 3 the law applies no reduction, so there is no step to show.
+    await calc.page.getByTestId('prepayment-years').fill('2')
+    await expect(discount).toHaveCount(0)
+  })
+
+  test('names the exemption behind each zeroed track', async ({ calc }) => {
+    // Each exempt row says which rule excused it, not just that it is exempt.
+    await expect(calc.page.getByTestId('prepayment-fee-prime')).toHaveText('פטור (פריים)')
+    await calc.page.getByTestId('prepayment-exit-station').check()
+    await expect(calc.page.getByTestId('prepayment-fee-variableIndexed5y')).toHaveText(
+      'פטור (תחנת יציאה)',
+    )
+  })
+
+  test('adds the fees charged on top, with their own controls', async ({ calc }) => {
+    await calc.page.getByTestId('prepayment-market-rate').fill('2')
+    const extras = calc.page.getByTestId('prepayment-extras')
+    await extras.locator('summary').click()
+
+    // The handling fee is per track and the default mix has three.
+    await expect(calc.page.getByTestId('prepayment-extras-operational')).toContainText('180')
+    await expect(calc.page.getByTestId('prepayment-extras-no-notice-amount')).toContainText('0')
+    await expect(calc.page.getByTestId('prepayment-extras-cpi-amount')).toContainText('0')
+
+    const fee = await amountOf(calc.page.getByTestId('prepayment-total'))
+    expect(await amountOf(calc.page.getByTestId('prepayment-extras-total'))).toBe(fee + 180)
+
+    // Both request-level charges are off until asked for, then they add up.
+    await calc.page.getByTestId('prepayment-extras-no-notice').check()
+    await calc.page.getByTestId('prepayment-extras-cpi').check()
+    const noNotice = await amountOf(calc.page.getByTestId('prepayment-extras-no-notice-amount'))
+    const cpi = await amountOf(calc.page.getByTestId('prepayment-extras-cpi-amount'))
+    // The default mix carries an indexed track, so both are real numbers.
+    expect(noNotice).toBeGreaterThan(0)
+    expect(cpi).toBeGreaterThan(0)
+    const withExtras = await amountOf(calc.page.getByTestId('prepayment-extras-total'))
+    expect(withExtras).toBe(fee + 180 + noNotice + cpi)
+
+    // The block fits a phone with both switches on: no sideways scroll.
+    await calc.page.setViewportSize({ width: 360, height: 900 })
+    await extras.scrollIntoViewIfNeeded()
+    const overflow = (await calc.page.evaluate(
+      'document.documentElement.scrollWidth - document.documentElement.clientWidth',
+    )) as number
+    expect(overflow).toBeLessThanOrEqual(1)
+  })
+
+  test('ranks the tracks before any amount is entered', async ({ calc }) => {
+    // The list answers "which track first" on its own; it used to be hidden
+    // until the reader typed a partial amount.
+    const order = calc.page.getByTestId('prepayment-order')
+    await expect(order).toBeVisible()
+    await expect(order.locator('li').first()).toContainText('פריים')
+    await expect(calc.page.getByTestId('prepayment-order-first')).toBeVisible()
+    // Every row carries its own amount field and its cost per ₪1,000.
+    await expect(order.locator('li').first().locator('.input-wrap')).toHaveCount(1)
+    await expect(order.locator('li').first()).toContainText('עמלה לכל 1,000')
+    // With nothing entered there is no partial prepayment to total up.
+    await expect(order.getByTestId('prepayment-order-fee')).toHaveCount(0)
+
+    // The section names the mix it prices: one mix, this many tracks.
+    await expect(calc.page.getByTestId('prepayment-mix-line')).toContainText('התמהיל הנוכחי')
+
+    // One amount is enough to start: the totals appear beside the rows.
+    await calc.page.getByTestId('prepayment-allocate-prime').fill('100000')
+    await expect(order.getByTestId('prepayment-order-fee')).toBeVisible()
+    await expect(order.getByTestId('prepayment-order-total-amount')).toContainText('סכום לפירעון')
+  })
+
+  test('puts the split under the controls and the outcomes above the cap', async ({ calc }) => {
+    await calc.page.getByTestId('prepayment-allocate-fixed').fill('100000')
+
+    // The requested reading order: amount first, then the split that spends
+    // it, then the summary. The outcomes explain the split, so they sit above
+    // the optional section 3(4) cap rather than after it.
+    const tops = (await calc.page.evaluate(`(() => {
+      const top = (id) => {
+        const el = document.querySelector('[data-testid="' + id + '"]')
+        return el ? el.getBoundingClientRect().top + window.scrollY : null
+      }
+      return {
+        amount: top('prepayment-partial'),
+        order: top('prepayment-order'),
+        stats: top('prepayment-kpi-total'),
+        outcomes: top('prepayment-outcomes'),
+        cap: top('prepayment-cap'),
+      }
+    })()`)) as Record<string, number | null>
+
+    expect(tops.amount, 'partial amount field rendered').not.toBeNull()
+    expect(tops.order, 'order panel rendered').not.toBeNull()
+    expect(tops.stats, 'summary rendered').not.toBeNull()
+    expect(tops.outcomes, 'outcomes rendered').not.toBeNull()
+    expect(tops.cap, 'cap disclosure rendered').not.toBeNull()
+
+    expect(tops.order!).toBeGreaterThan(tops.amount!)
+    expect(tops.stats!).toBeGreaterThan(tops.order!)
+    expect(tops.outcomes!).toBeGreaterThan(tops.stats!)
+    expect(tops.cap!).toBeGreaterThan(tops.outcomes!)
+  })
+
+  test('totals several track amounts and keeps each fee separate', async ({ calc }) => {
+    await calc.page.getByTestId('prepayment-market-rate').fill('2')
+    const order = calc.page.getByTestId('prepayment-order')
+
+    // Two amounts on two different tracks, one of them the free prime track.
+    await calc.page.getByTestId('prepayment-allocate-prime').fill('40000')
+    await calc.page.getByTestId('prepayment-allocate-fixed').fill('60000')
+
+    const primeFee = await amountOf(calc.page.getByTestId('prepayment-allocate-fee-prime'))
+    const fixedFee = await amountOf(calc.page.getByTestId('prepayment-allocate-fee-fixed'))
+    expect(primeFee).toBe(0)
+    expect(fixedFee).toBeGreaterThan(0)
+
+    // The block's total is exactly the two rows, fee included.
+    expect(await amountOf(order.getByTestId('prepayment-order-fee'))).toBeCloseTo(fixedFee, 0)
+    expect(await amountOf(order.getByTestId('prepayment-order-total-amount'))).toBe(100_000)
+    expect(await amountOf(calc.page.getByTestId('prepayment-total'))).toBeGreaterThanOrEqual(
+      fixedFee,
+    )
+  })
+
+  test('fills the rate-addition column, including an explicit zero', async ({ calc }) => {
+    // A comparison rate below the contractual one puts a real figure in.
+    await calc.page.getByTestId('prepayment-market-rate').fill('2')
+    await expect(calc.page.getByTestId('prepayment-rate-addition-fixed')).toHaveText(/^[\d.]+%$/)
+
+    // Above every track rate there is no fee: the column says 0% instead of
+    // looking broken, and the panel says why. The exempt track keeps '-'.
+    await calc.page.getByTestId('prepayment-market-rate').fill('20')
+    await expect(calc.page.getByTestId('prepayment-rate-addition-fixed')).toHaveText('0%')
+    await expect(calc.page.getByTestId('prepayment-rate-addition-variableIndexed5y')).toHaveText(
+      '0%',
+    )
+    await expect(calc.page.getByTestId('prepayment-rate-addition-prime')).toHaveText('-')
+    await expect(calc.page.getByTestId('prepayment-calculator')).toContainText(
+      'אין עמלת היוון לאף מסלול',
+    )
+  })
+
+  test('keeps the four penalty facts next to the fee they explain', async ({ calc }) => {
+    const note = calc.page.getByTestId('prepayment-calculator').getByTestId('prepayment-note')
+    await expect(note).toBeVisible()
+    // It is no longer in the input column, where it used to sit under the
+    // warning before the fee panel could price anything.
+    await expect(calc.page.locator('form [data-testid="prepayment-note"]')).toHaveCount(0)
+
+    await note.locator('summary').click()
+    await expect(calc.page.getByTestId('prepayment-penalty-facts').locator('li')).toHaveCount(4)
+  })
 })
 
 test.describe('early-repayment fee in English (LTR)', () => {
@@ -328,7 +557,7 @@ test.describe('early-repayment fee in English (LTR)', () => {
 
   test('names both partial-prepayment outcomes in English', async ({ localizedCalc }) => {
     await localizedCalc.goto()
-    await localizedCalc.page.getByTestId('prepayment-partial').fill('300000')
+    await localizedCalc.page.getByTestId('prepayment-allocate-fixed').fill('100000')
     const outcomes = localizedCalc.page.getByTestId('prepayment-outcomes')
     await expect(outcomes).toContainText('Finish earlier')
     await expect(outcomes).toContainText('Lower the payment')

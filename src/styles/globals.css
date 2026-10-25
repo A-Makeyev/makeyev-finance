@@ -6567,28 +6567,31 @@ e #name,
   font-size: 24px;
 }
 
-/* Wide schedule band: the mix ring matches the asides cost ring (190px), and
+/* Wide schedule band: the mix ring matches the asides cost ring (210px), and
    the chart takes the freed width. The mix text sizes live in the 320-unit
    viewBox, so they grow in units to keep the same rendered px at the smaller
    ring. The narrow pair keeps its own 260px scale below. */
 @media (min-width: 1001px) {
   .schedule-chart-band .schedule-mix-donut svg {
-    width: 190px;
-    max-width: 190px;
+    width: 210px;
+    max-width: 210px;
   }
 
+  /* Units shrink with the bigger ring, so the labels keep their rendered size:
+     19.9/19.9/30.8 units of the 320-unit canvas read ~13px / ~13px / ~20px at
+     210px, exactly what 22/22/34 read at 190px. */
   .schedule-chart-band .schedule-mix-donut .donut-slice-label,
   .schedule-chart-band .schedule-mix-donut .donut-center-label {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .schedule-chart-band .schedule-mix-donut .donut-center-value,
   .schedule-chart-band .schedule-mix-donut text.donut-center-value[data-compact="true"] {
-    font-size: 34px;
+    font-size: 30px;
   }
 
   /* Ring centered over its own legend, not parked on the column's reading
-     edge: the legend is wider than the 190px ring, and its outward shift
+     edge: the legend is wider than the 210px ring, and its outward shift
      (below) would otherwise leave the ring off-centre against it. */
   .schedule-chart-band .schedule-mix-donut {
     justify-items: center;
@@ -6769,25 +6772,25 @@ e #name,
 }
 
 .cost-donut svg {
-  width: 190px;
+  width: 210px;
   height: auto;
 }
 
 /* The in-slice share and the centre pair are sized in viewBox units, so their
-   rendered size follows the ring's own width: 12/12/18 units read ~13.4px /
-   ~13.4px / ~20px at the 190px asides ring, matching the larger mix canvas.
-   The pair overrides these for its own ring width, so the two placements read
-   at the same scale. */
+   rendered size follows the ring's own width: 10.9/10.9/16.3 units read
+   ~13.5px / ~13.5px / ~20px at the 210px asides ring - the same rendered type
+   as before the ring grew. The pair overrides these for its own ring width, so
+   the two placements read at the same scale. */
 .cost-donut .donut-slice-label {
-  font-size: 12px;
+  font-size: 10.9px;
 }
 
 .cost-donut .donut-center-label {
-  font-size: 12px;
+  font-size: 10.9px;
 }
 
 .cost-donut .donut-center-value {
-  font-size: 18px;
+  font-size: 16.3px;
 }
 
 .cost-legend {
@@ -6873,11 +6876,13 @@ e #name,
 
 .prepayment-controls {
   display: grid;
+  /* Three fields (date, comparison rate, partial amount) and the exit-station
+     checkbox on the same row; each field spans a label row, an input row and
+     a hint row, so the inputs line up even when one caption wraps. */
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-  gap: 18px;
-  /* The fields carry a hint under the input, the checkbox does not: align the
-     tops so every label sits on one line, then push the checkbox down to the
-     input row by hand. */
+  grid-template-rows: auto auto auto;
+  column-gap: 18px;
+  row-gap: 0;
   align-items: start;
   padding-bottom: 20px;
   margin-bottom: 18px;
@@ -6889,6 +6894,28 @@ e #name,
   font-size: 0.95rem;
   font-weight: 600;
   min-width: 0;
+}
+
+/* A field is three grid rows borrowed from the controls grid. The caption sits
+   at the bottom of its row, directly above the input, so a one-line label and
+   a wrapped one both leave the same small gap instead of one input sitting
+   lower than the others. */
+.prepayment-controls .prepayment-field {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+}
+
+.prepayment-controls .prepayment-field-label {
+  display: block;
+  align-self: end;
+  padding-bottom: 7px;
+  line-height: 1.2;
+}
+
+/* The shared .input-wrap margin would double the gap above the input row. */
+.prepayment-controls .input-wrap {
+  margin-top: 0;
 }
 
 /* The caption under a control: the accepted range, the rate source, why the
@@ -6920,9 +6947,11 @@ e #name,
   display: flex;
   align-items: center;
   gap: 8px;
-  /* Centre it in its grid row instead of nudging it down by a fixed amount:
-     beside a field it lands on the input's middle line, and alone on a
-     stacked phone row it needs no offset at all. */
+  /* The controls grid is three rows; row 2 is the input row. Placing the
+     checkbox there centres it on the boxes themselves, not on the whole field
+     (which also holds a caption above and a hint below). */
+  grid-column: 4;
+  grid-row: 2;
   align-self: center;
   color: var(--calc-muted);
   font-size: 0.95rem;
@@ -6975,11 +7004,14 @@ e #name,
   background: var(--calc-note);
 }
 
-/* Three headline numbers above the table: the fee, its basis, and its share. */
+/* Three headline numbers above the table: the fee, its basis, and its share.
+   The split panel above shares their soft fill, so a clear gap keeps the two
+   blocks from reading as one. */
 .prepayment-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
+  margin-top: 30px;
   margin-bottom: 20px;
 }
 
@@ -6994,6 +7026,13 @@ e #name,
 .prepayment-stat.is-primary {
   background: var(--calc-note);
   border-inline-start-color: var(--calc-teal);
+}
+
+/* The headline fee card needs a lighter surface than the almost-black note
+   fill on the dark page, or it reads as a hole rather than a highlight. */
+:root[data-theme='dark'] .prepayment-stat.is-primary {
+  background: color-mix(in srgb, var(--calc-teal) 18%, var(--calc-paper));
+  border-inline-start-color: var(--calc-teal-dark);
 }
 
 .prepayment-stat-label {
@@ -7274,6 +7313,13 @@ e #name,
   background: var(--calc-paper);
 }
 
+/* The year column holds row headers, so the page-wide `th` rule would draw its
+   teal 2px accent under every single year. These are data rows, not headings:
+   the year keeps the same hairline as the rest of its row. */
+.prepayment-chart-table tbody th {
+  border-bottom: 1px solid var(--calc-line);
+}
+
 .prepayment-chart-table thead th.unused {
   display: none;
 }
@@ -7372,6 +7418,75 @@ e #name,
   font-weight: 700;
 }
 
+/* Marks the track to repay first in the ranking (and in the split). */
+.prepayment-order-first {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--calc-teal) 35%, transparent);
+  border-radius: 999px;
+  background: var(--calc-note);
+  color: var(--calc-teal-dark);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.prepayment-order-hint {
+  margin: 12px 0 0;
+  color: var(--calc-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* A split that does not use the whole total: name what is left and offer the
+   one-click cheapest-first fill, instead of silently pricing a smaller sum. */
+.prepayment-order-remaining {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin-top: 10px;
+}
+
+.prepayment-order-remaining .prepayment-order-hint {
+  margin: 0;
+}
+
+.prepayment-order-fill {
+  padding: 6px 12px;
+  border: 1px dashed var(--calc-accent);
+  background: transparent;
+  color: var(--calc-accent);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.prepayment-order-fill:hover,
+.prepayment-order-fill:focus-visible {
+  background: var(--calc-accent);
+  color: #fff;
+}
+
+.prepayment-order-fill:focus-visible {
+  outline: 2px solid var(--calc-accent);
+  outline-offset: 2px;
+}
+
+/* What is being priced, directly above the per-track table. */
+.prepayment-mix-line {
+  margin: 0 0 8px;
+  color: var(--calc-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 /* Soft ring rather than a filled teal disc: `--calc-teal` carries white text
    at ~3:1 in dark mode, while the brighter `--calc-teal-dark` on this note
    fill stays readable in both themes. */
@@ -7391,6 +7506,24 @@ e #name,
 
 .prepayment-order-name {
   min-width: 0;
+}
+
+/* The per-track amount field, in the row's own column. Compact, and the
+   figure inside it reads to the end like the fee column beside it. */
+.prepayment-order-amount {
+  margin-top: 0;
+  min-inline-size: 118px;
+}
+
+.prepayment-order-amount input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  text-align: end;
+}
+
+.prepayment-order-amount span {
+  padding: 0 10px;
 }
 
 .prepayment-order-note {
@@ -7430,13 +7563,6 @@ e #name,
 
 .prepayment-order-row.is-total .prepayment-order-value {
   color: var(--calc-teal-dark);
-}
-
-.prepayment-order-capped {
-  margin: 10px 0 0;
-  color: var(--calc-muted);
-  font-size: 0.8rem;
-  line-height: 1.5;
 }
 
 /* The partial amount's two legal outcomes: finish earlier, or keep the end
@@ -7604,9 +7730,118 @@ e #name,
   margin: 14px 0 0;
 }
 
+/* The "why zero" answer closes the table above it, so give the next block a
+   clear breath after it instead of letting the two run together. */
+.prepayment-zero-why {
+  margin-bottom: 24px;
+}
+
 .prepayment-disclaimer {
   border-top: 1px solid var(--calc-line);
   padding-top: 12px;
+}
+
+/* The loyalty discount, shown as a step between the gross fee and the charge. */
+.prepayment-discount {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  background: var(--calc-soft);
+  border-inline-start: 3px solid var(--calc-teal);
+}
+
+.prepayment-discount-title {
+  margin: 0 0 8px;
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+}
+
+.prepayment-discount-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.prepayment-discount-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.prepayment-discount-row dt {
+  color: var(--calc-muted);
+}
+
+.prepayment-discount-row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.prepayment-discount-row.is-discount dd {
+  color: var(--calc-teal-dark);
+  font-weight: 700;
+}
+
+.prepayment-discount-row.is-total dt,
+.prepayment-discount-row.is-total dd {
+  color: inherit;
+  font-weight: 700;
+}
+
+.prepayment-discount-hint {
+  margin: 8px 0 0;
+  color: var(--calc-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* The charges outside the discounting formula, one row each. */
+.prepayment-extras-list {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.prepayment-extras-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 10px;
+}
+
+.prepayment-extras-label {
+  display: grid;
+  flex: 1 1 12rem;
+  gap: 2px;
+}
+
+.prepayment-extras-hint {
+  color: var(--calc-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.prepayment-extras-row strong {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.prepayment-extras-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--calc-line);
+  font-weight: 700;
+}
+
+.prepayment-extras-total strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* Section 3(4)'s optional origination-rate inputs: one compact field per
@@ -7671,11 +7906,26 @@ e #name,
   .prepayment-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* The third field wraps to a second row; the checkbox takes the free column
+     beside its input instead of leaving a half-empty grid. */
+  .prepayment-controls .prepayment-checkbox {
+    grid-column: 2;
+    grid-row: 5;
+  }
 }
 
 @media (max-width: 650px) {
   .prepayment-controls {
     grid-template-columns: 1fr;
+  }
+
+  /* One column has no free column beside the last field, so the checkbox
+     closes the block after all three. */
+  .prepayment-controls .prepayment-checkbox {
+    grid-column: 1;
+    grid-row: 10;
+    margin-top: 12px;
   }
 
   .prepayment-stats {
@@ -7691,11 +7941,16 @@ e #name,
     grid-template-columns: 1fr !important;
   }
 
-  /* Amount and fee drop under the track name, each captioned, so a phone
-     keeps the two aligned columns instead of a run-on sentence. */
+  /* The amount field and the fee drop under the track name, each in the
+     second column, so a phone keeps the row aligned instead of a run-on
+     sentence. */
   .prepayment-order-row {
     grid-template-columns: 20px minmax(0, 1fr);
     row-gap: 6px;
+  }
+
+  .prepayment-order-amount {
+    grid-column: 2;
   }
 
   .prepayment-order-figure {

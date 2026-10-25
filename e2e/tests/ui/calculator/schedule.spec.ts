@@ -406,8 +406,9 @@ test.describe('mortgage calculator - amortization schedule', () => {
     calc,
   }) => {
     // The wide band used to draw the mix ring at 280px while the cost ring in
-    // the asides was 190px. Both now render at 190px, and the chart beside the
-    // ring takes the ~90px the ring gave up.
+    // the asides was 190px. Both now render at 210px - bigger than the first
+    // pass at 190px, without enlarging their labels - and the chart beside the
+    // ring takes the width the ring gives up.
     await calc.page.setViewportSize({ width: 1440, height: 1200 })
     const mix = calc.page.locator('[data-testid="track-mix-donut"] svg')
     const cost = calc.page.locator('[data-testid="total-cost-donut"] svg')
@@ -419,10 +420,40 @@ test.describe('mortgage calculator - amortization schedule', () => {
     expect(mixBox).not.toBeNull()
     expect(costBox).not.toBeNull()
     expect(chartBox).not.toBeNull()
-    expect(mixBox!.width).toBeCloseTo(190, 0)
-    expect(costBox!.width).toBeCloseTo(190, 0)
+    expect(mixBox!.width).toBeCloseTo(210, 0)
+    expect(costBox!.width).toBeCloseTo(210, 0)
     expect(Math.abs(mixBox!.width - costBox!.width)).toBeLessThanOrEqual(1)
     expect(chartBox!.width).toBeGreaterThan(800)
+
+    // The rings grew but their type did not: both still render the share and
+    // the centre figure at the ~13px / ~20px they read at the old 190px ring.
+    // Font sizes inside an SVG are viewBox units, so the rendered size is the
+    // declared size times the ring's own scale; read both.
+    const typeSizes = (await calc.page.evaluate(`(() => {
+      const rendered = (rootSelector, textSelector) => {
+        const root = document.querySelector(rootSelector)
+        const svg = root && root.querySelector('svg')
+        const text = root && root.querySelector(textSelector)
+        if (!svg || !text) return 0
+        const units = Number(svg.getAttribute('viewBox').split(' ')[2])
+        const scale = svg.getBoundingClientRect().width / units
+        return parseFloat(getComputedStyle(text).fontSize) * scale
+      }
+      return {
+        mixSlice: rendered('[data-testid="track-mix-donut"]', 'text.donut-slice-label'),
+        mixValue: rendered('[data-testid="track-mix-donut"]', 'text.donut-center-value'),
+        costSlice: rendered('[data-testid="total-cost-donut"]', 'text.donut-slice-label'),
+        costValue: rendered('[data-testid="total-cost-donut"]', 'text.donut-center-value'),
+      }
+    })()`)) as { mixSlice: number; mixValue: number; costSlice: number; costValue: number }
+    expect(typeSizes.mixSlice).toBeGreaterThan(12)
+    expect(typeSizes.mixSlice).toBeLessThan(14)
+    expect(typeSizes.costSlice).toBeGreaterThan(12)
+    expect(typeSizes.costSlice).toBeLessThan(14)
+    expect(typeSizes.mixValue).toBeGreaterThan(19)
+    expect(typeSizes.mixValue).toBeLessThan(21)
+    expect(typeSizes.costValue).toBeGreaterThan(19)
+    expect(typeSizes.costValue).toBeLessThan(21)
 
     // The ring sits in the middle of its own legend, not on the column's
     // reading edge (the legend is wider than the 190px ring).

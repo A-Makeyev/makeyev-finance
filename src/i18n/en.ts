@@ -182,8 +182,8 @@ export const en: { translation: Translation } = {
             text: 'Under Bank of Israel rules, a prime track is exempt from the prepayment penalty. Its rate follows the Bank of Israel rate, so the bank has no locked-in future profit to be compensated for.',
           },
           reset: {
-            title: 'Resets more than once a year: an exit point at every reset',
-            text: 'A track whose rate resets every two, three or five years has an exit point: at every rate reset you can repay it without the discounting penalty (עמלת היוון). That exemption covers the discounting penalty; small operational fees may still apply.',
+            title: 'Annual or five-year resets: an exit point at every reset',
+            text: 'A track whose rate resets every year or every five years has an exit point: at every rate reset you can repay it without the discounting penalty (עמלת היוון). An annually-reset track is exempt throughout; a five-year track is exempt on the reset date itself. Small operational fees may still apply.',
           },
           fixed: {
             title: 'Fixed-rate tracks: no exemption',
@@ -626,7 +626,6 @@ export const en: { translation: Translation } = {
         marketRateManual: 'Your own rate, for every track',
         marketRateSuggestedNote: 'Suggested comparison rate from the latest BOI table: {{rate}}.',
         partialLabel: 'Partial prepayment amount',
-        partialHint: 'For the cheapest payoff order',
         exitStation: 'Repaid at an exit station (rate-reset date)',
         table: {
           track: 'Track',
@@ -641,6 +640,38 @@ export const en: { translation: Translation } = {
           balance: 'Balance to repay',
           share: 'Fee of the balance',
         },
+        discount: {
+          title: 'The loyalty discount at this date',
+          gross: 'Fee before the discount',
+          amount: 'Loyalty discount ({{percent}}%)',
+          after: 'Discounting fee after the discount',
+          hint: 'The reduction follows the age of the loan: 20% from year 3, 30% from year 5.',
+        },
+        extras: {
+          title: 'Fees charged on top of the discounting fee',
+          lead: 'The discounting fee is the statutory core. These are the other components the bank may charge on the same prepayment. The handling fee and the no-notice rate are caps, so the bank may charge less.',
+          operational: 'Handling fee, up to {{cap}} per track',
+          operationalHint: 'Charged once for each track being repaid.',
+          noNotice: 'No-notice fee (0.1%)',
+          noNoticeHint: 'When the request is made less than 10 days before the repayment.',
+          cpi: 'CPI compensation',
+          cpiHint: 'On the indexed part, when the repayment falls on days 1-15 of the month.',
+          total: 'Fee including these charges',
+          note: 'These are upper bounds, not a quote: the bank sets the actual amounts. The CPI part uses the calculator’s own inflation assumption.',
+        },
+        rateAdditionTiny: '<0.01%',
+        noFeeAtMarket:
+          'At the current comparison rate no track carries a discounting fee. Enter a lower rate to see what a fee would look like.',
+        mixLine_one: 'The mix being priced: 1 track, {{balance}} to repay',
+        mixLine_two: 'The mix being priced: 2 tracks, {{balance}} to repay',
+        mixLine_other: 'The mix being priced: {{count}} tracks, {{balance}} to repay',
+        orderFirst: 'Repay first',
+        orderPerThousand: 'Fee per ₪1,000: {{amount}}',
+        orderAllocateAria: 'Amount to repay from the {{track}} track',
+        orderNoAmount:
+          'Enter a partial amount above, or fill in one track or several. With no amount there is no partial prepayment, and the list shows only the ranking.',
+        zeroWhy:
+          'Why 0? Prime and annually reset tracks are always exempt. A five-year track is exempt on its reset date, and when the comparison rate is not below the track rate there is no fee to pay.',
         noFee: 'No fee',
         noFeeWhy:
           'The comparison rate is not below this track’s rate, so early repayment carries no discounting fee here.',
@@ -654,17 +685,17 @@ export const en: { translation: Translation } = {
         chartTableSummary: 'Show the data as a table',
         chartTableAria: 'Discounting fee per track by repayment year',
         chartTableYear: 'Year',
-        orderTitle: 'Cheapest payoff order: which track to repay first',
+        orderTitle: 'Cheapest payoff order: how much from each track',
         orderLead:
-          'The fee is charged in the same fee-to-balance ratio on every track, so the amount goes from the cheapest shekel to the dearest.',
+          'The total above spreads from the cheapest track to the dearest. Editing a row moves money between tracks without changing the total, and one click fills any remainder.',
         orderAmount: 'Amount',
         orderFee: 'Fee',
         orderTotalLabel: 'Total prepayment',
-        orderPartial:
-          'The amount entered is above the total balance, so the calculation covers {{allocated}} only.',
+        orderRemaining: 'Still unallocated from the total: {{amount}}',
+        orderFillRemaining: 'Fill the remainder cheapest first',
         exempt: {
           prime: 'Exempt (prime)',
-          frequentReset: 'Exempt (variable rate)',
+          frequentReset: 'Exempt (annual rate reset)',
           exitStation: 'Exempt (exit station)',
         },
         marketRateSource:

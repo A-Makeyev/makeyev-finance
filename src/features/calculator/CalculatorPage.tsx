@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, setNavigationBlockGuard, useNavigate } from '@/router'
+import { setNavigationBlockGuard, useNavigate } from '@/router'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPrimeRatePercent } from '@/services/boi'
@@ -16,7 +16,6 @@ import { MoneyInput } from '@/components/ui/MoneyInput'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { RateValidityChip } from '@/components/ui/RateValidityChip'
 import { HoverTooltip } from '@/components/ui/HoverTooltip'
-import { PrepaymentPenaltyFacts } from '@/components/education/PrepaymentPenaltyFacts'
 import { TermSlider } from '@/components/ui/TermSlider'
 import { ScrollCue } from '@/components/layout/ScrollCue'
 import { FlipSelect } from '@/components/ui/FlipSelect'
@@ -855,24 +854,8 @@ export function CalculatorPage() {
             </p>
           </form>
 
-          {/* Prepayment-penalty education: the Bank of Israel exemptions and
-              the loyalty discount, stated as general background rather than
-              a computed warning, so it sits outside the form. Collapsed by
-              default; the full article is one click away. */}
-          <details className="prepayment-note" data-testid="prepayment-note">
-            <summary>
-              <span className="collapse-caret" aria-hidden="true" />
-              {t('education.prepaymentPenalty.title')}
-            </summary>
-            <p className="prepayment-note-lead">{t('education.prepaymentPenalty.lead')}</p>
-            <PrepaymentPenaltyFacts className="prepayment-facts" />
-            <p className="prepayment-note-disclaimer">
-              {t('education.prepaymentPenalty.disclaimer')}
-            </p>
-            <Link className="prepayment-note-link" to="/articles/prepayment-penalties">
-              {t('education.prepaymentPenalty.articleLink')}
-            </Link>
-          </details>
+          {/* The prepayment-penalty facts now sit next to the computed fee
+              they explain, inside the early-repayment section. */}
         </section>
 
         <div ref={resultsRef}>

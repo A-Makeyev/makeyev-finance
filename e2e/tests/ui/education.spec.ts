@@ -43,39 +43,14 @@ for (const language of ['hebrew', 'english'] as const) {
       await expect(note).toBeVisible()
       await expect(page.getByTestId('prepayment-penalty-facts')).toBeHidden()
 
-      // The note is indented under the ⚠️ warning (user request): never out
-      // past the ⚠️ marker, and a small fixed gap beneath the warning box
-      // (20px note margin over the warning's -10px bottom margin = a 10px
-      // gap, kept as a deliberate design choice - the bound allows ~2px of
-      // drift). Read the live boxes so a padding or margin change fails here
-      // instead of drifting quietly. (String-form evaluate: the e2e tsconfig
-      // has no DOM lib.)
-      const alignment = (await page.evaluate(
-        `(() => {
-          const marker = document.querySelector('.regulatory-note strong')
-          const warning = document.querySelector('.regulatory-note')
-          const summary = document.querySelector('[data-testid="prepayment-note"] > summary')
-          if (!marker || !warning || !summary) return null
-          const m = marker.getBoundingClientRect()
-          const w = warning.getBoundingClientRect()
-          const s = summary.getBoundingClientRect()
-          // Distance inward from the ⚠️ marker: positive means indented under
-          // it, negative means overhanging out past it. In RTL the start edge
-          // is the right one, and indenting moves it left, so flip the signs.
-          const rtl = getComputedStyle(document.documentElement).direction === 'rtl'
-          return {
-            indentFromMarker: Math.round(rtl ? m.right - s.right : s.left - m.left),
-            gapBelowWarning: Math.round(s.top - w.bottom),
-          }
-        })()`,
-      )) as { indentFromMarker: number; gapBelowWarning: number } | null
-      expect(alignment, 'warning and note both rendered').not.toBeNull()
-      expect(
-        alignment?.indentFromMarker,
-        'note starts at or under the ⚠️ marker',
-      ).toBeGreaterThanOrEqual(0)
-      expect(alignment?.gapBelowWarning, 'note sits under the warning').toBeGreaterThanOrEqual(0)
-      expect(alignment?.gapBelowWarning, 'note sits under the warning').toBeLessThanOrEqual(12)
+      // The note belongs with the computed fee, so it lives inside the
+      // early-repayment section rather than in the input column. That is the
+      // placement it had when this test was written under the ⚠️ warning; the
+      // facts are now read next to the number they explain.
+      await expect(
+        page.locator('[data-testid="prepayment-calculator"] [data-testid="prepayment-note"]'),
+      ).toBeVisible()
+      await expect(page.locator('form [data-testid="prepayment-note"]')).toHaveCount(0)
 
       await note.locator('summary').click()
       const facts = page.getByTestId('prepayment-penalty-facts')
@@ -143,9 +118,9 @@ for (const language of ['hebrew', 'english'] as const) {
 
       // Same collapsing treatment and type scale: every block- and
       // summary-level value matches the purchase-tax breakdown's, EXCEPT the
-      // top gap - the note deliberately sits 20px down from the ⚠️ warning
-      // (user choice; the breakdown keeps 10px), so compare the margins
-      // separately and only require the note's to stay pinned.
+      // top gap - the note keeps its own 20px margin (the breakdown keeps
+      // 10px), so compare the margins separately and only require the note's
+      // to stay pinned.
       expect(snapshot.breakdown).not.toBeNull()
       const { marginTop: _noteMargin, ...noteRest } = snapshot.note!
       const { marginTop: _breakdownMargin, ...breakdownRest } = snapshot.breakdown!

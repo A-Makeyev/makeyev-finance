@@ -7,13 +7,15 @@ import {
 } from '@/lib/amortization'
 import {
   ageDiscountFor,
-  feeAsAnnualRateAddition,
   cheapestPrepaymentOrder,
+  feeAsAnnualRateAddition,
+  prepaymentAllocationPlan,
   deflatePayments,
   partialPrepaymentOutcomes,
   type PartialPrepaymentTrack,
   periodicFromEffectiveAnnual,
   periodicFromNominalAnnual,
+  prepaymentDiscountSummary,
   prepaymentExtras,
   prepaymentFee,
   presentValue,
@@ -538,16 +540,17 @@ describe('prepayment - rate addition', () => {
   })
 })
 
-describe('prepayment - cheapest payoff order', () => {
+describe('prepayment - per-track allocation plan', () => {
   const candidates = [
     { id: 'cheap', balance: 200_000, fee: 1_000 }, // 0.5 agorot per shekel
     { id: 'expensive', balance: 100_000, fee: 5_000 }, // 5 agorot per shekel
     { id: 'free', balance: 50_000, fee: 0 },
   ]
 
-  it('allocates the cheapest shekels first', () => {
+  it('spreads a total from the cheapest track first, then spills over', () => {
     const plan = cheapestPrepaymentOrder(candidates, 120_000)
     expect(plan.order).toEqual(['free', 'cheap', 'expensive'])
+    // The free track absorbs its whole 50k before the next-cheapest starts.
     expect(plan.allocations).toEqual([
       { id: 'free', amount: 50_000, fee: 0 },
       { id: 'cheap', amount: 70_000, fee: 350 },
@@ -556,29 +559,129 @@ describe('prepayment - cheapest payoff order', () => {
     expect(plan.totalFee).toBe(350)
   })
 
-  it('caps at the balances actually available', () => {
-    const plan = cheapestPrepaymentOrder(candidates, 1_000_000)
+  it('stops the cheapest-first split at the whole mix balance', () => {
+    const plan = cheapestPrepaymentOrder(candidates, 900_000)
+    expect(plan.allocations.map((allocation) => allocation.amount)).toEqual([
+      50_000, 200_000, 100_000,
+    ])
     expect(plan.allocated).toBe(350_000)
     expect(plan.totalFee).toBe(6_000)
-    expect(plan.allocations.map((allocation) => allocation.id)).toEqual([
-      'free',
-      'cheap',
-      'expensive',
-    ])
   })
 
-  it('scales the fee pro rata for a partial prepayment', () => {
-    const plan = cheapestPrepaymentOrder(candidates, 150_000)
+  it('allocates nothing for a zero, negative or non-finite total', () => {
+    for (const amount of [0, -5_000, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const plan = cheapestPrepaymentOrder(candidates, amount)
+      expect(plan.allocations).toEqual([])
+      expect(plan.allocated).toBe(0)
+      expect(plan.totalFee).toBe(0)
+    }
+  })
+
+  it('prices the tracks the reader chose, not a cheapest-first split', () => {
+    const plan = prepaymentAllocationPlan(candidates, { cheap: 100_000, expensive: 20_000 })
+    expect(plan.order).toEqual(['free', 'cheap', 'expensive'])
+    expect(plan.allocations).toEqual([
+      { id: 'cheap', amount: 100_000, fee: 500 },
+      { id: 'expensive', amount: 20_000, fee: 1_000 },
+    ])
+    expect(plan.allocated).toBe(120_000)
+    expect(plan.totalFee).toBe(1_500)
+  })
+
+  it('caps each amount at its own track balance', () => {
+    const plan = prepaymentAllocationPlan(candidates, { cheap: 900_000, free: 60_000 })
     expect(plan.allocations).toEqual([
       { id: 'free', amount: 50_000, fee: 0 },
-      { id: 'cheap', amount: 100_000, fee: 500 },
+      { id: 'cheap', amount: 200_000, fee: 1_000 },
     ])
+    expect(plan.allocated).toBe(250_000)
+    expect(plan.totalFee).toBe(1_000)
   })
 
-  it('returns an empty plan for a zero amount', () => {
-    const plan = cheapestPrepaymentOrder(candidates, 0)
+  it('ignores zero, negative, non-finite, unknown and repaid entries', () => {
+    const plan = prepaymentAllocationPlan(
+      [...candidates, { id: 'done', balance: 0, fee: 0 }],
+      {
+        cheap: 0,
+        expensive: -5_000,
+        free: Number.NaN,
+        missing: 1_000,
+        done: 1_000,
+      },
+    )
     expect(plan.allocations).toEqual([])
+    expect(plan.allocated).toBe(0)
     expect(plan.totalFee).toBe(0)
+  })
+
+  it('sums the rounded row fees, so the total matches the printed rows', () => {
+    const plan = prepaymentAllocationPlan(
+      [
+        { id: 'a', balance: 300_000, fee: 1_000 },
+        { id: 'b', balance: 300_000, fee: 1_000 },
+      ],
+      { a: 100_000, b: 100_000 },
+    )
+    expect(plan.allocations.map((allocation) => allocation.fee)).toEqual([333.33, 333.33])
+    expect(plan.totalFee).toBe(666.66)
+    expect(plan.allocated).toBe(200_000)
+  })
+
+  it('keeps an exempt track free at any amount', () => {
+    const plan = prepaymentAllocationPlan(candidates, { free: 40_000 })
+    expect(plan.allocations).toEqual([{ id: 'free', amount: 40_000, fee: 0 }])
+    expect(plan.totalFee).toBe(0)
+  })
+})
+
+describe('prepayment - loyalty discount summary', () => {
+  it('subtracts the 30% reduction from the gross fee', () => {
+    expect(
+      prepaymentDiscountSummary([
+        { grossFee: 1000, fee: 700, ageDiscount: 0.3, exempt: false },
+      ]),
+    ).toEqual({ grossFee: 1000, fee: 700, discount: 300, discountRate: 0.3 })
+  })
+
+  it('sums several priced tracks and reports their common rate', () => {
+    const summary = prepaymentDiscountSummary([
+      { grossFee: 800, fee: 640, ageDiscount: 0.2, exempt: false },
+      { grossFee: 200, fee: 160, ageDiscount: 0.2, exempt: false },
+    ])
+    expect(summary).toEqual({ grossFee: 1000, fee: 800, discount: 200, discountRate: 0.2 })
+  })
+
+  it('leaves exempt tracks out of both sides of the discount', () => {
+    // The prime track's gross difference never becomes a fee, so counting it
+    // would show a discount the borrower was never going to pay.
+    const summary = prepaymentDiscountSummary([
+      { grossFee: 5000, fee: 0, ageDiscount: 0.3, exempt: true },
+      { grossFee: 900, fee: 630, ageDiscount: 0.3, exempt: false },
+    ])
+    expect(summary).toEqual({ grossFee: 900, fee: 630, discount: 270, discountRate: 0.3 })
+  })
+
+  it('reports no discount before year 3, even when rounding drifts', () => {
+    expect(
+      // A real row: the gross difference is unrounded while the charge is
+      // rounded per track, so the two sides can disagree by agorot at a date
+      // where no tier applies. That difference is not a discount.
+      prepaymentDiscountSummary([{ grossFee: 100.6, fee: 100, ageDiscount: 0, exempt: false }]),
+    ).toEqual({ grossFee: 100.6, fee: 100, discount: 0, discountRate: 0 })
+  })
+
+  it('stays at zero for an empty mix and for non-finite rows', () => {
+    expect(prepaymentDiscountSummary([])).toEqual({
+      grossFee: 0,
+      fee: 0,
+      discount: 0,
+      discountRate: 0,
+    })
+    expect(
+      prepaymentDiscountSummary([
+        { grossFee: Number.NaN, fee: Number.POSITIVE_INFINITY, ageDiscount: Number.NaN, exempt: false },
+      ]),
+    ).toEqual({ grossFee: 0, fee: 0, discount: 0, discountRate: 0 })
   })
 })
 

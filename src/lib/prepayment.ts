@@ -395,6 +395,64 @@ export function prepaymentFee(input: PrepaymentFeeInput): PrepaymentFeeBreakdown
   }
 }
 
+/** One track's contribution to the loyalty-discount summary. */
+export interface PrepaymentDiscountRow {
+  /** The היוון difference before the loan-age reduction. */
+  grossFee: number
+  /** The fee actually charged after the reduction. */
+  fee: number
+  /** Legal reduction by loan age: 0, 0.2 or 0.3. */
+  ageDiscount: number
+  /** True when a statutory exemption zeroed this row's fee. */
+  exempt: boolean
+}
+
+/** What the loyalty discount took off the fee at one prepayment date. */
+export interface PrepaymentDiscountSummary {
+  /** Sum of the gross fees of the priced (non-exempt) tracks. */
+  grossFee: number
+  /** Sum of the fees actually charged. */
+  fee: number
+  /** The reduction in shekels, gross minus charged. */
+  discount: number
+  /** The reduction that applies at this date: 0, 0.2 or 0.3. */
+  discountRate: number
+}
+
+/**
+ * The loan-age reduction as a visible step: what the fee was before it, what
+ * it took off, and what is left. Exempt tracks are left out of both sides -
+ * their gross difference never becomes a fee, so counting it would invent a
+ * discount on money nobody was going to pay.
+ *
+ * The rate reported is the one the priced tracks carry (all rows are priced at
+ * the same prepayment date, so they agree). Non-finite input is treated as
+ * zero rather than spreading a NaN into the panel.
+ */
+export function prepaymentDiscountSummary(
+  rows: readonly PrepaymentDiscountRow[],
+): PrepaymentDiscountSummary {
+  let gross = 0
+  let fee = 0
+  let rate = 0
+  for (const row of rows) {
+    if (row.exempt) continue
+    if (Number.isFinite(row.grossFee)) gross += Math.max(0, row.grossFee)
+    if (Number.isFinite(row.fee)) fee += Math.max(0, row.fee)
+    if (Number.isFinite(row.ageDiscount)) rate = Math.max(rate, row.ageDiscount)
+  }
+  const grossFee = roundAgorot(gross)
+  const charged = roundAgorot(fee)
+  return {
+    grossFee,
+    fee: charged,
+    // No tier applies before year 3, so a cent of rounding drift between the
+    // summed gross and the rounded per-row fees is not a discount.
+    discount: rate > 0 ? roundAgorot(grossFee - charged) : 0,
+    discountRate: rate,
+  }
+}
+
 /**
  * "תוספת ריבית להשוואה": the fee re-expressed as a rate the borrower can
  * compare against a quoted interest rate.
@@ -455,50 +513,115 @@ export interface PrepaymentAllocation {
 export interface PrepaymentPlan {
   /** Track ids, cheapest first. */
   order: string[]
-  /** Where a partial amount lands, in `order` order. */
+  /** Where the reader's own split lands, in `order` order. */
   allocations: PrepaymentAllocation[]
-  /** How much of `amount` could actually be allocated. */
+  /** What the split actually repays, after each track's balance cap. */
   allocated: number
-  /** The היוון fee the prepayment costs, after the allocation. */
+  /** The היוון fee the split costs. */
   totalFee: number
 }
 
+/** A candidate with its fee-per-shekel ratio and a usable balance. */
+interface RankedCandidate extends PrepaymentCandidate {
+  balance: number
+  fee: number
+  feePerShekel: number
+}
+
 /**
- * Cheapest payoff order for a partial prepayment. The order charges the fee
- * pro rata to the amount repaid (`fee × amount / balance`, which is how the
- * order lets a bank scale a partial prepayment), so the cheapest use of a
- * shekel is the track with the LOWEST fee per shekel of balance. Free tracks
- * (exempt, or a market rate at/above the contractual one) therefore come
- * first, and ties keep the input order.
+ * Tracks that still carry a balance, cheapest per shekel first. A non-finite
+ * fee (never produced by the panel, but possible from bad input) is treated as
+ * zero, so it cannot poison the sort or move money.
+ */
+function rankCandidates(candidates: readonly PrepaymentCandidate[]): RankedCandidate[] {
+  return candidates
+    .filter((candidate) => Number.isFinite(candidate.balance) && candidate.balance > 0)
+    .map((candidate) => {
+      const fee = Number.isFinite(candidate.fee) ? Math.max(0, candidate.fee) : 0
+      return {
+        ...candidate,
+        fee,
+        feePerShekel: fee / candidate.balance,
+      }
+    })
+    .sort((a, b) => a.feePerShekel - b.feePerShekel)
+}
+
+/**
+ * The cheapest-first split of one total: fill the track with the lowest fee
+ * per shekel, then the next, until the amount is used up. This is the starting
+ * split the total field fills in; the reader can then move money between the
+ * per-track fields.
+ *
+ * Each take is capped at that track's balance, so an amount larger than the
+ * whole mix stops at the balances. A negative or non-finite amount allocates
+ * nothing.
  */
 export function cheapestPrepaymentOrder(
   candidates: readonly PrepaymentCandidate[],
   amount: number,
 ): PrepaymentPlan {
-  const usable = candidates
-    .filter((candidate) => candidate.balance > 0)
-    .map((candidate) => ({
-      ...candidate,
-      feePerShekel: Math.max(0, candidate.fee) / candidate.balance,
-    }))
-    .sort((a, b) => a.feePerShekel - b.feePerShekel)
+  const ranked = rankCandidates(candidates)
+  const request = Number.isFinite(amount) ? Math.max(0, amount) : 0
+  const allocations: PrepaymentAllocation[] = []
+  let left = request
+  let totalFee = 0
+  for (const candidate of ranked) {
+    if (left <= 0) break
+    const take = roundAgorot(Math.min(candidate.balance, left))
+    if (take <= 0) continue
+    const fee = roundAgorot(candidate.feePerShekel * take)
+    allocations.push({ id: candidate.id, amount: take, fee })
+    totalFee += fee
+    left = roundAgorot(left - take)
+  }
+  const allocated = allocations.reduce((sum, allocation) => sum + allocation.amount, 0)
+
+  return {
+    order: ranked.map((candidate) => candidate.id),
+    allocations,
+    allocated: roundAgorot(allocated),
+    totalFee: roundAgorot(totalFee),
+  }
+}
+
+/**
+ * Prices the borrower's own split: one amount per track, because the bank
+ * repays the tracks the borrower names, and a borrower may want to clear a
+ * short track completely or leave an exempt one alone.
+ *
+ * Every amount is capped at that track's balance, and the fee is charged pro
+ * rata to the amount repaid (`fee × amount / balance`, the same scaling a
+ * bank applies), so the split's cost is the sum of its rows. `order` still
+ * ranks every track cheapest per shekel first (fee-to-balance ratio, ties keep
+ * the input order), which is the advice the panel shows beside the inputs.
+ * A negative, non-finite, unknown or already-repaid entry contributes nothing,
+ * so bad input can never move money or a fee.
+ */
+export function prepaymentAllocationPlan(
+  candidates: readonly PrepaymentCandidate[],
+  amountsById: Readonly<Record<string, number>>,
+): PrepaymentPlan {
+  const ranked = rankCandidates(candidates)
 
   const allocations: PrepaymentAllocation[] = []
-  let left = Math.max(0, amount)
+  let allocated = 0
   let totalFee = 0
-  for (const candidate of usable) {
-    if (left <= 0) break
-    const take = Math.min(candidate.balance, left)
-    const fee = roundAgorot(candidate.feePerShekel * take)
-    allocations.push({ id: candidate.id, amount: roundAgorot(take), fee })
+  for (const candidate of ranked) {
+    const requested = amountsById[candidate.id]
+    if (requested === undefined || !Number.isFinite(requested) || requested <= 0) continue
+    const amount = roundAgorot(Math.min(candidate.balance, requested))
+    if (amount <= 0) continue
+    const fee = roundAgorot(candidate.feePerShekel * amount)
+    allocations.push({ id: candidate.id, amount, fee })
+    allocated += amount
     totalFee += fee
-    left -= take
   }
 
   return {
-    order: usable.map((candidate) => candidate.id),
+    order: ranked.map((candidate) => candidate.id),
     allocations,
-    allocated: roundAgorot(Math.max(0, amount) - Math.max(0, left)),
+    allocated: roundAgorot(allocated),
     totalFee: roundAgorot(totalFee),
   }
 }

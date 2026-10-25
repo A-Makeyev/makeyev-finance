@@ -197,8 +197,9 @@ the main one (היוון) first.
 - Partner outputs: per-track fee, `feeAsAnnualRateAddition` ("תוספת ריבית
   להשוואה", the undiscounted rate the fee is worth over the remaining term,
   computed on the real balance path for indexed tracks) and
-  `cheapestPrepaymentOrder` (fee pro rata to the amount repaid, so the cheapest
-  shekel is the track with the **lowest** fee per shekel of balance).
+  `prepaymentAllocationPlan` (the borrower's own amount per track, each capped
+  at its balance and priced pro rata, with the tracks ranked so the cheapest
+  shekel is the one with the **lowest** fee per shekel of balance).
 - The calculator's new "עמלת פירעון מוקדם" panel feeds the formula straight
   from the scheduled rows it already renders (so spitzer / קרן שווה and
   indexation need no re-derivation), defaults the comparison rate per track
