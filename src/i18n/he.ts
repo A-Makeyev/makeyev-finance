@@ -611,7 +611,7 @@ export const he = {
         yearsHint: 'שנה 1 עד {{max}} - המועד האחרון עם יתרה',
         marketRateLabel: 'ריבית השוואה שנתית',
         marketRatePlaceholder: 'לעדכון',
-        marketRateSuggestedNote: '',
+        marketRateSuggestedNote: 'ריבית השוואה מוצעת מהטבלה העדכנית של בנק ישראל: {{rate}}.',
         marketRateManual: 'ריבית שתזינו, לכל המסלולים',
         partialLabel: 'סכום לפירעון חלקי',
         partialHint: 'לחישוב סדר הפירעון הזול',
