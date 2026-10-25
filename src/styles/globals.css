@@ -6738,6 +6738,11 @@ e #name,
   align-items: center;
   gap: 8px;
   font-size: 0.9rem;
+  margin-left: -20px;
+}
+
+:root[dir='ltr'] .mix-legend-item {
+  margin-right: -40px;
 }
 
 .mix-legend-text {
@@ -6922,7 +6927,7 @@ e #name,
    partial amount is there. Quieter than the label it belongs to. */
 .prepayment-field-hint {
   display: block;
-  margin-top: 6px;
+  margin: 10px 0 10px;
   color: var(--calc-muted);
   font-size: 0.78rem;
   font-weight: 500;
@@ -8217,7 +8222,7 @@ e #name,
   }
 
   .forecast-chart .chart-axis-title,
-  .forecast-chart .chart-axis-title-above {
+  .forecast-chart .chart-axis-title-above {   
     font-size: 24px;
   }
 
@@ -9212,7 +9217,7 @@ tbody tr:hover {
   /* Charts: next step up for the SVG text (see the ≤800px block) - the
      rendered size stays ~12px as the viewBox keeps shrinking. */
   .amort-chart .chart-tick {
-    font-size: 15px;
+    font-size: 24px;
   }
 
   .per-track-chart .chart-tick {
@@ -9223,19 +9228,19 @@ tbody tr:hover {
      with the numbers. */
   .amort-chart .chart-axis-title,
   .per-track-chart .chart-axis-title {
-    font-size: 15px;
+    font-size: 24px;
   }
 
   .amort-chart .chart-axis-title-above {
-    font-size: 15px;
+    font-size: 24px;
   }
 
   .per-track-chart .chart-axis-title-above {
-    font-size: 19px;
+    font-size: 24px;
   }
 
   .forecast-chart .chart-axis-title-above {
-    font-size: 19px;
+    font-size: 24px;
   }
 
   /* Donut center numbers shrink with the same viewBox scaling - bump them
