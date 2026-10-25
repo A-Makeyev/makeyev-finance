@@ -593,8 +593,13 @@ export const en: { translation: Translation } = {
           },
           cpi: {
             label: 'Consumer Price Index - Israel Central Bureau of Statistics',
-            url: 'https://www.cbs.gov.il/en/subjects/Pages/consumer-price-index.aspx',        },
+            url: 'https://www.cbs.gov.il/en/subjects/Pages/consumer-price-index.aspx',
+          },
+        },
+      },
       charts: {
+        amortAria: 'Amortization chart: principal and interest per period with the loan balance',
+        mixAria: 'Track-mix donut chart',
         costAria: 'Principal, indexation and interest over the full term',
         perTrackAria: 'Per-track balance comparison over the term',
         mixTotalLabel: 'Total mortgage',
@@ -605,19 +610,17 @@ export const en: { translation: Translation } = {
         monthLabel: 'Month {{month}}',
         axisPayment: 'Annual payment',
         axisMonthlyPayment: 'Monthly payment',
-        axisBalance: 'Balance',        axisYear: 'Year',        },
+        axisBalance: 'Balance',
+        axisYear: 'Year',
       },
-      },
-      },
-
-
-          heading: 'Early-repayment fee',
-          lead:
-            'An estimate of the discounting fee the bank would charge to repay the mortgage on the date you pick, track by track, using the Bank of Israel formula. Every figure comes from the amortization schedule above.',
-          prepayYearsLabel: 'Repayment date (years from the mortgage)',
-          yearsSuffix: 'years',          yearsHint: 'Year 1 to {{max}} - the last year with a balance',
-          marketRateLabel: 'Annual comparison rate',
-
+      prepayment: {
+        heading: 'Early-repayment fee',
+        lead:
+          'An estimate of the discounting fee the bank would charge to repay the mortgage on the date you pick, track by track, using the Bank of Israel formula. Every figure comes from the amortization schedule above.',
+        prepayYearsLabel: 'Repayment date (years from the mortgage)',
+        yearsSuffix: 'years',
+        yearsHint: 'Year 1 to {{max}} - the last year with a balance',
+        marketRateLabel: 'Annual comparison rate',
         marketRatePlaceholder: 'From the BOI table',
         marketRateManual: 'Your own rate, for every track',
         marketRateSuggestedNote: 'Suggested comparison rate from the latest BOI table: {{rate}}.',
