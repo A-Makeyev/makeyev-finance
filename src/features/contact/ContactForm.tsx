@@ -299,7 +299,7 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
               status={status}
               testId={`${variant}-${name}-field`}
               textarea={name === 'message'}
-              rows={variant === 'action' ? 3 : 5}
+              rows={variant === 'action' ? 2 : 5}
               maxLength={name === 'message' ? 999 : 99}
               formDir={isHebrew ? 'rtl' : 'ltr'}
               inputDir={isLtrField ? 'ltr' : isHebrew ? 'rtl' : 'ltr'}

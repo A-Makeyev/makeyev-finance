@@ -66,7 +66,7 @@ export function AppModal({
           <Dialog.Close
             aria-label="close"
             data-testid={`${testId}-close`}
-            className="absolute end-[10px] top-[6px] flex h-[40px] w-[40px] items-center justify-center cursor-pointer border-none bg-none text-[28px] font-semibold leading-none text-ink outline-none transition-[transform,color] duration-300 hover:rotate-90 hover:text-soft-red"
+            className="absolute end-[10px] top-[6px] flex h-[36px] w-[36px] items-center justify-center cursor-pointer border-none bg-none text-[24px] font-semibold leading-none text-ink outline-none transition-[transform,color] duration-300 hover:rotate-90 hover:text-soft-red"
           >
             &#215;
           </Dialog.Close>

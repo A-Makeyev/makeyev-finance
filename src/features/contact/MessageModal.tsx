@@ -96,7 +96,7 @@ export function MessageModal({
           </div>
           <button
             type="button"
-            className="flex items-center justify-center w-[38px] h-[38px] rounded-full text-[28px] font-semibold text-ink bg-transparent border-none cursor-pointer outline-none transition-[transform,color] duration-300 hover:rotate-90 hover:text-soft-red"
+            className="flex items-center justify-center w-[34px] h-[34px] rounded-full text-[24px] font-semibold text-ink bg-transparent border-none cursor-pointer outline-none transition-[transform,color] duration-300 hover:rotate-90 hover:text-soft-red"
             data-modal-close
             data-testid="message-modal-close"
             aria-label="close"
