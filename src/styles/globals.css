@@ -7200,6 +7200,17 @@ e #name,
   line-height: 1.6;
 }
 
+/* Why the fee chart can sit flat on zero: the comparison rate is at or barely
+   below the tracks' own rates, so there is no gap to discount. Sits under the
+   chart's lead, above the plot. */
+.prepayment-chart-near-zero {
+  margin: 8px 0 0;
+  max-inline-size: 780px;
+  color: var(--calc-ink);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
 /* Directly under the plot (the grid's first column), not centred across the
    whole card below the table: it is the graph's own instruction. */
 .prepayment-chart-caption {

@@ -32,6 +32,13 @@ import { TRACK_TYPE_COLORS } from './trackColors'
 /** The prepayment point opens on the common "after five years" case. */
 const DEFAULT_PREPAY_YEARS = 5
 
+/**
+ * Below this share of the balance the היוון fee is under ₪1 per ₪1,000, which
+ * on the chart is a line flat on zero. The panel then explains why instead of
+ * leaving the reader to wonder whether the chart broke.
+ */
+const NEGLIGIBLE_FEE_SHARE_PERCENT = 0.1
+
 /** The priced row the table, chart and outcomes all read. */
 type TrackFeeRow = PrepaymentFeeRow
 
@@ -411,6 +418,17 @@ export function PrepaymentSection() {
         .map((row) => t(`calculator.trackTypes.${row.type}`)),
     ),
   ]
+  /** The rate the field shows, suggested or typed; '' while no table is loaded. */
+  const shownMarketRate = marketEdited ? manualMarketText.trim() : suggestedMarketRate
+  /**
+   * True when the priced fee is rounding noise against the balance, which is
+   * the case that leaves the chart sitting on zero: the comparison rate is at
+   * or barely below the tracks' own rates. Exempt-only mixes are left out - a
+   * zero there is about the exemption, and the table says so.
+   */
+  const feeIsNegligible =
+    totalBalance > 0 && feeShare < NEGLIGIBLE_FEE_SHARE_PERCENT && cappableRows.length > 0
+
   const asOf = rates.data?.tables.find((entry) => entry.status === 'ok')?.asOf ?? null
   const hasTracks = tracks.length > 0
   const hasResult = rows.length > 0
@@ -815,6 +833,17 @@ export function PrepaymentSection() {
                     <p className="prepayment-chart-lead">
                       {t('calculator.prepayment.chartLead')}
                     </p>
+                    {/* A flat line is the honest answer when the market rate is
+                        not below the loan's, so say why instead of letting the
+                        zero look like a broken chart. */}
+                    {feeIsNegligible && shownMarketRate !== '' && (
+                      <p
+                        className="prepayment-chart-near-zero"
+                        data-testid="prepayment-chart-near-zero"
+                      >
+                        {t('calculator.prepayment.chartNearZero', { rate: shownMarketRate })}
+                      </p>
+                    )}
                   </div>
                   <div className="prepayment-chart">
                     <div className="prepayment-chart-plot">

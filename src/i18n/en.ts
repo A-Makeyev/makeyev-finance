@@ -679,6 +679,8 @@ export const en: { translation: Translation } = {
         chartTitle: 'Discounting fee by repayment date',
         chartLead:
           'Later in the schedule the balance is smaller and the fee falls; each rate reset of a five-year variable track steps it down. An exempt track stays on zero all the way.',
+        chartNearZero:
+          'The chart sits almost flat on zero because the comparison rate ({{rate}}%) is close to the tracks’ own rates: a discounting fee arises only when the market rate falls below the loan’s rate. Lower the comparison rate to see that scenario.',
         chartCaption: 'Click the chart to pick a repayment date',
         chartAria: 'Discounting fee per track by repayment year',
         chartAxisFee: 'Discounting fee',

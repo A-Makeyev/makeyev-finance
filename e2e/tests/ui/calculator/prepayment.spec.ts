@@ -359,6 +359,22 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     await expect(chart.locator('path.chart-line-track')).toHaveCount(3)
   })
 
+  test('says why the chart sits on zero at the suggested rate', async ({ calc }) => {
+    // The suggestion is the BOI average and this mix's own rates sit right
+    // around it, so the curve is flat on zero. The card explains that instead
+    // of leaving a chart that looks like it failed to draw.
+    const note = calc.page.getByTestId('prepayment-chart-near-zero')
+    await expect(note).toBeVisible()
+    // The rate it names is the one the field shows.
+    const shown = await calc.page.getByTestId('prepayment-market-rate').inputValue()
+    await expect(note).toContainText(`${shown}%`)
+
+    // A comparison rate below the track rates produces a real curve, and the
+    // explanation goes away with the zero.
+    await calc.page.getByTestId('prepayment-market-rate').fill('2')
+    await expect(note).toHaveCount(0)
+  })
+
   test('shows the loyalty discount as a step in the fee', async ({ calc }) => {
     await calc.page.getByTestId('prepayment-market-rate').fill('2')
     // The section opens on year 5, where the 30% reduction applies.
@@ -537,6 +553,10 @@ test.describe('early-repayment fee in English (LTR)', () => {
     await section.scrollIntoViewIfNeeded()
     await expect(section.locator('h2')).toHaveText('Early-repayment fee')
     await expect(localizedCalc.page.getByTestId('prepayment-total')).toBeVisible()
+    // The zero-chart explanation ships in English too, not as a Hebrew leftover.
+    await expect(
+      localizedCalc.page.getByTestId('prepayment-chart-near-zero'),
+    ).toContainText('comparison rate')
   })
 
   test('puts the fee chart on the left and the table on the right (LTR)', async ({
