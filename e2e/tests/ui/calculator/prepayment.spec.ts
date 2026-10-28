@@ -46,8 +46,8 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     expect(before).toBeGreaterThan(0)
 
     // Section 3(4): discount at the lower of the contractual rate and the
-    // average rate at origination, so a lower C shrinks the fee.
-    await calc.page.getByTestId('prepayment-cap').locator('summary').click()
+    // average rate at origination, so a lower C shrinks the fee. The cap is
+    // always open now, so its input is reachable without expanding anything.
     await calc.page.getByTestId('prepayment-cap-fixed').fill('3')
     const capped = await amountOf(calc.page.getByTestId('prepayment-fee-fixed'))
     expect(capped).toBeGreaterThan(0)
@@ -332,7 +332,7 @@ test.describe('mortgage calculator - early-repayment fee', () => {
 
   test('marks an entered cap as applied or not, per priced track', async ({ calc }) => {
     await calc.page.getByTestId('prepayment-market-rate').fill('2')
-    await calc.page.getByTestId('prepayment-cap').locator('summary').click()
+    await expect(calc.page.getByTestId('prepayment-cap-fixed')).toBeVisible()
 
     // The default mix has three tracks but only two cap fields: the exempt
     // prime track has no fee, and the block names it so the count is clear.
@@ -409,7 +409,7 @@ test.describe('mortgage calculator - early-repayment fee', () => {
   test('adds the fees charged on top, with their own controls', async ({ calc }) => {
     await calc.page.getByTestId('prepayment-market-rate').fill('2')
     const extras = calc.page.getByTestId('prepayment-extras')
-    await extras.locator('summary').click()
+    await expect(extras).toBeVisible()
 
     // The handling fee is per track and the default mix has three.
     await expect(calc.page.getByTestId('prepayment-extras-operational')).toContainText('180')
@@ -461,36 +461,58 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     await expect(order.getByTestId('prepayment-order-total-amount')).toContainText('סכום לפירעון')
   })
 
-  test('puts the split under the controls and the outcomes above the cap', async ({ calc }) => {
+  test('puts the split under the controls with both charge cards beside it', async ({ calc }) => {
     await calc.page.getByTestId('prepayment-allocate-fixed').fill('100000')
 
     // The requested reading order: amount first, then the split that spends
-    // it, then the summary. The outcomes explain the split, so they sit above
-    // the optional section 3(4) cap rather than after it.
+    // it, then its summary. The extra bank charges and the section 3(4) cap
+    // share that row, both stretched to the split column's height, and the
+    // outcomes explain the split further down.
     const tops = (await calc.page.evaluate(`(() => {
       const top = (id) => {
         const el = document.querySelector('[data-testid="' + id + '"]')
         return el ? el.getBoundingClientRect().top + window.scrollY : null
       }
+      const box = (id) => {
+        const el = document.querySelector('[data-testid="' + id + '"]')
+        if (!el) return null
+        const r = el.getBoundingClientRect()
+        return { top: r.top + window.scrollY, height: r.height, left: r.left }
+      }
       return {
         amount: top('prepayment-partial'),
         order: top('prepayment-order'),
         stats: top('prepayment-kpi-total'),
+        extras: box('prepayment-extras'),
+        orderBox: box('prepayment-order'),
         outcomes: top('prepayment-outcomes'),
-        cap: top('prepayment-cap'),
+        cap: box('prepayment-cap'),
       }
-    })()`)) as Record<string, number | null>
+    })()`)) as Record<string, number | { top: number; height: number; left: number } | null>
 
     expect(tops.amount, 'partial amount field rendered').not.toBeNull()
     expect(tops.order, 'order panel rendered').not.toBeNull()
     expect(tops.stats, 'summary rendered').not.toBeNull()
     expect(tops.outcomes, 'outcomes rendered').not.toBeNull()
-    expect(tops.cap, 'cap disclosure rendered').not.toBeNull()
+    expect(tops.cap, 'cap card rendered').not.toBeNull()
+    expect(tops.extras, 'fees card rendered').not.toBeNull()
 
-    expect(tops.order!).toBeGreaterThan(tops.amount!)
-    expect(tops.stats!).toBeGreaterThan(tops.order!)
-    expect(tops.outcomes!).toBeGreaterThan(tops.stats!)
-    expect(tops.cap!).toBeGreaterThan(tops.outcomes!)
+    expect(tops.order as number).toBeGreaterThan(tops.amount as number)
+    expect(tops.stats as number).toBeGreaterThan(tops.order as number)
+
+    // Both charge cards share the split's row and stretch to its height, not
+    // just the split's own box: they cover the split plus its summary.
+    const extras = tops.extras as { top: number; height: number; left: number }
+    const cap = tops.cap as { top: number; height: number; left: number }
+    const orderBox = tops.orderBox as { top: number; height: number; left: number }
+    expect(extras.top).toBeCloseTo(orderBox.top, 0)
+    expect(cap.top).toBeCloseTo(orderBox.top, 0)
+    expect(extras.height).toBeGreaterThan(orderBox.height)
+    expect(cap.height).toBeGreaterThan(orderBox.height)
+    expect(extras.left).not.toBeCloseTo(orderBox.left, 0)
+    expect(cap.left).not.toBeCloseTo(extras.left, 0)
+
+    expect(tops.outcomes as number).toBeGreaterThan((tops.cap as { top: number }).top)
   })
 
   test('totals several track amounts and keeps each fee separate', async ({ calc }) => {

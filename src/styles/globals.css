@@ -1392,35 +1392,60 @@ img {
 }
 
 /* The action dialog is deliberately smaller than the standalone contact form
-   at every width: 400px wide (set in ActionFormModal), shorter fields and a
+   at every width: 380px wide (set in ActionFormModal), shorter fields and a
    tighter rhythm, so the whole form including the send button stays in view
-   without the dialog dominating a laptop or a wide monitor. Scoped to the
-   dialog only - the contact page form keeps its roomy spacing. */
+   without the dialog dominating a laptop or a wide monitor. The compact sizes
+   apply at every width, not only under a breakpoint: 1024-1440px laptops and
+   tablets are the screens where the dialog was tallest relative to the page.
+   Scoped to the dialog only - the contact page form keeps its roomy spacing. */
 [data-testid='action-form-modal'] .field-island {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-/* 44px instead of 50px, with the padding balanced so the 22px line box stays
+/* 40px instead of 50px, with the padding balanced so the 22px line box stays
    centered. The resting floating label is positioned from the wrapper, not
    the field, so it stays centered on the shorter field. */
 [data-testid='action-form-modal'] .field-island input {
-  height: 44px;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  height: 40px;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 [data-testid='action-form-modal'] .field-island textarea {
-  min-height: 76px;
+  min-height: 64px;
 }
 
 /* Callback chips block and the send button. */
 [data-testid='action-form-modal'] [data-testid='action-callback-times'] {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+}
+
+[data-testid='action-form-modal'] [data-testid='action-callback-times'] button {
+  padding-block: 6px;
+}
+
+[data-testid='action-form-modal'] [data-testid='action-callback-times'] button span:first-child {
+  font-size: 14px;
+}
+
+[data-testid='action-form-modal'] [data-testid='action-callback-times'] button span:last-child {
+  font-size: 11px;
 }
 
 [data-testid='action-form-modal'] #submit-form {
-  height: 44px;
-  margin-top: 16px;
+  height: 40px;
+  margin-top: 12px;
+}
+
+/* The shared close control is 36px with a 24px glyph; that reads oversized on
+   this short form, so the dialog gets a smaller box and glyph. It stays a
+   30px target, still comfortably clickable and keyboard-focusable. */
+[data-testid='action-form-modal'] > [data-testid='action-form-modal-close'] {
+  height: 30px;
+  width: 30px;
+  font-size: 20px;
+  inset-block-start: 4px;
+  inset-inline-end: 6px;
 }
 
 .modal-actions {
@@ -4545,6 +4570,7 @@ e #name,
   border-block: calc(var(--caret-size) / 2) solid transparent;
   border-inline-start: var(--caret-size) solid currentColor;
   vertical-align: middle;
+  margin-top: -2px;
 }
 
 /* Open: point down. The box stays exactly the same size (the inline borders
@@ -7045,52 +7071,87 @@ e #name,
   background: var(--calc-note);
 }
 
-/* Three headline numbers above the table: the fee, its basis, and its share.
-   The split panel above shares their soft fill, so a clear gap keeps the two
-   blocks from reading as one. */
-.prepayment-stats {
+/* The results row: the split and its summary in the start column, the extra
+   bank charges beside them. The grid stretches both columns to the same
+   height, so the charges card is exactly as tall as the split plus its
+   summary rather than trailing off on its own. */
+.prepayment-result-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 30px;
-  margin-bottom: 20px;
+  /* Split + summary, the extra charges, and the section 3(4) cap all share
+     one band: the two charges cards sit in the same row and every column
+     stretches to the tall split column. */
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
+  margin-block: 18px 20px;
 }
 
-.prepayment-stat {
-  display: grid;
-  gap: 4px;
-  padding: 14px 16px;
+/* No cappable track (every track exempt): the cap card is absent, so the
+   charges card takes the width the empty third column would leave. */
+.prepayment-result-grid.is-two {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+}
+
+.prepayment-result-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* The grid already spaces the row, so the split card loses its own top gap. */
+.prepayment-result-main .prepayment-order {
+  margin-top: 0;
+}
+
+/* The fee answer under the split: the mix line, then the fee, balance and
+   share, each figure directly beside its own label. */
+.prepayment-summary {
+  padding: 12px 16px;
   background: var(--calc-soft);
-  border-inline-start: 3px solid var(--calc-line);
+  border-inline-start: 3px solid var(--calc-teal);
 }
 
-.prepayment-stat.is-primary {
-  background: var(--calc-note);
-  border-inline-start-color: var(--calc-teal);
+.prepayment-summary .prepayment-mix-line {
+  margin: 0 0 8px;
 }
 
-/* The headline fee card needs a lighter surface than the almost-black note
-   fill on the dark page, or it reads as a hole rather than a highlight. */
-:root[data-theme='dark'] .prepayment-stat.is-primary {
-  background: color-mix(in srgb, var(--calc-teal) 18%, var(--calc-paper));
-  border-inline-start-color: var(--calc-teal-dark);
+.prepayment-summary-list {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  align-items: baseline;
+  gap: 3px 12px;
+  margin: 0;
 }
 
-.prepayment-stat-label {
+/* Rows exist only to pair a label with its figure; as contents, the dt/dd
+   pairs line up in the two columns above, close together. */
+.prepayment-summary-row {
+  display: contents;
+}
+
+.prepayment-summary-row dt {
   color: var(--calc-muted);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   font-weight: 600;
 }
 
-.prepayment-stat strong {
+.prepayment-summary-row dd {
+  margin: 0;
   color: var(--calc-ink);
-  font-size: 1.4rem;
+  font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
-  line-height: 1.2;
+  white-space: nowrap;
 }
 
-.prepayment-stat.is-primary strong {
+.prepayment-summary-row.is-primary dt,
+.prepayment-summary-row.is-primary dd {
   color: var(--calc-teal-dark);
+  font-weight: 700;
+}
+
+.prepayment-summary-row.is-primary dd {
+  font-size: 1.15rem;
 }
 
 /* Fee-by-date chart: sits directly on the panel like the schedule graph below
@@ -7453,9 +7514,11 @@ e #name,
 
 .prepayment-order-row {
   display: grid;
-  /* Rank, track, then the two figure columns - four children, four columns,
-     so nothing wraps onto a second line. */
-  grid-template-columns: 20px minmax(0, 1fr) minmax(104px, auto) minmax(104px, auto);
+  /* Rank, track, amount, fee. The track column hugs its own text instead of
+     absorbing all the spare width, so the amount field starts right beside
+     the name; the field then takes the remaining room and the fee closes the
+     row at the far end. */
+  grid-template-columns: 20px minmax(0, max-content) minmax(118px, 1fr) minmax(96px, auto);
   align-items: center;
   gap: 12px;
   padding: 10px 0;
@@ -7795,6 +7858,9 @@ e #name,
 
 /* The loyalty discount, shown as a step between the gross fee and the charge. */
 .prepayment-discount {
+  /* A step, not a banner: without the cap card beside it the ladder would
+     stretch across the whole panel and leave most of the card empty. */
+  max-inline-size: 560px;
   margin: 0 0 20px;
   padding: 14px 16px;
   background: var(--calc-soft);
@@ -7809,23 +7875,27 @@ e #name,
 
 .prepayment-discount-list {
   display: grid;
-  gap: 6px;
+  grid-template-columns: max-content max-content;
+  align-items: baseline;
+  gap: 4px 12px;
   margin: 0;
 }
 
+/* Rows pair a label with the figure right next to it instead of pushing the
+   figure to the card's far edge. As contents, the dt/dd pairs line up in the
+   two columns above, so the amounts still form a straight column. */
 .prepayment-discount-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  display: contents;
 }
 
 .prepayment-discount-row dt {
   color: var(--calc-muted);
+  font-size: 0.85rem;
 }
 
 .prepayment-discount-row dd {
   margin: 0;
+  font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -7848,36 +7918,97 @@ e #name,
   line-height: 1.5;
 }
 
-/* The charges outside the discounting formula, one row each. */
+/* The charges outside the discounting formula, as the card beside the split.
+   Each row is a three-part grid: checkbox (when there is one), the name and
+   its hint, and the amount. The name and amount share the first line, so a
+   checkbox never drifts above or below its own label. */
+.prepayment-extras-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--calc-soft);
+  border-inline-start: 3px solid var(--calc-teal);
+}
+
+.prepayment-extras-title {
+  margin: 0 0 6px;
+  color: var(--calc-teal-dark);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.prepayment-extras-lead {
+  margin: 0 0 10px;
+  color: var(--calc-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
 .prepayment-extras-list {
   display: grid;
-  gap: 10px;
-  margin: 12px 0;
+  margin: 0;
 }
 
 .prepayment-extras-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 8px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 2px 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--calc-line);
+}
+
+.prepayment-extras-row.is-toggle {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  cursor: pointer;
+}
+
+.prepayment-extras-row input[type='checkbox'] {
+  grid-column: 1;
+  grid-row: 1;
+  inline-size: 18px;
+  block-size: 18px;
+  margin: 0;
+  margin-block-start: 2px;
+  accent-color: var(--calc-teal);
 }
 
 .prepayment-extras-label {
   display: grid;
-  flex: 1 1 12rem;
   gap: 2px;
+  min-width: 0;
+}
+
+.prepayment-extras-row.is-toggle .prepayment-extras-label {
+  grid-column: 2;
+}
+
+.prepayment-extras-name {
+  color: var(--calc-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .prepayment-extras-hint {
   color: var(--calc-muted);
-  font-size: 0.8rem;
-  line-height: 1.5;
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
-.prepayment-extras-row strong {
-  margin-inline-start: auto;
+/* The amount stays on the name's line, not halfway down the hint. */
+.prepayment-extras-row>strong {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  font-size: 0.92rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.prepayment-extras-row.is-toggle>strong {
+  grid-column: 3;
 }
 
 .prepayment-extras-total {
@@ -7885,8 +8016,8 @@ e #name,
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 4px;
-  padding-top: 10px;
+  margin-block-start: auto;
+  padding-top: 12px;
   border-top: 1px solid var(--calc-line);
   font-weight: 700;
 }
@@ -7896,16 +8027,56 @@ e #name,
   white-space: nowrap;
 }
 
-/* Section 3(4)'s optional origination-rate inputs: one compact field per
-   priced track, all of them (MAX_TRACKS) on a single row. */
-.prepayment-cap {
-  margin-top: 4px;
+/* The card carries the block's disclaimer, but it is card body copy, not a
+   paragraph at the page's 20px base size. */
+.prepayment-extras-card .prepayment-note-disclaimer {
+  margin-block: 12px 4px;
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
+
+/* Section 3(4)'s cap sits in the results band beside the extra charges. It is
+   always open: the fee column it changes is on screen, so a collapsed toggle
+   would leave that column's numbers unexplained. */
+.prepayment-cap-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--calc-soft);
+  border-inline-start: 3px solid var(--calc-line);
+}
+
+.prepayment-cap-title {
+  margin: 0 0 6px;
+  color: var(--calc-teal-dark);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.prepayment-cap-lead {
+  margin: 0 0 10px;
+  color: var(--calc-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.prepayment-cap-note {
+  margin-block: auto 0;
+  padding-block-start: 12px;
+  color: var(--calc-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* Section 3(4)'s optional origination-rate inputs: one compact field per
+   priced track, wrapping when the card is narrower than the fields need. */
 
 .prepayment-cap-grid {
   display: grid;
-  /* One column per priced track, capped at three (set by the component). */
-  grid-template-columns: repeat(var(--cap-columns, 3), minmax(0, 1fr));
+  /* One field per priced track while they fit; in the narrow card beside the
+     split they wrap into a second row instead of shrinking past readability. */
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
   margin-block: 6px 12px;
 }
@@ -7920,7 +8091,7 @@ e #name,
 }
 
 /* Smaller than the panel's standard fields - these are optional percentages
-   inside a collapsed note under the fee table, not primary inputs. */
+   in their own card, not primary inputs. */
 .prepayment-cap-grid .prepayment-field {
   font-size: 0.85rem;
 }
@@ -7954,6 +8125,15 @@ e #name,
   font-weight: 700;
 }
 
+/* Stacks sooner than the controls: at a tablet's 1024px the split column
+   leaves the fees card too narrow and stretches it into empty space. */
+@media (max-width: 1100px) {
+  .prepayment-result-grid,
+  .prepayment-result-grid.is-two {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1000px) {
   .prepayment-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7978,10 +8158,6 @@ e #name,
     grid-column: 1;
     grid-row: 10;
     margin-top: 12px;
-  }
-
-  .prepayment-stats {
-    grid-template-columns: 1fr;
   }
 
   .prepayment-outcomes-grid {
@@ -8509,10 +8685,13 @@ e #name,
   margin: 0;
 }
 
+/* Direction, not a fixed side: in English a table's headers and cells start at
+   the left, in Hebrew at the right. Every table-specific rule below uses the
+   same logical start, so the two locales mirror without per-table overrides. */
 table {
   width: 100%;
   border-collapse: collapse;
-  text-align: right;
+  text-align: start;
   white-space: nowrap;
 }
 
@@ -8522,6 +8701,9 @@ th {
   font-weight: 500;
   padding: 12px 14px;
   border-bottom: 2px solid var(--calc-teal);
+  /* The UA sheet centres `th`; headers follow the table's reading direction
+     instead (left in English, right in Hebrew). */
+  text-align: start;
 }
 
 td {
@@ -8538,24 +8720,14 @@ td {
   padding-inline: 20px;
 }
 
-/* The last column (יתרה) starts next to the annual-payment column, not next
-   to the table's edge, so its start padding only stacks on the gap that
-   column already keeps - which left the balance figures visibly farther from
-   their neighbours than the annual payment ones. Move that 20px to the outer
-   edge instead (so the column keeps its width and the other columns' spacing
-   is untouched) and both trailing columns read the same distance from the
-   numbers beside them. */
+/* The last column (יתרה) keeps the extra outer gap toward the charts beside
+   the table, but its figures align with every other column instead of sitting
+   on the outer edge: right in Hebrew, left in English. `text-align: end` used
+   to push them toward the chart, which in Hebrew meant the left, so the
+   balance column read as the odd one out against the figures beside it. */
 .schedule-content th:last-child,
 .schedule-content td:last-child {
-  padding-inline-start: 0;
-  padding-inline-end: 24px;
-  /* The last column faces the charts beside the table (the mix donut above
-     it, the cost donut in the asides column), not the annual-payment numbers.
-     Align its figures to the inline end so they sit on that side, a grid gap
-     plus 24px from the chart instead of leaving the whole cell's width
-     between them. Logical alignment flips with the direction: left in
-     Hebrew, right in English, always toward the graph. */
-  text-align: end;
+  padding-inline: 20px 24px;
   text-indent: 0;
 }
 

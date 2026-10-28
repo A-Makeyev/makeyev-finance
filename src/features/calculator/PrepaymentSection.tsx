@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@/router'
 import { useCalculatorViewModel } from './useCalculatorViewModel'
@@ -675,6 +675,13 @@ export function PrepaymentSection() {
               </button>                  </div>
               )}              {hasResult && (
             <>
+              {/* The split and its summary share the start column; the extra
+                  charges sit beside them as one card, stretched to the same
+                  height (see .prepayment-result-grid). */}
+              <div
+                className={`prepayment-result-grid${cappableRows.length > 0 ? '' : ' is-two'}`}
+              >
+                <div className="prepayment-result-main">
               <div className="prepayment-order" data-testid="prepayment-order">
                 <p className="prepayment-order-title">
                   {t('calculator.prepayment.orderTitle')}
@@ -797,25 +804,175 @@ export function PrepaymentSection() {
                 )}
               </div>
 
-              <div className="prepayment-stats">
-                <article className="prepayment-stat is-primary">
-                  <span className="prepayment-stat-label">
-                    {t('calculator.prepayment.stats.total')}
-                  </span>
-                  <strong data-testid="prepayment-kpi-total">{formatCurrency(totalFee)}</strong>
-                </article>
-                <article className="prepayment-stat">
-                  <span className="prepayment-stat-label">
-                    {t('calculator.prepayment.stats.balance')}
-                  </span>
-                  <strong>{formatCurrency(totalBalance)}</strong>
-                </article>
-                <article className="prepayment-stat">
-                  <span className="prepayment-stat-label">
-                    {t('calculator.prepayment.stats.share')}
-                  </span>
-                  <strong>{formatRatePercent(feeShare)}%</strong>
-                </article>
+              {/* The mix line sits directly above the summary rows, and the
+                  balance it names is the row right below the fee total, so
+                  both figures read as the same number. */}
+              <div className="prepayment-summary" data-testid="prepayment-summary">
+                <p className="prepayment-mix-line" data-testid="prepayment-mix-line">
+                  {t('calculator.prepayment.mixLine', {
+                    count: rows.length,
+                    balance: formatCurrency(totalBalance),
+                  })}
+                </p>
+                <dl className="prepayment-summary-list">
+                  <div className="prepayment-summary-row is-primary">
+                    <dt>{t('calculator.prepayment.stats.total')}</dt>
+                    <dd data-testid="prepayment-kpi-total">{formatCurrency(totalFee)}</dd>
+                  </div>
+                  <div className="prepayment-summary-row">
+                    <dt>{t('calculator.prepayment.stats.balance')}</dt>
+                    <dd>{formatCurrency(totalBalance)}</dd>
+                  </div>
+                  <div className="prepayment-summary-row">
+                    <dt>{t('calculator.prepayment.stats.share')}</dt>
+                    <dd>{formatRatePercent(feeShare)}%</dd>
+                  </div>
+                </dl>
+              </div>
+                </div>
+
+                {/* The charges outside the formula, one row each: the name
+                    and the amount share the first line, the hint sits under
+                    them, and the checkbox is on that same first line. */}
+                <div className="prepayment-extras-card" data-testid="prepayment-extras">
+                  <p className="prepayment-extras-title">
+                    {t('calculator.prepayment.extras.title')}
+                  </p>
+                  <p className="prepayment-extras-lead">
+                    {t('calculator.prepayment.extras.lead')}
+                  </p>
+                  <div className="prepayment-extras-list">
+                    <div className="prepayment-extras-row">
+                      <span className="prepayment-extras-label">
+                        <span className="prepayment-extras-name">
+                          {t('calculator.prepayment.extras.operational', {
+                            cap: formatCurrency(OPERATIONAL_FEE_CAP),
+                          })}
+                        </span>
+                        <span className="prepayment-extras-hint">
+                          {t('calculator.prepayment.extras.operationalHint')}
+                        </span>
+                      </span>
+                      <strong data-testid="prepayment-extras-operational">
+                        {formatCurrency(extras.operationalFee)}
+                      </strong>
+                    </div>
+                    <label className="prepayment-extras-row is-toggle">
+                      <input
+                        id="prepayment-no-notice"
+                        name="prepayment-no-notice"
+                        type="checkbox"
+                        checked={noNotice}
+                        onChange={(event) => setNoNotice(event.target.checked)}
+                        data-testid="prepayment-extras-no-notice"
+                      />
+                      <span className="prepayment-extras-label">
+                        <span className="prepayment-extras-name">
+                          {t('calculator.prepayment.extras.noNotice')}
+                        </span>
+                        <span className="prepayment-extras-hint">
+                          {t('calculator.prepayment.extras.noNoticeHint')}
+                        </span>
+                      </span>
+                      <strong data-testid="prepayment-extras-no-notice-amount">
+                        {formatCurrency(extras.noNoticeFee)}
+                      </strong>
+                    </label>
+                    <label className="prepayment-extras-row is-toggle">
+                      <input
+                        id="prepayment-cpi"
+                        name="prepayment-cpi"
+                        type="checkbox"
+                        checked={firstHalfOfMonth}
+                        onChange={(event) => setFirstHalfOfMonth(event.target.checked)}
+                        data-testid="prepayment-extras-cpi"
+                      />
+                      <span className="prepayment-extras-label">
+                        <span className="prepayment-extras-name">
+                          {t('calculator.prepayment.extras.cpi')}
+                        </span>
+                        <span className="prepayment-extras-hint">
+                          {t('calculator.prepayment.extras.cpiHint')}
+                        </span>
+                      </span>
+                      <strong data-testid="prepayment-extras-cpi-amount">
+                        {formatCurrency(extras.cpiCompensationFee)}
+                      </strong>
+                    </label>
+                  </div>
+                  <div className="prepayment-extras-total">
+                    <span>{t('calculator.prepayment.extras.total')}</span>
+                    <strong data-testid="prepayment-extras-total">
+                      {formatCurrency(extrasTotalShown)}
+                    </strong>
+                  </div>
+                  <p className="prepayment-note-disclaimer">
+                    {t('calculator.prepayment.extras.note')}
+                  </p>
+                </div>
+
+                {/* Section 3(4)'s cap is always open beside the extra charges:
+                    it changes the fee column above, so hiding it behind a
+                    toggle would leave that column's numbers unexplained. */}
+                {cappableRows.length > 0 && (
+                  <div className="prepayment-cap-card" data-testid="prepayment-cap">
+                    <p className="prepayment-cap-title">
+                      {t('calculator.prepayment.capTitle')}
+                    </p>
+                    <p className="prepayment-cap-lead">
+                      {t('calculator.prepayment.capLead')}
+                    </p>
+                    {exemptTrackNames.length > 0 && (
+                      <p
+                        className="prepayment-cap-exempt"
+                        data-testid="prepayment-cap-exempt"
+                      >
+                        {t('calculator.prepayment.capExempt', {
+                          tracks: exemptTrackNames.join(', '),
+                        })}
+                      </p>
+                    )}
+                    <div className="prepayment-cap-grid">
+                      {cappableRows.map((row) => (
+                        <label className="input-group prepayment-field" key={row.id}>
+                          {t(`calculator.trackTypes.${row.type}`)}
+                          <span className="input-wrap">
+                            <input
+                              id={`prepayment-cap-${row.id}`}
+                              type="number"
+                              inputMode="decimal"
+                              min={0}
+                              step={0.01}
+                              value={capRateTexts[row.id] ?? ''}
+                              onChange={(event) => {
+                                const value = event.target.value
+                                setCapRateTexts((current) => ({ ...current, [row.id]: value }))
+                              }}
+                              placeholder={t('calculator.prepayment.capRatePlaceholder')}
+                              aria-label={`${t('calculator.prepayment.capRateLabel')} ${trackName(row.id)}`}
+                              data-testid={`prepayment-cap-${row.type}`}
+                            />
+                            <span aria-hidden="true">%</span>
+                          </span>
+                          <span
+                            className="prepayment-cap-status"
+                            data-active={row.breakdown.capApplied}
+                            data-testid={`prepayment-cap-status-${row.type}`}
+                          >
+                            {row.breakdown.capApplied
+                              ? t('calculator.prepayment.capStatusActive', {
+                                  fee: formatCurrency(row.breakdown.fee),
+                                })
+                              : t('calculator.prepayment.capStatusIdle')}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="prepayment-cap-note">
+                      {t('calculator.prepayment.capNote')}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {chartSeries.length > 0 && (
@@ -899,15 +1056,6 @@ export function PrepaymentSection() {
                   </div>
                 </article>
               )}
-
-              {/* What is being priced: the calculator holds one mix, so the
-                  line names its size and balance rather than a mix label. */}
-              <p className="prepayment-mix-line" data-testid="prepayment-mix-line">
-                {t('calculator.prepayment.mixLine', {
-                  count: rows.length,
-                  balance: formatCurrency(totalBalance),
-                })}
-              </p>
 
               <div className="table-wrap">
                 <table className="prepayment-table">
@@ -1116,148 +1264,7 @@ export function PrepaymentSection() {
                   </p>
                 </div>              )}
 
-              {cappableRows.length > 0 && (
-                <details className="prepayment-note prepayment-cap" data-testid="prepayment-cap">
-                  <summary>
-                    <span className="collapse-caret" aria-hidden="true" />
-                    {t('calculator.prepayment.capTitle')}
-                  </summary>
-                  <p className="prepayment-note-lead">{t('calculator.prepayment.capLead')}</p>
-                  {exemptTrackNames.length > 0 && (
-                    <p
-                      className="prepayment-cap-exempt"
-                      data-testid="prepayment-cap-exempt"
-                    >
-                      {t('calculator.prepayment.capExempt', {
-                        tracks: exemptTrackNames.join(', '),
-                      })}
-                    </p>
-                  )}
-                  <div
-                    className="prepayment-cap-grid"
-                    // Column count as a variable, so the phone breakpoint can
-                    // still fall back to one field per row.
-                    style={
-                      { '--cap-columns': Math.min(cappableRows.length, 3) } as CSSProperties
-                    }
-                  >
-                    {cappableRows.map((row) => (
-                      <label className="input-group prepayment-field" key={row.id}>
-                        {t(`calculator.trackTypes.${row.type}`)}
-                        <span className="input-wrap">
-                          <input
-                            id={`prepayment-cap-${row.id}`}
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            step={0.01}
-                            value={capRateTexts[row.id] ?? ''}
-                            onChange={(event) => {
-                              const value = event.target.value
-                              setCapRateTexts((current) => ({ ...current, [row.id]: value }))
-                            }}
-                            placeholder={t('calculator.prepayment.capRatePlaceholder')}
-                            aria-label={`${t('calculator.prepayment.capRateLabel')} ${trackName(row.id)}`}
-                            data-testid={`prepayment-cap-${row.type}`}
-                          />
-                          <span aria-hidden="true">%</span>
-                        </span>
-                        <span
-                          className="prepayment-cap-status"
-                          data-active={row.breakdown.capApplied}
-                          data-testid={`prepayment-cap-status-${row.type}`}
-                        >
-                          {row.breakdown.capApplied
-                            ? t('calculator.prepayment.capStatusActive', {
-                                fee: formatCurrency(row.breakdown.fee),
-                              })
-                            : t('calculator.prepayment.capStatusIdle')}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="prepayment-note-disclaimer">{t('calculator.prepayment.capNote')}</p>
-                </details>
-              )}
 
-              {/* The charges outside the discounting formula, with the two that
-                  depend on how the request itself is made. */}
-              <details
-                className="prepayment-note prepayment-extras"
-                data-testid="prepayment-extras"
-              >
-                <summary>
-                  <span className="collapse-caret" aria-hidden="true" />
-                  {t('calculator.prepayment.extras.title')}
-                </summary>
-                <p className="prepayment-note-lead">
-                  {t('calculator.prepayment.extras.lead')}
-                </p>
-                <div className="prepayment-extras-list">
-                  <div className="prepayment-extras-row">
-                    <span className="prepayment-extras-label">
-                      <span>
-                        {t('calculator.prepayment.extras.operational', {
-                          cap: formatCurrency(OPERATIONAL_FEE_CAP),
-                        })}
-                      </span>
-                      <span className="prepayment-extras-hint">
-                        {t('calculator.prepayment.extras.operationalHint')}
-                      </span>
-                    </span>
-                    <strong data-testid="prepayment-extras-operational">
-                      {formatCurrency(extras.operationalFee)}
-                    </strong>
-                  </div>
-                  <label className="prepayment-extras-row">
-                    <input
-                      id="prepayment-no-notice"
-                      name="prepayment-no-notice"
-                      type="checkbox"
-                      checked={noNotice}
-                      onChange={(event) => setNoNotice(event.target.checked)}
-                      data-testid="prepayment-extras-no-notice"
-                    />
-                    <span className="prepayment-extras-label">
-                      <span>{t('calculator.prepayment.extras.noNotice')}</span>
-                      <span className="prepayment-extras-hint">
-                        {t('calculator.prepayment.extras.noNoticeHint')}
-                      </span>
-                    </span>
-                    <strong data-testid="prepayment-extras-no-notice-amount">
-                      {formatCurrency(extras.noNoticeFee)}
-                    </strong>
-                  </label>
-                  <label className="prepayment-extras-row">
-                    <input
-                      id="prepayment-cpi"
-                      name="prepayment-cpi"
-                      type="checkbox"
-                      checked={firstHalfOfMonth}
-                      onChange={(event) => setFirstHalfOfMonth(event.target.checked)}
-                      data-testid="prepayment-extras-cpi"
-                    />
-                    <span className="prepayment-extras-label">
-                      <span>{t('calculator.prepayment.extras.cpi')}</span>
-                      <span className="prepayment-extras-hint">
-                        {t('calculator.prepayment.extras.cpiHint')}
-                      </span>
-                    </span>
-                    <strong data-testid="prepayment-extras-cpi-amount">
-                      {formatCurrency(extras.cpiCompensationFee)}
-                    </strong>
-                  </label>
-                </div>
-                <div className="prepayment-extras-total">
-                  <span>{t('calculator.prepayment.extras.total')}</span>
-                  <strong data-testid="prepayment-extras-total">
-                    {formatCurrency(extrasTotalShown)}
-                  </strong>
-                </div>
-                <p className="prepayment-note-disclaimer">
-                  {t('calculator.prepayment.extras.note')}
-                </p>
-              </details>
 
 
             </>

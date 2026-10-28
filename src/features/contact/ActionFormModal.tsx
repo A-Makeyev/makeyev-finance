@@ -54,11 +54,12 @@ export function ActionFormModal({ open, onOpenChange }: ActionFormModalProps) {
         // family as the valid fields and the send button.
         // `!max-w` beats the shared AppModal base's max-w-[500px]: both are
         // plain utilities, so without the important flag the 500px one wins
-        // by source order.
-        // `!top` nudges the dialog 48px below dead center so it sits clear of
-        // the sticky header on a laptop; the shared AppModal keeps centering
-        // all its other dialogs exactly as before.
-        contentClassName="no-scrollbar !max-w-[400px] !top-[calc(50%_+_48px)] !rounded-2xl !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
+        // by source order. The 60px drop and the height cap (viewport minus
+        // 200px) keep the dialog clear of the sticky header at the top and
+        // ~40px off the bottom on a short window. Together they guarantee a
+        // top edge at least 160px down, however short the viewport is; the
+        // form scrolls inside the cap instead of sliding under the header.
+        contentClassName="no-scrollbar !max-w-[380px] !max-h-[calc(100dvh_-_200px)] !top-[calc(50%_+_60px)] !rounded-2xl !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
       >
         {/* Compact by design at every width: the form modal is the tallest
             dialog on the site, so its fields, rhythm and type are one step
@@ -66,15 +67,15 @@ export function ActionFormModal({ open, onOpenChange }: ActionFormModalProps) {
             globals.css) and it is 100px narrower than the shared AppModal
             base, so it stops dominating the screen on a laptop or a wide
             monitor alike. */}
-        <div className="p-5" dir={isHebrew ? 'rtl' : 'ltr'}>
+        <div className="p-4" dir={isHebrew ? 'rtl' : 'ltr'}>
           {/* Header */}
           <div
-            className={`mb-3 ${isHebrew ? 'text-right' : 'text-left'}`}
+            className={`mb-2 ${isHebrew ? 'text-right' : 'text-left'}`}
           >
-            <h1 className="text-[20px] font-bold leading-tight text-ink sm:text-[22px]">
+            <h1 className="text-[18px] font-bold leading-tight text-ink sm:text-[19px]">
               {t('contact.actionModal.title')}
             </h1>
-            <p className="mt-1 text-[14px] font-medium text-soft-blue sm:text-[15px]">
+            <p className="mt-1 text-[13px] font-medium text-soft-blue sm:text-[14px]">
               {t('contact.actionModal.subtitle')}
             </p>
           </div>
