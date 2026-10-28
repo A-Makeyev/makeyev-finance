@@ -447,6 +447,34 @@ export class ForecastPanel {
     await this.root.scrollIntoViewIfNeeded()
   }
 
+  /**
+   * Top edge of each row inside the two forecast cards (title, lead, chart,
+   * caption, table). Side by side, the rows share one set of grid tracks, so
+   * the paired tops must match even when one lead wraps to two lines.
+   */
+  async rowTops(): Promise<
+    Array<Record<'title' | 'lead' | 'chart' | 'caption' | 'table', number | null>>
+  > {
+    const cards = await this.cards.all()
+    return Promise.all(
+      cards.map(async (card) => {
+        const top = async (selector: string) => {
+          const element = card.locator(selector)
+          if ((await element.count()) === 0) return null
+          const box = await element.boundingBox()
+          return box ? Math.round(box.y) : null
+        }
+        return {
+          title: await top('h3'),
+          lead: await top('.forecast-card-lead'),
+          chart: await top('.forecast-chart'),
+          caption: await top('.forecast-caption'),
+          table: await top('.forecast-table-block'),
+        }
+      }),
+    )
+  }
+
   /** The base / +1pp / -1pp payments at the start of `year` (1-based). */
   async resetPayments(year: number): Promise<{ base: number; up: number; down: number }> {
     const amounts = await this.rowAmounts(this.resetTable, year)

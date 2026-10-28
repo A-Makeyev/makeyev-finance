@@ -66,19 +66,25 @@ interface ForecastChartProps {
    * the default whole-K formatter rounds every label to the same "₪8K".
    */
   formatTick?: (value: number) => string
+  /**
+   * ViewBox height in plot units. The chart scales to its container's width, so
+   * a taller box only grows the plot area (the axes, margins and type keep their
+   * size). The prepayment chart asks for more because it shares a row with a
+   * 14-row table and would otherwise read as a shorter strip beside it.
+   */
+  height?: number
   testId: string
 }
 
 // Same 900x520 family as the other schedule charts, so the panel's charts line
 // up. The plot keeps a zero baseline: payment and cost paths both start at 0.
 const WIDTH = 900
-const HEIGHT = 520
+const DEFAULT_HEIGHT = 520
 // The left margin holds the shekel ticks plus the rotated side title; the
 // forecast panel asks for larger ticks, so it needs more room than the
 // schedule charts.
 const MARGIN = { top: 40, right: 88, bottom: 84, left: 120 }
 const INNER_W = WIDTH - MARGIN.left - MARGIN.right
-const INNER_H = HEIGHT - MARGIN.top - MARGIN.bottom
 
 /** Stroke patterns for the optional per-series dash (undefined = solid). */
 const DASH_ARRAYS = { solid: undefined, dashed: '9 6', dotted: '2 6' } as const
@@ -99,9 +105,11 @@ export function ForecastChart({
   onSelectYear,
   zeroBased = true,
   formatTick = formatAxisShekel,
+  height = DEFAULT_HEIGHT,
   testId,
 }: ForecastChartProps) {
   const { t } = useTranslation()
+  const innerHeight = height - MARGIN.top - MARGIN.bottom
   const [activeYear, setActiveYear] = useState<number | null>(null)
   // Whether the pointer is on the plot right now. `activeYear` deliberately
   // outlives it, so the callout still has a year to show while it fades out.
@@ -140,10 +148,11 @@ export function ForecastChart({
     const y = (value: number) =>
       svgRound(
         MARGIN.top +
-          INNER_H * (1 - (Math.max(axisMin, Math.min(axisMax, value)) - axisMin) / (axisMax - axisMin)),
+          innerHeight *
+            (1 - (Math.max(axisMin, Math.min(axisMax, value)) - axisMin) / (axisMax - axisMin)),
       )
     return { nonEmpty, maxYear, axisMin, axisMax, step, ticks, x, y }
-  }, [series, zeroBased])
+  }, [series, zeroBased, innerHeight])
 
   if (!geometry) return null
   const { nonEmpty, maxYear, step, ticks, x, y } = geometry
@@ -177,6 +186,9 @@ export function ForecastChart({
         return `L ${px} ${py}`
       })
       .join(' ')
+
+  /** Vertical centre of the plot, where the rotated side title sits. */
+  const axisCenterY = MARGIN.top + innerHeight / 2
 
   /** The loan year under the pointer, clamped into the plot. */
   const yearAt = (event: React.MouseEvent<SVGSVGElement>): number => {
@@ -243,7 +255,7 @@ export function ForecastChart({
       </div>
       <div className="forecast-plot" ref={plotRef}>
         <svg
-          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          viewBox={`0 0 ${WIDTH} ${height}`}
           direction="ltr"
           role="img"
           aria-label={ariaLabel}
@@ -277,7 +289,7 @@ export function ForecastChart({
               x1={x(year)}
               x2={x(year)}
               y1={MARGIN.top}
-              y2={MARGIN.top + INNER_H}
+              y2={MARGIN.top + innerHeight}
               className="forecast-reset-line"
               aria-hidden="true"
             />
@@ -288,7 +300,7 @@ export function ForecastChart({
               x1={x(pickedYear)}
               x2={x(pickedYear)}
               y1={MARGIN.top}
-              y2={MARGIN.top + INNER_H}
+              y2={MARGIN.top + innerHeight}
               className="forecast-selected-line"
               aria-hidden="true"
             />
@@ -299,12 +311,12 @@ export function ForecastChart({
               <line
                 x1={x(tick.index + 1)}
                 x2={x(tick.index + 1)}
-                y1={MARGIN.top + INNER_H}
-                y2={MARGIN.top + INNER_H + (tick.label === null ? 4 : 7)}
+                y1={MARGIN.top + innerHeight}
+                y2={MARGIN.top + innerHeight + (tick.label === null ? 4 : 7)}
                 className={tick.label === null ? 'chart-minor-tick' : 'chart-major-tick'}
               />
               {tick.label !== null && (
-                <text x={x(tick.index + 1)} y={HEIGHT - 34} className="chart-tick">
+                <text x={x(tick.index + 1)} y={height - 34} className="chart-tick">
                   {tick.label}
                 </text>
               )}
@@ -348,16 +360,16 @@ export function ForecastChart({
 
           <text
             x={axisTitleX}
-            y={MARGIN.top + INNER_H / 2}
+            y={axisCenterY}
             className="chart-axis-title chart-axis-title-rot"
-            transform={`rotate(-90 ${axisTitleX} ${MARGIN.top + INNER_H / 2})`}
+            transform={`rotate(-90 ${axisTitleX} ${axisCenterY})`}
           >
             {axisTitle}
           </text>
           <text x={44} y={12} className="chart-axis-title chart-axis-title-above">
             {axisTitle}
           </text>
-          <text x={MARGIN.left + INNER_W / 2} y={HEIGHT - 6} className="chart-axis-title">
+          <text x={MARGIN.left + INNER_W / 2} y={height - 6} className="chart-axis-title">
             {t('calculator.charts.axisYear')}
           </text>
         </svg>
@@ -371,7 +383,7 @@ export function ForecastChart({
             style={{
               left: `${(x(activeYear) / WIDTH) * 100}%`,
               // `translate` composes with the clamp hook's `transform`.
-              top: `${(anchorY / HEIGHT) * 100}%`,
+              top: `${(anchorY / height) * 100}%`,
               // Bottom edge just clear of the line, with a small gap.
               translate: '0 calc(-100% - 10px)',
             }}

@@ -452,8 +452,9 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     // With nothing entered there is no partial prepayment to total up.
     await expect(order.getByTestId('prepayment-order-fee')).toHaveCount(0)
 
-    // The section names the mix it prices: one mix, this many tracks.
-    await expect(calc.page.getByTestId('prepayment-mix-line')).toContainText('התמהיל הנוכחי')
+    // The section still names the balance its fees are charged on: the total
+    // that used to sit in a separate mix line now closes the fee table.
+    await expect(calc.page.getByTestId('prepayment-total-balance')).toBeVisible()
 
     // One amount is enough to start: the totals appear beside the rows.
     await calc.page.getByTestId('prepayment-allocate-prime').fill('100000')
@@ -461,13 +462,12 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     await expect(order.getByTestId('prepayment-order-total-amount')).toContainText('סכום לפירעון')
   })
 
-  test('puts the split under the controls with both charge cards beside it', async ({ calc }) => {
+  test('stacks the stats over the split, the fees card and the cap', async ({ calc }) => {
     await calc.page.getByTestId('prepayment-allocate-fixed').fill('100000')
 
-    // The requested reading order: amount first, then the split that spends
-    // it, then its summary. The extra bank charges and the section 3(4) cap
-    // share that row, both stretched to the split column's height, and the
-    // outcomes explain the split further down.
+    // The requested reading order: the amount and rate controls, then the fee
+    // chart, then the three headline figures, then the split and the extra bank
+    // charges side by side, with the section 3(4) cap full width underneath.
     const tops = (await calc.page.evaluate(`(() => {
       const top = (id) => {
         const el = document.querySelector('[data-testid="' + id + '"]')
@@ -482,7 +482,7 @@ test.describe('mortgage calculator - early-repayment fee', () => {
       return {
         amount: top('prepayment-partial'),
         order: top('prepayment-order'),
-        stats: top('prepayment-kpi-total'),
+        stats: top('prepayment-stats'),
         extras: box('prepayment-extras'),
         orderBox: box('prepayment-order'),
         outcomes: top('prepayment-outcomes'),
@@ -492,25 +492,28 @@ test.describe('mortgage calculator - early-repayment fee', () => {
 
     expect(tops.amount, 'partial amount field rendered').not.toBeNull()
     expect(tops.order, 'order panel rendered').not.toBeNull()
-    expect(tops.stats, 'summary rendered').not.toBeNull()
+    expect(tops.stats, 'stats band rendered').not.toBeNull()
     expect(tops.outcomes, 'outcomes rendered').not.toBeNull()
     expect(tops.cap, 'cap card rendered').not.toBeNull()
     expect(tops.extras, 'fees card rendered').not.toBeNull()
 
     expect(tops.order as number).toBeGreaterThan(tops.amount as number)
-    expect(tops.stats as number).toBeGreaterThan(tops.order as number)
+    // The three stat cards sit above the sections they summarise.
+    expect(tops.stats as number).toBeGreaterThan(tops.amount as number)
+    expect(tops.stats as number).toBeLessThan(tops.order as number)
 
-    // Both charge cards share the split's row and stretch to its height, not
-    // just the split's own box: they cover the split plus its summary.
+    // The split and the fees card share one row, its top edge and its height.
     const extras = tops.extras as { top: number; height: number; left: number }
     const cap = tops.cap as { top: number; height: number; left: number }
     const orderBox = tops.orderBox as { top: number; height: number; left: number }
     expect(extras.top).toBeCloseTo(orderBox.top, 0)
-    expect(cap.top).toBeCloseTo(orderBox.top, 0)
-    expect(extras.height).toBeGreaterThan(orderBox.height)
-    expect(cap.height).toBeGreaterThan(orderBox.height)
+    expect(extras.height).toBeCloseTo(orderBox.height, 0)
     expect(extras.left).not.toBeCloseTo(orderBox.left, 0)
-    expect(cap.left).not.toBeCloseTo(extras.left, 0)
+
+    // The cap is not a third card in that row: it opens below both cards and
+    // takes the band's full width.
+    expect(cap.top).toBeGreaterThan(orderBox.top + orderBox.height - 1)
+    expect(cap.left).toBeCloseTo(extras.left, 0)
 
     expect(tops.outcomes as number).toBeGreaterThan((tops.cap as { top: number }).top)
   })

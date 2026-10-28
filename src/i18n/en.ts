@@ -618,7 +618,7 @@ export const en: { translation: Translation } = {
         heading: 'Early-repayment fee',
         lead:
           'An estimate of the discounting fee the bank would charge to repay the mortgage on the date you pick, track by track, using the Bank of Israel formula. Every figure comes from the amortization schedule above.',
-        prepayYearsLabel: 'Repayment date (years from the mortgage)',
+        prepayYearsLabel: 'Repayment date',
         yearsSuffix: 'years',
         yearsHint: 'Year 1 to {{max}} - the last year with a balance',
         marketRateLabel: 'Annual comparison rate',
@@ -751,7 +751,7 @@ export const en: { translation: Translation } = {
         noReset:
           'No rate reset falls inside the loan term, so all scenarios are identical. Only five-year variable tracks have a contractual reset date.',
         costHeading: 'Cumulative interest and indexation',
-        costLead: 'What has accrued from the start of the loan through the end of each year on the base rate path.',
+        costLead: 'What has accrued each year on the base rate path.',
         noIndexation:
           'The mix has no CPI-indexed track, so there is no indexation to show. The line shows cumulative interest only.',
         tableYear: 'Year',

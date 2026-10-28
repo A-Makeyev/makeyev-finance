@@ -156,4 +156,19 @@ test.describe('rate and CPI forecast in English (LTR)', () => {
 
     await expect(forecast.resetTable.locator('thead')).toContainText('+1 pp')
   })
+
+  test('starts both cards on the same line', async ({ localizedCalc }) => {
+    await localizedCalc.goto()
+    const forecast = localizedCalc.forecast
+    await forecast.scrollTo()
+
+    // English wraps the second card's lead to two lines; the rows below it
+    // still begin where the first card's rows do, chart to table.
+    const [first, second] = await forecast.rowTops()
+    for (const row of ['title', 'lead', 'chart', 'caption', 'table'] as const) {
+      expect(first[row], `${row} rendered in the first card`).not.toBeNull()
+      expect(second[row], `${row} rendered in the second card`).not.toBeNull()
+      expect(Math.abs(first[row]! - second[row]!), `${row} top edges`).toBeLessThanOrEqual(1)
+    }
+  })
 })

@@ -214,3 +214,22 @@ test.describe('mortgage calculator - tracks and allocation', () => {
     await expect(calc.page.getByTestId('purchase-tax-breakdown')).toBeVisible()
   })
 })
+
+test.describe('track form in English (LTR)', () => {
+  test.use({ language: 'english' })
+
+  test('keeps the Term value and its suffix inside the field', async ({ localizedCalc }) => {
+    await localizedCalc.goto()
+    const term = localizedCalc.page.getByTestId('track-years-1')
+    await term.scrollIntoViewIfNeeded()
+    await expect(term).toHaveValue('15')
+
+    // The number input used to be narrower than its own content: "15" plus
+    // the "years" suffix clipped the value. The column is wide enough now.
+    const fit = await term.evaluate((node) => ({
+      scroll: node.scrollWidth,
+      client: node.clientWidth,
+    }))
+    expect(fit.scroll).toBeLessThanOrEqual(fit.client + 1)
+  })
+})

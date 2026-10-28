@@ -54,20 +54,18 @@ export function ActionFormModal({ open, onOpenChange }: ActionFormModalProps) {
         // family as the valid fields and the send button.
         // `!max-w` beats the shared AppModal base's max-w-[500px]: both are
         // plain utilities, so without the important flag the 500px one wins
-        // by source order. The 60px drop and the height cap (viewport minus
-        // 200px) keep the dialog clear of the sticky header at the top and
-        // ~40px off the bottom on a short window. Together they guarantee a
-        // top edge at least 160px down, however short the viewport is; the
-        // form scrolls inside the cap instead of sliding under the header.
-        contentClassName="no-scrollbar !max-w-[380px] !max-h-[calc(100dvh_-_200px)] !top-[calc(50%_+_60px)] !rounded-2xl !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
+        // by source order. The dialog widens with the viewport (380 -> 440 ->
+        // 480) so it does not dominate a phone but uses a laptop screen;
+        // 92vw still caps it on small screens. The 60px drop and the height
+        // cap (viewport minus 200px) keep the dialog clear of the sticky
+        // header at the top and ~40px off the bottom on a short window.
+        contentClassName="no-scrollbar !max-w-[380px] sm:!max-w-[440px] lg:!max-w-[480px] !max-h-[calc(100dvh_-_200px)] !top-[calc(50%_+_60px)] !rounded-2xl !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
       >
-        {/* Compact by design at every width: the form modal is the tallest
-            dialog on the site, so its fields, rhythm and type are one step
-            tighter than the standalone contact form (see the scoped rules in
-            globals.css) and it is 100px narrower than the shared AppModal
-            base, so it stops dominating the screen on a laptop or a wide
-            monitor alike. */}
-        <div className="p-4" dir={isHebrew ? 'rtl' : 'ltr'}>
+        {/* The form modal is the tallest dialog on the site, so its fields,
+            rhythm and type are one step tighter than the standalone contact
+            form (see the scoped rules in globals.css). Padding steps up with
+            the dialog width so the form keeps an even inset at every size. */}
+        <div className="p-4 sm:p-5 lg:p-6" dir={isHebrew ? 'rtl' : 'ltr'}>
           {/* Header */}
           <div
             className={`mb-2 ${isHebrew ? 'text-right' : 'text-left'}`}
