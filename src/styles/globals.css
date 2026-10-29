@@ -7035,19 +7035,27 @@ e #name,
   line-height: 1.6;
 }
 
+/* The inputs band: the three primary fields (date, comparison rate, partial
+   amount), one field per priced track for the section 3(4) cap, and the
+   exit-station switch. The fields are three rows deep (caption, box, hint) and
+   the switch sits on the middle of those rows, so its box lines up with the
+   input boxes however tall a caption gets. */
 .prepayment-controls {
-  display: grid;
-  /* Three fields (date, comparison rate, partial amount) and the exit-station
-     checkbox on the same row; each field spans a label row, an input row and
-     a hint row, so the inputs line up even when one caption wraps. */
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-  grid-template-rows: auto auto auto;
-  column-gap: 18px;
-  row-gap: 0;
-  align-items: start;
   padding-bottom: 20px;
   margin-bottom: 18px;
   border-bottom: 1px solid var(--calc-line);
+}
+
+/* auto-fit collapses the columns no field needs, so a mix with three fields
+   keeps them as wide as before and the cap fields only take the tracks they
+   occupy; the last track is the switch's own column, sized to its text. */
+.prepayment-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) minmax(200px, auto);
+  column-gap: 18px;
+  row-gap: 0;
+  align-items: start;
+  min-width: 0;
 }
 
 .prepayment-field {
@@ -7057,17 +7065,17 @@ e #name,
   min-width: 0;
 }
 
-/* A field is three grid rows borrowed from the controls grid. The caption sits
+/* A field is three grid rows borrowed from the fields grid. The caption sits
    at the bottom of its row, directly above the input, so a one-line label and
    a wrapped one both leave the same small gap instead of one input sitting
    lower than the others. */
-.prepayment-controls .prepayment-field {
+.prepayment-fields .prepayment-field {
   display: grid;
   grid-template-rows: subgrid;
   grid-row: span 3;
 }
 
-.prepayment-controls .prepayment-field-label {
+.prepayment-fields .prepayment-field-label {
   display: block;
   align-self: end;
   padding-bottom: 7px;
@@ -7075,7 +7083,7 @@ e #name,
 }
 
 /* The shared .input-wrap margin would double the gap above the input row. */
-.prepayment-controls .input-wrap {
+.prepayment-fields .input-wrap {
   margin-top: 0;
 }
 
@@ -7108,15 +7116,24 @@ e #name,
   display: flex;
   align-items: center;
   gap: 8px;
-  /* The controls grid is three rows; row 2 is the input row. Placing the
-     checkbox there centres it on the boxes themselves, not on the whole field
-     (which also holds a caption above and a hint below). */
-  grid-column: 4;
+  /* The second row of the band is the input row, so the switch sits level with
+     the boxes, not halfway down the captions and hints around them. */
+  grid-column: -2 / -1;
   grid-row: 2;
   align-self: center;
+  max-inline-size: 230px;
   color: var(--calc-muted);
   font-size: 0.95rem;
   cursor: pointer;
+}
+
+/* Two lines, always: the condition is the control, and what it means is the
+   parenthetical under it. Wrapped as one string it broke inside the
+   parenthetical, which read as a typo. */
+.prepayment-checkbox-hint {
+  display: block;
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .prepayment-checkbox input {
@@ -7192,8 +7209,11 @@ e #name,
 
 /* The results row: the split and the extra bank charges are the two peers.
    The grid stretches both to the tallest, so their frames share a top and
-   bottom edge, and they stay side by side until the panel is too narrow for
-   two readable cards. */
+   bottom edge. They stay side by side only while each card is wide enough for
+   its own rows: the split's amount field keeps a fixed 200px column, so on a
+   half-width card its track name and captions wrap into a stack of narrow
+   slivers. Below 1000px each card takes the band's full width instead (see
+   the media query near the end of this block). */
 .prepayment-result-grid {
   display: grid;
   /* Close to an even split: the split's rows only need a little more room than
@@ -7203,12 +7223,6 @@ e #name,
   align-items: stretch;
   gap: 16px;
   margin-bottom: 20px;
-}
-
-/* Section 3(4)'s cap is not a third peer: it runs full width under the pair,
-   so its stacked fields are never squeezed into a narrow column. */
-.prepayment-result-grid>.prepayment-cap-card {
-  grid-column: 1 / -1;
 }
 
 /* The three headline figures above the band, one card each: the statutory fee,
@@ -8184,105 +8198,34 @@ e #name,
   line-height: 1.45;
 }
 
-/* Section 3(4)'s cap runs full width under the split and the extra charges. It
-   is always open: the fee column it changes is on screen, so a collapsed toggle
-   would leave that column's numbers unexplained. The explanation opens the
-   card and the rate fields follow it in one row, so a single cappable track no
-   longer leaves a tall, mostly empty column beside the text. */
-.prepayment-cap-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-  min-width: 0;
-  padding: 16px 18px;
-  background: var(--calc-soft);
-  border-inline-start: 3px solid var(--calc-line);
-}
-
-.prepayment-cap-title {
-  grid-column: 1;
-  margin: 0 0 6px;
-  color: var(--calc-teal-dark);
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.prepayment-cap-lead {
-  grid-column: 1;
-  margin: 0 0 10px;
-  color: var(--calc-muted);
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
-.prepayment-cap-note {
-  grid-column: 1 / -1;
-  margin-block: 8px 0;
-  padding-block-start: 12px;
-  border-top: 1px solid var(--calc-line);
-  color: var(--calc-muted);
-  font-size: 0.78rem;
-  line-height: 1.5;
-}
-
-/* Section 3(4)'s optional origination-rate inputs: one field per priced track,
-   laid out in a row that fills the card. The fields share the band equally, and
-   each stops at a readable width so one track alone does not stretch a single
-   percentage box across the whole card. */
-
-.prepayment-cap-grid {
-  grid-column: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px 18px;
-  inline-size: 100%;
-  margin-block: 2px 0;
-}
-
-/* Names the tracks that are absent from the cap grid, so a two-field grid
-   under a three-track mix never reads as a missing input. */
-.prepayment-cap-exempt {
-  grid-column: 1;
-  margin: 0 0 10px;
-  color: var(--calc-muted);
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-
-/* Smaller than the panel's standard fields - these are optional percentages
-   in their own card, not primary inputs. */
-.prepayment-cap-grid .prepayment-field {
-  max-inline-size: 340px;
-  font-size: 0.85rem;
-}
-
-.prepayment-cap-grid .input-wrap input {
-  font-size: 0.85rem;
-  padding: 8px 10px;
-}
-
-/* Three fields share one row, so the % suffix only needs a token gap - the
-   standard 15px on each side would eat most of a phone-width field. */
-.prepayment-cap-grid .input-wrap span {
-  padding: 0 7px;
-  font-size: 0.85rem;
-}
-
 /* Live answer under a cap field: whether the entered rate changed anything.
    Without it an entry that cannot bite (an average above the track's rate, or
-   the track's fee already zero) looks like a broken input. */
-.prepayment-cap-status {
-  display: block;
-  margin-top: 6px;
-  color: var(--calc-muted);
-  font-size: 0.72rem;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
+   the track's fee already zero) looks like a broken input. The caption's size
+   and spacing come from .prepayment-field-hint, which the line also carries;
+   an applied cap takes the accent ink. */
 .prepayment-cap-status[data-active='true'] {
   color: var(--calc-teal-dark);
   font-weight: 700;
+}
+
+/* Below the width where all of the inputs fit on one line (three primary
+   fields, one per cappable track, and the checkbox), the checkbox drops under
+   them and the fields take three columns: a wrapped row of four plus a
+   leftover field alone looks like a broken grid, while three plus the cap
+   fields underneath reads as two deliberate rows. */
+@media (max-width: 1180px) {
+  .prepayment-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* No room for a column of its own: the switch closes the band under the
+     fields, on its own full-width row. */
+  .prepayment-checkbox {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    max-inline-size: none;
+    margin-block-start: 12px;
+  }
 }
 
 /* The split card narrows with the viewport while the track name keeps its
@@ -8294,47 +8237,33 @@ e #name,
   }
 }
 
-/* Order and the extra charges stay side by side as long as both cards are
-   readable, and only then stack. The cap's fields already reflow on their own
-   (auto-fit), so they need no override here. */
-@media (max-width: 760px) {
+@media (max-width: 1000px) {
+  /* At this width a half-width split card is too narrow: its 200px amount
+     field leaves the track name around 110px, and the name, the "repay first"
+     badge and the per-₪1,000 line each break into their own sliver. The two
+     cards take the full width one above the other instead. */
   .prepayment-result-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (max-width: 1000px) {
-  .prepayment-controls {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  /* The third field wraps to a second row; the checkbox takes the free column
-     beside its input instead of leaving a half-empty grid. */
-  .prepayment-controls .prepayment-checkbox {
-    grid-column: 2;
-    grid-row: 5;
-  }
-}
-
 @media (max-width: 650px) {
-  .prepayment-controls {
-    grid-template-columns: 1fr;
-  }
-
-  /* One column has no free column beside the last field, so the checkbox
-     closes the block after all three. */
-  .prepayment-controls .prepayment-checkbox {
-    grid-column: 1;
-    grid-row: 10;
-    margin-top: 12px;
-  }
-
   .prepayment-outcomes-grid {
     grid-template-columns: 1fr;
   }
 
   .prepayment-stats {
     grid-template-columns: 1fr;
+  }
+
+  /* Two fields per row: a 150px column is too narrow for the track names the
+     cap fields carry, and a phone has no room for three. */
+  .prepayment-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .prepayment-checkbox {
+    margin-block-start: 16px;
   }
 
   /* The amount field and the fee drop under the track name, each in the
@@ -8381,6 +8310,14 @@ e #name,
   .prepayment-table th:first-child,
   .prepayment-table td:first-child {
     white-space: normal;
+  }
+}
+
+/* One field per row on a phone: two columns here leave the track names three
+   lines deep and the rate boxes too narrow to read. */
+@media (max-width: 420px) {
+  .prepayment-fields {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

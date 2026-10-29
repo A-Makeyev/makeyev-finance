@@ -410,14 +410,17 @@ export function PrepaymentSection() {
   // Tracks whose fee a cap can actually lower: the exempt ones are fee-free
   // whatever the origination rate was.
   const cappableRows = rows.filter((row) => !row.breakdown.exemptReason)
-  /** Exempt tracks have no cap field; this line names them so the count adds up. */
-  const exemptTrackNames = [
-    ...new Set(
-      rows
-        .filter((row) => row.breakdown.exemptReason)
-        .map((row) => t(`calculator.trackTypes.${row.type}`)),
-    ),
-  ]
+  /**
+   * The tracks that get a section 3(4) field. Prime and annual-reset tracks are
+   * exempt whatever the circumstances, so a field there could never do
+   * anything; a track waived only because the exit-station switch is ticked
+   * keeps its field (its hint names the exemption) so ticking the switch does
+   * not make an input the reader is filling in disappear.
+   */
+  const capFieldRows = rows.filter(
+    (row) =>
+      row.breakdown.exemptReason !== 'prime' && row.breakdown.exemptReason !== 'frequentReset',
+  )
   /** The rate the field shows, suggested or typed; '' while no table is loaded. */
   const shownMarketRate = marketEdited ? manualMarketText.trim() : suggestedMarketRate
   /**
@@ -568,87 +571,134 @@ export function PrepaymentSection() {
       ) : (
         <>
           <div className="prepayment-controls">
-            <label className="input-group prepayment-field">
-              <span className="prepayment-field-label">
-                {t('calculator.prepayment.prepayYearsLabel')}
-              </span>
-              <span className="input-wrap">
-                <input
-                  id="prepayment-years"
-                  name="prepayment-years"
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={lastPrepayYears}
-                  step={1}
-                  value={prepayYearsText}
-                  onChange={(event) => {
-                    const raw = event.target.value
-                    const parsed = Number.parseFloat(raw)
-                    if (Number.isFinite(parsed) && parsed > lastPrepayYears) {
-                      setPrepayYearsText(String(lastPrepayYears))
-                      return
-                    }
-                    setPrepayYearsText(raw)
-                  }}
-                  aria-label={t('calculator.prepayment.prepayYearsLabel')}
-                  aria-describedby="prepayment-years-hint"
-                  data-testid="prepayment-years"
+            {/* The section 3(4) cap fields join this row as its last fields:
+                they price the same mix, with the same three-part shape (label,
+                box, hint), so they read as part of the inputs rather than a
+                block of their own. Only tracks that can carry a fee get one -
+                an exempt track is fee-free whatever the cap says. */}
+            <div className="prepayment-fields">
+              <label className="input-group prepayment-field">
+                <span className="prepayment-field-label">
+                  {t('calculator.prepayment.prepayYearsLabel')}
+                </span>
+                <span className="input-wrap">
+                  <input
+                    id="prepayment-years"
+                    name="prepayment-years"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={lastPrepayYears}
+                    step={1}
+                    value={prepayYearsText}
+                    onChange={(event) => {
+                      const raw = event.target.value
+                      const parsed = Number.parseFloat(raw)
+                      if (Number.isFinite(parsed) && parsed > lastPrepayYears) {
+                        setPrepayYearsText(String(lastPrepayYears))
+                        return
+                      }
+                      setPrepayYearsText(raw)
+                    }}
+                    aria-label={t('calculator.prepayment.prepayYearsLabel')}
+                    aria-describedby="prepayment-years-hint"
+                    data-testid="prepayment-years"
+                  />
+                  <span aria-hidden="true">{t('calculator.prepayment.yearsSuffix')}</span>
+                </span>
+                <span className="prepayment-field-hint" id="prepayment-years-hint">
+                  {t('calculator.prepayment.yearsHint', { max: lastPrepayYears })}
+                </span>
+              </label>
+
+              <label className="input-group prepayment-field">
+                <span className="prepayment-field-label">
+                  {t('calculator.prepayment.marketRateLabel')}
+                </span>
+                <span className="input-wrap">
+                  <input
+                    id="prepayment-market-rate"
+                    name="prepayment-market-rate"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step={0.01}
+                    // The suggestion is only the field's contents until the
+                    // reader edits it; after that their text must stay visible
+                    // (binding to the suggestion made every keystroke vanish).
+                    value={marketEdited ? manualMarketText : suggestedMarketRate}
+                    onChange={(event) => {
+                      setMarketEdited(true)
+                      setManualMarketText(event.target.value)
+                    }}
+                    placeholder={t('calculator.prepayment.marketRatePlaceholder')}
+                    aria-label={t('calculator.prepayment.marketRateLabel')}
+                    aria-describedby="prepayment-market-rate-hint"
+                    data-testid="prepayment-market-rate"
+                    data-suggested={marketEdited ? undefined : 'true'}
+                  />
+                  <span aria-hidden="true">%</span>
+                </span>
+                <span className="prepayment-field-hint" id="prepayment-market-rate-hint">
+                  {marketRateHint}
+                </span>
+              </label>
+
+              <label className="input-group prepayment-field">
+                <span className="prepayment-field-label">
+                  {t('calculator.prepayment.partialLabel')}
+                </span>
+                <MoneyInput
+                  value={partialText}
+                  onChange={changeTotal}
+                  suffix="₪"
+                  ariaLabel={t('calculator.prepayment.partialLabel')}
+                  testId="prepayment-partial"
                 />
-                <span aria-hidden="true">{t('calculator.prepayment.yearsSuffix')}</span>
-              </span>
-              <span className="prepayment-field-hint" id="prepayment-years-hint">
-                {t('calculator.prepayment.yearsHint', { max: lastPrepayYears })}
-              </span>
-            </label>
+              </label>
 
-            <label className="input-group prepayment-field">
-              <span className="prepayment-field-label">
-                {t('calculator.prepayment.marketRateLabel')}
-              </span>
-              <span className="input-wrap">
-                <input
-                  id="prepayment-market-rate"
-                  name="prepayment-market-rate"
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step={0.01}
-                  // The suggestion is only the field's contents until the
-                  // reader edits it; after that their text must stay visible
-                  // (binding to the suggestion made every keystroke vanish).
-                  value={marketEdited ? manualMarketText : suggestedMarketRate}
-                  onChange={(event) => {
-                    setMarketEdited(true)
-                    setManualMarketText(event.target.value)
-                  }}
-                  placeholder={t('calculator.prepayment.marketRatePlaceholder')}
-                  aria-label={t('calculator.prepayment.marketRateLabel')}
-                  aria-describedby="prepayment-market-rate-hint"
-                  data-testid="prepayment-market-rate"
-                  data-suggested={marketEdited ? undefined : 'true'}
-                />
-                <span aria-hidden="true">%</span>
-              </span>
-              <span className="prepayment-field-hint" id="prepayment-market-rate-hint">
-                {marketRateHint}
-              </span>
-            </label>
+              {capFieldRows.map((row) => (
+                <label className="input-group prepayment-field" key={row.id}>
+                  <span className="prepayment-field-label">
+                    {t('calculator.prepayment.capFieldLabel', {
+                      track: t(`calculator.trackTypes.${row.type}`),
+                    })}
+                  </span>
+                  <span className="input-wrap">
+                    <input
+                      id={`prepayment-cap-${row.id}`}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={0.01}
+                      value={capRateTexts[row.id] ?? ''}
+                      onChange={(event) => {
+                        const value = event.target.value
+                        setCapRateTexts((current) => ({ ...current, [row.id]: value }))
+                      }}
+                      placeholder={t('calculator.prepayment.capRatePlaceholder')}
+                      aria-label={`${t('calculator.prepayment.capRateLabel')} ${trackName(row.id)}`}
+                      data-testid={`prepayment-cap-${row.type}`}
+                    />
+                    <span aria-hidden="true">%</span>
+                  </span>
+                  <span
+                    className="prepayment-field-hint prepayment-cap-status"
+                    data-active={row.breakdown.capApplied}
+                    data-testid={`prepayment-cap-status-${row.type}`}
+                  >
+                    {row.breakdown.exemptReason
+                      ? t(`calculator.prepayment.exempt.${row.breakdown.exemptReason}`)
+                      : row.breakdown.capApplied
+                        ? t('calculator.prepayment.capStatusActive', {
+                            fee: formatCurrency(row.breakdown.fee),
+                          })
+                        : t('calculator.prepayment.capStatusIdle')}
+                  </span>
+                </label>
+              ))}
 
-            <label className="input-group prepayment-field">
-              <span className="prepayment-field-label">
-                {t('calculator.prepayment.partialLabel')}
-              </span>
-              <MoneyInput
-                value={partialText}
-                onChange={changeTotal}
-                suffix="₪"
-                ariaLabel={t('calculator.prepayment.partialLabel')}
-                testId="prepayment-partial"
-              />
-            </label>
-
-            <label className="prepayment-checkbox">
+              <label className="prepayment-checkbox">
               <input
                 id="prepayment-exit-station"
                 name="prepayment-exit-station"
@@ -656,9 +706,14 @@ export function PrepaymentSection() {
                 checked={onExitStation}
                 onChange={(event) => setOnExitStation(event.target.checked)}
                 data-testid="prepayment-exit-station"
-              />
-              <span>{t('calculator.prepayment.exitStation')}</span>
-            </label>
+              />                <span className="prepayment-checkbox-text">
+                  <span>{t('calculator.prepayment.exitStation')}</span>
+                  <span className="prepayment-checkbox-hint">
+                    {t('calculator.prepayment.exitStationHint')}
+                  </span>
+                </span>
+              </label>
+            </div>
           </div>
 
           {!hasResult && (
@@ -790,9 +845,7 @@ export function PrepaymentSection() {
                 </article>
               </div>
 
-              {/* The split and the extra charges share the row; the section
-                  3(4) cap runs full width underneath, with its rate fields in
-                  one row across the band. */}
+              {/* The split and the extra charges share the row. */}
               <div className="prepayment-result-grid">
                 <div className="prepayment-order" data-testid="prepayment-order">
                   <p className="prepayment-order-title">
@@ -997,69 +1050,6 @@ export function PrepaymentSection() {
                       {t('calculator.prepayment.extras.note')}
                     </p>
                   </div>
-
-                  {/* Section 3(4)'s cap is always open beside the extra charges:
-                      it changes the fee column above, so hiding it behind a
-                      toggle would leave that column's numbers unexplained. */}
-                  {cappableRows.length > 0 && (
-                    <div className="prepayment-cap-card" data-testid="prepayment-cap">
-                      <p className="prepayment-cap-title">
-                        {t('calculator.prepayment.capTitle')}
-                      </p>
-                      <p className="prepayment-cap-lead">
-                        {t('calculator.prepayment.capLead')}
-                      </p>
-                      {exemptTrackNames.length > 0 && (
-                        <p
-                          className="prepayment-cap-exempt"
-                          data-testid="prepayment-cap-exempt"
-                        >
-                          {t('calculator.prepayment.capExempt', {
-                            tracks: exemptTrackNames.join(', '),
-                          })}
-                        </p>
-                      )}
-                      <div className="prepayment-cap-grid">
-                        {cappableRows.map((row) => (
-                          <label className="input-group prepayment-field" key={row.id}>
-                            {t(`calculator.trackTypes.${row.type}`)}
-                            <span className="input-wrap">
-                              <input
-                                id={`prepayment-cap-${row.id}`}
-                                type="number"
-                                inputMode="decimal"
-                                min={0}
-                                step={0.01}
-                                value={capRateTexts[row.id] ?? ''}
-                                onChange={(event) => {
-                                  const value = event.target.value
-                                  setCapRateTexts((current) => ({ ...current, [row.id]: value }))
-                                }}
-                                placeholder={t('calculator.prepayment.capRatePlaceholder')}
-                                aria-label={`${t('calculator.prepayment.capRateLabel')} ${trackName(row.id)}`}
-                                data-testid={`prepayment-cap-${row.type}`}
-                              />
-                              <span aria-hidden="true">%</span>
-                            </span>
-                            <span
-                              className="prepayment-cap-status"
-                              data-active={row.breakdown.capApplied}
-                              data-testid={`prepayment-cap-status-${row.type}`}
-                            >
-                              {row.breakdown.capApplied
-                                ? t('calculator.prepayment.capStatusActive', {
-                                    fee: formatCurrency(row.breakdown.fee),
-                                  })
-                                : t('calculator.prepayment.capStatusIdle')}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                      <p className="prepayment-cap-note">
-                        {t('calculator.prepayment.capNote')}
-                      </p>
-                    </div>
-                  )}
               </div>
 
               <div className="table-wrap">
@@ -1161,7 +1151,7 @@ export function PrepaymentSection() {
               {/* The exemptions are the other reason a row reads 0, and the one
                   readers ask about most: prime and annual-reset tracks never
                   pay the fee, and a five-year track is free on its reset date. */}
-              {exemptTrackNames.length > 0 && (
+              {rows.some((row) => row.breakdown.exemptReason !== null) && (
                 <p
                   className="prepayment-note-line prepayment-zero-why"
                   data-testid="prepayment-zero-why"

@@ -626,7 +626,8 @@ export const en: { translation: Translation } = {
         marketRateManual: 'Your own rate, for every track',
         marketRateSuggestedNote: 'Suggested comparison rate from the latest BOI table: {{rate}}.',
         partialLabel: 'Partial prepayment amount',
-        exitStation: 'Repaid at an exit station (rate-reset date)',
+        exitStation: 'Repaid at an exit station',
+        exitStationHint: '(rate-reset date)',
         table: {
           track: 'Track',
           balance: 'Outstanding principal',
@@ -696,7 +697,7 @@ export const en: { translation: Translation } = {
         orderRemaining: 'Still unallocated from the total: {{amount}}',
         orderFillRemaining: 'Fill the remainder cheapest first',
         exempt: {
-          prime: 'Exempt (prime)',
+          prime: 'Exempt',
           frequentReset: 'Exempt (annual rate reset)',
           exitStation: 'Exempt (exit station)',
         },
@@ -704,17 +705,11 @@ export const en: { translation: Translation } = {
           'The comparison rate comes from the Bank of Israel average-rate table for {{date}} and is converted to a monthly rate on an effective annual basis.',
         marketRateFallback: 'The Bank of Israel average rate could not be loaded, so the estimate uses {{rate}}%.',
         marketRateLink: 'The average-rate table',
-        capTitle: 'Origination-rate cap (section 3(4))',
-        capLead:
-          'If you know the Bank of Israel average rate for the track type and term on the day the loan was taken, enter it for that track. The cap replaces the calculation only when that average is below the track rate.',
-        capExempt:
-          'Exempt tracks are not shown here: {{tracks}}. Their fee is zero whatever the origination average was, so an input there would have nothing to change.',
+        capFieldLabel: 'Origination-rate cap: {{track}}',
         capRateLabel: 'Origination average rate',
         capRatePlaceholder: 'Not known',
-        capStatusActive: 'Cap applied: this track’s fee is {{fee}}',
-        capStatusIdle: 'No effect: the cap is not below the track’s rate',
-        capNote:
-          'With no value the cap is not applied, so the fee may be higher than the one actually charged, never lower. Exempt tracks are not listed here because their fee is zero either way.',
+        capStatusActive: 'Applied: {{fee}}',
+        capStatusIdle: 'Not below the track rate',
         note: 'The estimate is for the date you choose, using the Bank of Israel formula. It covers the discounting (היוון) component only: an operational fee, a no-notice fee (up to 0.1% of the amount repaid) and a CPI compensation fee on index-linked tracks are charged on top. The section 3(4) cap applies only when you enter the average rate on the origination date; with no value it is left off, so the estimate may be higher than the actual fee. Your bank decides the actual fee.',
         emptyTitle: 'Nothing left to repay on that date',
         empty:

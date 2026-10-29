@@ -335,9 +335,7 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     await expect(calc.page.getByTestId('prepayment-cap-fixed')).toBeVisible()
 
     // The default mix has three tracks but only two cap fields: the exempt
-    // prime track has no fee, and the block names it so the count is clear.
-    await expect(calc.page.getByTestId('prepayment-cap-exempt')).toContainText('פריים')
-
+    // prime track has no fee to cap.
     const status = calc.page.getByTestId('prepayment-cap-status-fixed')
     await expect(status).toHaveAttribute('data-active', 'false')
     await calc.page.getByTestId('prepayment-cap-fixed').fill('3')
@@ -347,6 +345,16 @@ test.describe('mortgage calculator - early-repayment fee', () => {
 
     // An exempt track has no fee to cap, so it has no field at all.
     await expect(calc.page.getByTestId('prepayment-cap-prime')).toHaveCount(0)
+
+    // Ticking the exit station waives the five-year track's fee, but its field
+    // stays (naming the exemption) so an input being filled in does not
+    // disappear mid-entry.
+    await calc.page.getByTestId('prepayment-cap-variableIndexed5y').fill('1')
+    await calc.page.getByTestId('prepayment-exit-station').check()
+    await expect(calc.page.getByTestId('prepayment-cap-variableIndexed5y')).toHaveValue('1')
+    await expect(calc.page.getByTestId('prepayment-cap-status-variableIndexed5y')).toContainText(
+      'פטור',
+    )
   })
 
   test('keeps the fee chart when every fee is zero', async ({ calc }) => {
@@ -399,7 +407,8 @@ test.describe('mortgage calculator - early-repayment fee', () => {
 
   test('names the exemption behind each zeroed track', async ({ calc }) => {
     // Each exempt row says which rule excused it, not just that it is exempt.
-    await expect(calc.page.getByTestId('prepayment-fee-prime')).toHaveText('פטור (פריים)')
+    // Prime needs no parenthetical: the track's own name is on the row already.
+    await expect(calc.page.getByTestId('prepayment-fee-prime')).toHaveText('פטור')
     await calc.page.getByTestId('prepayment-exit-station').check()
     await expect(calc.page.getByTestId('prepayment-fee-variableIndexed5y')).toHaveText(
       'פטור (תחנת יציאה)',
@@ -462,12 +471,15 @@ test.describe('mortgage calculator - early-repayment fee', () => {
     await expect(order.getByTestId('prepayment-order-total-amount')).toContainText('סכום לפירעון')
   })
 
-  test('stacks the stats over the split, the fees card and the cap', async ({ calc }) => {
+  test('puts the cap fields in the inputs row and the split beside the fees card', async ({
+    calc,
+  }) => {
     await calc.page.getByTestId('prepayment-allocate-fixed').fill('100000')
 
-    // The requested reading order: the amount and rate controls, then the fee
+    // The requested reading order: the amount and rate controls, with the
+    // section 3(4) cap fields as the last fields of that same row, then the fee
     // chart, then the three headline figures, then the split and the extra bank
-    // charges side by side, with the section 3(4) cap full width underneath.
+    // charges side by side.
     const tops = (await calc.page.evaluate(`(() => {
       const top = (id) => {
         const el = document.querySelector('[data-testid="' + id + '"]')
@@ -477,45 +489,86 @@ test.describe('mortgage calculator - early-repayment fee', () => {
         const el = document.querySelector('[data-testid="' + id + '"]')
         if (!el) return null
         const r = el.getBoundingClientRect()
-        return { top: r.top + window.scrollY, height: r.height, left: r.left }
+        return { top: r.top + window.scrollY, height: r.height, left: r.left, width: r.width }
       }
+      const controls = document.querySelector('.prepayment-controls')
+      const controlsBox = controls
+        ? (() => {
+            const r = controls.getBoundingClientRect()
+            return { top: r.top + window.scrollY, height: r.height, left: r.left, width: r.width }
+          })()
+        : null
       return {
-        amount: top('prepayment-partial'),
-        order: top('prepayment-order'),
-        stats: top('prepayment-stats'),
+        controlsBox,
+        date: box('prepayment-years'),
+        rate: box('prepayment-market-rate'),
+        amount: box('prepayment-partial'),
+        cap: box('prepayment-cap-fixed'),
+        exit: box('prepayment-exit-station'),
+        stats: box('prepayment-stats'),
+        order: box('prepayment-order'),
         extras: box('prepayment-extras'),
-        orderBox: box('prepayment-order'),
-        outcomes: top('prepayment-outcomes'),
-        cap: box('prepayment-cap'),
+        outcomes: box('prepayment-outcomes'),
       }
-    })()`)) as Record<string, number | { top: number; height: number; left: number } | null>
+    })()`)) as Record<
+      string,
+      { top: number; height: number; left: number; width: number } | null
+    >
 
-    expect(tops.amount, 'partial amount field rendered').not.toBeNull()
-    expect(tops.order, 'order panel rendered').not.toBeNull()
-    expect(tops.stats, 'stats band rendered').not.toBeNull()
-    expect(tops.outcomes, 'outcomes rendered').not.toBeNull()
-    expect(tops.cap, 'cap card rendered').not.toBeNull()
-    expect(tops.extras, 'fees card rendered').not.toBeNull()
+    for (const key of [
+      'date',
+      'rate',
+      'amount',
+      'cap',
+      'exit',
+      'stats',
+      'order',
+      'extras',
+      'outcomes',
+    ]) {
+      expect(tops[key], `${key} rendered`).not.toBeNull()
+    }
+    expect(tops.controlsBox, 'inputs band rendered').not.toBeNull()
 
-    expect(tops.order as number).toBeGreaterThan(tops.amount as number)
-    // The three stat cards sit above the sections they summarise.
-    expect(tops.stats as number).toBeGreaterThan(tops.amount as number)
-    expect(tops.stats as number).toBeLessThan(tops.order as number)
+    const boxOf = (key: string) =>
+      tops[key] as { top: number; height: number; left: number; width: number }
+    const controlsBox = tops.controlsBox as {
+      top: number
+      height: number
+      left: number
+      width: number
+    }
+
+    // The cap is not a block of its own: its inputs sit on the same input row
+    // as the date, the comparison rate and the amount, which is what makes them
+    // one set of prepayment inputs rather than two.
+    for (const key of ['rate', 'amount', 'cap']) {
+      expect(boxOf(key).top, `${key} shares the input row`).toBeCloseTo(boxOf('date').top, 0)
+    }
+    // The exit-station switch is level with the boxes, not with the captions
+    // above them or the hints below: its centre is the input row's centre.
+    const centre = (b: { top: number; height: number }) => b.top + b.height / 2
+    expect(centre(boxOf('exit'))).toBeCloseTo(centre(boxOf('date')), 0)
+
+    // The cap fields close that row: toward the reading end of the band (the
+    // fields run right to left in Hebrew, so the last one is the leftmost).
+    expect(boxOf('cap').left).toBeLessThan(boxOf('amount').left)
+    expect(boxOf('cap').top).toBeLessThanOrEqual(
+      controlsBox.top + controlsBox.height - boxOf('cap').height,
+    )
+
+    // The three stat cards sit above the sections they summarise, and the cap
+    // inputs sit above the figures and the table they price.
+    expect(boxOf('stats').top).toBeGreaterThan(boxOf('amount').top)
+    expect(boxOf('stats').top).toBeLessThan(boxOf('order').top)
+    expect(boxOf('cap').top).toBeLessThan(boxOf('stats').top)
 
     // The split and the fees card share one row, its top edge and its height.
-    const extras = tops.extras as { top: number; height: number; left: number }
-    const cap = tops.cap as { top: number; height: number; left: number }
-    const orderBox = tops.orderBox as { top: number; height: number; left: number }
-    expect(extras.top).toBeCloseTo(orderBox.top, 0)
-    expect(extras.height).toBeCloseTo(orderBox.height, 0)
-    expect(extras.left).not.toBeCloseTo(orderBox.left, 0)
+    expect(boxOf('extras').top).toBeCloseTo(boxOf('order').top, 0)
+    expect(boxOf('extras').height).toBeCloseTo(boxOf('order').height, 0)
+    expect(boxOf('extras').left).not.toBeCloseTo(boxOf('order').left, 0)
 
-    // The cap is not a third card in that row: it opens below both cards and
-    // takes the band's full width.
-    expect(cap.top).toBeGreaterThan(orderBox.top + orderBox.height - 1)
-    expect(cap.left).toBeCloseTo(extras.left, 0)
-
-    expect(tops.outcomes as number).toBeGreaterThan((tops.cap as { top: number }).top)
+    expect(boxOf('outcomes').top).toBeGreaterThan(boxOf('order').top + boxOf('order').height - 1)
   })
 
   test('totals several track amounts and keeps each fee separate', async ({ calc }) => {
