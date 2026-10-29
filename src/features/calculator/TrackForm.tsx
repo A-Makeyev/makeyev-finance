@@ -28,9 +28,24 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
   const updateTrackRate = useCalculatorStore((s) => s.updateTrackRate)
   const commitTrackRateBlur = useCalculatorStore((s) => s.commitTrackRateBlur)
   const updateTrackMargin = useCalculatorStore((s) => s.updateTrackMargin)
+  const primeRate = useCalculatorStore((s) => s.primeRate)
   const changeTrackType = useCalculatorStore((s) => s.changeTrackType)
   const changeTrackMethod = useCalculatorStore((s) => s.changeTrackMethod)
   const removeTrack = useCalculatorStore((s) => s.removeTrack)
+
+  /**
+   * A prime track's margin is its rate minus the prime rate, so the live Bank
+   * of Israel rate can suggest it. Other tracks' margins are a spread over a
+   * bank-set reference rate the app does not hold, so they get no suggestion.
+   */
+  const primeMarginSuggestion = (() => {
+    if (track.type !== 'prime' || primeRate === null) return ''
+    const enteredRate = Number.parseFloat(track.rateText)
+    if (!Number.isFinite(enteredRate)) return ''
+    const margin = enteredRate - primeRate
+    if (!Number.isFinite(margin) || margin <= 0) return ''
+    return margin.toFixed(2)
+  })()
 
   return (
     <fieldset
@@ -138,16 +153,30 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         </div>
       </label>
 
-      <label className="input-group">
-        {t('calculator.track.marginLabel')}
+      <label className="input-group" htmlFor={`track-margin-${track.id}`}>
+        {/* Explicit htmlFor, like the type and method selects: the tooltip's
+            "?" button must not become the label's implicit control. */}
+        <span className="label-help-row">
+          <span className="label-help-text">{t('calculator.track.marginLabel')}</span>
+          <HelpTooltip
+            label={t('calculator.help.marginAria')}
+            content={t('calculator.help.margin')}
+            testId={`help-margin-${index + 1}`}
+          />
+        </span>
         <div className="input-wrap">
           <input
+            id={`track-margin-${track.id}`}
             type="number"
             min={0}
             max={MAX_RATE_PERCENT}
             step={0.01}
             value={track.marginText ?? ''}
             onInput={(event) => updateTrackMargin(track.id, event.currentTarget.value)}
+            // Suggested, not entered: on a prime track the margin is the
+            // tracked rate minus the live prime rate. Kept as a placeholder so
+            // a suggestion never turns into saved state the reader did not set.
+            placeholder={primeMarginSuggestion || undefined}
             aria-label={`${t('calculator.track.marginLabel')} ${index + 1}`}
             name={`track-margin-${index + 1}`}
             data-testid={`track-margin-${index + 1}`}

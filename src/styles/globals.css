@@ -7210,16 +7210,15 @@ e #name,
 /* The results row: the split and the extra bank charges are the two peers.
    The grid stretches both to the tallest, so their frames share a top and
    bottom edge. They stay side by side only while each card is wide enough for
-   its own rows: the split's amount field keeps a fixed 200px column, so on a
+   its own rows: the split's amount field needs a real column, so on a
    half-width card its track name and captions wrap into a stack of narrow
-   slivers. Below 1000px each card takes the band's full width instead (see
+   slivers. Below 1100px each card takes the band's full width instead (see
    the media query near the end of this block). */
 .prepayment-result-grid {
   display: grid;
-  /* Close to an even split: the split's rows only need a little more room than
-     the charges card, and a wider first column would leave the split's rows
-     with a stretch of empty space between the track name and its amount. */
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  /* The split carries the input fields, so it takes the larger share; the
+     charges card is text and figures and reads fine a little narrower. */
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   align-items: stretch;
   gap: 16px;
   margin-bottom: 20px;
@@ -7644,7 +7643,7 @@ e #name,
      click), and the fee column shrinks to its own figure; the track column
      takes what is left, so the two figures sit side by side without a stretch
      of empty space between them. */
-  grid-template-columns: 20px minmax(0, 1fr) 240px auto;
+  grid-template-columns: 20px minmax(0, 1fr) minmax(270px, 2fr) auto;
   align-items: center;
   gap: 6px;
   padding: 9px 0;
@@ -7765,10 +7764,15 @@ e #name,
 }
 
 /* The per-track amount field, in the row's own column. Compact, and the
-   figure inside it reads to the end like the fee column beside it. */
+   figure inside it reads to the end like the fee column beside it. The field
+   gives up a strip at its inline end, so the box (and the ₪ at that edge)
+   sits nearer the track name and leaves air between it and the fee. */
 .prepayment-order-amount {
   margin-top: 0;
   min-inline-size: 0;
+  /* A narrow offset, growing a little with the viewport: enough air between
+     the box and the fee, but most of the row stays with the field. */
+  margin-inline-end: clamp(16px, 1.8vw, 28px);
 }
 
 .prepayment-order-amount input {
@@ -8124,6 +8128,9 @@ e #name,
 
 .prepayment-extras-row.is-toggle {
   grid-template-columns: auto minmax(0, 1fr) auto;
+  /* A touch tighter than the non-toggle row: the amount belongs to the label
+     it prices, not to a column of its own. */
+  column-gap: 8px;
   cursor: pointer;
 }
 
@@ -8218,13 +8225,16 @@ e #name,
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  /* No room for a column of its own: the switch closes the band under the
-     fields, on its own full-width row. */
+  /* The switch keeps its place in the field flow instead of dropping to a
+     full-width row under it: its hint answers the cap field's "not below the
+     track rate" line, so the two need to stay near each other. Spanning the
+     field's three rows keeps the box level with the input row. */
   .prepayment-checkbox {
-    grid-column: 1 / -1;
-    grid-row: auto;
+    grid-column: auto;
+    grid-row: span 3;
+    align-self: center;
     max-inline-size: none;
-    margin-block-start: 12px;
+    margin-block-start: 0;
   }
 }
 
@@ -8232,18 +8242,20 @@ e #name,
    share of the row, so the widened amount field only holds its extra width
    where there is room for it; below that it gives the pixels back. */
 @media (max-width: 1100px) {
-  .prepayment-order-row {
-    grid-template-columns: 20px minmax(0, 1fr) 200px auto;
-  }
-}
-
-@media (max-width: 1000px) {
-  /* At this width a half-width split card is too narrow: its 200px amount
-     field leaves the track name around 110px, and the name, the "repay first"
-     badge and the per-₪1,000 line each break into their own sliver. The two
-     cards take the full width one above the other instead. */
+  /* At this width a half-width split card is too narrow: its amount field
+     leaves the track name around 110px, and the name, the "repay first" badge
+     and the per-₪1,000 line each break into their own sliver. The two cards
+     take the full width one above the other instead. */
   .prepayment-result-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The cards take the full width here, so the fixed amount field left a gap
+     between the track name and the box that the empty track column could not
+     explain. The name takes only the share its text needs and the amount takes
+     the rest of the row, up to the fee beside it. */
+  .prepayment-order-row {
+    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 3.5fr) auto;
   }
 }
 
@@ -8262,10 +8274,6 @@ e #name,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .prepayment-checkbox {
-    margin-block-start: 16px;
-  }
-
   /* The amount field and the fee drop under the track name, each in the
      second column, so a phone keeps the row aligned instead of a run-on
      sentence. */
@@ -8276,6 +8284,7 @@ e #name,
 
   .prepayment-order-amount {
     grid-column: 2;
+    margin-inline-end: 0;
   }
 
   .prepayment-order-figure {

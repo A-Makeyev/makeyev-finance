@@ -8,7 +8,7 @@ import { TRACK_TYPES } from '../../src/lib/amortization'
  * tip switches with the selected type) plus the shared method/term/preset
  * tips, each as an aria/body pair.
  */
-const HELP_KEYS = ['method', 'term', 'preset'] as const
+const HELP_KEYS = ['method', 'margin', 'term', 'preset'] as const
 const TYPE_BODIES = TRACK_TYPES
 
 /**

@@ -469,6 +469,9 @@ export const en: { translation: Translation } = {
           variableIndexed:
             'Variable indexed yearly combines a yearly-updated rate with CPI indexation: inflation grows the principal while the rate updates yearly.',
         },
+        marginAria: 'More about the market margin',
+        margin:
+          'The market margin is the gap between the track rate and its reference rate ~ for prime, the Bank of Israel rate. It is display-only and does not change the calculation. On a prime track it is suggested automatically from the rate entered minus the prime rate; on other tracks, enter it from the bank offer.',
         methodAria: 'More about the amortization schedule',
         method:
           'Spitzer keeps the payment constant; equal principal starts higher, declines over time and saves on total interest. This is a whole-loan decision based on your cash flow, not a separate choice per track.',
