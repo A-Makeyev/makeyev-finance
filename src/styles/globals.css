@@ -6668,23 +6668,48 @@ e #name,
   }
 
   /* Ring centered over its own legend, not parked on the column's reading
-     edge: the legend is wider than the 210px ring, and its outward shift
-     (below) would otherwise leave the ring off-centre against it. */
+     edge: the legend is wider than the 210px ring. */
   .schedule-chart-band .schedule-mix-donut {
     justify-items: center;
   }
 
-  /* Each slice's row sits centered under the ring too, so the ring and its
-     key read as one figure in the middle of the column rather than a centred
-     ring over a right-aligned (left-aligned in English) list. */
   /* Every row spans the widest one, so the color chips line up in a column
-     instead of stepping in and out with each row's width; the block itself
-     stays centered under the ring. */
+     instead of stepping in and out with each row's width. */
   .schedule-chart-band .schedule-mix-donut .mix-legend,
   :root[dir='ltr'] .schedule-chart-band .schedule-mix-donut .mix-legend {
-    transform: none;
     min-width: 0;
     justify-items: stretch;
+  }
+
+  /* The band's legend hangs under its ring in the same column as the asides
+     cost legend below it, so its squares have to land on the cost legend's
+     squares. Both legends are centred in their own box, but the mix rows are
+     wider (track names over the amount against the cost row's shorter slice
+     names), which parks the mix chip column that much toward the ring's
+     reading-start edge. Nudged back onto the cost column. */
+  :root[dir='rtl'] .schedule-chart-band .schedule-mix-donut .mix-legend {
+    transform: translateX(-26px);
+  }
+
+  /* English's mix rows are much wider, so the mirrored shift would push the
+     legend past the panel's edge; there the cost legend is the one with room
+     to move, and it meets the mix column from the other side. Only when the
+     band (and with it the mix legend) is above it - the legend sits alone in
+     the asides on an empty loan. */
+  :root[dir='ltr'] .schedule-chart-band .schedule-mix-donut .mix-legend {
+    transform: none;
+  }
+
+  :root[dir='ltr'] .schedule-chart-band + .schedule-content .schedule-asides .cost-legend {
+    transform: translateX(-45px);
+  }
+
+  /* The rows used to be pulled toward the ring's outer edge (20px in Hebrew,
+     40px in English). The legend's own nudge (above) sets the column now, so
+     that pull only moved every row off it. */
+  .schedule-chart-band .schedule-mix-donut .mix-legend-item,
+  :root[dir] .schedule-chart-band .schedule-mix-donut .mix-legend-item {
+    margin-inline: 0;
   }
 
   /* One text column across the rows: both lines start at the chip side, so a
@@ -6698,7 +6723,7 @@ e #name,
      chart keeps its 26px gap, so the block leans out of the card. Nudged right
      (translated, not margined, so the chart keeps its width). */
   :root[dir='rtl'] .schedule-chart-band .schedule-mix-donut {
-    transform: translateX(12px);
+    transform: translateX(10px);
   }
 }
 
@@ -6851,6 +6876,7 @@ e #name,
    any size (asides column or the narrow donut pair). */
 .cost-donut-plot {
   position: relative;
+  transform: translateX(5px);
 }
 
 .cost-donut svg {
@@ -6915,6 +6941,49 @@ e #name,
 
 :root[dir='ltr'] .schedule-donut-pair .cost-legend {
   direction: ltr;
+}
+
+/* Wide layout only: the asides cost legend sits below the band's mix legend,
+   so it stacks its rows the same way - the chip and the slice name open each
+   row, and the amount with its share sits under the name. The narrow pair
+   keeps one-line rows, because there the two legends have to share one line
+   per slice. */
+@media (min-width: 1001px) {
+  .schedule-asides .cost-legend-item {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    column-gap: 6px;
+    row-gap: 1px;
+    align-items: center;
+  }
+
+  /* The chip runs beside both lines, like the mix legend's. */
+  .schedule-asides .cost-legend-item .chart-swatch {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .schedule-asides .cost-legend-name {
+    grid-column: 2 / span 2;
+    grid-row: 1;
+  }
+
+  /* Amount and share are one line: the amount starts under the name and the
+     share follows it, instead of being pushed to the row's far edge. */
+  .schedule-asides .cost-legend-item strong {
+    grid-column: 2;
+    grid-row: 2;
+    margin-inline-start: 0;
+    justify-self: start;
+  }
+
+  .schedule-asides .cost-legend-share {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: start;
+    min-inline-size: 0;
+    text-align: start;
+  }
 }
 
 /* =========================
@@ -7556,11 +7625,12 @@ e #name,
 
 .prepayment-order-row {
   display: grid;
-  /* Rank, track, amount, fee. The amount field is wide enough for a seven-digit
-     figure and the fee column shrinks to its own figure, so the two sit side by
-     side and the track column takes every pixel that is left - no gap in the
-     row. */
-  grid-template-columns: 20px minmax(0, 1fr) 200px auto;
+  /* Rank, track, amount, fee. The amount field carries the row's spare width
+     (a seven-digit figure plus its separators, with a comfortable target to
+     click), and the fee column shrinks to its own figure; the track column
+     takes what is left, so the two figures sit side by side without a stretch
+     of empty space between them. */
+  grid-template-columns: 20px minmax(0, 1fr) 240px auto;
   align-items: center;
   gap: 6px;
   padding: 9px 0;
@@ -8116,17 +8186,13 @@ e #name,
 
 /* Section 3(4)'s cap runs full width under the split and the extra charges. It
    is always open: the fee column it changes is on screen, so a collapsed toggle
-   would leave that column's numbers unexplained. The explanation takes the
-   reading start and the fields sit in a fixed column beside it, so a full-width
-   band never leaves half of itself empty. */
+   would leave that column's numbers unexplained. The explanation opens the
+   card and the rate fields follow it in one row, so a single cappable track no
+   longer leaves a tall, mostly empty column beside the text. */
 .prepayment-cap-card {
   display: grid;
-  /* The field column is only as wide as the answer line under each field, so the
-     percentage box and the "no effect" sentence below it read as one block. */
-  grid-template-columns: minmax(0, 1fr) 220px;
-  align-items: start;
-  column-gap: 28px;
-  row-gap: 4px;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
   min-width: 0;
   padding: 16px 18px;
   background: var(--calc-soft);
@@ -8160,16 +8226,17 @@ e #name,
 }
 
 /* Section 3(4)'s optional origination-rate inputs: one field per priced track,
-   stacked one below another so each label and its hint get the full width. */
+   laid out in a row that fills the card. The fields share the band equally, and
+   each stops at a readable width so one track alone does not stretch a single
+   percentage box across the whole card. */
 
 .prepayment-cap-grid {
-  grid-column: 2;
-  grid-row: 1 / span 3;
+  grid-column: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 18px;
   inline-size: 100%;
-  margin-block: 0;
+  margin-block: 2px 0;
 }
 
 /* Names the tracks that are absent from the cap grid, so a two-field grid
@@ -8185,6 +8252,7 @@ e #name,
 /* Smaller than the panel's standard fields - these are optional percentages
    in their own card, not primary inputs. */
 .prepayment-cap-grid .prepayment-field {
+  max-inline-size: 340px;
   font-size: 0.85rem;
 }
 
@@ -8217,26 +8285,21 @@ e #name,
   font-weight: 700;
 }
 
+/* The split card narrows with the viewport while the track name keeps its
+   share of the row, so the widened amount field only holds its extra width
+   where there is room for it; below that it gives the pixels back. */
+@media (max-width: 1100px) {
+  .prepayment-order-row {
+    grid-template-columns: 20px minmax(0, 1fr) 200px auto;
+  }
+}
+
 /* Order and the extra charges stay side by side as long as both cards are
-   readable, and only then stack; the cap's own fields follow the same rule. */
+   readable, and only then stack. The cap's fields already reflow on their own
+   (auto-fit), so they need no override here. */
 @media (max-width: 760px) {
   .prepayment-result-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .prepayment-cap-card {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .prepayment-cap-card>* {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  /* Stacked, the card is as wide as the panel; the percentage fields keep their
-     readable width instead of stretching across it. */
-  .prepayment-cap-grid {
-    max-inline-size: 220px;
   }
 }
 
@@ -8272,11 +8335,6 @@ e #name,
 
   .prepayment-stats {
     grid-template-columns: 1fr;
-  }
-
-  /* The cap fields go one per row: the hint under each needs the width. */
-  .prepayment-cap-grid {
-    grid-template-columns: 1fr !important;
   }
 
   /* The amount field and the fee drop under the track name, each in the
@@ -9241,6 +9299,13 @@ tbody tr:hover {
     justify-items: stretch;
   }
 
+  /* The rows were pulled toward the ring's outer edge for the wide band; here
+     the legend is already centered under its ring, so that pull only moved
+     every row off the ring's center line. */
+  .schedule-donut-pair .mix-legend .mix-legend-item {
+    margin-inline: 0;
+  }
+
   /* Name and amount both start at the chip side in that one text column. */
   .schedule-donut-pair .mix-legend-text {
     flex: 1;
@@ -9270,6 +9335,13 @@ tbody tr:hover {
     gap: 8px;
   }
 
+  /* The two legends face each other under their rings, so the ring-to-legend
+     gap has to match too: the cost ring's default 8px left its list starting
+     6px above the mix list. */
+  .schedule-donut-pair .cost-donut {
+    gap: 14px;
+  }
+
   .mortgage-track {
     grid-template-columns: repeat(6, 1fr);
   }
@@ -9296,6 +9368,45 @@ tbody tr:hover {
 
   .mortgage-track .input-group:nth-of-type(6) {
     grid-column: 1 / 7;
+  }
+}
+
+/* The two legends sit under their rings at one compact line per row, so their
+   rows have to line up. The cost row was already one line; the mix row stacked
+   its name over its amount, making it 34px tall against the cost row's 17px,
+   which left the cost list drifting out of line from the first row down. On one
+   line the name, the share and the amount land on the cost legend's rows, and
+   both legends end at the same height. Below 390px the widest English name no
+   longer fits on one line, so that tier keeps the stacked two-line legend. */
+@media (min-width: 390px) and (max-width: 1000px) {
+
+  .schedule-donut-pair .mix-legend-text {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 6px;
+    min-width: 0;
+  }
+
+  /* One line is wider than the ring, so the legend sets its column's width
+     instead of being clipped to the ring's; the pair wraps when the two rings
+     no longer fit on one row. */
+  .schedule-donut-pair .mix-legend {
+    width: max-content;
+    max-width: none;
+  }
+
+  /* The one-line legend is wider than its ring, so its squares hang past the
+     ring's reading-start edge. Pulled back by that overhang only (half the
+     width difference), the squares start on the ring's own edge instead of
+     outside it. English takes the same mirrored nudge; its rows are wider, but
+     a bigger shift would push the block past the panel at tablet widths. */
+  :root[dir='rtl'] .schedule-donut-pair .mix-legend {
+    transform: translateX(-5px);
+  }
+
+  :root[dir='ltr'] .schedule-donut-pair .mix-legend {
+    transform: translateX(5px);
   }
 }
 

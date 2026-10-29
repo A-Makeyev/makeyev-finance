@@ -400,6 +400,49 @@ test.describe('mortgage calculator - amortization schedule', () => {
     // the name line and for the numbers.
     expect(costSide.legendName).toEqual(mix.legendName)
     expect(costSide.legendNumber).toEqual(mix.legendNumber)
+
+    // The two legends face each other under their rings, so their rows sit on
+    // the same lines: one compact line per row in both, starting on the same
+    // line and ending at the same height.
+    const legends = (await calc.page.evaluate(`(() => {
+      const tops = (selector) =>
+        [...document.querySelectorAll(selector)].map((row) =>
+          Math.round(row.getBoundingClientRect().top),
+        )
+      const box = (selector) => {
+        const rect = document.querySelector(selector).getBoundingClientRect()
+        return { top: Math.round(rect.top), height: Math.round(rect.height) }
+      }
+      const legend = document.querySelector('.schedule-donut-pair .mix-legend')
+      const direction = getComputedStyle(legend).direction
+      const chip = legend.querySelector('.mix-legend-item .chart-swatch').getBoundingClientRect()
+      const ring = document
+        .querySelector('.schedule-donut-pair .mix-donut svg')
+        .getBoundingClientRect()
+      return {
+        mixRows: tops('.schedule-donut-pair .mix-legend-item'),
+        costRows: tops('.schedule-donut-pair .cost-legend-item'),
+        mixLegend: box('.schedule-donut-pair .mix-legend'),
+        costLegend: box('.schedule-donut-pair .cost-legend'),
+        mixSquare: direction === 'rtl' ? chip.right : chip.left,
+        ringStart: direction === 'rtl' ? ring.right : ring.left,
+      }
+    })()`)) as {
+      mixRows: number[]
+      costRows: number[]
+      mixLegend: { top: number; height: number }
+      costLegend: { top: number; height: number }
+      mixSquare: number
+      ringStart: number
+    }
+    expect(legends.mixRows).toHaveLength(3)
+    expect(legends.costRows).toEqual(legends.mixRows)
+    expect(legends.costLegend.top).toBe(legends.mixLegend.top)
+    expect(legends.costLegend.height).toBe(legends.mixLegend.height)
+    // The one-line legend is wider than its ring, so it used to hang its
+    // squares past the ring's reading-start edge; pulled back by that
+    // overhang, the squares start on the ring's own edge.
+    expect(legends.mixSquare).toBeLessThanOrEqual(legends.ringStart + 1)
   })
 
   test('the wide mix ring matches the cost ring and gives the freed width to the chart', async ({
@@ -455,43 +498,67 @@ test.describe('mortgage calculator - amortization schedule', () => {
     expect(typeSizes.costValue).toBeGreaterThan(19)
     expect(typeSizes.costValue).toBeLessThan(21)
 
-    // The ring sits in the middle of its own legend, not on the column's
-    // reading edge (the legend is wider than the 190px ring).
-    const legendBox = await calc.page
-      .locator('[data-testid="track-mix-donut"] .mix-legend')
-      .boundingBox()
-    expect(legendBox).not.toBeNull()
-    expect(mixBox!.x + mixBox!.width / 2).toBeCloseTo(legendBox!.x + legendBox!.width / 2, 0)
-
-    // Every row takes the widest row's width, so the color chips line up on
-    // one edge instead of stepping in and out, each row's name and amount
-    // start at that chip (not from the middle of the column), and the block
-    // still sits centered under the ring.
-    const rows = calc.page.locator('[data-testid="track-mix-donut"] .mix-legend-item')
-    expect(await rows.count()).toBeGreaterThan(1)
-    const ringCenter = mixBox!.x + mixBox!.width / 2
-    const legend = await calc.page
-      .locator('[data-testid="track-mix-donut"] .mix-legend')
-      .evaluate((node) => {
-        const direction = getComputedStyle(node).direction
-        const start = (box: DOMRect) => (direction === 'rtl' ? box.right : box.left)
-        return [...node.querySelectorAll('.mix-legend-item')].map((row) => {
-          const box = row.getBoundingClientRect()
-          return {
-            center: box.x + box.width / 2,
-            chip: start(row.querySelector('.chart-swatch')!.getBoundingClientRect()),
-            name: start(row.querySelector('.mix-legend-name')!.getBoundingClientRect()),
-            amount: start(row.querySelector('.mix-legend-amount')!.getBoundingClientRect()),
-          }
+    // The mix legend hangs under its ring in the same column as the asides
+    // cost legend below it, so its squares have to sit exactly on the cost
+    // legend's squares. Centring the wider mix rows in their own box left them
+    // ~10px toward the ring's reading edge (and ~13px in English); the legend
+    // is nudged back so the two square columns are one line.
+    const columns = (await calc.page.evaluate(`(() => {
+      // Centers, not an edge: the band forces LTR on the mix donut while the
+      // cost donut inherits the page's RTL, so a "start" edge would be a
+      // different side of the square for each legend.
+      const squares = (rootSelector, rowSelector) => {
+        const root = document.querySelector(rootSelector)
+        return [...root.querySelectorAll(rowSelector)].map((row) => {
+          const box = row.querySelector('.chart-swatch').getBoundingClientRect()
+          return box.x + box.width / 2
         })
-      })
-    expect(legend).toHaveLength(3)
-    for (const row of legend) {
-      expect(row.center).toBeCloseTo(ringCenter, 0)
-      expect(row.chip, 'chips share one line').toBeCloseTo(legend[0].chip, 0)
-      expect(row.name, 'names share one line').toBeCloseTo(legend[0].name, 0)
+      }
+      const mix = document.querySelector('[data-testid="track-mix-donut"]')
+      const direction = getComputedStyle(mix.querySelector('.mix-legend')).direction
+      const edge = (node) => {
+        const box = node.getBoundingClientRect()
+        return direction === 'rtl' ? box.right : box.left
+      }
+      // One cost row, read line by line: the name opens the row and the amount
+      // sits under it, like the mix legend's stacked rows.
+      const costRow = document.querySelector('[data-testid="total-cost-donut"] .cost-legend-item')
+      const costName = costRow.querySelector('.cost-legend-name').getBoundingClientRect()
+      const costAmount = costRow.querySelector('strong').getBoundingClientRect()
+      return {
+        mixSquares: squares('[data-testid="track-mix-donut"]', '.mix-legend-item'),
+        costSquares: squares('[data-testid="total-cost-donut"]', '.cost-legend-item'),
+        rows: [...mix.querySelectorAll('.mix-legend-item')].map((row) => ({
+          square: edge(row.querySelector('.chart-swatch')),
+          name: edge(row.querySelector('.mix-legend-name')),
+          amount: edge(row.querySelector('.mix-legend-amount')),
+        })),
+        costLines: { nameTop: costName.top, nameBottom: costName.bottom, amountTop: costAmount.top },
+      }
+    })()`)) as {
+      mixSquares: number[]
+      costSquares: number[]
+      rows: { square: number; name: number; amount: number }[]
+      costLines: { nameTop: number; nameBottom: number; amountTop: number }
+    }
+    expect(columns.mixSquares).toHaveLength(3)
+    expect(columns.costSquares.length).toBeGreaterThan(1)
+    for (const square of columns.mixSquares) {
+      expect(Math.abs(square - columns.costSquares[0]), 'squares share one column').toBeLessThanOrEqual(
+        1,
+      )
+    }
+    // And within the legend every row shares one chip/name/amount column, so
+    // the rows read as a table instead of stepping in and out.
+    for (const row of columns.rows) {
+      expect(row.square, 'chips share one line').toBeCloseTo(columns.rows[0].square, 0)
+      expect(row.name, 'names share one line').toBeCloseTo(columns.rows[0].name, 0)
       expect(row.amount, 'amount starts under its name').toBeCloseTo(row.name, 0)
     }
+
+    // The wide cost legend stacks like the mix one: the name on the first line,
+    // the amount on the next, instead of name, amount and share sharing a row.
+    expect(columns.costLines.amountTop).toBeGreaterThanOrEqual(columns.costLines.nameBottom - 1)
   })
 
   test('the schedule table takes keyboard focus and scrolls with the keyboard', async ({

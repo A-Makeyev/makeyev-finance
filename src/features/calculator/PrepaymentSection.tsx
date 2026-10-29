@@ -791,8 +791,8 @@ export function PrepaymentSection() {
               </div>
 
               {/* The split and the extra charges share the row; the section
-                  3(4) cap runs full width underneath, where its stacked fields
-                  have room. */}
+                  3(4) cap runs full width underneath, with its rate fields in
+                  one row across the band. */}
               <div className="prepayment-result-grid">
                 <div className="prepayment-order" data-testid="prepayment-order">
                   <p className="prepayment-order-title">
