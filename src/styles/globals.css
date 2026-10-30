@@ -6674,39 +6674,25 @@ e #name,
   }
 
   /* Every row spans the widest one, so the color chips line up in a column
-     instead of stepping in and out with each row's width. */
+     instead of stepping in and out with each row's width. The legend takes the
+     asides column's own 220px (see `.schedule-asides .cost-legend` below), so
+     both chip columns sit on the panel's shared edge. A fixed offset used to
+     nudge the mix legend onto the cost column, but it only held for the text
+     width it was measured at and fell a few pixels short whenever the font
+     metrics changed. */
   .schedule-chart-band .schedule-mix-donut .mix-legend,
   :root[dir='ltr'] .schedule-chart-band .schedule-mix-donut .mix-legend {
+    width: 220px;
     min-width: 0;
     justify-items: stretch;
-  }
-
-  /* The band's legend hangs under its ring in the same column as the asides
-     cost legend below it, so its squares have to land on the cost legend's
-     squares. Both legends are centred in their own box, but the mix rows are
-     wider (track names over the amount against the cost row's shorter slice
-     names), which parks the mix chip column that much toward the ring's
-     reading-start edge. Nudged back onto the cost column. */
-  :root[dir='rtl'] .schedule-chart-band .schedule-mix-donut .mix-legend {
-    transform: translateX(-26px);
-  }
-
-  /* English's mix rows are much wider, so the mirrored shift would push the
-     legend past the panel's edge; there the cost legend is the one with room
-     to move, and it meets the mix column from the other side. Only when the
-     band (and with it the mix legend) is above it - the legend sits alone in
-     the asides on an empty loan. */
-  :root[dir='ltr'] .schedule-chart-band .schedule-mix-donut .mix-legend {
+    /* The base legend shift was a per-direction nudge too; the shared width
+       and the panel's edge set the column now. */
     transform: none;
   }
 
-  :root[dir='ltr'] .schedule-chart-band + .schedule-content .schedule-asides .cost-legend {
-    transform: translateX(-45px);
-  }
-
   /* The rows used to be pulled toward the ring's outer edge (20px in Hebrew,
-     40px in English). The legend's own nudge (above) sets the column now, so
-     that pull only moved every row off it. */
+     40px in English). The shared legend width sets the column now, so that
+     pull would only move every row off it. */
   .schedule-chart-band .schedule-mix-donut .mix-legend-item,
   :root[dir] .schedule-chart-band .schedule-mix-donut .mix-legend-item {
     margin-inline: 0;
@@ -6719,12 +6705,6 @@ e #name,
     flex: 1;
   }
 
-  /* Hebrew: the ring otherwise sits flush on the panel's left edge while the
-     chart keeps its 26px gap, so the block leans out of the card. Nudged right
-     (translated, not margined, so the chart keeps its width). */
-  :root[dir='rtl'] .schedule-chart-band .schedule-mix-donut {
-    transform: translateX(10px);
-  }
 }
 
 .donut-slice-label {
@@ -6949,6 +6929,12 @@ e #name,
    keeps one-line rows, because there the two legends have to share one line
    per slice. */
 @media (min-width: 1001px) {
+  /* The same 220px column the band's mix legend takes, so the two chip
+     columns line up without a per-direction nudge. */
+  .schedule-asides .cost-legend {
+    width: 100%;
+  }
+
   .schedule-asides .cost-legend-item {
     display: grid;
     grid-template-columns: auto auto minmax(0, 1fr);
@@ -9200,6 +9186,24 @@ tbody tr:hover {
     margin: 0;
   }
 
+  /* The ring is the column, not the legend: the one-line legend is usually
+     wider than the 260px ring, and a centred legend then hangs its chips past
+     the ring's reading-start edge. Keeping the track at the ring's width and
+     aligning both items to that edge puts the chips on the ring itself
+     whatever width the text renders at; the legend's extra width spills
+     toward the pair's gap instead. */
+  .schedule-donut-pair .mix-donut {
+    grid-template-columns: min(260px, 80vw);
+  }
+
+  :root[dir='rtl'] .schedule-donut-pair .mix-donut {
+    justify-items: end;
+  }
+
+  :root[dir='ltr'] .schedule-donut-pair .mix-donut {
+    justify-items: start;
+  }
+
   /* Same ring size for both, so the pair reads as one comparison. The rings
      stay big (260px on a tablet, and they stack at ~260px on a phone as
      well), but their labels are sized in viewBox units, so the pair uses
@@ -9232,22 +9236,22 @@ tbody tr:hover {
     font-size: 12.5px;
   }
 
-  /* The legend is centered under the ring instead of stretched across the
-     column: fit-content keeps each row's chip and text together, and the
-     auto margins put that block in the middle of the donut. */
+  /* The legend hugs the ring's reading-start edge (see the mix-donut track
+     above): fit-content keeps each row's chip and text together, and no auto
+     margins so the alignment stays on that edge. */
   .schedule-donut-pair .mix-legend {
     min-width: 0;
     width: fit-content;
     max-width: 100%;
-    margin-inline: auto;
+    margin-inline: 0;
     /* Rows share one width, so the color chips line up in a column - same as
        the wide band's legend. */
     justify-items: stretch;
   }
 
   /* The rows were pulled toward the ring's outer edge for the wide band; here
-     the legend is already centered under its ring, so that pull only moved
-     every row off the ring's center line. */
+     the legend is anchored to the ring's edge, so that pull only moved every
+     row off it. */
   .schedule-donut-pair .mix-legend .mix-legend-item {
     margin-inline: 0;
   }
@@ -9334,25 +9338,12 @@ tbody tr:hover {
     min-width: 0;
   }
 
-  /* One line is wider than the ring, so the legend sets its column's width
-     instead of being clipped to the ring's; the pair wraps when the two rings
-     no longer fit on one row. */
+  /* One line is wider than the ring, so the legend keeps its natural width and
+     spills toward the pair's gap; the mix-donut track above anchors its chips
+     to the ring's reading-start edge, so no per-direction nudge is needed. */
   .schedule-donut-pair .mix-legend {
     width: max-content;
     max-width: none;
-  }
-
-  /* The one-line legend is wider than its ring, so its squares hang past the
-     ring's reading-start edge. Pulled back by that overhang only (half the
-     width difference), the squares start on the ring's own edge instead of
-     outside it. English takes the same mirrored nudge; its rows are wider, but
-     a bigger shift would push the block past the panel at tablet widths. */
-  :root[dir='rtl'] .schedule-donut-pair .mix-legend {
-    transform: translateX(-5px);
-  }
-
-  :root[dir='ltr'] .schedule-donut-pair .mix-legend {
-    transform: translateX(5px);
   }
 }
 
