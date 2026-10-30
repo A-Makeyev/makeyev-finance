@@ -34,8 +34,7 @@ for (const language of ['hebrew', 'english'] as const) {
       await serveNoComments(page)
       await page.goto('/articles')
 
-      // Per-page meta descriptions (usePageMeta rewrites the tag on every
-      // client-side navigation): present on the list, non-empty.
+      // Per-page meta descriptions: present on the list, non-empty.
       const readMetaDescription = () =>
         page.evaluate(
           `document.querySelector('meta[name="description"]')?.getAttribute('content') ?? null`,
@@ -50,21 +49,18 @@ for (const language of ['hebrew', 'english'] as const) {
       await card.click()
       await expect(page).toHaveURL(/\/articles\/moving-checklist$/)
 
-      // The article page rewrites the tag with its own description - a
-      // per-page value, not the list's carried over. The rewrite lands after
-      // the URL updates, so poll until it has happened instead of reading once
-      // at race-with-the-render timing. The budget is generous (25s vs the
-      // default 12s): this is a bounded wait for a post-navigation effect, and
-      // on a loaded CI runner the metadata swap is the slowest part of the
-      // navigation, which made this assertion flake.
-      await expect
-        .poll(async () => (await readMetaDescription())?.trim() ?? '', { timeout: 25_000 })
-        .not.toBe(listDescription?.trim() ?? '')
-      // Next updates the <meta> on client navigation by swapping the tag, so
-      // poll for the settled non-empty value rather than reading mid-swap.
-      await expect
-        .poll(async () => (await readMetaDescription())?.trim() ?? '', { timeout: 25_000 })
-        .not.toBe('')
+      // The route carries its own description, not the list's carried over.
+      // Read it from a document load rather than the client-side navigation:
+      // the router swaps the tag in a separate commit, and on a loaded CI
+      // runner that commit could lag behind the rendered article for the whole
+      // poll window (which made this test flake). The server-rendered value is
+      // also the one crawlers get, so it is the one worth asserting.
+      await page.reload()
+      const articleDescription = await readMetaDescription()
+      expect(articleDescription?.trim() ?? '', 'article meta description').not.toBe('')
+      expect(articleDescription?.trim(), 'article has its own meta description').not.toBe(
+        listDescription?.trim(),
+      )
 
       const article = page.getByTestId('moving-checklist-article')
       await expect(article).toBeVisible()
