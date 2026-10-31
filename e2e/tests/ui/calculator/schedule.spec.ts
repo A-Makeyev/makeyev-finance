@@ -190,8 +190,8 @@ test.describe('mortgage calculator - amortization schedule', () => {
         const [light, dark] = [luminance(one), luminance(other)].sort((a, b) => b - a)
         return (light + 0.05) / (dark + 0.05)
       }
-      const amounts = [...donut.querySelectorAll('.cost-legend-item strong')].map((node) =>
-        Number(node.textContent.replace(/[^\\d]/g, '')),
+      const amounts = [...donut.querySelectorAll('.cost-legend-amount')].map((node) =>
+        Number((node.textContent || '').split('·')[0].replace(/[^\\d]/g, '')),
       )
       const total = amounts.reduce((sum, amount) => sum + amount, 0)
       return {
@@ -260,11 +260,11 @@ test.describe('mortgage calculator - amortization schedule', () => {
       const style = list ? getComputedStyle(list) : null
       return {
         legend: [...root.querySelectorAll('.cost-legend-item')].map((row) => {
-          const amount = row.querySelector('strong')
-          const share = row.querySelector('.cost-legend-share')
+          const amountLine = row.querySelector('.cost-legend-amount')
+          const [amountText, shareText] = (amountLine ? amountLine.textContent : '').split('·')
           return {
-            amount: Number(digits(amount ? amount.textContent : '')),
-            share: ((share ? share.textContent : '') || '').trim(),
+            amount: Number(digits(amountText)),
+            share: (shareText || '').trim(),
           }
         }),
         items: list ? [...list.querySelectorAll('li')].map((li) => li.textContent) : null,
@@ -371,7 +371,7 @@ test.describe('mortgage calculator - amortization schedule', () => {
           value: text('text.donut-center-value'),
           valueText: valueEl ? valueEl.textContent.trim() : '',
           legendName: styleOf(root.querySelector('.mix-legend-name, .cost-legend-name')),
-          legendNumber: styleOf(root.querySelector('.mix-legend-amount, .cost-legend-item strong')),
+          legendNumber: styleOf(root.querySelector('.mix-legend-amount, .cost-legend-amount')),
         }
       }
       return {
@@ -448,6 +448,7 @@ test.describe('mortgage calculator - amortization schedule', () => {
   test('the wide mix ring matches the cost ring and gives the freed width to the chart', async ({
     calc,
   }) => {
+    type LegendStyle = { size: string; weight: string; color: string }
     // The wide band used to draw the mix ring at 280px while the cost ring in
     // the asides was 190px. Both now render at 210px - bigger than the first
     // pass at 190px, without enlarging their labels - and the chart beside the
@@ -498,11 +499,11 @@ test.describe('mortgage calculator - amortization schedule', () => {
     expect(typeSizes.costValue).toBeGreaterThan(19)
     expect(typeSizes.costValue).toBeLessThan(21)
 
-    // The mix legend hangs under its ring in the same column as the asides
-    // cost legend below it, so its squares have to sit exactly on the cost
-    // legend's squares. Centring the wider mix rows in their own box left them
-    // ~10px toward the ring's reading edge (and ~13px in English); the legend
-    // is nudged back so the two square columns are one line.
+    // Both legends are tight blocks under their own ring: the text and its chip
+    // stay together, the block's own width is the longest row, and the two chip
+    // columns share one vertical line. The cost row copies the mix row's ink
+    // name and muted "amount · share" line.
+    await calc.page.evaluate('document.fonts.ready')
     const columns = (await calc.page.evaluate(`(() => {
       // Centers, not an edge: the band forces LTR on the mix donut while the
       // cost donut inherits the page's RTL, so a "start" edge would be a
@@ -514,7 +515,12 @@ test.describe('mortgage calculator - amortization schedule', () => {
           return box.x + box.width / 2
         })
       }
+      const box = (node) => {
+        const rect = node.getBoundingClientRect()
+        return { left: Math.round(rect.left), right: Math.round(rect.right), width: Math.round(rect.width) }
+      }
       const mix = document.querySelector('[data-testid="track-mix-donut"]')
+      const cost = document.querySelector('[data-testid="total-cost-donut"]')
       const direction = getComputedStyle(mix.querySelector('.mix-legend')).direction
       const edge = (node) => {
         const box = node.getBoundingClientRect()
@@ -524,8 +530,16 @@ test.describe('mortgage calculator - amortization schedule', () => {
       // sits under it, like the mix legend's stacked rows.
       const costRow = document.querySelector('[data-testid="total-cost-donut"] .cost-legend-item')
       const costName = costRow.querySelector('.cost-legend-name').getBoundingClientRect()
-      const costAmount = costRow.querySelector('strong').getBoundingClientRect()
+      const costAmount = costRow.querySelector('.cost-legend-amount').getBoundingClientRect()
+      const costChip = costRow.querySelector('.chart-swatch').getBoundingClientRect()
+      const styleOf = (selector, root) => {
+        const node = root.querySelector(selector)
+        if (!node) return null
+        const style = getComputedStyle(node)
+        return { size: style.fontSize, weight: style.fontWeight, color: style.color }
+      }
       return {
+        direction,
         mixSquares: squares('[data-testid="track-mix-donut"]', '.mix-legend-item'),
         costSquares: squares('[data-testid="total-cost-donut"]', '.cost-legend-item'),
         rows: [...mix.querySelectorAll('.mix-legend-item')].map((row) => ({
@@ -533,23 +547,76 @@ test.describe('mortgage calculator - amortization schedule', () => {
           name: edge(row.querySelector('.mix-legend-name')),
           amount: edge(row.querySelector('.mix-legend-amount')),
         })),
+        mixRing: box(mix.querySelector('svg')),
+        mixLegend: box(mix.querySelector('.mix-legend')),
+        costRing: box(cost.querySelector('svg')),
+        costLegend: box(cost.querySelector('.cost-legend')),
+        mixNameStyle: styleOf('.mix-legend-name', mix),
+        costNameStyle: styleOf('.cost-legend-name', cost),
+        mixAmountStyle: styleOf('.mix-legend-amount', mix),
+        costAmountStyle: styleOf('.cost-legend-amount', cost),
+        costAmountTexts: [...cost.querySelectorAll('.cost-legend-amount')].map((node) =>
+          (node.textContent || '').trim(),
+        ),
+        costChipToName:
+          direction === 'rtl' ? costChip.left - costName.right : costName.left - costChip.right,
         costLines: { nameTop: costName.top, nameBottom: costName.bottom, amountTop: costAmount.top },
       }
     })()`)) as {
+      direction: string
       mixSquares: number[]
       costSquares: number[]
       rows: { square: number; name: number; amount: number }[]
+      mixRing: { left: number; right: number; width: number }
+      mixLegend: { left: number; right: number; width: number }
+      costRing: { left: number; right: number; width: number }
+      costLegend: { left: number; right: number; width: number }
+      mixNameStyle: LegendStyle
+      costNameStyle: LegendStyle
+      mixAmountStyle: LegendStyle
+      costAmountStyle: LegendStyle
+      costAmountTexts: string[]
+      costChipToName: number
       costLines: { nameTop: number; nameBottom: number; amountTop: number }
     }
     expect(columns.mixSquares).toHaveLength(3)
     expect(columns.costSquares.length).toBeGreaterThan(1)
-    for (const square of columns.mixSquares) {
-      expect(Math.abs(square - columns.costSquares[0]), 'squares share one column').toBeLessThanOrEqual(
-        1,
-      )
+    const center = (box: { left: number; width: number }) => box.left + box.width / 2
+    // Both legends are one box on one center line. Hebrew shifts that line off
+    // the ring center (per the shared --schedule-legend-shift), English keeps it
+    // centered; the two legends must move together either way.
+    expect(Math.abs(center(columns.mixLegend) - center(columns.costLegend))).toBeLessThanOrEqual(1)
+    if (columns.direction === 'rtl') {
+      expect(Math.abs(center(columns.mixLegend) - center(columns.mixRing) + 26)).toBeLessThanOrEqual(1)
+    } else {
+      expect(Math.abs(center(columns.mixLegend) - center(columns.mixRing))).toBeLessThanOrEqual(1)
     }
-    // And within the legend every row shares one chip/name/amount column, so
-    // the rows read as a table instead of stepping in and out.
+    // The two rings still sit on the same vertical lines.
+    expect(columns.mixRing.left).toBe(columns.costRing.left)
+    expect(columns.mixRing.right).toBe(columns.costRing.right)
+    // The mix chips and the cost chips form one vertical line, not two columns
+    // a few pixels apart.
+    for (const square of columns.mixSquares) {
+      expect(
+        Math.abs(square - columns.costSquares[0]),
+        'mix and cost chips share one column',
+      ).toBeLessThanOrEqual(1)
+    }
+    // Inside each legend every chip sits on one line, and the text stays right
+    // beside its own chip instead of being pushed across the column.
+    for (const square of columns.costSquares) {
+      expect(Math.abs(square - columns.costSquares[0]), 'cost chips share one line').toBeLessThanOrEqual(1)
+    }
+    expect(columns.costChipToName).toBeLessThanOrEqual(10)
+    // The cost row is the mix row: ink name line, then the amount and its share
+    // on one muted line joined by a middle dot.
+    expect(columns.costNameStyle).toEqual(columns.mixNameStyle)
+    expect(columns.costAmountStyle).toEqual(columns.mixAmountStyle)
+    for (const text of columns.costAmountTexts) {
+      expect(text).toContain('·')
+    }
+    // And within the mix legend every row shares one chip/name/amount column,
+    // so the rows read as a table instead of stepping in and out.
     for (const row of columns.rows) {
       expect(row.square, 'chips share one line').toBeCloseTo(columns.rows[0].square, 0)
       expect(row.name, 'names share one line').toBeCloseTo(columns.rows[0].name, 0)

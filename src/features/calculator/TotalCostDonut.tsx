@@ -241,9 +241,12 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
         {slices.map((slice) => (
           <li key={slice.key} className="cost-legend-item">
             <i className="chart-swatch" style={{ background: slice.color }} />
-            <span className="cost-legend-name">{slice.label}</span>
-            <strong>{formatCurrency(slice.value)}</strong>
-            <span className="cost-legend-share">{slice.percent}%</span>
+            <div className="cost-legend-text">
+              <span className="cost-legend-name">{slice.label}</span>
+              <span className="cost-legend-amount">
+                {formatCurrency(slice.value)} · {slice.percent}%
+              </span>
+            </div>
           </li>
         ))}
       </ul>

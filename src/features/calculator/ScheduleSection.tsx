@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCalculatorViewModel } from './useCalculatorViewModel'
 import { formatCurrency, formatRatePercent, formatRatio, parseAmountText } from '@/lib/format'
@@ -122,8 +122,36 @@ export function ScheduleSection() {
       : vm.visibleScheduleTracks.length > 0
   const donutInBand = narrowLayout && hasChartBand
 
+  // The cost legend mirrors the mix legend's width so both chip columns sit on
+  // one vertical line. The mix legend is sized by its own text (max-content),
+  // so measure it and hand the same width to the cost legend. A plain
+  // measurement on mount went stale when the Google webfont swapped in: the
+  // mix legend shrank but the cost legend kept the fallback-width box, and the
+  // two square columns drifted apart by a few pixels. ResizeObserver re-syncs
+  // whenever the legend's box changes, and running the effect on every render
+  // also catches the band appearing or a track label changing.
+  const sectionRef = useRef<HTMLElement>(null)
+  useLayoutEffect(() => {
+    const section = sectionRef.current
+    if (!section) return
+    const sync = () => {
+      const legend = section.querySelector<HTMLElement>('.schedule-chart-band .mix-legend')
+      if (!legend) {
+        section.style.removeProperty('--schedule-legend-width')
+        return
+      }
+      section.style.setProperty('--schedule-legend-width', `${legend.getBoundingClientRect().width}px`)
+    }
+    sync()
+    const legend = section.querySelector<HTMLElement>('.schedule-chart-band .mix-legend')
+    if (!legend) return
+    const observer = new ResizeObserver(sync)
+    observer.observe(legend)
+    return () => observer.disconnect()
+  })
+
   return (
-    <section className="schedule-section">
+    <section className="schedule-section" ref={sectionRef}>
       <div className="section-heading">
         <div>
           <h2>{t('calculator.schedule.heading')}</h2>

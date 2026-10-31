@@ -6551,6 +6551,13 @@ e #name,
   direction: ltr;
 }
 
+/* Both schedule legends move together toward the donut's reading-end edge in
+   Hebrew, so they stay on one column instead of sitting dead center under the
+   ring. English keeps the centered position. */
+:root[dir='rtl'] .schedule-section {
+  --schedule-legend-shift: -26px;
+}
+
 /* English (LTR): put the donut on the RIGHT, chart on the LEFT. */
 :root[dir='ltr'] .schedule-chart-band {
   flex-direction: row-reverse;
@@ -6668,26 +6675,30 @@ e #name,
   }
 
   /* Ring centered over its own legend, not parked on the column's reading
-     edge: the legend is wider than the 210px ring. */
+     edge. The donut keeps the asides column's own 220px width, so the band's
+     donut column and the asides column share one left/right edge and one
+     center line. */
   .schedule-chart-band .schedule-mix-donut {
+    width: 220px;
     justify-items: center;
   }
 
-  /* Every row spans the widest one, so the color chips line up in a column
-     instead of stepping in and out with each row's width. The legend takes the
-     asides column's own 220px (see `.schedule-asides .cost-legend` below), so
-     both chip columns sit on the panel's shared edge. A fixed offset used to
-     nudge the mix legend onto the cost column, but it only held for the text
-     width it was measured at and fell a few pixels short whenever the font
-     metrics changed. */
+  /* The legend is a tight block under the ring: every row spans the widest
+     one, so the color chips line up in a column instead of stepping in and
+     out, and the block's own width (the longest track name) is centered on the
+     ring before the shared direction shift. No fixed width and no padding: the
+     text stays right beside its chip. The asides cost legend below is built the
+     same way. */
   .schedule-chart-band .schedule-mix-donut .mix-legend,
   :root[dir='ltr'] .schedule-chart-band .schedule-mix-donut .mix-legend {
-    width: 220px;
+    width: max-content;
+    max-width: 100%;
     min-width: 0;
+    margin-inline: auto;
     justify-items: stretch;
-    /* The base legend shift was a per-direction nudge too; the shared width
-       and the panel's edge set the column now. */
-    transform: none;
+    /* The base legend shift is a per-direction nudge; the shared shift keeps
+       this legend and the cost legend on one column in both directions. */
+    transform: translateX(var(--schedule-legend-shift, 0px));
   }
 
   /* The rows used to be pulled toward the ring's outer edge (20px in Hebrew,
@@ -6856,7 +6867,6 @@ e #name,
    any size (asides column or the narrow donut pair). */
 .cost-donut-plot {
   position: relative;
-  transform: translateX(5px);
 }
 
 .cost-donut svg {
@@ -6881,34 +6891,40 @@ e #name,
   font-size: 16.3px;
 }
 
+/* The asides cost legend mirrors the mix legend item for item: a color chip
+   beside a two-line text block, the name in ink and the amount with its share
+   in the muted hint color on the line under it, exactly like `.mix-legend`. */
 .cost-legend {
   display: grid;
-  gap: 4px;
-  font-size: 0.82rem;
+  gap: 8px;
+  font-size: 0.9rem;
 }
 
 .cost-legend-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--calc-muted);
   font-weight: 600;
 }
 
-.cost-legend-item strong {
-  color: var(--calc-ink);
-  margin-inline-start: auto;
+.cost-legend-text {
+  display: grid;
+  gap: 1px;
 }
 
-/* The share sits in its own column after the amount, so the ₪ figures still
-   line up down the legend whatever the percentage's width. It takes the ink,
-   not the muted hint color: muted is 4.2:1 on this paper, under AA for 13px
-   text, and this number is data rather than a label. */
-.cost-legend-share {
+.cost-legend-name {
   color: var(--calc-ink);
-  font-variant-numeric: tabular-nums;
-  min-inline-size: 4ch;
-  text-align: end;
+  font-weight: 700;
+}
+
+/* The amount and its share are one line separated by a middle dot, like the
+   mix legend's amount line, so the percentage stays right beside the figure
+   instead of being pushed into its own column. */
+.cost-legend-amount {
+  color: var(--calc-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
 }
 
 /* The chart band forces LTR for its layout, so the narrow donut pair restores
@@ -6924,51 +6940,19 @@ e #name,
 }
 
 /* Wide layout only: the asides cost legend sits below the band's mix legend,
-   so it stacks its rows the same way - the chip and the slice name open each
-   row, and the amount with its share sits under the name. The narrow pair
-   keeps one-line rows, because there the two legends have to share one line
-   per slice. */
+   so it uses the exact same two-line row (name over the amount with its share).
+   The narrow pair makes both legends one line per row in the media query
+   below. */
 @media (min-width: 1001px) {
-  /* The same 220px column the band's mix legend takes, so the two chip
-     columns line up without a per-direction nudge. */
+  /* The cost legend takes the mix legend's own width, measured by
+     ScheduleSection and exposed as --schedule-legend-width. Both blocks are
+     then the same box centered in their column, so the two chip columns land
+     on one vertical line. */
   .schedule-asides .cost-legend {
-    width: 100%;
-  }
-
-  .schedule-asides .cost-legend-item {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr);
-    column-gap: 6px;
-    row-gap: 1px;
-    align-items: center;
-  }
-
-  /* The chip runs beside both lines, like the mix legend's. */
-  .schedule-asides .cost-legend-item .chart-swatch {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-  }
-
-  .schedule-asides .cost-legend-name {
-    grid-column: 2 / span 2;
-    grid-row: 1;
-  }
-
-  /* Amount and share are one line: the amount starts under the name and the
-     share follows it, instead of being pushed to the row's far edge. */
-  .schedule-asides .cost-legend-item strong {
-    grid-column: 2;
-    grid-row: 2;
-    margin-inline-start: 0;
-    justify-self: start;
-  }
-
-  .schedule-asides .cost-legend-share {
-    grid-column: 3;
-    grid-row: 2;
-    justify-self: start;
-    min-inline-size: 0;
-    text-align: start;
+    width: var(--schedule-legend-width, max-content);
+    max-width: 100%;
+    margin-inline: auto;
+    transform: translateX(var(--schedule-legend-shift, 0px));
   }
 }
 
@@ -9273,8 +9257,7 @@ tbody tr:hover {
   }
 
   .schedule-donut-pair .mix-legend-amount,
-  .schedule-donut-pair .cost-legend-item strong,
-  .schedule-donut-pair .cost-legend-share {
+  .schedule-donut-pair .cost-legend-amount {
     color: var(--calc-ink);
     font-size: 0.85rem;
     font-weight: 600;
@@ -9330,7 +9313,8 @@ tbody tr:hover {
    longer fits on one line, so that tier keeps the stacked two-line legend. */
 @media (min-width: 390px) and (max-width: 1000px) {
 
-  .schedule-donut-pair .mix-legend-text {
+  .schedule-donut-pair .mix-legend-text,
+  .schedule-donut-pair .cost-legend-text {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
