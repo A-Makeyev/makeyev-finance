@@ -110,6 +110,13 @@ test('calculator help tooltip - hover opens, grace close, click pins', async ({ 
     `getComputedStyle(document.querySelector('[data-testid="help-method-1"]')).borderColor`,
   )) as string
 
+  // Center the trigger before hovering: hover() only scrolls the icon into
+  // view, which can leave the panel and its link below the fold. Scrolling
+  // after the panel is open would move the page under the pointer and can
+  // start the hover-close timer while the test reads the link's box.
+  await trigger.evaluate(
+    `(element) => element.scrollIntoView({ block: 'center', behavior: 'instant' })`,
+  )
   // Hovering the icon opens the panel.
   await trigger.hover()
   let panel = page.getByTestId('help-method-1-panel')
@@ -124,24 +131,53 @@ test('calculator help tooltip - hover opens, grace close, click pins', async ({ 
   // because its stability wait needs rAF frames, and the virtual clock below
   // never lets them advance - it retried until the panel had re-rendered.
   const link = panel.locator('a')
-  // Move, check and click are retried as ONE step: under parallel-suite load
-  // the widget's DOM node can be replaced (a late hydration re-render) while
-  // the pointer is on its way, which detaches the node the move was aimed at
-  // and makes the click land on whatever is underneath. Retrying re-resolves
-  // the link on the live panel and re-aims; the behavior under test (the grace
-  // close is NOT triggered once the pointer lands on the link) is unchanged,
-  // and the virtual clock below cannot close the panel meanwhile.
-  await expect(async () => {
-    // Scroll the link into view INSTANTLY before aiming. The site sets a
-    // smooth scroll-behavior, and with the virtual clock installed that
-    // animation never gets a frame to finish, so the link can sit below the
-    // fold while its box coordinates are still off-viewport - a raw mouse
-    // click there hits nothing at all (the flake this replaces).
-    await page.evaluate(
-      `document.querySelector('[data-testid="help-method-1-panel"] a')?.scrollIntoView({ block: 'center', behavior: 'instant' })`,
+  const linkSelector = '[data-testid="help-method-1-panel"] a'
+
+  /**
+   * A raw click that misses the link lands outside the widget, and the
+   * tooltip closes itself on an outside pointerdown by design. The next
+   * attempt would then have no link to aim at (which surfaced as a 15s
+   * boundingBox timeout in the full suite), so every attempt starts by making
+   * sure the hover panel is open again. Centering the trigger while the panel
+   * is closed keeps the link in view without scrolling after it opens.
+   */
+  const ensurePanelOpen = async () => {
+    if ((await trigger.getAttribute('aria-expanded')) === 'true') return
+    // Park first: a missed click leaves the pointer where it landed, and
+    // moving onto the trigger from there only fires the mouseenter that opens
+    // the panel after a real crossing.
+    await page.mouse.move(0, 0)
+    await trigger.evaluate(
+      `(element) => element.scrollIntoView({ block: 'center', behavior: 'instant' })`,
     )
+    await trigger.hover()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  }
+
+  // Move, check and click are retried as ONE step: under parallel-suite load
+  // a late font swap or hydration re-render can move the link between the box
+  // read and the click, and raw mouse events have no actionability check of
+  // their own. Each retry reopens the panel if a miss closed it, re-resolves
+  // the link, and confirms the point still belongs to the link before
+  // pressing; the behavior under test (the grace close is NOT triggered once
+  // the pointer lands on the link) is unchanged.
+  await expect(async () => {
+    await ensurePanelOpen()
+    // Fail fast when a re-render has unmounted the link: the default 15s
+    // action timeout would otherwise consume half the retry budget in one try.
+    await expect(link).toBeVisible({ timeout: 5000 })
     const box = (await link.boundingBox())!
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    // A late font swap or re-render can move the link after the box read; a
+    // raw click would then press whatever moved under the point instead.
+    const onLink = (await page.evaluate(`(() => {
+      const target = document.elementFromPoint(${x}, ${y})
+      const anchor = document.querySelector(${JSON.stringify(linkSelector)})
+      return !!anchor && !!target && (target === anchor || anchor.contains(target))
+    })()`)) as boolean
+    expect(onLink, 'the link is still under the click point').toBe(true)
+    await page.mouse.move(x, y)
     await expect(panel).toBeVisible()
     await page.mouse.down()
     await page.mouse.up()
