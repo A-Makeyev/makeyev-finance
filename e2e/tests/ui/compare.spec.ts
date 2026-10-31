@@ -103,11 +103,9 @@ test.describe('mortgage comparison - /compare', () => {
   test('the cheapest compliant mix is marked as the best-value mix', async ({ page }) => {
     await page.goto('/compare')
     await expect(page.getByTestId('compare-shell')).toBeVisible()
-    // One priced mix has nothing to beat yet, so nothing is recommended and
-    // the caption that keys the ring stays off the page with it.
+    // One priced mix has nothing to beat yet, so nothing is recommended.
     await expect(page.getByTestId('compare-result-card-1')).not.toHaveClass(/is-best/)
     await expect(page.getByTestId('compare-result-card-2')).not.toHaveClass(/is-best/)
-    await expect(page.getByTestId('compare-best-mix-caption')).toHaveCount(0)
 
     // Duplicate mix 1, then stretch the copy's term to 30 years: the same mix
     // over twice the term owes the bank materially more interest per shekel
@@ -130,10 +128,11 @@ test.describe('mortgage comparison - /compare', () => {
       'התמהיל המשתלם ביותר',
     )
 
-    // The caption under the cards says what the ring means, and only appears
-    // alongside a ring.
-    await expect(page.getByTestId('compare-best-mix-caption')).toBeVisible()
-    await expect(page.getByTestId('compare-best-mix-caption')).toContainText('עלות האשראי')
+    // The badge itself carries the reason, briefly, so no separate caption is
+    // needed on the page.
+    await expect(
+      page.getByTestId('compare-result-card-1').locator('.compare-best-mix-badge'),
+    ).toHaveText('התמהיל המשתלם ביותר: עלות אשראי נמוכה')
 
     // The ring and the badge share the theme's deep teal (--calc-teal-dark),
     // not the brand green: both flip together in dark mode.
@@ -727,7 +726,6 @@ test.describe('mortgage comparison - /compare', () => {
     // three slices, each with a type name, amount and share.
     const donut = page.getByTestId('compare-mix-donut-1')
     await expect(donut).toBeVisible()
-    await expect(donut).toContainText('הרכב התמהיל')
     await expect(donut.locator('svg')).toBeVisible()
     await expect(donut.locator('.mix-legend li')).toHaveCount(3)
     await expect(donut.locator('.mix-legend li').first()).toContainText('%')

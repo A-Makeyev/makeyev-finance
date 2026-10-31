@@ -945,10 +945,8 @@ export const en: { translation: Translation } = {
       // Mobile stacked view.
       scenarioSwitcherAria: 'Switch between mixes',
       bestBadge: 'Best',
-      bestMixBadge: 'Best-value mix',
-      bestMixCaption: 'The teal ring marks the mix with the lowest cost of credit.',
+      bestMixBadge: 'Best-value mix: lowest cost of credit',
       chartsHeading: 'Payments over time',
-      mixDonutTitle: 'Track mix composition',
       paymentTrendTitle: 'Monthly payment over time',
       paymentCompositionTitle: 'Monthly payment composition: principal, indexation and interest',
       totalPaymentsTitle: 'Total payments accumulated',

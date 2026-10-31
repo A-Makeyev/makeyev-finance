@@ -333,18 +333,6 @@ export function ComparePage() {
   }, [results])
 
   /**
-   * One-line key for the teal ring, under the cards. Rendered only while a mix
-   * is actually marked, so the page never explains a ring that is not there
-   * (a single priced mix has nothing to beat and no ring to point at).
-   */
-  const bestMixCaption =
-    bestMixIndexes.size > 0 ? (
-      <p className="compare-best-mix-caption" data-testid="compare-best-mix-caption">
-        {t('compare.bestMixCaption')}
-      </p>
-    ) : null
-
-  /**
    * Early-repayment fee per scenario, at the end of every loan year, from the
    * same projection the calculator's prepayment panel uses. One map per
    * scenario (year -> total fee across its tracks) so the chart series below
@@ -871,7 +859,6 @@ export function ComparePage() {
               className="compare-mix-block"
               data-testid={`compare-mix-donut-${index + 1}`}
             >
-              <h3 className="compare-mix-title">{t('compare.mixDonutTitle')}</h3>
               <TrackMixDonut
                 shares={result.mixShares.map((share, shareIndex) => ({
                   trackId: `${share.type}-${shareIndex}`,
@@ -1193,7 +1180,6 @@ export function ComparePage() {
                 renderResultCard(index, `compare-result-card-${index + 1}`),
               )}
             </div>
-            {bestMixCaption}
           </section>
         ) : (
           /* Mobile: the active scenario's result card, switched by the tabs
@@ -1202,9 +1188,6 @@ export function ComparePage() {
             <div className="compare-results-grid">
               {renderResultCard(clampedMobileIndex, 'compare-card')}
             </div>
-            {/* Mobile shows one card at a time, so the key waits for the tab
-                whose card actually carries the ring. */}
-            {bestMixIndexes.has(clampedMobileIndex) ? bestMixCaption : null}
           </section>
         )}
 

@@ -11080,8 +11080,9 @@ html[dir='rtl'] .comment-text {
 
 /* The recommended mix (cheapest cost of credit among the mixes that clear the
    regulatory limits): a deep-teal ring around the whole card, plus the badge
-   in its title. The ring is a box-shadow, not a thicker border, so the marked
-   card keeps its box and never shifts the neighboring cards by a pixel. */
+   in its title that names it and says why in one line. The ring is a
+   box-shadow, not a thicker border, so the marked card keeps its box and never
+   shifts the neighboring cards by a pixel. */
 .compare-result-card.is-best {
   border-color: var(--calc-teal-dark);
   box-shadow:
@@ -11092,9 +11093,13 @@ html[dir='rtl'] .comment-text {
 /* The badge borrows the same role: --calc-teal-dark is the deep teal on the
    light card and brightens in dark mode, so the ink is --calc-paper, which
    flips the other way. The pair stays legible in both themes (~8:1 light,
-   ~8:1 dark) instead of locking one theme's ink onto a flipping fill. */
+   ~8:1 dark) instead of locking one theme's ink onto a flipping fill. The
+   nudge lifts it off the title's baseline, where middle alignment on the
+   larger 1.2rem heading left it reading low. */
 .compare-best-mix-badge {
   display: inline-block;
+  position: relative;
+  inset-block-start: -0.18em;
   margin-inline-start: 8px;
   font-size: 0.72rem;
   font-weight: 700;
@@ -11103,16 +11108,6 @@ html[dir='rtl'] .comment-text {
   border-radius: 999px;
   padding: 2px 9px;
   vertical-align: middle;
-}
-
-/* The key for that ring, directly under the result cards. Muted so it reads as
-   a note about the cards rather than another figure in them. */
-.compare-best-mix-caption {
-  margin: 12px 0 0;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--calc-muted);
-  text-align: start;
 }
 
 .compare-status-list {
@@ -11468,13 +11463,6 @@ html[dir='rtl'] .comment-text {
   margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid var(--calc-line);
-}
-
-.compare-mix-title {
-  justify-self: center;
-  margin: 0;
-  font-size: 0.95rem;
-  color: var(--calc-teal-dark);
 }
 
 .mix-donut.compare-mix-donut-chart {

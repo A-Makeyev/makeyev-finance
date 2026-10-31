@@ -930,10 +930,8 @@ export const he = {
       // Mobile stacked view.
       scenarioSwitcherAria: 'מעבר בין תמהילים',
       bestBadge: 'הטוב ביותר',
-      bestMixBadge: 'התמהיל המשתלם ביותר',
-      bestMixCaption: 'הטבעת מסמנת את התמהיל עם עלות האשראי הנמוכה ביותר.',
+      bestMixBadge: 'התמהיל המשתלם ביותר: עלות אשראי נמוכה',
       chartsHeading: 'תשלומים לאורך זמן',
-      mixDonutTitle: 'הרכב התמהיל',
       paymentTrendTitle: 'תשלום חודשי לאורך זמן',
       paymentCompositionTitle: 'הרכב התשלום החודשי: קרן, הצמדה וריבית',
       totalPaymentsTitle: 'סך כל התשלומים',
