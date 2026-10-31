@@ -6551,11 +6551,16 @@ e #name,
   direction: ltr;
 }
 
-/* Both schedule legends move together toward the donut's reading-end edge in
-   Hebrew, so they stay on one column instead of sitting dead center under the
-   ring. English keeps the centered position. */
+/* Both schedule legends move together toward the donut's reading-end edge:
+   Hebrew (RTL) shifts them left, English (LTR) mirrors that shift to the
+   right, so they stay on one column instead of sitting dead center under the
+   ring. The same variable drives the wide band and the paired layout. */
 :root[dir='rtl'] .schedule-section {
   --schedule-legend-shift: -26px;
+}
+
+:root[dir='ltr'] .schedule-section {
+  --schedule-legend-shift: 26px;
 }
 
 /* English (LTR): put the donut on the RIGHT, chart on the LEFT. */
@@ -9111,10 +9116,18 @@ tbody tr:hover {
     align-items: center;
   }
 
-  /* Stacked layout is centered, so the horizontal legend shift is undone. */
+  /* Stacked layout is centered, so the horizontal legend shift is undone for
+     the other mix legends. The schedule's paired legends keep the wide band's
+     directional shift below, so shrinking the page does not move them off the
+     column they sit on in the wide layout. */
   .mix-legend,
   :root[dir='ltr'] .mix-legend {
     transform: none;
+  }
+
+  :root[dir] .schedule-donut-pair .mix-legend,
+  :root[dir] .schedule-donut-pair .cost-legend {
+    transform: translateX(var(--schedule-legend-shift, 0px));
   }
 
   .per-track-chart {
@@ -9170,22 +9183,12 @@ tbody tr:hover {
     margin: 0;
   }
 
-  /* The ring is the column, not the legend: the one-line legend is usually
-     wider than the 260px ring, and a centred legend then hangs its chips past
-     the ring's reading-start edge. Keeping the track at the ring's width and
-     aligning both items to that edge puts the chips on the ring itself
-     whatever width the text renders at; the legend's extra width spills
-     toward the pair's gap instead. */
+  /* Both rings keep the same column width, and each legend stays centered
+     under its own ring exactly as it does in the wide band. The legends are
+     narrower than the ring now that they keep the two-line row, so centering
+     them cannot push a chip past the ring edge. */
   .schedule-donut-pair .mix-donut {
     grid-template-columns: min(260px, 80vw);
-  }
-
-  :root[dir='rtl'] .schedule-donut-pair .mix-donut {
-    justify-items: end;
-  }
-
-  :root[dir='ltr'] .schedule-donut-pair .mix-donut {
-    justify-items: start;
   }
 
   /* Same ring size for both, so the pair reads as one comparison. The rings
@@ -9220,9 +9223,9 @@ tbody tr:hover {
     font-size: 12.5px;
   }
 
-  /* The legend hugs the ring's reading-start edge (see the mix-donut track
-     above): fit-content keeps each row's chip and text together, and no auto
-     margins so the alignment stays on that edge. */
+  /* The legend is a centered block under the ring, like the wide band's:
+     fit-content keeps each row's chip and text together, and the rows share
+     one width so the chips line up in a column. */
   .schedule-donut-pair .mix-legend {
     min-width: 0;
     width: fit-content;
@@ -9234,8 +9237,7 @@ tbody tr:hover {
   }
 
   /* The rows were pulled toward the ring's outer edge for the wide band; here
-     the legend is anchored to the ring's edge, so that pull only moved every
-     row off it. */
+     the legend stays centered, so that pull would only move every row off it. */
   .schedule-donut-pair .mix-legend .mix-legend-item {
     margin-inline: 0;
   }
@@ -9245,27 +9247,17 @@ tbody tr:hover {
     flex: 1;
   }
 
-  /* One type scale for both legends under the pair: an ink 0.9rem name line at
-     700, then the numbers at 0.85rem in ink at 600. The cost legend used to sit
-     a size below the mix's and flip the emphasis (muted label, ink amount);
-     ink on the numbers also keeps the muted 4.2:1 from carrying data. */
-  .schedule-donut-pair .mix-legend-name,
-  .schedule-donut-pair .cost-legend-name {
-    color: var(--calc-ink);
-    font-size: 0.9rem;
-    font-weight: 700;
-  }
-
-  .schedule-donut-pair .mix-legend-amount,
-  .schedule-donut-pair .cost-legend-amount {
-    color: var(--calc-ink);
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-
-  /* Match the mix legend's row rhythm, so the two blocks read at one density. */
+  /* Match the mix legend's row rhythm, so the two blocks read at one density.
+     Both rings share one center line once the pair wraps on a phone, so the
+     two legends also have to share one width for their chips to land on ONE
+     vertical line - the same column the wide band's asides legend keeps. The
+     mix legend is the wider of the two (track names beat amount lines), so
+     growing the cost legend to its measured width (see ScheduleSection's
+     --schedule-legend-width) is enough; min-width never shrinks a row that is
+     naturally wider. */
   .schedule-donut-pair .cost-legend {
     gap: 8px;
+    min-width: var(--schedule-legend-width, 0px);
   }
 
   /* The two legends face each other under their rings, so the ring-to-legend
@@ -9301,33 +9293,6 @@ tbody tr:hover {
 
   .mortgage-track .input-group:nth-of-type(6) {
     grid-column: 1 / 7;
-  }
-}
-
-/* The two legends sit under their rings at one compact line per row, so their
-   rows have to line up. The cost row was already one line; the mix row stacked
-   its name over its amount, making it 34px tall against the cost row's 17px,
-   which left the cost list drifting out of line from the first row down. On one
-   line the name, the share and the amount land on the cost legend's rows, and
-   both legends end at the same height. Below 390px the widest English name no
-   longer fits on one line, so that tier keeps the stacked two-line legend. */
-@media (min-width: 390px) and (max-width: 1000px) {
-
-  .schedule-donut-pair .mix-legend-text,
-  .schedule-donut-pair .cost-legend-text {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0 6px;
-    min-width: 0;
-  }
-
-  /* One line is wider than the ring, so the legend keeps its natural width and
-     spills toward the pair's gap; the mix-donut track above anchors its chips
-     to the ring's reading-start edge, so no per-direction nudge is needed. */
-  .schedule-donut-pair .mix-legend {
-    width: max-content;
-    max-width: none;
   }
 }
 

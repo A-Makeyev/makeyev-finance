@@ -396,53 +396,117 @@ test.describe('mortgage calculator - amortization schedule', () => {
     expect(mix.valueText).toMatch(/^₪[\d.]+M$/)
     expect(mix.value.width).toBeLessThan(mix.svgWidth * 0.5)
 
-    // Both legends share one typographic scale: same size, weight and ink for
-    // the name line and for the numbers.
+    // Both legends share one typographic scale: same size, weight and color
+    // for the name line and for the amount line.
     expect(costSide.legendName).toEqual(mix.legendName)
     expect(costSide.legendNumber).toEqual(mix.legendNumber)
 
-    // The two legends face each other under their rings, so their rows sit on
-    // the same lines: one compact line per row in both, starting on the same
-    // line and ending at the same height.
+    // The two legends face each other under their rings, so their two-line
+    // rows sit on the same lines: same top, same height. Each legend is
+    // centered on its own ring and keeps its chips in one column, exactly like
+    // the wide band's legends.
     const legends = (await calc.page.evaluate(`(() => {
       const tops = (selector) =>
         [...document.querySelectorAll(selector)].map((row) =>
           Math.round(row.getBoundingClientRect().top),
         )
+      const centers = (selector) =>
+        [...document.querySelectorAll(selector)].map((row) => {
+          const chip = row.querySelector('.chart-swatch').getBoundingClientRect()
+          return chip.left + chip.width / 2
+        })
       const box = (selector) => {
         const rect = document.querySelector(selector).getBoundingClientRect()
-        return { top: Math.round(rect.top), height: Math.round(rect.height) }
+        return {
+          left: Math.round(rect.left),
+          top: Math.round(rect.top),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        }
       }
-      const legend = document.querySelector('.schedule-donut-pair .mix-legend')
-      const direction = getComputedStyle(legend).direction
-      const chip = legend.querySelector('.mix-legend-item .chart-swatch').getBoundingClientRect()
-      const ring = document
-        .querySelector('.schedule-donut-pair .mix-donut svg')
-        .getBoundingClientRect()
       return {
         mixRows: tops('.schedule-donut-pair .mix-legend-item'),
         costRows: tops('.schedule-donut-pair .cost-legend-item'),
+        mixChips: centers('.schedule-donut-pair .mix-legend-item'),
+        costChips: centers('.schedule-donut-pair .cost-legend-item'),
         mixLegend: box('.schedule-donut-pair .mix-legend'),
         costLegend: box('.schedule-donut-pair .cost-legend'),
-        mixSquare: direction === 'rtl' ? chip.right : chip.left,
-        ringStart: direction === 'rtl' ? ring.right : ring.left,
+        mixRing: box('.schedule-donut-pair .mix-donut svg'),
+        costRing: box('.schedule-donut-pair .cost-donut svg'),
       }
     })()`)) as {
       mixRows: number[]
       costRows: number[]
-      mixLegend: { top: number; height: number }
-      costLegend: { top: number; height: number }
-      mixSquare: number
-      ringStart: number
+      mixChips: number[]
+      costChips: number[]
+      mixLegend: { left: number; top: number; width: number; height: number }
+      costLegend: { left: number; top: number; width: number; height: number }
+      mixRing: { left: number; top: number; width: number; height: number }
+      costRing: { left: number; top: number; width: number; height: number }
     }
     expect(legends.mixRows).toHaveLength(3)
     expect(legends.costRows).toEqual(legends.mixRows)
     expect(legends.costLegend.top).toBe(legends.mixLegend.top)
     expect(legends.costLegend.height).toBe(legends.mixLegend.height)
-    // The one-line legend is wider than its ring, so it used to hang its
-    // squares past the ring's reading-start edge; pulled back by that
-    // overhang, the squares start on the ring's own edge.
-    expect(legends.mixSquare).toBeLessThanOrEqual(legends.ringStart + 1)
+    for (const chip of legends.mixChips) {
+      expect(Math.abs(chip - legends.mixChips[0]), 'mix chips share one column').toBeLessThanOrEqual(1)
+    }
+    for (const chip of legends.costChips) {
+      expect(Math.abs(chip - legends.costChips[0]), 'cost chips share one column').toBeLessThanOrEqual(1)
+    }
+    // Centered on its own ring, then nudged by the shared direction shift both
+    // legends take (--schedule-legend-shift), so neither sits dead center.
+    const shift = (await calc.page.evaluate(`(() => {
+      const value = getComputedStyle(document.querySelector('.schedule-section'))
+        .getPropertyValue('--schedule-legend-shift')
+      return parseFloat(value) || 0
+    })()`)) as number
+    const center = (box: { left: number; width: number }) => box.left + box.width / 2
+    expect(Math.abs(center(legends.mixLegend) - (center(legends.mixRing) + shift))).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(center(legends.costLegend) - (center(legends.costRing) + shift)),
+    ).toBeLessThanOrEqual(1)
+
+    // On a phone the pair wraps: the two rings stack on one center line, so
+    // the legends sit one under the other and their chips have to land on ONE
+    // vertical line. A cost legend sized to its own text is narrower than the
+    // mix legend, and centering it on the same ring pushed its squares off the
+    // mix legend's column.
+    await calc.page.setViewportSize({ width: 430, height: 1200 })
+    await expect
+      .poll(() =>
+        calc.page.evaluate(`(() => {
+          const centerOf = (selector) => {
+            const rect = document.querySelector(selector).getBoundingClientRect()
+            return Math.round(rect.left + rect.width / 2)
+          }
+          return Math.abs(
+            centerOf('.schedule-donut-pair .mix-donut svg') -
+              centerOf('.schedule-donut-pair .cost-donut svg'),
+          )
+        })()`),
+      )
+      .toBeLessThanOrEqual(1)
+
+    const stacked = (await calc.page.evaluate(`(() => {
+      const chips = (selector) =>
+        [...document.querySelectorAll(selector)].map((row) => {
+          const chip = row.querySelector('.chart-swatch').getBoundingClientRect()
+          return chip.left + chip.width / 2
+        })
+      return {
+        mix: chips('.schedule-donut-pair .mix-legend-item'),
+        cost: chips('.schedule-donut-pair .cost-legend-item'),
+      }
+    })()`)) as { mix: number[]; cost: number[] }
+    expect(stacked.mix).toHaveLength(3)
+    expect(stacked.cost).toHaveLength(3)
+    for (const chip of stacked.cost) {
+      expect(
+        Math.abs(chip - stacked.mix[0]),
+        'the two legends share one chip column once the rings stack',
+      ).toBeLessThanOrEqual(1)
+    }
   })
 
   test('the wide mix ring matches the cost ring and gives the freed width to the chart', async ({
