@@ -59,7 +59,7 @@ export function ActionFormModal({ open, onOpenChange }: ActionFormModalProps) {
         // 92vw still caps it on small screens. The 60px drop and the height
         // cap (viewport minus 200px) keep the dialog clear of the sticky
         // header at the top and ~40px off the bottom on a short window.
-        contentClassName="no-scrollbar !max-w-[380px] sm:!max-w-[440px] lg:!max-w-[480px] !max-h-[calc(100dvh_-_200px)] !top-[calc(50%_+_60px)] !rounded-2xl !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
+        contentClassName="no-scrollbar !max-w-[380px] sm:!max-w-[440px] sm:mt-5 lg:!max-w-[480px] !max-h-[calc(100dvh_-_200px)] !top-[calc(50%_+_60px)] !rounded-2xl !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
       >
         {/* The form modal is the tallest dialog on the site, so its fields,
             rhythm and type are one step tighter than the standalone contact
