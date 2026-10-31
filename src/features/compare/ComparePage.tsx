@@ -303,6 +303,48 @@ export function ComparePage() {
   }, [results, t])
 
   /**
+   * The mix to recommend: the CHEAPEST cost of credit (interest per shekel
+   * borrowed, `overpayPercent`) among the mixes that are priced AND clear the
+   * regulatory limits. A cheaper mix the bank cannot approve is not a better
+   * offer, so scenarios over LTV/DTI/PTI, in an error state, or still blank
+   * are not candidates. Cost of credit rather than total paid, because the
+   * scenarios may run for different terms: total paid grows with every extra
+   * year of interest, which would always crown the shortest term instead of
+   * the cheapest money. Interest per shekel still prices the same shared loan
+   * across mixes, so the comparison stays apples to apples. All tied winners
+   * are marked, and fewer than two candidates means there is nothing to beat,
+   * so nothing is highlighted.
+   */
+  const bestMixIndexes = useMemo(() => {
+    const candidates = results
+      .map((result, index) => ({ result, index }))
+      .filter(
+        ({ result }) =>
+          !result.isEmpty && !result.error && !result.ltv && !result.dti && !result.pti,
+      )
+    if (candidates.length < 2) return new Set<number>()
+    const cheapest = Math.min(...candidates.map(({ result }) => result.overpayPercent))
+    if (!Number.isFinite(cheapest)) return new Set<number>()
+    return new Set(
+      candidates
+        .filter(({ result }) => Math.abs(result.overpayPercent - cheapest) < 1e-9)
+        .map(({ index }) => index),
+    )
+  }, [results])
+
+  /**
+   * One-line key for the teal ring, under the cards. Rendered only while a mix
+   * is actually marked, so the page never explains a ring that is not there
+   * (a single priced mix has nothing to beat and no ring to point at).
+   */
+  const bestMixCaption =
+    bestMixIndexes.size > 0 ? (
+      <p className="compare-best-mix-caption" data-testid="compare-best-mix-caption">
+        {t('compare.bestMixCaption')}
+      </p>
+    ) : null
+
+  /**
    * Early-repayment fee per scenario, at the end of every loan year, from the
    * same projection the calculator's prepayment panel uses. One map per
    * scenario (year -> total fee across its tracks) so the chart series below
@@ -766,13 +808,20 @@ export function ComparePage() {
     if (!result || !scenario) return null
     const label = scenario.label.trim() || t('compare.scenarioUntitle', { index: index + 1 })
     const hasFigures = !result.isEmpty && !result.error
+    const isBestMix = bestMixIndexes.has(index)
     return (
       <article
         key={scenario.id}
-        className="compare-result-card"
+        className={isBestMix ? 'compare-result-card is-best' : 'compare-result-card'}
         data-testid={testId}
+        data-best-mix={isBestMix ? 'true' : undefined}
       >
-        <h2>{label}</h2>
+        <h2>
+          {label}
+          {isBestMix && (
+            <span className="compare-best-mix-badge">{t('compare.bestMixBadge')}</span>
+          )}
+        </h2>
         <dl className="compare-card-metrics">
           {metrics.map((metric) => {
             const isBest = bestIndexes.get(metric.key)?.has(index) ?? false
@@ -1144,6 +1193,7 @@ export function ComparePage() {
                 renderResultCard(index, `compare-result-card-${index + 1}`),
               )}
             </div>
+            {bestMixCaption}
           </section>
         ) : (
           /* Mobile: the active scenario's result card, switched by the tabs
@@ -1152,6 +1202,9 @@ export function ComparePage() {
             <div className="compare-results-grid">
               {renderResultCard(clampedMobileIndex, 'compare-card')}
             </div>
+            {/* Mobile shows one card at a time, so the key waits for the tab
+                whose card actually carries the ring. */}
+            {bestMixIndexes.has(clampedMobileIndex) ? bestMixCaption : null}
           </section>
         )}
 

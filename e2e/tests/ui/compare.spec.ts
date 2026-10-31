@@ -100,6 +100,55 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(page.getByTestId('compare-metric-avgPayment-1')).toHaveClass(/best/)
   })
 
+  test('the cheapest compliant mix is marked as the best-value mix', async ({ page }) => {
+    await page.goto('/compare')
+    await expect(page.getByTestId('compare-shell')).toBeVisible()
+    // One priced mix has nothing to beat yet, so nothing is recommended and
+    // the caption that keys the ring stays off the page with it.
+    await expect(page.getByTestId('compare-result-card-1')).not.toHaveClass(/is-best/)
+    await expect(page.getByTestId('compare-result-card-2')).not.toHaveClass(/is-best/)
+    await expect(page.getByTestId('compare-best-mix-caption')).toHaveCount(0)
+
+    // Duplicate mix 1, then stretch the copy's term to 30 years: the same mix
+    // over twice the term owes the bank materially more interest per shekel
+    // borrowed, so the untouched 15-year original is the cheaper credit and
+    // takes the teal ring + badge.
+    await page.getByTestId('compare-duplicate-1').click()
+    await expect(page.getByTestId('compare-scenario-editor-3')).toBeVisible()
+    await page.getByTestId('compare-term-2').fill('30')
+
+    await expect(page.getByTestId('compare-result-card-1')).toHaveClass(/is-best/)
+    await expect(page.getByTestId('compare-result-card-1')).toContainText(
+      'התמהיל המשתלם ביותר',
+    )
+    await expect(page.getByTestId('compare-result-card-1')).toHaveAttribute(
+      'data-best-mix',
+      'true',
+    )
+    await expect(page.getByTestId('compare-result-card-2')).not.toHaveClass(/is-best/)
+    await expect(page.getByTestId('compare-result-card-2')).not.toContainText(
+      'התמהיל המשתלם ביותר',
+    )
+
+    // The caption under the cards says what the ring means, and only appears
+    // alongside a ring.
+    await expect(page.getByTestId('compare-best-mix-caption')).toBeVisible()
+    await expect(page.getByTestId('compare-best-mix-caption')).toContainText('עלות האשראי')
+
+    // The ring and the badge share the theme's deep teal (--calc-teal-dark),
+    // not the brand green: both flip together in dark mode.
+    const colors = (await page.evaluate(`(() => {
+      const card = document.querySelector('[data-testid="compare-result-card-1"]')
+      const badge = card.querySelector('.compare-best-mix-badge')
+      return {
+        border: getComputedStyle(card).borderTopColor,
+        badge: getComputedStyle(badge).backgroundColor,
+      }
+    })()`)) as { border: string; badge: string }
+    expect(colors.border).toBe(colors.badge)
+    expect(colors.border).not.toBe('rgb(35, 185, 55)')
+  })
+
   test('blank shared inputs hint the values the priced scenarios need', async ({ page }) => {
     await page.goto('/compare')
     // Scenario 1 carries the calculator's ₪1,000,000 recommended mix and

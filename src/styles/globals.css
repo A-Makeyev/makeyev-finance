@@ -11078,6 +11078,43 @@ html[dir='rtl'] .comment-text {
   vertical-align: middle;
 }
 
+/* The recommended mix (cheapest cost of credit among the mixes that clear the
+   regulatory limits): a deep-teal ring around the whole card, plus the badge
+   in its title. The ring is a box-shadow, not a thicker border, so the marked
+   card keeps its box and never shifts the neighboring cards by a pixel. */
+.compare-result-card.is-best {
+  border-color: var(--calc-teal-dark);
+  box-shadow:
+    0 0 0 2px var(--calc-teal-dark),
+    0 20px 55px rgba(22, 50, 53, 0.1);
+}
+
+/* The badge borrows the same role: --calc-teal-dark is the deep teal on the
+   light card and brightens in dark mode, so the ink is --calc-paper, which
+   flips the other way. The pair stays legible in both themes (~8:1 light,
+   ~8:1 dark) instead of locking one theme's ink onto a flipping fill. */
+.compare-best-mix-badge {
+  display: inline-block;
+  margin-inline-start: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--calc-paper);
+  background: var(--calc-teal-dark);
+  border-radius: 999px;
+  padding: 2px 9px;
+  vertical-align: middle;
+}
+
+/* The key for that ring, directly under the result cards. Muted so it reads as
+   a note about the cards rather than another figure in them. */
+.compare-best-mix-caption {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--calc-muted);
+  text-align: start;
+}
+
 .compare-status-list {
   display: grid;
   gap: 6px;
