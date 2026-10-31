@@ -139,6 +139,7 @@ export function ForecastSection() {
       id: 'interest',
       label: t('calculator.forecast.series.interest'),
       color: INTEREST_COLOR,
+      area: true,
       points: base.points.map((point) => ({
         year: point.year,
         value: point.cumulativeInterest,
@@ -150,6 +151,7 @@ export function ForecastSection() {
       id: 'indexation',
       label: t('calculator.forecast.series.indexation'),
       color: INDEXATION_COLOR,
+      area: true,
       points: base.points.map((point) => ({
         year: point.year,
         value: point.cumulativeIndexation,

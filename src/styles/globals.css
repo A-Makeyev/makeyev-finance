@@ -6977,12 +6977,12 @@ e #name,
 }
 
 /* The track-mix summary ("Prime · Fixed non-indexed · ...") belongs to the
-   title, so it follows it on the same line instead of sitting at the far end
-   of the row; it drops to its own line only when the two cannot share one. */
+   title, so it shares that line: the summary wraps its own text when the row
+   is tight instead of dropping to a second line under the heading. */
 .schedule-section .section-heading {
   justify-content: flex-start;
   align-items: baseline;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0 14px;
 }
 
@@ -7618,7 +7618,10 @@ e #name,
      click), and the fee column shrinks to its own figure; the track column
      takes what is left, so the two figures sit side by side without a stretch
      of empty space between them. */
-  grid-template-columns: 20px minmax(0, 1fr) minmax(270px, 2fr) auto;
+  /* The original 1fr / 2fr rhythm, 1% narrower: every row's amount box is
+     the same size because the name track has a zero minimum (a content-sized
+     name would otherwise resize the amount row by row). */
+  grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1.98fr) auto;
   align-items: center;
   gap: 6px;
   padding: 9px 0;
@@ -8178,6 +8181,8 @@ e #name,
   margin-block: 12px 4px;
   font-size: 0.78rem;
   line-height: 1.45;
+  /* Supporting small print under the figures: muted, not body ink. */
+  color: var(--calc-muted);
 }
 
 /* Live answer under a cap field: whether the entered rate changed anything.
@@ -8202,14 +8207,25 @@ e #name,
 
   /* The switch keeps its place in the field flow instead of dropping to a
      full-width row under it: its hint answers the cap field's "not below the
-     track rate" line, so the two need to stay near each other. Spanning the
-     field's three rows keeps the box level with the input row. */
+     track rate" line, so the two need to stay near each other. It borrows the
+     field's three rows as a subgrid, so its own box and text sit in the input
+     row itself - exactly level with the percent box, whatever heights the
+     label and hint rows take. */
   .prepayment-checkbox {
     grid-column: auto;
     grid-row: span 3;
-    align-self: center;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: subgrid;
+    align-items: center;
+    column-gap: 8px;
     max-inline-size: none;
     margin-block-start: 0;
+  }
+
+  .prepayment-checkbox>input,
+  .prepayment-checkbox>.prepayment-checkbox-text {
+    grid-row: 2;
   }
 }
 
@@ -8230,7 +8246,17 @@ e #name,
      explain. The name takes only the share its text needs and the amount takes
      the rest of the row, up to the fee beside it. */
   .prepayment-order-row {
-    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 3.5fr) auto;
+    /* Back to the original 1fr / 3.5fr shape (1% narrower), with the name
+       column fixed: every row is its own grid, so a content-sized name made
+       each track's amount field a different width. 170px holds the nowrap
+       per-₪1,000 line. */
+    grid-template-columns: 20px 170px minmax(0, 1fr) auto;
+  }
+
+  /* The fee-per-₪1,000 line is one figure: wrapping it splits the amount onto
+     a second line that reads as a separate number. */
+  .prepayment-order-note-inline {
+    white-space: nowrap;
   }
 }
 
@@ -8249,12 +8275,18 @@ e #name,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  /* The amount field and the fee drop under the track name, each in the
-     second column, so a phone keeps the row aligned instead of a run-on
-     sentence. */
+  /* A phone keeps the amount and its fee on one line under the track name:
+     the fee is the answer to the amount beside it, so the two must not be
+     separated by a row of captions. */
   .prepayment-order-row {
-    grid-template-columns: 20px minmax(0, 1fr);
+    /* Amount and fee sit side by side under the track name, the amount taking
+       the row's spare width like it did before. */
+    grid-template-columns: 20px minmax(0, 1fr) auto;
     row-gap: 6px;
+  }
+
+  .prepayment-order-name {
+    grid-column: 2 / -1;
   }
 
   .prepayment-order-amount {
@@ -8263,11 +8295,16 @@ e #name,
   }
 
   .prepayment-order-figure {
+    grid-column: 3;
+    min-inline-size: 0;
+  }
+
+  /* The total row's two figures share the line under its label. */
+  .prepayment-order-row.is-total .prepayment-order-figure {
     grid-column: 2;
     flex-direction: row;
     align-items: baseline;
-    justify-content: space-between;
-    min-inline-size: 0;
+    gap: 8px;
   }
 
   /* The fee and its rate equivalent are the answer; the balance and the
@@ -8581,6 +8618,12 @@ e #name,
 #schedule-summary {
   color: var(--calc-muted);
   font-size: 1rem;
+  /* The summary wraps its own text instead of being pushed onto a second
+     flex line under the heading. */
+  min-width: 0;
+  /* Lifted off the baseline a touch, so the smaller line reads centred on the
+     heading rather than sitting low against it. */
+  translate: 0 -4px;
 }
 
 .table-wrap {
@@ -8612,9 +8655,10 @@ e #name,
    natural height while the aside column stretches to match it. */
 .schedule-content .table-wrap {
   align-self: start;
-  /* 530px fits one net extra ~48px row vs the original 480px cap - enough
-     extra visibility without letting the table dominate the panel. */
-  max-height: 550px;
+  /* 530px fits one net extra ~48px row vs the original 480px cap; 598px
+     adds one more yearly row, enough extra visibility without letting the
+     table dominate the panel. */
+  max-height: 598px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
@@ -8656,6 +8700,9 @@ e #name,
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* Nudged below the table's top edge, so the aside column does not sit
+     flush against the corner of the panel. */
+  margin-block-start: 12px;
 }
 
 .schedule-asides-title {
@@ -9296,14 +9343,37 @@ tbody tr:hover {
   }
 }
 
+@media (max-width: 1000px) {
+
+  /* From 1000px down the six-column tier is broken into two inputs per row:
+     the market margin pairs with the repayment schedule (לוח סילוקין), which
+     used to sit alone on its own row and read as a separate question. The
+     rows above are type/amount and term/rate. */
+  .mortgage-track .input-group:nth-of-type(3) {
+    grid-column: 1 / 4;
+  }
+
+  .mortgage-track .input-group:nth-of-type(4) {
+    grid-column: 4 / 7;
+  }
+
+  .mortgage-track .input-group:nth-of-type(5) {
+    grid-column: 1 / 4;
+  }
+
+  .mortgage-track .input-group:nth-of-type(6) {
+    grid-column: 4 / 7;
+  }
+}
+
 @media (max-width: 900px) {
 
-  /* Stack the limits row a bit earlier than the 800px panel collapse:
-     between 800-900px the four-column grid squeezed שווי הנכס / הון עצמי to
-     ~127px, which scrolled the leading digits of 7-digit amounts out of
-     view. Stacked, each money field gets the full row width instead. */
+  /* Two per row below the four-column tier: from ~890px the four-column
+     grid squeezed שווי הנכס / הון עצמי to ~127px, which scrolled the leading
+     digits of 7-digit amounts out of view. Paired up, each money field still
+     gets half a tablet row instead of a single full-width stack. */
   .limits-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
   }
 
@@ -9330,11 +9400,11 @@ tbody tr:hover {
     gap: 0;
   }
 
-  /* The schedule title keeps the mix summary on its line while the two fit
-     side by side; only then does the summary wrap under it. */
+  /* The schedule title keeps the mix summary on its line; the summary wraps
+     its own text rather than dropping below the heading. */
   .schedule-section .section-heading {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: baseline;
     gap: 0 10px;
   }
@@ -9435,6 +9505,57 @@ tbody tr:hover {
   }
 }
 
+@media (max-width: 800px) {
+
+  /* The approval date, the loan amount and the term share one row from the
+     panel's stacked tier down, so the three entry fields stay together; the
+     actions move to their own line below. The date and amount boxes are the
+     same width (the amount's own base width). */
+  .starting-point {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: flex-start;
+    /* Tighter columns keep the date, amount and term reading as one group. */
+    column-gap: 14px;
+  }
+
+  .starting-approval,
+  .starting-amount {
+    flex: 0 1 auto;
+    width: auto;
+  }
+
+  /* The date field fills its own cell (and hugs its 160px box on the wide
+     tier): its label's 220px flex basis otherwise left ~60px of empty space
+     before the amount sitting beside it. */
+  .starting-approval .rate-validity-field {
+    flex: 1 1 160px;
+    max-width: 100%;
+  }
+
+  .term-slider {
+    flex: 1 1 180px;
+    width: auto;
+    min-width: 0;
+  }
+
+  .starting-actions {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .starting-approval .input-wrap,
+  .starting-amount .input-wrap {
+    inline-size: 160px;
+    max-inline-size: 160px;
+  }
+
+  .starting-approval .input-wrap input[type='date'] {
+    width: 100%;
+  }
+}
+
 @media (max-width: 650px) {
 
   /* Small phones: trim the calculator's type scale and control heights one
@@ -9445,13 +9566,47 @@ tbody tr:hover {
     padding: 20px 14px;
   }
 
-  /* The two-column costs row runs out of room here: half of a ~600px panel
-     leaves each fee pair ~290px, and once the percent is at its 100px floor
-     the ₪ amount is down to ~125px (at 480px it fell to 53px, hiding most of
-     the number). Stacked one per line every field gets the full panel width
-     again, same as the lone appraiser / renovations amounts. */
+  /* Phones: the approval date and the loan amount keep their row (equal
+     halves), while the term drops below them with room under it before the
+     actions. */
+  .starting-approval,
+  .starting-amount {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .starting-approval .input-wrap,
+  .starting-amount .input-wrap {
+    inline-size: 100%;
+    max-inline-size: 100%;
+  }
+
+  .term-slider {
+    flex: 1 1 100%;
+    margin-block: 16px 22px;
+  }
+
+  /* The cost cells keep two per row: דמי תיווך beside שכר עו"ד, so their four
+     inputs share one line, with שמאי and שיפוצים pairing on the row below. The
+     percent floor drops and the ₪ amount keeps the larger share, enough for
+     the amount to stay readable in the narrow phone cell. */
   .costs-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .costs-row .fee-inputs {
+    grid-template-columns: minmax(64px, 1fr) minmax(0, 1.4fr);
+    gap: 6px;
+  }
+
+  /* Pinned pairs: שמאי and שיפוצים always share the row under the fee pair,
+     whatever the labels' content widths are. */
+  .costs-row>.input-group:nth-child(3) {
+    grid-column: 1;
+  }
+
+  .costs-row>.input-group:nth-child(4) {
+    grid-column: 2;
   }
 
   .panel-heading h2,
@@ -9635,17 +9790,18 @@ tbody tr:hover {
     font-size: 1.45rem;
   }
 
-  /* Track form: stack every field - the long track-type label ("משתנה כל 5
-     שנים לא צמודה") finally fits without clipping. */
+  /* Track form: two fields per row - the type/amount, term/rate and
+     margin/method pairs keep their pairing on a phone instead of stacking
+     one field per line. */
   .mortgage-track {
     --track-pad-inline: 12px;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     padding: 26px var(--track-pad-inline) 12px;
   }
 
-  /* Neutralize the 6-col spans from the ≤1000px block - in a 1-column grid
-     every field takes the full row again. */
+  /* Neutralize the 6-col spans from the ≤1000px and ≤960px blocks - the
+     pairs above come from the source order in a two-column grid. */
   .mortgage-track .input-group:nth-of-type(1),
   .mortgage-track .input-group:nth-of-type(2),
   .mortgage-track .input-group:nth-of-type(3),
@@ -10681,48 +10837,29 @@ html[dir='rtl'] .comment-text {
    capital / income / monthly / one-time, four even cells (span 3) - so the
    expense pair sits on income's own row, right after it. Below 1100px the same
    six columns carry rows of 2, 2, 3 (income folds in with the pair). */
+/* Flex, not a fixed-column grid: seven fields never fill four (or two)
+   columns, and stretching the odd one out made it wider than the rest. With
+   fixed-width items the fields keep the same width and each row starts at the
+   reading edge, so the last row lines up under the first instead of floating
+   in the middle. */
 .compare-shared-grid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   gap: 18px;
 }
 
-/* Row 1: purpose / loan / property, three even cells. */
-.compare-shared-grid>.input-group:nth-child(1),
-.compare-shared-grid>.input-group:nth-child(2),
-.compare-shared-grid>.input-group:nth-child(3) {
-  grid-column: span 4;
-}
-
-/* Row 2: capital / income / monthly / one-time, four even cells. */
-.compare-shared-grid>.input-group:nth-child(n + 4) {
-  grid-column: span 3;
+.compare-shared-grid>.input-group {
+  flex: 0 1 calc(25% - 13.5px);
+  min-width: 0;
+  max-width: calc(25% - 13.5px);
 }
 
 @media (max-width: 1100px) {
 
-  .compare-shared-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-
-  /* Rows of 2, 2, 3: the first four pair up, the last three share one row
-     (income + the two expense amounts). */
-  .compare-shared-grid>.input-group:nth-child(n + 5) {
-    grid-column: span 2;
-  }
-
-  .compare-shared-grid>.input-group:nth-child(-n + 4) {
-    grid-column: span 3;
-  }
-}
-
-@media (max-width: 640px) {
-  .compare-shared-grid {
-    grid-template-columns: 1fr;
-  }
-
   .compare-shared-grid>.input-group {
-    grid-column: auto;
+    flex-basis: calc(50% - 9px);
+    max-width: calc(50% - 9px);
   }
 }
 
@@ -10734,7 +10871,7 @@ html[dir='rtl'] .comment-text {
    ones. */
 .compare-fees {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
   margin-block-start: 20px;
   padding-block-start: 16px;
@@ -10763,8 +10900,22 @@ html[dir='rtl'] .comment-text {
 }
 
 @media (max-width: 640px) {
-  .compare-fees {
-    grid-template-columns: 1fr;
+  /* All four cost inputs share a row: each pair keeps its percent and ₪ amount
+     side by side (the percent's floor drops so the ₪ figure still holds its
+     digits in the narrow cell), with שמאי and שיפוצים paired on the row below. */
+  .compare-fees .fee-inputs {
+    grid-template-columns: minmax(72px, 1fr) minmax(0, 1.3fr);
+    gap: 6px;
+  }
+
+  /* Pinned pairs: שמאי and שיפוצים always share the row under the fee pair,
+     whatever the labels' content widths are. */
+  .compare-fees>.input-group:nth-child(3) {
+    grid-column: 1;
+  }
+
+  .compare-fees>.input-group:nth-child(4) {
+    grid-column: 2;
   }
 }
 
@@ -10954,13 +11105,9 @@ html[dir='rtl'] .comment-text {
   grid-column: auto;
 }
 
-/* The long track-type label needs the full row on a phone, where two equal
-   columns would clip it (calculator parity: its own track stacks there too). */
-@media (max-width: 650px) {
-  .compare-shell .compare-track {
-    grid-template-columns: 1fr;
-  }
-}
+/* A phone keeps the same two-per-row pairing (type beside amount, rate
+   beside method) instead of stacking one field per line: the four fields
+   keep the two rows they use in the desktop column. */
 
 /* The seeded default mix puts the long type label (English "Variable indexed
    every 5 years") into the tightest 3-scenario column, where 1rem text needs
@@ -11720,6 +11867,55 @@ html[dir='rtl'] .comment-text {
    with one color per mix and one stroke per reset path. The figures behind it
    live in a screen-reader-only table (see RateScenarioChart), so the section
    stays graph-only on screen. */
+
+/* The results-card explanation dialog on a short viewport (a laptop window,
+   a landscape phone): the explanation keeps its actions visible by stepping
+   the type and spacing down, instead of pushing the buttons past the scroll
+   box. */
+@media (max-height: 700px) {
+  [role='dialog'][data-testid='results-card-modal'] {
+    max-height: 80vh;
+    /* Nudged below dead centre, so a short window does not clip the
+       dialog's top against the hero or the browser chrome. */
+    top: calc(50% + 20px);
+  }
+
+  .results-card-modal-body {
+    padding: 20px 20px 16px;
+  }
+
+  .results-card-modal-body .results-card-modal-value {
+    font-size: 28px;
+  }
+
+  .results-card-modal-body .results-card-modal-title {
+    margin-top: 4px;
+    font-size: 17px;
+  }
+
+  .results-card-modal-body .results-card-modal-text {
+    margin-top: 8px;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .results-card-modal-body .results-card-modal-caption {
+    margin-top: 6px;
+    font-size: 13px;
+  }
+
+  .results-card-modal-body .results-card-modal-link {
+    margin-top: 8px;
+    font-size: 14px;
+  }
+
+  .results-card-modal-body .results-card-modal-wishlist,
+  .results-card-modal-body .results-card-modal-gotit {
+    margin-top: 6px;
+    padding-block: 6px;
+    font-size: 15px;
+  }
+}
 
 @media (max-width: 500px) {
 

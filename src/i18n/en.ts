@@ -675,7 +675,7 @@ export const en: { translation: Translation } = {
         orderNoAmount:
           'Enter a partial amount above, or fill in one track or several. With no amount there is no partial prepayment, and the list shows only the ranking.',
         zeroWhy:
-          'Why 0? Prime and annually reset tracks are always exempt. A five-year track is exempt on its reset date, and when the comparison rate is not below the track rate there is no fee to pay.',
+          'Prime and annually reset tracks are always exempt. A five-year track is exempt on its reset date, and when the comparison rate is not below the track rate there is no fee to pay.',
         noFee: 'No fee',
         noFeeWhy:
           'The comparison rate is not below this track’s rate, so early repayment carries no discounting fee here.',

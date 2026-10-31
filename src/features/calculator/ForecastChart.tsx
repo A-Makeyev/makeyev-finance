@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
 import { formatAxisShekel, niceRange, niceTicks, svgRound, xAxisTicks } from '@/lib/charts'
@@ -28,6 +28,13 @@ export interface ForecastSeries {
    * color that would have to be invented per mix and path.
    */
   dash?: 'dashed' | 'dotted'
+  /**
+   * Shade the area under the line down to the plot's baseline, in the series
+   * color at low opacity. Cumulative cost charts use it so the line reads as
+   * a running total; payment paths leave it off, since a jump between years
+   * is not an accumulation.
+   */
+  area?: boolean
 }
 
 interface ForecastChartProps {
@@ -109,6 +116,10 @@ export function ForecastChart({
   testId,
 }: ForecastChartProps) {
   const { t } = useTranslation()
+  // Unique per chart, so several plots on one page never share a gradient id.
+  const gradientBase = useId().replace(/[^a-zA-Z0-9_-]/g, '')
+  const areaGradientId = (id: string) =>
+    `forecast-area-${gradientBase}-${id.replace(/[^a-zA-Z0-9_-]/g, '')}`
   const innerHeight = height - MARGIN.top - MARGIN.bottom
   const [activeYear, setActiveYear] = useState<number | null>(null)
   // Whether the pointer is on the plot right now. `activeYear` deliberately
@@ -263,6 +274,27 @@ export function ForecastChart({
           onMouseLeave={() => setHovering(false)}
           onClick={handleClick}
         >
+          {/* One vertical wash per shaded series: stronger under the line near
+              the top of the plot, fading to nothing at the baseline. */}
+          <defs>
+            {nonEmpty
+              .filter((entry) => entry.area)
+              .map((entry) => (
+                <linearGradient
+                  key={`area-gradient-${entry.id}`}
+                  id={areaGradientId(entry.id)}
+                  gradientUnits="userSpaceOnUse"
+                  x1={0}
+                  y1={MARGIN.top}
+                  x2={0}
+                  y2={MARGIN.top + innerHeight}
+                >
+                  <stop offset="0" stopColor={entry.color} stopOpacity={0.3} />
+                  <stop offset="1" stopColor={entry.color} stopOpacity={0.02} />
+                </linearGradient>
+              ))}
+          </defs>
+
           {ticks.map((tick) => (
             <g key={tick}>
               <line
@@ -282,6 +314,24 @@ export function ForecastChart({
               </text>
             </g>
           ))}
+
+          {/* Optional dim fill under a line, drawn before the strokes so it
+              never hides them. */}
+          {[...nonEmpty].reverse().map((entry) => {
+            if (!entry.area) return null
+            const first = entry.points[0]
+            const last = entry.points[entry.points.length - 1]
+            const baseY = zeroBased ? y(0) : MARGIN.top + innerHeight
+            return (
+              <path
+                key={`area-${entry.id}`}
+                d={`${pathFor(entry)} L ${x(last.year)} ${baseY} L ${x(first.year)} ${baseY} Z`}
+                fill={`url(#${areaGradientId(entry.id)})`}
+                className="chart-area-fill"
+                aria-hidden="true"
+              />
+            )
+          })}
 
           {markerYears.map((year) => (
             <line

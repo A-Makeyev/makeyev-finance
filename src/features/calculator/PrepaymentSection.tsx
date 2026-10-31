@@ -884,7 +884,7 @@ export function PrepaymentSection() {
                               </span>
                             )}
                             <span
-                              className="prepayment-order-note"
+                              className="prepayment-order-note prepayment-order-note-inline"
                               data-testid={`prepayment-order-per-thousand-${row.type}`}
                             >
                               {t('calculator.prepayment.orderPerThousand', {
@@ -1168,12 +1168,6 @@ export function PrepaymentSection() {
                     {t('calculator.prepayment.discount.title')}
                   </p>
                   <dl className="prepayment-discount-list">
-                    <div className="prepayment-discount-row">
-                      <dt>{t('calculator.prepayment.discount.gross')}</dt>
-                      <dd data-testid="prepayment-discount-gross">
-                        {formatCurrency(grossShown)}
-                      </dd>
-                    </div>
                     <div className="prepayment-discount-row is-discount">
                       <dt>
                         {t('calculator.prepayment.discount.amount', {
@@ -1182,6 +1176,12 @@ export function PrepaymentSection() {
                       </dt>
                       <dd data-testid="prepayment-discount-amount">
                         -{formatCurrency(discountShown)}
+                      </dd>
+                    </div>
+                    <div className="prepayment-discount-row">
+                      <dt>{t('calculator.prepayment.discount.gross')}</dt>
+                      <dd data-testid="prepayment-discount-gross">
+                        {formatCurrency(grossShown)}
                       </dd>
                     </div>
                     <div className="prepayment-discount-row is-total">

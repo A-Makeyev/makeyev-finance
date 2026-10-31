@@ -468,15 +468,15 @@ export function ResultsCards() {
         contentClassName="max-w-[480px]"
       >
         {openCard && (
-          <div className="px-7 pb-7 pt-9 text-center">
-            <div className="text-[34px] font-bold leading-tight text-[var(--calc-teal-dark)]">
+          <div className="results-card-modal-body px-7 pb-7 pt-9 text-center">
+            <div className="results-card-modal-value text-[34px] font-bold leading-tight text-[var(--calc-teal-dark)]">
               {openCard.value}
               {openCard.unit}
             </div>
-            <div className="mt-2 text-[18px] font-bold leading-snug text-[var(--calc-ink)]">
+            <div className="results-card-modal-title mt-2 text-[18px] font-bold leading-snug text-[var(--calc-ink)]">
               {openCard.label}
             </div>
-            <p className="mt-4 text-[17px] leading-relaxed text-[var(--calc-ink)]">
+            <p className="results-card-modal-text mt-4 text-[17px] leading-relaxed text-[var(--calc-ink)]">
               {t(`calculator.results.details.${openCard.key}`)}
             </p>
             {/* The average-payment card explains itself through the average,
@@ -490,14 +490,14 @@ export function ResultsCards() {
                 {t('calculator.results.firstPaymentNote', { payment: vm.monthlyPayment })}
               </p>
             )}
-            <div className="mt-3 text-[14px] font-semibold leading-relaxed text-[var(--calc-muted)]">
+            <div className="results-card-modal-caption mt-3 text-[14px] font-semibold leading-relaxed text-[var(--calc-muted)]">
               {openCard.caption}
             </div>
             {cardLinkIsInternal ? (
               <Link
                 to={cardLinkHref}
                 data-testid="results-card-modal-link"
-                className="mt-5 inline-block text-[15px] font-semibold text-[var(--calc-teal-dark)] underline underline-offset-4 transition-colors hover:text-[var(--calc-accent)]"
+                className="results-card-modal-link mt-5 inline-block text-[15px] font-semibold text-[var(--calc-teal-dark)] underline underline-offset-4 transition-colors hover:text-[var(--calc-accent)]"
               >
                 {t(`calculator.results.links.${openCard.link}.label`)}
               </Link>
@@ -507,7 +507,7 @@ export function ResultsCards() {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="results-card-modal-link"
-                className="mt-5 inline-block text-[15px] font-semibold text-[var(--calc-teal-dark)] underline underline-offset-4 transition-colors hover:text-[var(--calc-accent)]"
+                className="results-card-modal-link mt-5 inline-block text-[15px] font-semibold text-[var(--calc-teal-dark)] underline underline-offset-4 transition-colors hover:text-[var(--calc-accent)]"
               >
                 {isRtl && (
                   <FaExternalLinkAlt aria-hidden="true" className="me-1.5 inline-block text-[13px]" />
@@ -523,7 +523,7 @@ export function ResultsCards() {
               data-testid="wishlist-toggle"
               aria-pressed={wishlistSaved}
               onClick={() => openCard && toggleWishlist(openCard)}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-[5px] px-5 py-2 text-[16px] font-semibold text-[var(--calc-muted)] outline-none transition-colors hover:text-[var(--calc-teal-dark)] focus-visible:ring-2 focus-visible:ring-soft-blue/40"
+              className="results-card-modal-wishlist mt-4 flex w-full items-center justify-center gap-2 rounded-[5px] px-5 py-2 text-[16px] font-semibold text-[var(--calc-muted)] outline-none transition-colors hover:text-[var(--calc-teal-dark)] focus-visible:ring-2 focus-visible:ring-soft-blue/40"
             >
               {wishlistSaved ? (
                 <FaStar aria-hidden="true" className="text-[15px] text-[var(--calc-teal)]" />
@@ -535,7 +535,7 @@ export function ResultsCards() {
             <button
               type="button"
               data-testid="results-card-modal-gotit"
-              className="mt-3 w-full rounded-[5px] bg-[var(--calc-teal)] px-5 py-2.5 text-[16px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
+              className="results-card-modal-gotit mt-3 w-full rounded-[5px] bg-[var(--calc-teal)] px-5 py-2.5 text-[16px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
               onClick={closeDialog}
             >
               {t('calculator.results.gotIt')}
