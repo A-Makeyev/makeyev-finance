@@ -1357,10 +1357,12 @@ export function splitLargestForNewTrack(existingAmounts: number[]): number[] | n
  * Auto-fix rebalancer for the ⅔ variable-rate ceiling. Fixed (non-variable)
  * tracks keep the exact amounts the user entered; only the variable tracks
  * are trimmed - proportionally to each other, last one absorbing rounding -
- * until their total is at most twice the fixed total (share ≤ 2/3). The
- * trimmed excess leaves the loan instead of being parked into a fixed track,
- * so the mortgage total shrinks. When every track is variable one of them
- * (the last one holding money) is converted to fixed to anchor the ceiling.
+ * until their total is at most twice the fixed total (share ≤ 2/3). This
+ * helper only answers which variable amounts survive the cap; the store hands
+ * the trimmed excess back to the fixed tracks, so the mortgage total the user
+ * typed is preserved rather than shrunk. When every track is variable one of
+ * them (the last one holding money) is converted to fixed to anchor the
+ * ceiling.
  * Input tracks carry a display amount and whether they are variable-type.
  * Returns new amounts plus (optionally) the index converted to fixed.
  */
