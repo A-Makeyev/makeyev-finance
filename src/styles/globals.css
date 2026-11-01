@@ -4353,6 +4353,17 @@ e #name,
   flex: 0 0 auto;
 }
 
+/* The action buttons are 38px tall while the slider's control box is 50px, and
+   the row aligns on its bottom edge (flex-end). Lift the buttons by half the
+   difference so their center lands on the slider's track. Applies only while
+   the starting point is still one row - below 800px the actions get their own
+   full-width line. */
+@media (min-width: 801px) {
+  .starting-actions {
+    margin-bottom: 6px;
+  }
+}
+
 .limits-row {
   display: grid;
   /* Property value and capital hold the biggest numbers (7-8 digits once
@@ -6384,11 +6395,29 @@ e #name,
 }
 
 .chart-area-principal {
-  fill-opacity: 0.28;
+  fill-opacity: 0.4;
+}
+
+.chart-area-indexation {
+  fill-opacity: 0.38;
 }
 
 .chart-area-interest {
-  fill-opacity: 0.28;
+  fill-opacity: 0.34;
+}
+
+/* Per-track gradient areas sit behind their lines and must never steal the
+   hover from the plot. */
+.chart-area-track {
+  pointer-events: none;
+}
+
+/* Yearly per-track markers: a small dot per year, ringed in the card color so
+   overlapping lines still read as separate series. */
+.chart-point-track {
+  stroke: var(--calc-paper, #ffffff);
+  stroke-width: 1.5;
+  pointer-events: none;
 }
 
 /* The balance trend line: dashed so it reads as a separate series on top of
@@ -6833,6 +6862,8 @@ e #name,
 
 .mix-legend-item {
   display: flex;
+  /* The chip sits in the middle of the two-line block (name over amount), so
+     it reads as the row's marker rather than the name's own bullet. */
   align-items: center;
   gap: 8px;
   font-size: 0.9rem;
@@ -6907,6 +6938,8 @@ e #name,
 
 .cost-legend-item {
   display: flex;
+  /* Same centering as the mix legend: chip in the middle of the name and
+     amount. */
   align-items: center;
   gap: 8px;
   color: var(--calc-muted);
@@ -7195,7 +7228,10 @@ e #name,
      charges card is text and figures and reads fine a little narrower. */
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   align-items: stretch;
-  gap: 16px;
+  /* Column gap only: the rows of this grid are shared with the two cards (see
+     the subgrid rule below), so a row gap would open space inside each card. */
+  column-gap: 16px;
+  row-gap: 0;
   margin-bottom: 20px;
 }
 
@@ -7595,13 +7631,13 @@ e #name,
   color: var(--calc-teal-dark);
   font-weight: 700;
   font-size: 1rem;
-  margin: 0 0 4px;
+  margin: 0 0 6px;
 }
 
 .prepayment-order-lead {
   margin: 0 0 10px;
   color: var(--calc-muted);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   line-height: 1.5;
 }
 
@@ -7609,6 +7645,15 @@ e #name,
   margin: 0;
   padding: 0;
   list-style: none;
+  /* Close the list with the same hairline the charges card draws above its
+     total, so both cards end their rows on a rule instead of one of them
+     trailing off after the last track. */
+  border-bottom: 1px solid var(--calc-line);
+}
+
+/* With a total row the list is already closed by that row's own teal rule. */
+.prepayment-order-list:has(+ .prepayment-order-row.is-total) {
+  border-bottom: 0;
 }
 
 .prepayment-order-row {
@@ -8021,7 +8066,11 @@ e #name,
 
 .prepayment-discount-row dd {
   margin: 0;
-  color: var(--calc-ink);
+  /* Every step figure shares the highlighted teal and the bold weight: the
+     gross fee and the post-discount fee are the same number before and after
+     the step, so they must not read as two different measures. */
+  color: var(--calc-teal-dark);
+  font-weight: 700;
   font-size: 1.4rem;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -8033,12 +8082,6 @@ e #name,
 .prepayment-discount-row.is-discount {
   background: var(--calc-note);
   border-inline-start-color: var(--calc-teal);
-}
-
-.prepayment-discount-row.is-discount dd,
-.prepayment-discount-row.is-total dd {
-  color: var(--calc-teal-dark);
-  font-weight: 700;
 }
 
 /* Matches the stat card's dark-mode fill, so the highlight does not read as a
@@ -8099,6 +8142,10 @@ e #name,
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
+  /* The list shares a row with the split card, so a row can be taller than its
+     own line. Centre the line inside the band (between its two grey rules)
+     instead of leaving the row hugging the top of it. */
+  align-content: center;
   gap: 2px 12px;
   padding: 9px 0;
   border-top: 1px solid var(--calc-line);
@@ -8118,7 +8165,9 @@ e #name,
   inline-size: 18px;
   block-size: 18px;
   margin: 0;
-  margin-block-start: 2px;
+  /* Centered against the label it toggles (name over hint), not pinned to the
+     name's line. */
+  align-self: center;
   accent-color: var(--calc-teal);
 }
 
@@ -8232,6 +8281,24 @@ e #name,
 /* The split card narrows with the viewport while the track name keeps its
    share of the row, so the widened amount field only holds its extra width
    where there is room for it; below that it gives the pixels back. */
+/* Side by side, the two cards share this grid's rows: each card is a subgrid,
+   so its title, lead and list occupy the same rows as its neighbour's. The
+   first rule inside the two lists (their grey top border) then lands on one
+   line however the two leads wrap, instead of depending on both being the
+   same number of lines. Stacked below 1101px each card lays itself out. */
+@media (min-width: 1101px) {
+  .prepayment-result-grid {
+    grid-template-rows: repeat(6, auto);
+  }
+
+  .prepayment-order,
+  .prepayment-extras-card {
+    grid-row: 1 / -1;
+    display: grid;
+    grid-template-rows: subgrid;
+  }
+}
+
 @media (max-width: 1100px) {
   /* At this width a half-width split card is too narrow: its amount field
      leaves the track name around 110px, and the name, the "repay first" badge
@@ -8239,6 +8306,9 @@ e #name,
      take the full width one above the other instead. */
   .prepayment-result-grid {
     grid-template-columns: minmax(0, 1fr);
+    /* Stacked, the shared-row trick is off (each card lays itself out), so
+       the vertical gap between the two cards comes back. */
+    row-gap: 16px;
   }
 
   /* The cards take the full width here, so the fixed amount field left a gap
@@ -8696,6 +8766,12 @@ e #name,
   align-items: stretch;
 }
 
+/* With no schedule the aside column is hidden, so let the empty state own the
+   full panel width instead of sitting off-center beside an empty track. */
+.schedule-content.is-empty {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .schedule-asides {
   display: flex;
   flex-direction: column;
@@ -8840,6 +8916,44 @@ e #name,
   color: var(--calc-muted);
   font-size: 0.9rem;
   margin: 0;
+}
+
+/* Empty schedule: a centered card with a chart icon, instead of a lone note
+   beside a header-only table and an empty donut. */
+.schedule-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 44px 20px;
+  background: var(--calc-paper);
+  border: 1px dashed var(--calc-line);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.schedule-empty-icon {
+  width: 46px;
+  height: 46px;
+  color: var(--calc-muted);
+  opacity: 0.65;
+  margin-bottom: 2px;
+}
+
+.schedule-empty-title {
+  margin: 0;
+  color: var(--calc-ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.schedule-empty-body {
+  margin: 0;
+  max-width: 36ch;
+  color: var(--calc-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 /* Direction, not a fixed side: in English a table's headers and cells start at
@@ -10832,35 +10946,21 @@ html[dir='rtl'] .comment-text {
 }
 
 /* Seven fields (purpose, loan, property, capital, income, then the fixed
-   monthly/one-time expense pair). A twelve-column base grid holds two tidy
-   rows: purpose / loan / property, three even cells (span 4), then
-   capital / income / monthly / one-time, four even cells (span 3) - so the
-   expense pair sits on income's own row, right after it. Below 1100px the same
-   six columns carry rows of 2, 2, 3 (income folds in with the pair). */
-/* Flex, not a fixed-column grid: seven fields never fill four (or two)
-   columns, and stretching the odd one out made it wider than the rest. With
-   fixed-width items the fields keep the same width and each row starts at the
-   reading edge, so the last row lines up under the first instead of floating
-   in the middle. */
+   monthly/one-time expense pair). Every field is one equal cell: the card
+   holds as many columns as fit at a 262px minimum each, so all seven stay the
+   same width (a stray field is never stretched wider than its neighbours) and
+   each row starts at the reading edge. Fewer, wider columns as the card
+   narrows keep every select able to show its own text - the purpose picks need
+   ~260px in English once the 36px chevron padding is counted - down to one
+   field per line on a phone. */
 .compare-shared-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 262px), 1fr));
   gap: 18px;
 }
 
 .compare-shared-grid>.input-group {
-  flex: 0 1 calc(25% - 13.5px);
   min-width: 0;
-  max-width: calc(25% - 13.5px);
-}
-
-@media (max-width: 1100px) {
-
-  .compare-shared-grid>.input-group {
-    flex-basis: calc(50% - 9px);
-    max-width: calc(50% - 9px);
-  }
 }
 
 /* Transaction-cost fields in the shared card: the calculator's costs row
@@ -11105,9 +11205,49 @@ html[dir='rtl'] .comment-text {
   grid-column: auto;
 }
 
-/* A phone keeps the same two-per-row pairing (type beside amount, rate
-   beside method) instead of stacking one field per line: the four fields
-   keep the two rows they use in the desktop column. */
+/* Phones below 480px: one field per line. Half a 360-420px panel leaves a
+   track's long type option ("משתנה צמודה כל 5 שנים") ~82px of text room, so
+   the select cut it to "משתנה צמ..."; the same squeeze left the ₪ side of a
+   cost pair showing only its ₪. Stacked, every field gets the card's full
+   width - the cost pairs keep their percent beside their amount, and the
+   track keeps its four fields on four rows. */
+@media (max-width: 480px) {
+
+  .mortgage-track,
+  .compare-shell .compare-track {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The ≤1000px block's 6-column spans are only undone again below 400px, so
+     401-480px would otherwise place every field on a 3-column span of a
+     one-column grid (phantom columns, ~123px fields). */
+  .mortgage-track .input-group:nth-of-type(n) {
+    grid-column: auto;
+  }
+
+  .costs-row,
+  .compare-fees {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Undo the pinned cells from the ≤650px / ≤640px blocks: with one column
+     they would otherwise open a phantom second column and squeeze the pairs
+     beside it. */
+  .costs-row>.input-group:nth-child(3),
+  .costs-row>.input-group:nth-child(4),
+  .compare-fees>.input-group:nth-child(3),
+  .compare-fees>.input-group:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  /* The pair is back to its desktop ratio: the percent keeps its 100px floor
+     and the ₪ amount takes the rest of the full-width cell. */
+  .costs-row .fee-inputs,
+  .compare-fees .fee-inputs {
+    grid-template-columns: minmax(100px, 1fr) minmax(0, 1.5fr);
+    gap: 10px;
+  }
+}
 
 /* The seeded default mix puts the long type label (English "Variable indexed
    every 5 years") into the tightest 3-scenario column, where 1rem text needs

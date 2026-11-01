@@ -1876,24 +1876,152 @@ export const useCalculatorStore = create<CalculatorStore>()(
       set((s) => {
         // Auto-fix is a one-click repair of an invalid mix, not typed-in work.
         const wasDirty = isMixDirty(s)
-        const inputs = s.tracks.map((track) => ({
-          amount: parseAmountText(track.amountText),
-          isVariable: isVariableType(track.type),
-        }))
-        const result = autoFixVariableMix(inputs)
-        if (result.convertedToFixedIndex !== null) {
-          const track = s.tracks[result.convertedToFixedIndex]
-          track.type = 'fixed'
-          applyTrackTypeLogic(s, track, 'fixed')
-        }
-        // Auto-fix only trims the variable tracks down to the ⅔ ceiling -
-        // fixed amounts are left as entered and the excess exits the loan
-        // (the total shrinks) instead of being parked into a fixed track.
-        s.tracks.forEach((track, index) => {
-          track.amountText = displayAmountText(Math.max(0, result.amounts[index]))
+        // The mortgage the user is pricing, captured before any repair. With
+        // no property pin it is the typed starting amount; with one it is
+        // property - capital. Fall back to the tracks' own total so a mix
+        // built track-by-track still has a target to preserve.
+        const loanBefore = getLoanAmount(s)
+        const totalBefore = s.tracks.reduce(
+          (sum, track) => sum + parseAmountText(track.amountText),
+          0,
+        )
+        const targetLoan = loanBefore > 0 ? loanBefore : totalBefore
+
+        // 1. Terms: every track must carry a 1..MAX_YEARS term.
+        const fallbackYears = Math.min(
+          MAX_YEARS,
+          Math.max(1, Math.round(s.termYears) || DEFAULT_TERM_YEARS),
+        )
+        s.tracks.forEach((track) => {
+          const years = Number(track.yearsText)
+          if (!Number.isFinite(years) || years < 1 || years > MAX_YEARS) {
+            track.yearsText = String(fallbackYears)
+          }
         })
+
+        // 2. Duplicate types: one track per type, the same rule adding a track
+        // uses. Walk the mix and move every repeat onto the first type it does
+        // not already hold, reseeding an auto rate.
+        let typesChanged = false
+        const used = new Set<TrackType>()
+        for (const track of s.tracks) {
+          if (used.has(track.type)) {
+            const free = nextFreeTrackType([...used])
+            if (!free) break
+            track.type = free
+            applyTrackTypeLogic(s, track, free)
+            typesChanged = true
+          }
+          used.add(track.type)
+        }
+
+        // 3. Positive amounts: a non-empty field that parses to zero can never
+        // produce a schedule, so clear it instead of leaving the mix blocked.
+        s.tracks.forEach((track) => {
+          if (track.amountText.trim() !== '' && parseAmountText(track.amountText) <= 0) {
+            track.amountText = ''
+          }
+        })
+
+        // 4. Variable-rate ceiling: trim the variable side and, when every
+        // track is variable, convert one to fixed to anchor the 2/3 rule.
+        // Only run this when the ceiling is actually breached - autofix now
+        // shows for every error kind, and an empty all-variable lineup must
+        // not be silently re-typed for a term or duplicate error.
+        const applyVariableCap = () => {
+          const fix = autoFixVariableMix(
+            s.tracks.map((track) => ({
+              amount: parseAmountText(track.amountText),
+              isVariable: isVariableType(track.type),
+            })),
+          )
+          if (fix.convertedToFixedIndex !== null) {
+            const track = s.tracks[fix.convertedToFixedIndex]
+            track.type = 'fixed'
+            applyTrackTypeLogic(s, track, 'fixed')
+            typesChanged = true
+          }
+          s.tracks.forEach((track, index) => {
+            track.amountText = displayAmountText(Math.max(0, fix.amounts[index]))
+          })
+        }
+        const capTotal = s.tracks.reduce(
+          (sum, track) => sum + parseAmountText(track.amountText),
+          0,
+        )
+        const capVariable = s.tracks
+          .filter((track) => isVariableType(track.type))
+          .reduce((sum, track) => sum + parseAmountText(track.amountText), 0)
+        if (capTotal > 0 && variableShareExceeded(capTotal, capVariable)) {
+          applyVariableCap()
+        }
+
+        // 5. Preserve the mortgage total. The cap trim takes the excess off
+        // the variable side; put it back into a fixed track instead of
+        // shrinking the loan the user typed. With every track empty, allocate
+        // the target across the lineup first (preset proportions when the
+        // lineup still matches, otherwise an even split), then re-apply the
+        // cap and return whatever it trims to the fixed side.
+        if (targetLoan > 0) {
+          const currentTotal = s.tracks.reduce(
+            (sum, track) => sum + parseAmountText(track.amountText),
+            0,
+          )
+          if (currentTotal === 0) {
+            const preset = s.activePreset ? PRESETS[s.activePreset] : null
+            const lineupMatches =
+              preset !== null &&
+              preset.length === s.tracks.length &&
+              preset.every((definition, index) => definition.type === s.tracks[index].type)
+            if (lineupMatches) {
+              const allocated = allocatePreset(s.activePreset!, targetLoan, s.primeRate)
+              s.tracks.forEach((track, index) => {
+                track.amountText = displayAmountText(allocated[index].amount)
+              })
+            } else {
+              const amounts = distributeEqually(targetLoan, s.tracks.length)
+              s.tracks.forEach((track, index) => {
+                track.amountText = displayAmountText(amounts[index] ?? 0)
+              })
+            }
+            // An even split can put more than 2/3 into variable tracks; trim
+            // it and let the shortfall go back to the fixed side below.
+            applyVariableCap()
+          }
+
+          const afterFillTotal = s.tracks.reduce(
+            (sum, track) => sum + parseAmountText(track.amountText),
+            0,
+          )
+          const shortfall = targetLoan - afterFillTotal
+          if (shortfall > 0) {
+            const fundedFixed = s.tracks.filter(
+              (track) => !isVariableType(track.type) && parseAmountText(track.amountText) > 0,
+            )
+            if (fundedFixed.length > 0) {
+              const target = fundedFixed[fundedFixed.length - 1]
+              target.amountText = displayAmountText(
+                parseAmountText(target.amountText) + shortfall,
+              )
+            } else {
+              // No fixed track carries money: split the shortfall across the
+              // fixed tracks (autoFixVariableMix always leaves at least one).
+              const fixedTracks = s.tracks.filter((track) => !isVariableType(track.type))
+              const shares = distributeEqually(shortfall, fixedTracks.length)
+              fixedTracks.forEach((track, index) => {
+                track.amountText = displayAmountText(
+                  parseAmountText(track.amountText) + (shares[index] ?? 0),
+                )
+              })
+            }
+          }
+        }
+
+        // The repaired mix no longer matches the preset that seeded it.
+        if (typesChanged) s.activePreset = null
+
         // Without a property pin the loan field mirrors the tracks - make it
-        // follow the shrunk total. With a property the loan is derived from
+        // follow the preserved total. With a property the loan is derived from
         // it, so the field must keep showing property - capital.
         if (!parseAmountText(s.propertyValueText)) syncStartingAmountFromTracks(s)
         recalculate(s)

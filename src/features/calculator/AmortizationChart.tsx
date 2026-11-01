@@ -349,10 +349,15 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
                     .map((value, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${value}`)
                     .join(' ')
                 const band = (top: string, bottom: number[]) => {
+                  // Walk the bottom edge backwards to close the band. The
+                  // value must come from the SAME reversed index as the x
+                  // coordinate: pairing the reversed x with a forward-ordered
+                  // y twisted every stacked area into a bow-tie (the monthly
+                  // view's broken picture).
                   const reverse = bottom
-                    .map((value, offset) => {
+                    .map((_, offset) => {
                       const index = bottom.length - 1 - offset
-                      return `L ${x(index)} ${value}`
+                      return `L ${x(index)} ${bottom[index]}`
                     })
                     .join(' ')
                   return `${top} ${reverse} Z`

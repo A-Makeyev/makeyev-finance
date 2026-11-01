@@ -158,7 +158,9 @@ test.describe('mortgage calculator - amortization schedule', () => {
     }
     await expect(calc.page.getByTestId('schedule-body')).toHaveCount(0)
     await expect(calc.page.locator('[data-testid^="schedule-year-"]')).toHaveCount(0)
-    await expect(calc.page.locator('.schedule-empty')).toBeVisible()
+    await expect(calc.page.getByTestId('schedule-empty-state')).toBeVisible()
+    // The empty panel drops the hollow cost donut too.
+    await expect(calc.page.getByTestId('total-cost-donut')).toHaveCount(0)
 
     // A real amount brings the full 15-year table back (fixed-rate track,
     // so the variable-share cap doesn't block the calculation).

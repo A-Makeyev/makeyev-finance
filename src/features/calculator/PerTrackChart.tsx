@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
 import { formatAxisShekel, niceTicks, xAxisTicks } from '@/lib/charts'
@@ -61,6 +61,11 @@ export function PerTrackChart({
   monthly?: boolean
 }) {
   const { t } = useTranslation()
+  // Unique gradient ids: the same chart can render twice (total + separate
+  // views are mutually exclusive, but the saved-mix preview and the live
+  // chart can coexist), and duplicate ids would make one area borrow the
+  // other's fill. Sanitized because React's useId contains colons.
+  const gradientId = `track-area-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
   const [hover, setHover] = useState<HoverState | null>(null)
   // Whether the pointer is on the plot right now. `hover` deliberately
   // outlives it, so the callout still has content while it fades out.
@@ -151,6 +156,21 @@ export function PerTrackChart({
         })
       : []
 
+  // Area under each line, closing down to the chart's zero baseline. The fill
+  // is a per-track vertical gradient (defined below), so overlapping tracks
+  // stay readable instead of painting over each other.
+  const baselineY = MARGIN.top + INNER_H
+  const areaPath = (series: BalancePoint[]) => {
+    if (series.length === 0) return ''
+    const top = series
+      .map(
+        (point, index) =>
+          `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(Math.max(0, point.balance))}`,
+      )
+      .join(' ')
+    return `${top} L ${x(series.length - 1)} ${baselineY} L ${x(0)} ${baselineY} Z`
+  }
+
   return (
     <div className="per-track-chart" data-testid="per-track-chart">
       {/* Legend row sits above the plot, wrapping track names left-to-right. */}
@@ -177,6 +197,30 @@ export function PerTrackChart({
           onMouseLeave={() => setHovering(false)}
           onClick={handleMove}
         >
+          <defs>
+            {nonEmpty.map((entry, trackIndex) => (
+              <linearGradient
+                key={`gradient-${trackIndex}-${entry.track.type}`}
+                id={`${gradientId}-${trackIndex}`}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="0%"
+                  stopColor={TRACK_TYPE_COLORS[entry.track.type]}
+                  stopOpacity="0.3"
+                />
+                <stop
+                  offset="100%"
+                  stopColor={TRACK_TYPE_COLORS[entry.track.type]}
+                  stopOpacity="0.02"
+                />
+              </linearGradient>
+            ))}
+          </defs>
+
           {ticks.map((tick) => (
             <g key={tick}>
               <line
@@ -214,6 +258,18 @@ export function PerTrackChart({
             </g>
           ))}
 
+          {/* Shaded area under each line. Monthly keeps the smooth continuous
+              fill; yearly adds a marker per point so the two granularities
+              read as different views rather than the same picture. */}
+          {nonEmpty.map((entry, trackIndex) => (
+            <path
+              key={`area-${trackIndex}-${entry.track.type}`}
+              d={areaPath(entry.series)}
+              fill={`url(#${gradientId}-${trackIndex})`}
+              className="chart-area-track"
+            />
+          ))}
+
           {nonEmpty.map((entry, trackIndex) => (
             <path
               key={`${trackIndex}-${entry.track.type}`}
@@ -227,6 +283,22 @@ export function PerTrackChart({
               className={`chart-line-track${hovering && hover?.nearestTrack === trackIndex ? ' is-active' : ''}`}
             />
           ))}
+
+          {/* Yearly view: one dot per year on each line. The monthly view has
+              hundreds of points, so it stays a clean continuous line. */}
+          {!monthly &&
+            nonEmpty.map((entry, trackIndex) =>
+              entry.series.map((point, index) => (
+                <circle
+                  key={`point-${trackIndex}-${index}-${entry.track.type}`}
+                  cx={x(index)}
+                  cy={y(Math.max(0, point.balance))}
+                  r={3}
+                  fill={TRACK_TYPE_COLORS[entry.track.type]}
+                  className="chart-point-track"
+                />
+              )),
+            )}
 
           {/* Hover markers on every surviving line at the hovered period. */}
           {hovering &&

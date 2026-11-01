@@ -91,8 +91,9 @@ export function ScheduleSection() {
   // Total repaid = nominal principal + indexation + interest, so the nominal
   // principal is totalPaid minus the other two (exact, not a rounding of the
   // loan: the principal column telescopes to nominal + indexation over the
-  // term).
-  const costDonut = (
+  // term). With no loan there is nothing to split, so the empty state takes
+  // the panel instead of a hollow ring.
+  const costDonut = vm.snapshot.isEmpty ? null : (
     <TotalCostDonut
       principal={
         vm.snapshot.totals.totalPaid -
@@ -114,6 +115,30 @@ export function ScheduleSection() {
       className="schedule-mix-donut"
     />
   ) : null
+
+  // One centered empty state for both views: no header-only table and no
+  // empty donut. The icon is decorative; the two lines carry the message.
+  const emptyState = (
+    <div className="schedule-empty-state" data-testid="schedule-empty-state">
+      <svg
+        className="schedule-empty-icon"
+        viewBox="0 0 48 48"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <rect x="6" y="8" width="36" height="32" rx="5" />
+        <path d="M6 18h36" />
+        <path d="M14 32l6-7 5 4 9-11" />
+        <circle cx="34" cy="18" r="1.4" fill="currentColor" stroke="none" />
+      </svg>
+      <p className="schedule-empty-title">{t('calculator.schedule.emptyTitle')}</p>
+      <p className="schedule-empty-body">{t('calculator.schedule.emptyBody')}</p>
+    </div>
+  )
   // The band only exists while there is a chart to show. Without one there is
   // nothing to pair the cost donut with, so it stays in the asides.
   const hasChartBand =
@@ -224,7 +249,7 @@ export function ScheduleSection() {
         </div>
       )}
 
-      <div className="schedule-content">
+      <div className={`schedule-content${vm.snapshot.isEmpty ? ' is-empty' : ''}`}>
         {view === 'total' ? (
           hasTotalRows ? (
             /* The per-track view puts a track heading above each table. The
@@ -295,13 +320,11 @@ export function ScheduleSection() {
               </div>
             </div>
           ) : (
-            <p className="schedule-empty">{t('calculator.emptyNote')}</p>
+            emptyState
           )
         ) : (
           <div className="schedule-tracks">
-            {vm.visibleScheduleTracks.length === 0 && (
-              <p className="schedule-empty">{t('calculator.emptyNote')}</p>
-            )}
+            {vm.visibleScheduleTracks.length === 0 && emptyState}
             {vm.visibleScheduleTracks.map((track, index) => (
               <section className="schedule-track" key={`${index}-${track.type}`}>
                 <h3 className="schedule-track-heading">
@@ -374,30 +397,32 @@ export function ScheduleSection() {
           </div>
         )}
 
-        <div className="schedule-asides">
-          {!donutInBand && costDonut}
-          <p className="schedule-asides-title">{t('calculator.results.paybackPerTrackTitle')}</p>
-          {vm.trackPaybacks.length === 0 && (
-            <aside className="schedule-aside">
-              <span>{t('calculator.emptyNote')}</span>
-            </aside>
-          )}
-          {vm.trackPaybacks.map((entry, index) => (
-            <aside className="schedule-aside schedule-aside-payback" key={`${index}-${entry.type}`}>
-              <strong>{t(`calculator.trackTypes.${entry.type}`)}</strong>
-              <span>
-                {formatCurrency(entry.amount)} · {formatRatio(entry.paybackRatio)}
-              </span>
-              {entry.marketMarginPercent !== null && (
-                <span data-testid={`track-market-margin-${index + 1}`}>
-                  {t('calculator.results.marketMarginLine', {
-                    percent: formatRatePercent(entry.marketMarginPercent),
-                  })}
+        {!vm.snapshot.isEmpty && (
+          <div className="schedule-asides">
+            {!donutInBand && costDonut}
+            <p className="schedule-asides-title">{t('calculator.results.paybackPerTrackTitle')}</p>
+            {vm.trackPaybacks.length === 0 && (
+              <aside className="schedule-aside">
+                <span>{t('calculator.emptyNote')}</span>
+              </aside>
+            )}
+            {vm.trackPaybacks.map((entry, index) => (
+              <aside className="schedule-aside schedule-aside-payback" key={`${index}-${entry.type}`}>
+                <strong>{t(`calculator.trackTypes.${entry.type}`)}</strong>
+                <span>
+                  {formatCurrency(entry.amount)} · {formatRatio(entry.paybackRatio)}
                 </span>
-              )}
-            </aside>
-          ))}
-        </div>
+                {entry.marketMarginPercent !== null && (
+                  <span data-testid={`track-market-margin-${index + 1}`}>
+                    {t('calculator.results.marketMarginLine', {
+                      percent: formatRatePercent(entry.marketMarginPercent),
+                    })}
+                  </span>
+                )}
+              </aside>
+            ))}
+          </div>
+        )}
       </div>
 
       <p className="legal-note">

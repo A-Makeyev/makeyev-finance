@@ -81,7 +81,7 @@ test.describe('mortgage calculator - tracks and allocation', () => {
     await expect(calc.startingAmount).toHaveValue('אין צורך 🥳')
   })
 
-  test('variable-rate cap blocks calculation and auto-fix trims variable tracks only', async ({
+  test('variable-rate cap blocks calculation and auto-fix keeps the pinned loan', async ({
     calc,
   }) => {
     const track1 = calc.track(1)
@@ -96,29 +96,30 @@ test.describe('mortgage calculator - tracks and allocation', () => {
     await calc.autofixButton.click()
     await expect(calc.formError).toBeHidden()
     await expect(calc.autofixButton).toBeHidden()
-    // Auto-fix keeps the fixed track (56,667) as entered and trims only the
-    // variable tracks down to the ⅔ ceiling (2·56,667 = 113,334 across prime
-    // and the 5-year variable), so the loan total shrinks to 170,001 instead
-    // of inflating the fixed track.
+    // Auto-fix trims the variable tracks down to the ⅔ ceiling (2·56,667 =
+    // 113,334 across prime and the 5-year variable) and moves the trimmed
+    // excess into the fixed track, so the pinned 1,000,000 loan is kept rather
+    // than shrinking to the 170,001 the capped split can carry.
     await expect(calc.track(1).amount()).toHaveValue('108,128')
-    await expect(calc.track(2).amount()).toHaveValue('56,667')
+    await expect(calc.track(2).amount()).toHaveValue('886,666')
     await expect(calc.track(3).amount()).toHaveValue('5,206')
+    await expect(calc.startingAmount).toHaveValue('1,000,000')
     await expect(calc.avgMonthlyPayment).not.toHaveText('₪0')
   })
 
-  test('auto-fix without a pinned property shrinks the loan total', async ({ calc }) => {
+  test('auto-fix without a pinned property keeps the typed loan total', async ({ calc }) => {
     // Prime 900,000 (variable) on top of the default fixed 340,000 and 5-year
-    // variable 260,000 exceeds the ⅔ ceiling. Auto-fix keeps the fixed 340,000
-    // as entered and trims the variable tracks to 2×340,000 = 680,000, so the
-    // loan drops from 1,500,000 to 1,020,000 and the loan field follows.
+    // variable 260,000 exceeds the ⅔ ceiling. Auto-fix trims the variable
+    // tracks to 2×340,000 = 680,000 and returns the trimmed 480,000 to the
+    // fixed track, so the 1,500,000 loan the user typed stays whole.
     await calc.track(1).setAmount('900,000')
     await expect(calc.autofixButton).toBeVisible()
     await calc.autofixButton.click()
     await expect(calc.autofixButton).toBeHidden()
     await expect(calc.track(1).amount()).toHaveValue('527,586')
-    await expect(calc.track(2).amount()).toHaveValue('340,000')
+    await expect(calc.track(2).amount()).toHaveValue('820,000')
     await expect(calc.track(3).amount()).toHaveValue('152,414')
-    await expect(calc.startingAmount).toHaveValue('1,020,000')
+    await expect(calc.startingAmount).toHaveValue('1,500,000')
   })
 
   test('a repeated track type is rejected with an error', async ({ calc }) => {
@@ -131,14 +132,17 @@ test.describe('mortgage calculator - tracks and allocation', () => {
       await expect(track2.type()).toHaveValue('prime')
     }).toPass()
     await expect(calc.formError).toContainText('לא ניתן לחזור על אותו מסלול')
-    // Both repeated-type rows are flagged, and this rule has no auto-fix.
+    // Both repeated-type rows are flagged, and auto-fix repairs it: the repeat
+    // moves onto the first type the mix does not already hold.
     await expect(calc.track(1).legend()).toHaveClass(/variable-limit-flag/)
     await expect(track2.legend()).toHaveClass(/variable-limit-flag/)
-    await expect(calc.autofixButton).toBeHidden()
+    await expect(calc.autofixButton).toBeVisible()
 
-    // Picking a distinct type clears it.
-    await track2.setType('fixed')
+    await calc.autofixButton.click()
     await expect(calc.formError).toBeHidden()
+    await expect(calc.autofixButton).toBeHidden()
+    await expect(track2.type()).not.toHaveValue('prime')
+    await expect(track2.legend()).not.toHaveClass(/variable-limit-flag/)
   })
 
   test('typing a home amount fills empty tracks with the recommended mix', async ({ calc }) => {

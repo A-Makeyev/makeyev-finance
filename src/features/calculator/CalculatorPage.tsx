@@ -837,7 +837,7 @@ export function CalculatorPage() {
               )}
             </p>
 
-            {store.error?.kind === 'variableCap' && (
+            {store.error && (
               <button
                 type="button"
                 id="autofix-mix"

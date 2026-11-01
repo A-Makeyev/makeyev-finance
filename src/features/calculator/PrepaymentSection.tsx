@@ -1191,9 +1191,6 @@ export function PrepaymentSection() {
                       </dd>
                     </div>
                   </dl>
-                  <p className="prepayment-discount-hint">
-                    {t('calculator.prepayment.discount.hint')}
-                  </p>
                 </div>
               )}
 
@@ -1278,6 +1275,14 @@ export function PrepaymentSection() {
             </>
           )}
 
+          {/* The discount rule and the comparison-rate source are the two
+              footnotes behind the figures above, so they read as two
+              consecutive lines: discount rule first, source second. */}
+          {discountShown > 0 && (
+            <p className="prepayment-note-line prepayment-discount-hint">
+              {t('calculator.prepayment.discount.hint')}
+            </p>
+          )}
           <p className="prepayment-note-line" aria-live="polite">
             {asOf
               ? t('calculator.prepayment.marketRateSource', { date: asOf })
