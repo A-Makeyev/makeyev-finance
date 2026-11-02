@@ -2813,6 +2813,14 @@ nav#navbar .nav-account-prefs {
   margin-bottom: 4px;
 }
 
+/* While the session lookup is pending there are no account actions under the
+   preferences yet, so the divider would sit on the menu's bottom edge with
+   nothing to separate. It belongs to the prefs/actions split, so it is shown
+   only when that split exists. */
+nav#navbar .nav-account-prefs:last-child {
+  border-bottom: none;
+}
+
 /* The language row's flag takes the icon slot (the theme row's svg is 15px),
    so the two rows line up on the same left/right edge. */
 nav#navbar .nav-account-flag {
@@ -4297,10 +4305,19 @@ e #name,
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 20px 24px;
+  /* The same 18px column gap the limits row uses, so the space after the
+     approval date matches the space between the purpose and property fields. */
+  gap: 20px 18px;
   padding-bottom: 24px;
   margin-bottom: 22px;
   border-bottom: 1px solid var(--calc-line);
+}
+
+/* When the validity message hangs under the date, its 33px chip plus the 6px
+   gap need room below the row before the border. Absolute positioning keeps
+   the date input itself aligned with the loan amount. */
+.starting-point:has(.starting-approval-status) {
+  padding-bottom: 48px;
 }
 
 .starting-point>label {
@@ -4310,9 +4327,10 @@ e #name,
 
 /* אישור עקרוני approval date: the offer's date on the starting row, before
    the loan amount. The date field keeps its intrinsic width; the validity
-   status renders on its own full-width line below the row (see
-   .starting-approval-status). */
+   status hangs directly below the input, out of flow so it cannot lift the
+   date control away from the loan amount's baseline. */
 .starting-approval {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -4321,13 +4339,18 @@ e #name,
 }
 
 .starting-approval-status {
-  flex: 0 0 100%;
+  position: absolute;
+  /* start = right in Hebrew, left in English, the same edge as the input */
+  inset-inline-start: 0;
+  inset-block-start: calc(100% + 6px);
   display: flex;
-  /* start = right in Hebrew, left in English, like the row above it */
   justify-content: flex-start;
-  /* The row's 20px flex gap already separates the fields; pull the status
-     line closer to the date it belongs to. */
-  margin-top: -12px;
+}
+
+/* A single line under the narrow date field; the chip may run past the field's
+   width, but it sits in the empty space below the row, never on another field. */
+.starting-approval-status .rate-validity-chip {
+  white-space: nowrap;
 }
 
 .starting-approval .rate-validity-field {
@@ -4384,61 +4407,66 @@ e #name,
   margin-top: 7px;
 }
 
-/* The approval field keeps its own usable width inside the starting row. */
+/* The approval field keeps its own usable width inside the starting row, and
+   the column hugs the control: a fixed 220px basis left empty space between
+   the date box and the loan amount, since the field itself is narrower. */
 .rate-validity-field {
-  flex: 0 1 220px;
+  flex: 0 0 auto;
   min-width: 0;
 }
 
-/* The panel's blanket input rule stretches a field to 100%; a native date
-   control has its own usable width, so let it keep it. The negative block
-   margin cancels the ~2px that Chrome draws a date control taller than a
-   text field at the same padding (its inner date fields outgrow a text line),
-   so the loan-amount field beside it sets the frame height of both - at every
-   breakpoint, since the responsive padding still applies. */
-.rate-validity-field .input-wrap input[type='date'] {
-  width: auto;
-  min-width: 0;
-  margin-block: -1px;
+/* The approval date is a masked text field showing dd/mm/yyyy, not a native
+   date control: the native control rewrites its segments while the year is
+   typed and draws its own locale-ordered fields. The field hugs its text in
+   both the calculator and the comparison. */
+.rate-validity-field .input-wrap {
+  inline-size: fit-content;
+  max-inline-size: 100%;
 }
 
-/* The native calendar button is drawn at the control's own inline end - the
-   right, since a date control is LTR even on the Hebrew page - while every
-   other field's ₪ suffix sits at the page's inline end (left in Hebrew). In
-   Hebrew move the button there and give the field start padding: enough to
-   clear the button plus a readable gap, so the date never crowds it.
-   Physical properties on purpose: the control's LTR direction would mirror
-   logical ones straight back to the right. */
-:root[dir='rtl'] .rate-validity-field .input-wrap input[type='date'] {
-  position: relative;
-  padding-left: 42px;
-  /* The date itself rides the far end of the field, opposite the button, like
-     the ₪ fields put their amount opposite the symbol. The control is LTR, so
-     `start` would keep the date glued to the button on the left. */
+/* 14ch, not 11ch: the field is border-box, so 11ch left only ~73px for the
+   date once its 12px padding was taken off, and dd/mm/yyyy clipped its first
+   digits. 14ch fits the ten characters with room for the caret. */
+.rate-validity-field .date-field {
+  inline-size: 14ch;
+  max-inline-size: 100%;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* The native date control's calendar mark, restored as the masked field's
+   affordance. It is decorative: the value is typed, never picked, so it is
+   hidden from assistive tech and does not take the click. Sits at the inline
+   end beside the date, where every other field puts its suffix. */
+.date-field-icon {
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  margin-inline: 8px;
+  color: var(--calc-teal);
+  pointer-events: none;
+}
+
+/* The date value sits at the page's start edge, opposite the calendar mark,
+   like every other field puts its value opposite its suffix. The input keeps
+   dir="ltr" so dd/mm/yyyy and the caret stay left-to-right; only the alignment
+   follows the page, which is what dir="ltr" would otherwise override. */
+html[dir='rtl'] .date-field {
   text-align: right;
 }
 
-:root[dir='rtl'] .rate-validity-field .input-wrap input[type='date']::-webkit-calendar-picker-indicator {
-  position: absolute;
-  left: 8px;
-  right: auto;
-  cursor: pointer;
+html[dir='ltr'] .date-field {
+  text-align: left;
 }
 
-/* Tint the button like those ₪ suffixes (teal on the field, not the UA's dark
-   glyph). A background-image replaces the UA icon in place, so the button
-   keeps its click target either way. */
-.rate-validity-field .input-wrap input[type='date']::-webkit-calendar-picker-indicator {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23087f78' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3.5' y='5.5' width='17' height='15' rx='2'/%3E%3Cpath d='M3.5 10.5h17M8 3.5v4M16 3.5v4'/%3E%3C/svg%3E");
-  background-size: 17px 17px;
-  background-position: center;
-  background-repeat: no-repeat;
-  /* The UA dims the glyph; the tint has to read as strongly as the suffix. */
-  opacity: 1;
+/* Impossible text stays visible so it can be corrected, but the field says it
+   is not a date: red ink and border, announced with aria-invalid. */
+.date-field[data-invalid='true'] {
+  color: var(--danger);
 }
 
-:root[data-theme='dark'] .rate-validity-field .input-wrap input[type='date']::-webkit-calendar-picker-indicator {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338d3c4' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3.5' y='5.5' width='17' height='15' rx='2'/%3E%3Cpath d='M3.5 10.5h17M8 3.5v4M16 3.5v4'/%3E%3C/svg%3E");
+.input-wrap:has(.date-field[data-invalid='true']) {
+  border-color: var(--danger);
 }
 
 /* The status chip itself: colour carries the urgency. Shared with the compare
@@ -7393,14 +7421,19 @@ e #name,
   line-height: 1.6;
 }
 
-/* Why the fee chart can sit flat on zero: the comparison rate is at or barely
-   below the tracks' own rates, so there is no gap to discount. Sits under the
-   chart's lead, above the plot. */
-.prepayment-chart-near-zero {
+/* The one rule behind the fee curve: a discounting fee exists only when the
+   market rate undercuts the loan's. Always rendered, so editing the market
+   rate never reflows the chart below it - the styling matches the regulator
+   note above the results. */
+.prepayment-chart-rate-note {
   margin: 8px 0 0;
   max-inline-size: 780px;
-  color: var(--calc-ink);
-  font-size: 0.85rem;
+  padding: 8px 12px;
+  border-inline-start: 3px solid var(--calc-accent);
+  background: var(--calc-note);
+  color: var(--calc-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
   line-height: 1.6;
 }
 
@@ -9529,6 +9562,26 @@ tbody tr:hover {
     gap: 18px;
   }
 
+  /* Stacked fields: the message becomes a normal line under the date instead
+     of an absolutely placed chip, so it cannot overlap the next field. */
+  .starting-approval {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .starting-approval-status {
+    position: static;
+    margin-top: 0;
+  }
+
+  .starting-approval-status .rate-validity-chip {
+    white-space: normal;
+  }
+
+  .starting-point:has(.starting-approval-status) {
+    padding-bottom: 24px;
+  }
+
   .starting-approval,
   .starting-amount,
   .term-slider,
@@ -11061,40 +11114,144 @@ html[dir='rtl'] .comment-text {
 /* אישור עקרוני approval date in a scenario column: the calculator's field +
    validity chip, on one wrapping row between the term slider and the preset
    buttons. Each mix carries its own date, so the row is per scenario. */
-.compare-approval-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 8px 12px;
+/* The date field and the preset row share one four-column grid, but the date
+   field does NOT stretch across preset columns: two presets made it much wider
+   than dd/mm/yyyy needs. It hugs its own text at the reading start and the
+   chip follows its inline end; both are out of grid sizing, so the preset list
+   keeps its exact columns in either direction. */
+.compare-offer-controls {
+  /* The date control's height is shared by the field and its status message,
+     so the two align even though the message is out of flow. */
+  --compare-date-height: 37px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  column-gap: 8px;
+  row-gap: 12px;
   margin: 0 0 12px;
+  min-width: 0;
+}
+
+.compare-approval-row {
+  display: contents;
+}
+
+/* The date and its status are one field box at the grid's reading start. The
+   box takes the full row's width as available space but justifies to its own
+   content, so the date stays narrow; the status is positioned off the box's
+   inline end, anchored to the input without taking part in grid sizing. */
+.compare-approval-field {
+  position: relative;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: start;
+  align-self: end;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-width: 0;
 }
 
 .compare-approval-row .input-group {
-  flex: 0 1 200px;
   min-width: 0;
 }
 
-/* A native date control has its own usable width; the shell's blanket 100%
-   would stretch it across the column. */
-.compare-approval-row .input-wrap input[type='date'] {
-  width: auto;
-  min-width: 0;
+/* The wrapper hugs the date field (the shared 14ch plus the calendar mark),
+   so the control is as wide as its value needs, not as wide as the grid. The
+   status message is out of flow, so nothing that appears inside it can
+   change the presets. */
+.compare-approval-row .input-wrap {
+  width: fit-content;
+  max-width: 100%;
+  block-size: var(--compare-date-height);
+}
+
+.compare-approval-row .date-field {
+  inline-size: 14ch;
+  min-inline-size: 0;
   padding: 8px 10px;
   font-size: 0.9rem;
 }
 
+/* The status sits on the date's own line, out of grid flow. As an absolutely
+   positioned grid item it is placed in the two preset columns beside the date
+   but contributes nothing to their sizing, so the mixes keep their exact
+   width and position whether or not a message is shown. Matching the date
+   control's height centers the message on the field instead of hanging it at
+   the bottom edge. */
+/* The status sits on the date's own line, out of grid flow. It starts one
+   column gap past the date field's inline end (right in Hebrew, left in
+   English) and matches the field's height, so the message is centered on the
+   input and the mixes keep their exact width and position whether or not a
+   message is shown. */
 .compare-approval-row .rate-validity-chip {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: calc(100% + 8px);
+  display: flex;
+  align-items: center;
+  block-size: var(--compare-date-height);
+  inline-size: max-content;
+  white-space: nowrap;
   font-size: 0.8rem;
   padding: 5px 8px;
 }
 
 /* Preset mixes (תמהיל 1-4): the calculator's .preset-list/.preset-button
-   restyled for the scenario column with the same active treatment. */
+   restyled for the scenario column with the same active treatment. The list
+   is a subgrid of .compare-offer-controls, so each button sits in one of the
+   columns the date field spans. */
 .compare-preset-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 12px;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: subgrid;
+  margin: 0;
+}
+
+/* Below tablet width the four columns no longer fit; drop the shared grid and
+   let the presets wrap as they did before, with the date field back to its own
+   natural width. */
+@media (max-width: 800px) {
+  .compare-offer-controls {
+    display: block;
+  }
+
+  /* No shared grid to hug: the field box dissolves and its label and status
+     become the wrapping row's own items again. */
+  .compare-approval-field {
+    display: contents;
+  }
+
+  .compare-approval-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px 12px;
+    margin-block-end: 12px;
+  }
+
+  /* The shared grid is gone below tablet width: the date hugs its text again,
+     and the status returns to the flex row beside it. */
+  .compare-approval-row .input-wrap {
+    block-size: auto;
+    inline-size: fit-content;
+  }
+
+  .compare-approval-row .date-field {
+    inline-size: 14ch;
+  }
+
+  .compare-approval-row .rate-validity-chip {
+    position: static;
+    block-size: auto;
+    display: block;
+  }
+
+  .compare-preset-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
 }
 
 .compare-preset-button {
@@ -11712,7 +11869,14 @@ html[dir='rtl'] .comment-text {
   font-size: 13px;
   color: var(--calc-ink);
   pointer-events: none;
-  white-space: nowrap;
+  /* max-content keeps the callout the same width near either edge. With an
+     auto width, an absolutely positioned box shrinks to the room left of its
+     `left` anchor, so the composition rows wrapped smaller and smaller the
+     farther right the hovered year was. The cap lets a long row wrap on a
+     phone instead of overhanging the plot. */
+  width: max-content;
+  max-width: 100%;
+  white-space: normal;
   z-index: 10;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }

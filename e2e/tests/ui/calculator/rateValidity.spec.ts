@@ -39,6 +39,130 @@ test.describe('mortgage calculator - אישור עקרוני rate validity', () 
     await expect(calc.rateValidityChip).toHaveCount(0)
   })
 
+  test('typing a date keeps the day and month segments', async ({ calc }) => {
+    // Typed one digit at a time: the mask inserts the separators and the date
+    // is never rewritten behind the caret.
+    await calc.typeApprovalDate('10102020')
+    await expect(calc.approvalDateIcon).toBeVisible()
+    await expect(calc.approvalDate).toHaveValue('10/10/2020')
+    await expect(calc.rateValidityChip).toHaveAttribute('data-status', 'expired')
+  })
+
+  test('deleting from the end continues through the year into the month', async ({ calc }) => {
+    await calc.setApprovalDate('2026-12-17')
+    await expect(calc.approvalDate).toHaveValue('17/12/2026')
+    await calc.approvalDate.press('End')
+
+    for (const value of ['17/12/202', '17/12/20', '17/12/2', '17/12', '17/1']) {
+      await calc.approvalDate.press('Backspace')
+      await expect(calc.approvalDate).toHaveValue(value)
+    }
+  })
+
+  test('editing inside the month keeps the year and the caret', async ({ calc }) => {
+    await calc.setApprovalDate('2026-12-17')
+    await calc.approvalDate.evaluate((element) => {
+      const input = element as HTMLInputElement
+      input.focus()
+      input.setSelectionRange(4, 4)
+    })
+
+    // Typing a digit between the month's two digits replaces the second one;
+    // it must not spill into the year or jump the caret to the end.
+    await calc.approvalDate.press('1')
+    await expect(calc.approvalDate).toHaveValue('17/11/2026')
+    expect(
+      await calc.approvalDate.evaluate((element) => (element as HTMLInputElement).selectionStart),
+    ).toBe(5)
+
+    // Deleting the month's last digit, then typing one, edits only the month.
+    await calc.approvalDate.evaluate((element) => {
+      const input = element as HTMLInputElement
+      input.setSelectionRange(5, 5)
+    })
+    await calc.approvalDate.press('Backspace')
+    await expect(calc.approvalDate).toHaveValue('17/1/2026')
+    await calc.approvalDate.press('1')
+    await expect(calc.approvalDate).toHaveValue('17/11/2026')
+    expect(
+      await calc.approvalDate.evaluate((element) => (element as HTMLInputElement).selectionStart),
+    ).toBe(5)
+  })
+
+  test('the full date fits the field and its column hugs the control', async ({ calc }) => {
+    await calc.setApprovalDate(dateOnly(0))
+
+    const geometry = await calc.page.evaluate(() => {
+      const input = document.querySelector('#approval-date') as HTMLInputElement
+      const wrap = input.parentElement as HTMLElement
+      const label = wrap.closest('.rate-validity-field') as HTMLElement
+      const amount = document.querySelector('.starting-amount') as HTMLElement
+      const chip = document.querySelector('[data-testid="rate-validity-chip"]') as HTMLElement
+      const limits = document.querySelector('.limits-row') as HTMLElement
+      const wrapBox = wrap.getBoundingClientRect()
+      const labelBox = label.getBoundingClientRect()
+      const amountBox = amount.getBoundingClientRect()
+      const chipBox = chip.getBoundingClientRect()
+      const purposeBox = limits.children[0].getBoundingClientRect()
+      const propertyBox = limits.children[1].getBoundingClientRect()
+      const rtl = document.documentElement.dir === 'rtl'
+      return {
+        clientWidth: input.clientWidth,
+        scrollWidth: input.scrollWidth,
+        wrapWidth: wrapBox.width,
+        labelWidth: labelBox.width,
+        rowGap: Math.max(
+          0,
+          labelBox.left - amountBox.right,
+          amountBox.left - labelBox.right,
+        ),
+        limitGap: Math.max(
+          0,
+          purposeBox.left - propertyBox.right,
+          propertyBox.left - purposeBox.right,
+        ),
+        chipTop: chipBox.top,
+        chipBottom: chipBox.bottom,
+        dateBottom: wrapBox.bottom,
+        chipStart: rtl ? chipBox.right : chipBox.left,
+        fieldStart: rtl ? wrapBox.right : wrapBox.left,
+        limitsTop: limits.getBoundingClientRect().top,
+      }
+    })
+
+    // dd/mm/yyyy is fully inside the box, not clipped at the reading edge.
+    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1)
+    // The label column is exactly the control's width, so it leaves no empty
+    // space before the loan amount.
+    expect(Math.abs(geometry.labelWidth - geometry.wrapWidth)).toBeLessThanOrEqual(1)
+    // The date-to-loan gap matches the purpose-to-property gap in the limits row.
+    expect(Math.abs(geometry.rowGap - geometry.limitGap)).toBeLessThanOrEqual(1)
+    // The validity message hangs directly under the date input: same inline
+    // start edge, just below it, not on a separate full-width row.
+    expect(Math.abs(geometry.chipStart - geometry.fieldStart)).toBeLessThanOrEqual(1)
+    expect(geometry.chipTop).toBeGreaterThanOrEqual(geometry.dateBottom)
+    expect(geometry.chipTop - geometry.dateBottom).toBeLessThanOrEqual(12)
+    // And it stays inside the starting row, above the limits row below it.
+    expect(geometry.chipBottom).toBeLessThanOrEqual(geometry.limitsTop)
+  })
+
+  test('completing the day and month advances to the next segment', async ({ calc }) => {
+    await calc.approvalDate.fill('')
+    await calc.typeApprovalDate('10')
+    await expect(calc.approvalDate).toHaveValue('10/')
+    await calc.approvalDate.pressSequentially('10')
+    await expect(calc.approvalDate).toHaveValue('10/10/')
+  })
+
+  test('a two-digit year is completed on blur, not mangled while typing', async ({ calc }) => {
+    await calc.typeApprovalDate('030320')
+    // While typing, the field keeps exactly what was entered.
+    await expect(calc.approvalDate).toHaveValue('03/03/20')
+    await calc.approvalDate.press('Tab')
+    await expect(calc.approvalDate).toHaveValue('03/03/2020')
+    await expect(calc.rateValidityChip).toHaveAttribute('data-status', 'expired')
+  })
+
   test('a fresh approval is valid and names the last day the quote holds', async ({ calc }) => {
     await calc.setApprovalDate(dateOnly(0))
 
@@ -126,7 +250,7 @@ test.describe('mortgage comparison - אישור עקרוני rate validity', () 
     await calc.unsavedLeave.click()
     await expect(page.getByTestId('compare-shell')).toBeVisible()
 
-    await expect(page.getByTestId('compare-approval-date-1')).toHaveValue('2026-01-01')
+    await expect(page.getByTestId('compare-approval-date-1')).toHaveValue('01/01/2026')
     await expect(page.getByTestId('compare-approval-date-2')).toHaveValue('')
     // Two mixes, each its own offer: only the first carries a date, so only it
     // shows a chip. 2026-01-01 is long past, so the chip is the expired one.
@@ -171,6 +295,129 @@ test.describe('mortgage comparison - אישור עקרוני rate validity', () 
     await expect(page.getByTestId('compare-approval-chip-1')).toHaveCount(0)
   })
 
+  test('the date hugs its value and the status leaves the mixes in place', async ({
+    page,
+  }) => {
+    await page.goto('/compare')
+    await expect(page.getByTestId('compare-shell')).toBeVisible()
+    await page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+    const presetBoxes = () =>
+      page.evaluate(() =>
+        ['basket1', 'basket2', 'basket3', 'basket4'].map((id) => {
+          const box = document
+            .querySelector(`[data-testid="compare-preset-1-${id}"]`)!
+            .getBoundingClientRect()
+          return {
+            left: Math.round(box.left),
+            top: Math.round(box.top + window.scrollY),
+            width: Math.round(box.width),
+          }
+        }),
+      )
+
+    // No date yet: this is the layout the presets must keep.
+    const before = await presetBoxes()
+
+    await page.getByTestId('compare-approval-date-1').fill(dateOnly(0))
+    await expect(page.getByTestId('compare-approval-chip-1')).toBeVisible()
+    // The calendar mark survives the narrow two-column date field.
+    await expect(
+      page.getByTestId('compare-approval-date-1').locator('..').getByTestId('date-field-icon'),
+    ).toBeVisible()
+    // Value at the reading start, icon at the opposite end.
+    await expect(page.getByTestId('compare-approval-date-1')).toHaveCSS('text-align', 'right')
+
+    // The message must not size the preset columns or move the buttons.
+    expect(await presetBoxes()).toEqual(before)
+
+    const geometry = await page.evaluate(() => {
+      const field = document.querySelector('#compare-approval-date-1')!.parentElement!
+      const chip = document.querySelector('[data-testid="compare-approval-chip-1"]')!
+      const fieldBox = field.getBoundingClientRect()
+      const chipBox = chip.getBoundingClientRect()
+      const first = document
+        .querySelector('[data-testid="compare-preset-1-basket1"]')!
+        .getBoundingClientRect()
+      const second = document
+        .querySelector('[data-testid="compare-preset-1-basket2"]')!
+        .getBoundingClientRect()
+      const input = document.querySelector('#compare-approval-date-1') as HTMLInputElement
+      return {
+        fieldLeft: fieldBox.left,
+        fieldRight: fieldBox.right,
+        fieldWidth: fieldBox.width,
+        fieldHeight: fieldBox.height,
+        fieldCenterY: fieldBox.top + fieldBox.height / 2,
+        chipLeft: chipBox.left,
+        chipRight: chipBox.right,
+        chipHeight: chipBox.height,
+        chipCenterY: chipBox.top + chipBox.height / 2,
+        gap:
+          Math.max(0, chipBox.left - fieldBox.right, fieldBox.left - chipBox.right),
+        inputClientWidth: input.clientWidth,
+        inputScrollWidth: input.scrollWidth,
+        pairLeft: Math.min(first.left, second.left),
+        pairRight: Math.max(first.right, second.right),
+        pairWidth: Math.max(first.right, second.right) - Math.min(first.left, second.left),
+      }
+    })
+
+    // The full dd/mm/yyyy value fits, and the field is sized by its own text
+    // (about 14ch plus the calendar mark), not stretched across preset columns.
+    expect(geometry.inputScrollWidth).toBeLessThanOrEqual(geometry.inputClientWidth + 1)
+    expect(geometry.inputClientWidth).toBeLessThanOrEqual(130)
+    expect(geometry.fieldWidth).toBeLessThanOrEqual(geometry.inputClientWidth + 40)
+    // It still starts at the reading start (right in Hebrew), aligned with the
+    // first preset's edge.
+    expect(Math.abs(geometry.fieldRight - geometry.pairRight)).toBeLessThanOrEqual(1)
+
+    // The message matches the field's height and is centered on it, rather
+    // than hanging at its bottom edge.
+    expect(Math.abs(geometry.chipHeight - geometry.fieldHeight)).toBeLessThanOrEqual(1)
+    expect(Math.abs(geometry.chipCenterY - geometry.fieldCenterY)).toBeLessThanOrEqual(1)
+
+    // And it sits beside the date, one grid gap away, never over it.
+    const overlap =
+      Math.min(geometry.chipRight, geometry.fieldRight) -
+      Math.max(geometry.chipLeft, geometry.fieldLeft)
+    expect(overlap).toBeLessThanOrEqual(1)
+    expect(geometry.gap).toBeLessThanOrEqual(12)
+  })
+
+  test('typing 03 03 20 keeps the date and completes the year', async ({ page }) => {
+    await page.goto('/compare')
+    await expect(page.getByTestId('compare-shell')).toBeVisible()
+    await page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+    const input = page.getByTestId('compare-approval-date-1')
+    await input.focus()
+    await input.pressSequentially('03 03 20')
+    // The spaces land in the mask's separator positions, so they render as
+    // slashes while the two-digit year is kept until blur.
+    await expect(input).toHaveValue('03/03/20')
+    await input.blur()
+    await expect(input).toHaveValue('03/03/2020')
+    await expect(page.getByTestId('compare-approval-chip-1')).toHaveAttribute(
+      'data-status',
+      'expired',
+    )
+  })
+
+  test('an impossible date is marked invalid and produces no status', async ({ page }) => {
+    await page.goto('/compare')
+    await expect(page.getByTestId('compare-shell')).toBeVisible()
+    await page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+    const input = page.getByTestId('compare-approval-date-1')
+    await input.focus()
+    await input.pressSequentially('31022020')
+    await input.blur()
+    await expect(input).toHaveValue('31/02/2020')
+    await expect(input).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.getByTestId('compare-approval-chip-1')).toHaveCount(0)
+  })
+
   test('fits a 360px phone without a sideways scroll', async ({ page }) => {
     await page.goto('/compare')
     await expect(page.getByTestId('compare-shell')).toBeVisible()
@@ -197,5 +444,67 @@ test.describe('rate validity in English (LTR)', () => {
     await expect(localizedCalc.summaryNotes.locator('.note-line.negative')).toContainText(
       'The pre-approval rate has lapsed',
     )
+  })
+
+  test('the compare date, status and mixes keep their layout in LTR', async ({ page }) => {
+    await page.goto('/en/compare')
+    await expect(page.getByTestId('compare-shell')).toBeVisible()
+    await page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+    const buttonBoxes = () =>
+      page.evaluate(() =>
+        ['basket1', 'basket2', 'basket3', 'basket4'].map((id) => {
+          const box = document
+            .querySelector(`[data-testid="compare-preset-1-${id}"]`)!
+            .getBoundingClientRect()
+          return {
+            left: Math.round(box.left),
+            top: Math.round(box.top + window.scrollY),
+            width: Math.round(box.width),
+          }
+        }),
+      )
+    const before = await buttonBoxes()
+
+    await page.getByTestId('compare-approval-date-1').fill(dateOnly(0))
+    await expect(page.getByTestId('compare-approval-chip-1')).toBeVisible()
+    expect(await buttonBoxes()).toEqual(before)
+
+    const geometry = await page.evaluate(() => {
+      const field = document.querySelector('#compare-approval-date-1')!.parentElement!
+      const chip = document.querySelector('[data-testid="compare-approval-chip-1"]')!
+      const fieldBox = field.getBoundingClientRect()
+      const chipBox = chip.getBoundingClientRect()
+      const first = document
+        .querySelector('[data-testid="compare-preset-1-basket1"]')!
+        .getBoundingClientRect()
+      const second = document
+        .querySelector('[data-testid="compare-preset-1-basket2"]')!
+        .getBoundingClientRect()
+      const input = document.querySelector('#compare-approval-date-1') as HTMLInputElement
+      return {
+        dir: document.documentElement.dir,
+        fieldLeft: fieldBox.left,
+        fieldWidth: fieldBox.width,
+        pairLeft: Math.min(first.left, second.left),
+        pairWidth: Math.max(first.right, second.right) - Math.min(first.left, second.left),
+        fieldCenterY: fieldBox.top + fieldBox.height / 2,
+        chipCenterY: chipBox.top + chipBox.height / 2,
+        gap: Math.max(0, chipBox.left - fieldBox.right, fieldBox.left - chipBox.right),
+        inputClientWidth: input.clientWidth,
+        inputScrollWidth: input.scrollWidth,
+      }
+    })
+
+    expect(geometry.dir).toBe('ltr')
+    await expect(page.getByTestId('compare-approval-date-1')).toHaveCSS('text-align', 'left')
+    // Mirrored: at the reading start (left in English), hugging its value and
+    // not stretched across the preset columns.
+    expect(Math.abs(geometry.fieldLeft - geometry.pairLeft)).toBeLessThanOrEqual(1)
+    expect(geometry.inputClientWidth).toBeLessThanOrEqual(130)
+    expect(geometry.fieldWidth).toBeLessThanOrEqual(geometry.inputClientWidth + 40)
+    expect(geometry.inputScrollWidth).toBeLessThanOrEqual(geometry.inputClientWidth + 1)
+    expect(Math.abs(geometry.chipCenterY - geometry.fieldCenterY)).toBeLessThanOrEqual(1)
+    expect(geometry.gap).toBeLessThanOrEqual(12)
   })
 })

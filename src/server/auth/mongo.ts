@@ -19,7 +19,13 @@ function createClientPromise(): Promise<MongoClient> {
       '[auth] MONGODB_URI is not set. Add it to .env (server-only; see docs/SECURITY.md).',
     )
   }
-  return new MongoClient(MONGODB_URI).connect()
+  /**
+   * Fail in seconds, not in Mongo's 30s default. A dead or unreachable database
+   * otherwise holds every auth request (and the page's session lookup) open for
+   * half a minute before the visitor sees the signed-out state. Five seconds is
+   * long enough for a healthy server selection, including a cold Atlas pool.
+   */
+  return new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 5000 }).connect()
 }
 
 export function getMongoClient(): Promise<MongoClient> {

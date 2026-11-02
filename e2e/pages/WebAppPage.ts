@@ -25,6 +25,8 @@ export class WebAppPage {
   readonly navAvatarInitials: Locator
   readonly navAccountTheme: Locator
   readonly navAccountLanguage: Locator
+  /** The language + color-mode block in the account menu. */
+  readonly navAccountPrefs: Locator
   readonly navAccountSignin: Locator
   readonly navAccountSignout: Locator
   /** The bar's link row (nav items + social icons), for layout reads. */
@@ -46,6 +48,7 @@ export class WebAppPage {
     this.navAvatarInitials = page.locator('[data-testid="nav-avatar"] .nav-avatar-fallback')
     this.navAccountTheme = page.getByTestId('nav-account-theme')
     this.navAccountLanguage = page.getByTestId('nav-account-language')
+    this.navAccountPrefs = page.getByTestId('nav-account-prefs')
     this.navAccountSignin = page.getByTestId('nav-account-signin')
     this.navAccountSignout = page.getByTestId('nav-account-signout')
     this.navLinkRow = page.locator('#nav-list')
@@ -146,18 +149,19 @@ export class WebAppPage {
    * the account menu now (the bar flag was removed), so this opens the menu
    * first - the hover path a desktop visitor takes.
    *
-   * The switch is a client-side (soft) navigation, so `load` may already have
-   * fired for the current document and waiting on it alone can return while
-   * the new document is still being swapped in. The next `page.evaluate` then
-   * dies with "Execution context was destroyed". Wait for the URL to actually
-   * change first, which is what a user observes anyway.
+   * The two locales have separate root layouts, so the switch can be a full
+   * reload even though it is a NextLink. `waitForLoadState('load')` can return
+   * immediately for the OLD document, leaving the next `page.evaluate` reading
+   * the in-progress document (no pre-paint `data-theme` yet). Wait for the URL
+   * to change as part of a completed navigation, then for hydration, so callers
+   * read the new page's real attributes rather than a half-swapped document.
    */
   async switchLanguage(): Promise<void> {
     const before = new URL(this.page.url()).pathname
     await this.openAccountMenu()
     await this.navAccountLanguage.click()
-    await expect.poll(() => new URL(this.page.url()).pathname).not.toBe(before)
-    await this.page.waitForLoadState('load')
+    await this.page.waitForURL((url) => url.pathname !== before, { waitUntil: 'load' })
+    await this.waitForHydration()
   }
 
   /** A bar link by nav item id ("services", "articles", ...). */

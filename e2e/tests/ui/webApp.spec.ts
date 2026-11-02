@@ -726,7 +726,7 @@ test.describe('web app: navigation + chrome parity', () => {
     expect(underline.background).toBe('rgb(15, 15, 15)')
   })
 
-  test('a quiet skeleton holds the account slot while the session loads', async ({ page }) => {
+  test('the account menu stays usable while the session lookup hangs', async ({ page }) => {
     // Never resolve get-session: the pending state is observable for as long
     // as the test needs it.
     await page.route('**/api/auth/get-session*', () => new Promise(() => undefined))
@@ -734,12 +734,24 @@ test.describe('web app: navigation + chrome parity', () => {
     await app.goto('/')
     await app.waitForHydration()
 
-    // While pending: the skeleton occupies the trigger's slot; neither the
-    // circular trigger nor its menu is rendered yet.
-    const pending = page.getByTestId('nav-auth-pending')
-    await expect(pending).toBeVisible()
-    await expect(app.navAccount).toHaveCount(0)
-    await expect(app.navAvatar).toHaveCount(0)
+    // While pending: the skeleton holds the trigger's glyph, but the account
+    // control and its menu still render so language and theme never wait on
+    // the auth request.
+    await expect(app.navAuthPending).toBeVisible()
+    await expect(app.navAccount).toBeVisible()
+    await expect(app.navAvatar).toBeVisible()
+    await expect(app.navAvatarEmpty).toHaveCount(0)
+
+    await app.openAccountMenu()
+    await expect(app.navAccountLanguage).toBeVisible()
+    await expect(app.navAccountTheme).toBeVisible()
+    // No actions below the preferences yet, so the divider that separates the
+    // two groups must not hang at the menu's bottom edge.
+    await expect(app.navAccountPrefs).toHaveCSS('border-bottom-width', '0px')
+    // No account action is shown until the lookup settles, so a signed-in
+    // visitor is never offered "sign in".
+    await expect(app.navAccountSignin).toHaveCount(0)
+    await expect(app.navAccountSignout).toHaveCount(0)
   })
 
   test('the signed-in avatar shows the provider photo when the session has one', async ({

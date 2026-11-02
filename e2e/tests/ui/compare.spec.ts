@@ -508,6 +508,31 @@ test.describe('mortgage comparison - /compare', () => {
     expect(await compositionPanel.locator('.compare-trend-bar').count()).toBeGreaterThan(oneMixBars)
   })
 
+  test('the composition tooltip keeps its width at the last year', async ({ page }) => {
+    await page.goto('/compare')
+    const plot = page.getByTestId('compare-trend-composition-plot')
+    const plotBox = await plot.boundingBox()
+    expect(plotBox).not.toBeNull()
+    // Hover the far-right year: an auto-width absolutely positioned tooltip
+    // used to shrink to the room left of its anchor there, wrapping the
+    // composition rows into a narrow column.
+    await plot.hover({
+      position: { x: plotBox!.width - 8, y: Math.min(120, plotBox!.height / 2) },
+    })
+    const tooltip = plot.locator('.compare-trend-tooltip')
+    await expect(tooltip).toBeVisible()
+    const tooltipBox = await tooltip.boundingBox()
+    expect(tooltipBox).not.toBeNull()
+    expect(tooltipBox!.width).toBeGreaterThan(200)
+    // The clamp keeps the callout inside the plot instead of clipping it.
+    await expect
+      .poll(async () => {
+        const box = await tooltip.boundingBox()
+        return box ? box.x + box.width : Number.POSITIVE_INFINITY
+      })
+      .toBeLessThanOrEqual(plotBox!.x + plotBox!.width + 1)
+  })
+
   test('a long indexed mix keeps its negative net principal below zero', async ({ page }) => {
     await page.goto('/compare')
     // Scenario 2: the single fixed preset, turned into a fully indexed 30-year

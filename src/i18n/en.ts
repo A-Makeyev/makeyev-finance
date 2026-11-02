@@ -398,6 +398,8 @@ export const en: { translation: Translation } = {
       ptiHint:
         'Suggested payment: the mortgage payment together with additional monthly expenses should not exceed {{threshold}}% of income.',
       approvalDateLabel: 'Pre-approval date',
+      approvalDateFormat: 'dd/mm/yyyy',
+      approvalDateFormatHint: 'Enter the date as day/month/year, for example 03/03/2020.',
       rateValidity: {
         valid: 'Rate valid until {{date}}',
         expiring: 'Rate expires soon, on {{date}}',
@@ -681,9 +683,9 @@ export const en: { translation: Translation } = {
         capped: 'Capped',
         chartTitle: 'Discounting fee by repayment date',
         chartLead:
-          'The fee falls the later the date; a five-year track steps down at each reset, and an exempt track stays on zero.',
-        chartNearZero:
-          'The chart sits almost flat on zero because the comparison rate ({{rate}}%) is close to the tracks’ own rates: a discounting fee arises only when the market rate falls below the loan’s rate. Lower the comparison rate to see that scenario.',
+          'Later in the schedule the balance is smaller and the fee falls; each rate reset of a five-year variable track steps it down. An exempt track stays on zero all the way.',
+        chartRateNote:
+          'The bank charges a discounting fee only when the market rate falls below the loan rate, so when the two are close the chart stays flat on zero. Current comparison rate: {{rate}}%.',
         chartCaption: 'Click the chart to pick a repayment date',
         chartAria: 'Discounting fee per track by repayment year',
         chartAxisFee: 'Discounting fee',

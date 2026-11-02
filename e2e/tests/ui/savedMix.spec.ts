@@ -145,7 +145,7 @@ test.describe('saved mixes', () => {
     await expect(calc.termSlider).toHaveValue('27')
     // The approval date and the display-only market margin are part of the
     // saved offer, so they come back with it.
-    await expect(calc.approvalDate).toHaveValue('2026-03-02')
+    await expect(calc.approvalDate).toHaveValue('02/03/2026')
     await expect(calc.track(1).margin()).toHaveValue('1.2')
     // The margin decomposes that track's rate in the schedule's payback aside.
     await expect(calc.marketMargin(1)).toContainText('1.2')
@@ -453,6 +453,10 @@ test.describe('saved mixes', () => {
     // single pixel here. The saved-state control is not even a button, so it
     // stays completely flat.
     await calc.goto()
+    // The save control mounts when the session lookup settles. Waiting for it
+    // first keeps the row's geometry final, so the hover cannot land on a
+    // control that appears beside the pointer a moment later.
+    await expect(calc.saveMixSignIn).toBeVisible()
     await expect(calc.showPayments).toHaveCSS('transform', 'none')
 
     await calc.showPayments.hover()

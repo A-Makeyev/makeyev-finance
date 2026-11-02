@@ -9,6 +9,7 @@ import { OfflineBanner } from './OfflineBanner'
 import { Footer } from './Footer'
 import { usePathname } from '@/router'
 import { applyDocumentDirection, type Language } from '@/i18n'
+import { applyTheme } from '@/theme'
 import { shouldHideFooter } from '@/lib/siteChrome'
 
 /**
@@ -30,7 +31,12 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   // Hydration signal: set once React has attached to the server HTML, so e2e
   // can wait for interactivity instead of racing a pre-hydration paint on a
   // controlled input (the SSR HTML is visible before the bundle runs).
+  // The theme is re-asserted here because hydration reconciles <html>'s
+  // attributes against the server markup, which does not carry the pre-paint
+  // `data-theme`; a dark OS preference lost it and repainted light. Applying it
+  // after the commit restores the pre-paint choice before this signal is set.
   useEffect(() => {
+    applyTheme()
     document.documentElement.dataset.hydrated = 'true'
   }, [])
 

@@ -57,8 +57,9 @@ export function Navbar({
   const { isDark, toggle: toggleTheme } = useTheme()
   // isPending: the session lookup is still in flight (no way to know yet).
   // data: null while signed out, the { user, session } pair once signed in.
-  // The avatar/menu render only after the lookup lands, so a signed-in
-  // visitor never flashes the sign-in icon.
+  // The trigger's GLYPH waits for the lookup so a signed-in visitor never
+  // flashes the sign-in icon, but the account menu itself renders immediately:
+  // the language and theme switches must never wait on an auth request.
   const { data: session, isPending: sessionPending } = authClient.useSession()
   const pathname = usePathname()
   const router = useRouter()
@@ -326,26 +327,18 @@ export function Navbar({
           sheet, now links + socials only, slides down behind it. The language
           switch used to sit here too; it is now a row in the account menu. */}
         <ul className="nav-bar-controls" data-testid="nav-bar-controls">
-          {/* Account control. While the session is being looked up a muted
-                skeleton circle holds the trigger's slot (the slot used to sit
-                empty, so the row jumped when the icon appeared; the skeleton
-                wears the same colour as the nav links). Both session states
-                render the same circular trigger and menu: signed in it holds
-                the photo/initials avatar and the identity + profile + sign-out
-                items; signed out it holds the person-glyph circle and the
-                sign-in entry. The color mode row sits in the menu in both
-                states, so the menu is now the only theme toggle. */}
+          {/* Account control. The menu (language and colour mode included) is
+                always rendered, so site preferences stay usable even while the
+                session lookup is slow or failing. While that lookup is in
+                flight a muted skeleton circle holds the trigger's glyph (the
+                slot used to sit empty, so the row jumped when the icon
+                appeared; the skeleton wears the same colour as the nav links).
+                Signed in the trigger holds the photo/initials avatar and the
+                menu adds identity + profile + sign-out; signed out it holds the
+                person glyph and the sign-in entry. The color mode row sits in
+                the menu in both states, so the menu is the only theme toggle. */}
           <li>
-            {sessionPending ? (
-              <span
-                className="nav-auth-pending"
-                aria-hidden="true"
-                data-testid="nav-auth-pending"
-              >
-                <span className="nav-auth-skeleton" />
-              </span>
-            ) : (
-              <div
+            <div
                 className="nav-account"
                 ref={accountRef}
                 data-testid="nav-account"
@@ -397,7 +390,15 @@ export function Navbar({
                     }
                   }}
                 >
-                  {user && avatarUrl ? (
+                  {sessionPending ? (
+                    <span
+                      className="nav-auth-pending"
+                      aria-hidden="true"
+                      data-testid="nav-auth-pending"
+                    >
+                      <span className="nav-auth-skeleton" />
+                    </span>
+                  ) : user && avatarUrl ? (
                     // Google profile photo, when the provider returned
                     // one. referrerPolicy="no-referrer"
                     // keeps the auth header out of Google's request.
@@ -450,7 +451,7 @@ export function Navbar({
                         switch, then the color-mode toggle. Both render the
                         same icon-then-label row, so the two "site settings"
                         read as one group. */}
-                  <div className="nav-account-prefs">
+                  <div className="nav-account-prefs" data-testid="nav-account-prefs">
                     {/* Language switch. It targets the OTHER locale, so it
                           carries the raw href (computed above) rather than
                           going through the locale-aware Link adapter, and it
@@ -492,47 +493,47 @@ export function Navbar({
                       <span>{t(isDark ? 'nav.lightMode' : 'nav.darkMode')}</span>
                     </button>
                   </div>
-                  {user ? (
-                    <>
+                  {!sessionPending &&
+                    (user ? (
+                      <>
+                        <Link
+                          to="/profile"
+                          role="menuitem"
+                          className="nav-account-item"
+                          data-testid="nav-account-profile"
+                          onClick={() => setAccountMenuOpen(false)}
+                        >
+                          <FaRegUser aria-hidden="true" />
+                          <span>{t('auth.profileItem')}</span>
+                        </Link>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="nav-account-item"
+                          data-testid="nav-account-signout"
+                          onClick={onSignOut}
+                        >
+                          <FaSignOutAlt aria-hidden="true" />
+                          <span>{t('auth.signOut')}</span>
+                        </button>
+                      </>
+                    ) : (
                       <Link
-                        to="/profile"
+                        to="/login"
                         role="menuitem"
                         className="nav-account-item"
-                        data-testid="nav-account-profile"
-                        onClick={() => setAccountMenuOpen(false)}
+                        data-testid="nav-account-signin"
+                        onClick={() => {
+                          if (menuOpen) closeMenu()
+                          setAccountMenuOpen(false)
+                        }}
                       >
                         <FaRegUser aria-hidden="true" />
-                        <span>{t('auth.profileItem')}</span>
+                        <span>{t('auth.loginLink')}</span>
                       </Link>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="nav-account-item"
-                        data-testid="nav-account-signout"
-                        onClick={onSignOut}
-                      >
-                        <FaSignOutAlt aria-hidden="true" />
-                        <span>{t('auth.signOut')}</span>
-                      </button>
-                    </>
-                  ) : (
-                    <Link
-                      to="/login"
-                      role="menuitem"
-                      className="nav-account-item"
-                      data-testid="nav-account-signin"
-                      onClick={() => {
-                        if (menuOpen) closeMenu()
-                        setAccountMenuOpen(false)
-                      }}
-                    >
-                      <FaRegUser aria-hidden="true" />
-                      <span>{t('auth.loginLink')}</span>
-                    </Link>
-                  )}
+                    ))}
                 </div>
               </div>
-            )}
           </li>
         </ul>
       </div>

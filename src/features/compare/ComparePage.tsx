@@ -25,6 +25,7 @@ import {
 } from '@/lib/format'
 import { PRESET_IDS } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
+import { DateField } from '@/components/ui/DateField'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { TermSlider } from '@/components/ui/TermSlider'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
@@ -616,61 +617,78 @@ export function ComparePage() {
             approval date (and its own result, since offers compared side by
             side rarely share one). The field, chip and hint are shared with
             the calculator. htmlFor names the input directly: the tooltip's
-            "?" button is the label's first labelable descendant. */}
-        <div className="compare-approval-row">
-          <label className="input-group" htmlFor={`compare-approval-date-${scenarioIndex + 1}`}>
-            <span className="label-help-row">
-              <span className="label-help-text">{t('calculator.approvalDateLabel')}</span>
-              <HelpTooltip
-                label={t('calculator.help.approvalDateAria')}
-                content={t('calculator.help.approvalDate')}
-                testId={`help-approval-date-${scenarioIndex + 1}`}
+            "?" button is the label's first labelable descendant. The date and
+            the preset row share one grid, but the date field hugs its own
+            dd/mm/yyyy text at the reading start rather than stretching across
+            two presets. The status lives in the same field box but is
+            positioned out of grid flow, so showing it can never resize the
+            date or move the mixes. */}
+        <div className="compare-offer-controls">
+          <div className="compare-approval-row">
+            <div className="compare-approval-field">
+              <label
+                className="input-group"
+                htmlFor={`compare-approval-date-${scenarioIndex + 1}`}
+              >
+                <span className="label-help-row">
+                  <span className="label-help-text">{t('calculator.approvalDateLabel')}</span>
+                  <HelpTooltip
+                    label={t('calculator.help.approvalDateAria')}
+                    content={t('calculator.help.approvalDate')}
+                    testId={`help-approval-date-${scenarioIndex + 1}`}
+                  />
+                </span>
+                <span className="input-wrap">
+                  <DateField
+                    id={`compare-approval-date-${scenarioIndex + 1}`}
+                    value={scenario.approvalDateText}
+                    onChange={(value) => actions.setScenarioApprovalDate(scenario.id, value)}
+                    placeholder={t('calculator.approvalDateFormat')}
+                    describedBy={`compare-approval-date-format-${scenarioIndex + 1}`}
+                    testId={`compare-approval-date-${scenarioIndex + 1}`}
+                  />
+                </span>
+                <span
+                  id={`compare-approval-date-format-${scenarioIndex + 1}`}
+                  className="visually-hidden"
+                >
+                  {t('calculator.approvalDateFormatHint')}
+                </span>
+              </label>
+              <RateValidityChip
+                approvalDate={scenario.approvalDateText}
+                testId={`compare-approval-chip-${scenarioIndex + 1}`}
               />
-            </span>
-            <span className="input-wrap">
-              <input
-                id={`compare-approval-date-${scenarioIndex + 1}`}
-                type="date"
-                value={scenario.approvalDateText}
-                onChange={(event) =>
-                  actions.setScenarioApprovalDate(scenario.id, event.target.value)
+            </div>
+          </div>
+          {/* Preset mixes (תמהיל 1-4), calculator parity: clicking one replaces
+              the scenario's tracks with the preset's allocation at the shared
+              loan (or at the tracks' own total when no loan is derivable yet).
+              The active preset stays highlighted. Picking a mix on a blank
+              scenario therefore prices it right away - the loan was already
+              entered once, above. */}
+          <div
+            className="compare-preset-list"
+            role="group"
+            aria-label={t('calculator.presetHeading')}
+          >
+            {PRESET_IDS.map((presetId) => (
+              <button
+                key={presetId}
+                type="button"
+                className={
+                  scenario.activePreset === presetId
+                    ? 'compare-preset-button active'
+                    : 'compare-preset-button'
                 }
-                data-testid={`compare-approval-date-${scenarioIndex + 1}`}
-              />
-            </span>
-          </label>
-          <RateValidityChip
-            approvalDate={scenario.approvalDateText}
-            testId={`compare-approval-chip-${scenarioIndex + 1}`}
-          />
-        </div>
-        {/* Preset mixes (תמהיל 1-4), calculator parity: clicking one replaces
-            the scenario's tracks with the preset's allocation at the shared
-            loan (or at the tracks' own total when no loan is derivable yet).
-            The active preset stays highlighted. Picking a mix on a blank
-            scenario therefore prices it right away - the loan was already
-            entered once, above. */}
-        <div
-          className="compare-preset-list"
-          role="group"
-          aria-label={t('calculator.presetHeading')}
-        >
-          {PRESET_IDS.map((presetId) => (
-            <button
-              key={presetId}
-              type="button"
-              className={
-                scenario.activePreset === presetId
-                  ? 'compare-preset-button active'
-                  : 'compare-preset-button'
-              }
-              aria-pressed={scenario.activePreset === presetId}
-              data-testid={`compare-preset-${scenarioIndex + 1}-${presetId}`}
-              onClick={() => actions.loadScenarioPreset(scenario.id, presetId)}
-            >
-              {t(`calculator.preset${presetId.charAt(0).toUpperCase()}${presetId.slice(1)}`)}
-            </button>
-          ))}
+                aria-pressed={scenario.activePreset === presetId}
+                data-testid={`compare-preset-${scenarioIndex + 1}-${presetId}`}
+                onClick={() => actions.loadScenarioPreset(scenario.id, presetId)}
+              >
+                {t(`calculator.preset${presetId.charAt(0).toUpperCase()}${presetId.slice(1)}`)}
+              </button>
+            ))}
+          </div>
         </div>
         {scenario.tracks.map((track, trackIndex) => (
           <fieldset

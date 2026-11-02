@@ -13,6 +13,7 @@ import { useSavedMixes } from '@/features/mixes/api'
 import { seedFromCalculator } from '@/stores/comparisonStore'
 import { MAX_OTHER_EXPENSES, MAX_TRACKS, MAX_YEARS, PRESET_IDS, type PresetId, type PropertyPurpose } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
+import { DateField } from '@/components/ui/DateField'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { RateValidityChip } from '@/components/ui/RateValidityChip'
 import { HoverTooltip } from '@/components/ui/HoverTooltip'
@@ -390,15 +391,32 @@ export function CalculatorPage() {
                     />
                   </span>
                   <span className="input-wrap">
-                    <input
+                    <DateField
                       id="approval-date"
-                      type="date"
                       value={store.approvalDateText}
-                      onChange={(event) => store.setApprovalDate(event.target.value)}
-                      data-testid="approval-date"
+                      onChange={(value) => store.setApprovalDate(value)}
+                      placeholder={t('calculator.approvalDateFormat')}
+                      describedBy="approval-date-format"
+                      testId="approval-date"
                     />
                   </span>
+                  <span id="approval-date-format" className="visually-hidden">
+                    {t('calculator.approvalDateFormatHint')}
+                  </span>
                 </label>
+
+                {/* The validity status hangs directly under the date input it
+                    describes. Out of flow, so a long message never lifts the
+                    date field away from the loan amount next to it. */}
+                {store.approvalDateText && (
+                  <div className="starting-approval-status">
+                    <RateValidityChip
+                      approvalDate={store.approvalDateText}
+                      testId="rate-validity-chip"
+                      className="rate-validity-row-chip"
+                    />
+                  </div>
+                )}
               </div>
 
               <label className="starting-amount">
@@ -455,18 +473,6 @@ export function CalculatorPage() {
                 <SaveMixButton />
               </div>
 
-              {/* The validity status sits on its own full-width line inside
-                  the row so a long chip can never push the loan fields or the
-                  actions onto another line. It renders only with a date. */}
-              {store.approvalDateText && (
-                <div className="starting-approval-status">
-                  <RateValidityChip
-                    approvalDate={store.approvalDateText}
-                    testId="rate-validity-chip"
-                    className="rate-validity-row-chip"
-                  />
-                </div>
-              )}
             </div>
 
             <div className="limits-row">

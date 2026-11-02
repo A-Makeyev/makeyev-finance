@@ -21,6 +21,8 @@ import { expect, type Locator, type Page } from '@playwright/test'
   readonly termSlider: Locator
   /** אישור עקרוני approval date and the rate-validity chip it drives. */
   readonly approvalDate: Locator
+  /** The calendar mark that closes the date field. */
+  readonly approvalDateIcon: Locator
   readonly rateValidityChip: Locator
   /** Advisor-metric extra: the total principal the payments give back. */
   readonly principalDecline: Locator
@@ -84,6 +86,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
     this.monthlyIncome = page.getByTestId('monthly-income')
     this.termSlider = page.getByTestId('term-years')
     this.approvalDate = page.getByTestId('approval-date')
+    this.approvalDateIcon = page.locator('.rate-validity-field .date-field-icon')
     this.rateValidityChip = page.getByTestId('rate-validity-chip')
     this.principalDecline = page.getByTestId('principal-decline')
     this.highestCaption = page.getByTestId('highest-caption')
@@ -175,6 +178,16 @@ import { expect, type Locator, type Page } from '@playwright/test'
   /** Sets the אישור עקרוני approval date (a date-only 'YYYY-MM-DD' value). */
   async setApprovalDate(value: string): Promise<void> {
     await this.approvalDate.fill(value)
+  }
+
+  /**
+   * Types a date into the field one segment at a time, the way a visitor does.
+   * `fill` jumps straight to the final value and would not catch the native
+   * segment editing that a real keyboard session exercises.
+   */
+  async typeApprovalDate(digits: string): Promise<void> {
+    await this.approvalDate.focus()
+    await this.approvalDate.pressSequentially(digits)
   }
 
   /**
