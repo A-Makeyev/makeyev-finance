@@ -414,6 +414,37 @@
     <div class="last-updated" id="lastUpdated"></div>
     <ul class="reports-list" id="reportsList">
         <li class="report-item">
+          <a href="Run-128/index.html" class="report-link" aria-label="Open report for Run 128"></a>
+            <div class="report-content">
+              <div class="run-header">
+                <span class="run-number">Run #128 <span class="badge badge-success">✓ Passed</span></span>
+                <span class="test-type">Playwright Tests</span>
+                <span class="run-duration">⏱ 6m 33s</span>
+              </div>
+              <div class="run-date">03-11-2026 11:35AM</div>
+              <div class="run-source">
+                <span class="run-branch">⎇ main</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/7bcca8308200f6c6119e18bfe1a52ee546b70b7a" target="_blank" rel="noopener" title="7bcca8308200f6c6119e18bfe1a52ee546b70b7a">7bcca83</a>
+                <a class="report-chip" href="Run-128/index.html" target="_blank" rel="noopener">📊 HTML report<svg class="chip-ext-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
+              </div>
+              <div class="commit-subject" title="Pair compare scenarios and keep the header on one row">
+                <span class="subject-text">Pair compare scenarios and keep the header on one row</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="test-stats">
+                <span class="stat-item">Passed: <span class="stat-value">371</span></span>
+                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
+                <span class="stat-item">Skipped: <span class="stat-value">17</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">381</span></span>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
+              </div>
+            </div>
+          </a>
+        </li>
+        <li class="report-item">
           <a href="Run-127/index.html" class="report-link" aria-label="Open report for Run 127"></a>
             <div class="report-content">
               <div class="run-header">
@@ -693,37 +724,6 @@
             </div>
           </a>
         </li>
-        <li class="report-item">
-          <a href="Run-118/index.html" class="report-link" aria-label="Open report for Run 118"></a>
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #118 <span class="badge badge-success">✓ Passed</span></span>
-                <span class="test-type">Playwright Tests</span>
-                <span class="run-duration">⏱ 6m 42s</span>
-              </div>
-              <div class="run-date">31-10-2026 09:06AM</div>
-              <div class="run-source">
-                <span class="run-branch">⎇ main</span>
-                <span class="run-sha-label">commit</span>
-                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/27f54d556d24191494eb22994c9b2cabc5f73128" target="_blank" rel="noopener" title="27f54d556d24191494eb22994c9b2cabc5f73128">27f54d5</a>
-                <a class="report-chip" href="Run-118/index.html" target="_blank" rel="noopener">📊 HTML report<svg class="chip-ext-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
-              </div>
-              <div class="commit-subject" title="Keep the help tooltip panel open through the e2e click">
-                <span class="subject-text">Keep the help tooltip panel open through the e2e click</span>
-                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
-              </div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">348</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">17</span></span>
-                <span class="stat-breakdown">
-                  <span class="stat-item">UI: <span class="stat-value">358</span></span>
-                  <span class="stat-item">API: <span class="stat-value">7</span></span>
-                </span>
-              </div>
-            </div>
-          </a>
-        </li>
     </ul>
   </div>
   <script>
@@ -861,7 +861,7 @@
     })();
 
     // Auto-refresh logic
-    const currentRun = "127";
+    const currentRun = "128";
     let checkCount = 0;
 
     async function checkForUpdates() {
