@@ -638,14 +638,25 @@ export function ComparePage() {
                     testId={`help-approval-date-${scenarioIndex + 1}`}
                   />
                 </span>
-                <span className="input-wrap">
-                  <DateField
-                    id={`compare-approval-date-${scenarioIndex + 1}`}
-                    value={scenario.approvalDateText}
-                    onChange={(value) => actions.setScenarioApprovalDate(scenario.id, value)}
-                    placeholder={t('calculator.approvalDateFormat')}
-                    describedBy={`compare-approval-date-format-${scenarioIndex + 1}`}
-                    testId={`compare-approval-date-${scenarioIndex + 1}`}
+                {/* The status is anchored to the control, not to the label
+                    column: the label text can be a few pixels wider than the
+                    date box (and how much depends on the font), so anchoring
+                    to the column left a font-dependent gap. The wrapper is
+                    exactly the date box, and the chip sits one gap past it. */}
+                <span className="compare-date-line">
+                  <span className="input-wrap">
+                    <DateField
+                      id={`compare-approval-date-${scenarioIndex + 1}`}
+                      value={scenario.approvalDateText}
+                      onChange={(value) => actions.setScenarioApprovalDate(scenario.id, value)}
+                      placeholder={t('calculator.approvalDateFormat')}
+                      describedBy={`compare-approval-date-format-${scenarioIndex + 1}`}
+                      testId={`compare-approval-date-${scenarioIndex + 1}`}
+                    />
+                  </span>
+                  <RateValidityChip
+                    approvalDate={scenario.approvalDateText}
+                    testId={`compare-approval-chip-${scenarioIndex + 1}`}
                   />
                 </span>
                 <span
@@ -655,10 +666,6 @@ export function ComparePage() {
                   {t('calculator.approvalDateFormatHint')}
                 </span>
               </label>
-              <RateValidityChip
-                approvalDate={scenario.approvalDateText}
-                testId={`compare-approval-chip-${scenarioIndex + 1}`}
-              />
             </div>
           </div>
           {/* Preset mixes (תמהיל 1-4), calculator parity: clicking one replaces

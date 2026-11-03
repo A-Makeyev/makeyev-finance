@@ -150,6 +150,13 @@ describe('segmentsFromText', () => {
     expect(segmentsFromText('/12/2026')).toEqual({ day: '', month: '12', year: '2026' })
   })
 
+  it('never keeps a day above 31 or a month above 12', () => {
+    // Rebuilt (typed, pasted or regrouped) text is fitted to the calendar
+    // range, so 40/13 can never be shown as a day and month.
+    expect(segmentsFromText('40/13/2020')).toEqual({ day: '4', month: '1', year: '2020' })
+    expect(segmentsFromText('99-99-2020')).toEqual({ day: '9', month: '9', year: '2020' })
+  })
+
   it('reads year-first and compact forms', () => {
     expect(segmentsFromText('2026-02-17')).toEqual({ day: '17', month: '02', year: '2026' })
     expect(segmentsFromText('030320')).toEqual({ day: '03', month: '03', year: '20' })
@@ -225,6 +232,37 @@ describe('editDateText', () => {
       text: '17/02/2026',
       caret: 10,
     })
+  })
+
+  it('moves a digit that cannot fit the part into the next part', () => {
+    // A one-digit day or month that would go above its limit hands the digit
+    // to the next part instead of stalling, so the year can still be typed.
+    expect(editDateText('3', '32', 2)).toEqual({ text: '3/2', caret: 3 })
+    expect(editDateText('30/3', '30/32', 5)).toEqual({ text: '30/3/2', caret: 6 })
+    // No part ever holds an out-of-range day or month.
+    expect(segmentsFromText('3/2')).toEqual({ day: '3', month: '2', year: '' })
+    // Overwriting an existing full month is still refused, so the year stays.
+    expect(typeAt('17/12/2026', 5, '3')).toEqual({ text: '17/12/2026', caret: 5 })
+    // The limits themselves still go in: day 31 and month 12.
+    expect(editDateText('3', '31', 2)).toEqual({ text: '31/', caret: 3 })
+    expect(typeAt('10/1/2020', 4, '2')).toEqual({ text: '10/12/2020', caret: 5 })
+  })
+
+  it('shows the slash as soon as a part cannot grow', () => {
+    // 4-9 cannot be the first of a two-digit day or month.
+    expect(editDateText('', '4', 1)).toEqual({ text: '4/', caret: 2 })
+    expect(editDateText('4/', '4/5', 3)).toEqual({ text: '4/5/', caret: 4 })
+    // 1-3 still wait for a possible second digit (10-31, 10-12).
+    expect(editDateText('', '1', 1)).toEqual({ text: '1', caret: 1 })
+    expect(editDateText('', '3', 1)).toEqual({ text: '3', caret: 1 })
+    // A gap in the middle of an existing date is not closed by a slash at the
+    // end: a later part already holds a value.
+    expect(editDateText('1//2020', '12//2020', 2)).toEqual({ text: '12//2020', caret: 2 })
+    expect(editDateText('17/12/2026', '4/12/2026', 1)).toEqual({ text: '4/12/2026', caret: 1 })
+  })
+
+  it('drops out-of-range digits from a pasted date instead of showing them', () => {
+    expect(editDateText('', '20/20/2000', 10)).toEqual({ text: '20/2/2000', caret: 9 })
   })
 
   it('keeps a short date short until it is complete', () => {

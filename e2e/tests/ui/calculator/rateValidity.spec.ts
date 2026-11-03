@@ -48,6 +48,39 @@ test.describe('mortgage calculator - אישור עקרוני rate validity', () 
     await expect(calc.rateValidityChip).toHaveAttribute('data-status', 'expired')
   })
 
+  test('a day above 31 or a month above 12 moves to the next part', async ({ calc }) => {
+    await calc.approvalDate.fill('')
+    await calc.typeApprovalDate('32')
+    // 32 is not a day, so the 2 starts the month instead of being dropped.
+    await expect(calc.approvalDate).toHaveValue('3/2')
+    // 20 is not a month either, so the 0 starts the year.
+    await calc.typeApprovalDate('0')
+    await expect(calc.approvalDate).toHaveValue('3/2/0')
+    // No segment ever holds an out-of-range day or month.
+    await expect(calc.approvalDate).toHaveValue(/^(0?[1-9]|[12]\d|3[01])\/(0?[1-9]|1[0-2])\/\d*$/)
+  })
+
+  test('a one-digit month keeps formatting and reaches the year', async ({ calc }) => {
+    await calc.approvalDate.fill('')
+    // Typed as day 30, month 3, year 2025 without pressing "/".
+    await calc.typeApprovalDate('3032025')
+    await expect(calc.approvalDate).toHaveValue('30/3/2025')
+    await calc.approvalDate.press('Tab')
+    await expect(calc.approvalDate).toHaveValue('30/03/2025')
+    // The typed date is a real one, so the validity chip reports it.
+    await expect(calc.rateValidityChip).toHaveAttribute('data-status', 'expired')
+  })
+
+  test('a one-digit 4-9 shows the next slash immediately', async ({ calc }) => {
+    await calc.approvalDate.fill('')
+    await calc.typeApprovalDate('4')
+    await expect(calc.approvalDate).toHaveValue('4/')
+    await calc.typeApprovalDate('5')
+    await expect(calc.approvalDate).toHaveValue('4/5/')
+    await calc.typeApprovalDate('2025')
+    await expect(calc.approvalDate).toHaveValue('4/5/2025')
+  })
+
   test('deleting from the end continues through the year into the month', async ({ calc }) => {
     await calc.setApprovalDate('2026-12-17')
     await expect(calc.approvalDate).toHaveValue('17/12/2026')
@@ -144,6 +177,88 @@ test.describe('mortgage calculator - אישור עקרוני rate validity', () 
     expect(geometry.chipTop - geometry.dateBottom).toBeLessThanOrEqual(12)
     // And it stays inside the starting row, above the limits row below it.
     expect(geometry.chipBottom).toBeLessThanOrEqual(geometry.limitsTop)
+  })
+
+  test('the date and amount keep the column gap at every narrow tier', async ({ calc }) => {
+    await calc.setApprovalDate(dateOnly(0))
+    await expect(calc.rateValidityChip).toBeVisible()
+
+    // The validity message under the date is wider than the 160px control on
+    // the small-tablet tier. In flow it stretched the date's cell and pushed
+    // the amount ~35px further away; at phone widths the date field did not
+    // fill its half, leaving ~70px of empty space beside the amount. Both
+    // tiers should measure the row's own 14px column gap.
+    for (const width of [750, 500, 430]) {
+      await calc.page.setViewportSize({ width, height: 900 })
+      const geometry = (await calc.page.evaluate(`(() => {
+        const field = document.querySelector('#approval-date').parentElement.getBoundingClientRect()
+        const amount = document.querySelector('[data-testid="starting-amount"]').parentElement.getBoundingClientRect()
+        const row = document.querySelector('.starting-point')
+        return {
+          gap: Math.max(0, field.left - amount.right, amount.left - field.right),
+          columnGap: parseFloat(getComputedStyle(row).columnGap),
+        }
+      })()`)) as { gap: number; columnGap: number }
+
+      expect(geometry.columnGap).toBeGreaterThan(0)
+      expect(
+        Math.abs(geometry.gap - geometry.columnGap),
+        `date-to-amount gap at ${width}px`,
+      ).toBeLessThanOrEqual(1)
+    }
+  })
+
+  test('the year value bubble keeps clear of the row divider', async ({ calc }) => {
+    // 481-650px: the slider shares its line with the action buttons, so the
+    // value bubble hanging under the track is what sets the row's bottom
+    // clearance. It used to end 2px above the divider.
+    for (const width of [600, 500]) {
+      await calc.page.setViewportSize({ width, height: 900 })
+      const clearance = (await calc.page.evaluate(`(() => {
+        const bubble = document.querySelector('.term-slider .slider-current').getBoundingClientRect()
+        const row = document.querySelector('.starting-point').getBoundingClientRect()
+        return Math.round(row.bottom - bubble.bottom)
+      })()`)) as number
+
+      expect(clearance, `bubble clearance at ${width}px`).toBeGreaterThanOrEqual(8)
+    }
+  })
+
+  test('the status never covers the fields or buttons of a wrapped row', async ({ calc }) => {
+    await calc.setApprovalDate(dateOnly(0))
+    await expect(calc.rateValidityChip).toBeVisible()
+
+    // Walk the tiers where the starting row wraps: a hanging chip can only
+    // land on something when its own flex line is followed by another one.
+    const readings: Array<{ overlaps: boolean; wrapped: boolean }> = []
+    for (let width = 481; width <= 1200; width += 50) {
+      await calc.page.setViewportSize({ width, height: 900 })
+      readings.push(
+        (await calc.page.evaluate(`(() => {
+          const chip = document.querySelector('[data-testid="rate-validity-chip"]').getBoundingClientRect()
+          const date = document.querySelector('#approval-date').getBoundingClientRect()
+          const actions = document.querySelector('[data-testid="starting-actions"]')
+            .getBoundingClientRect()
+          const others = Array.from(
+            document.querySelectorAll(
+              '.starting-point .starting-amount, .starting-point .term-slider, .starting-point .starting-actions',
+            ),
+          ).map((element) => element.getBoundingClientRect())
+          const overlaps = others.some(
+            (box) =>
+              chip.left < box.right &&
+              box.left < chip.right &&
+              chip.top < box.bottom &&
+              box.top < chip.bottom,
+          )
+          return { overlaps, wrapped: actions.top >= date.bottom }
+        })()`)) as { overlaps: boolean; wrapped: boolean },
+      )
+    }
+
+    // The guard is only meaningful if at least one of these widths wrapped.
+    expect(readings.some((reading) => reading.wrapped)).toBe(true)
+    expect(readings.filter((reading) => reading.overlaps)).toEqual([])
   })
 
   test('completing the day and month advances to the next segment', async ({ calc }) => {
@@ -259,6 +374,22 @@ test.describe('mortgage comparison - אישור עקרוני rate validity', () 
       'expired',
     )
     await expect(page.getByTestId('compare-approval-chip-2')).toHaveCount(0)
+  })
+
+  test('the compare date field formats one-digit parts while typing', async ({ page }) => {
+    await page.goto('/compare')
+    await expect(page.getByTestId('compare-shell')).toBeVisible()
+    await page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+    const field = page.getByTestId('compare-approval-date-1')
+    await field.fill('')
+    // Same shared control as the calculator: 30/3/2025 can be typed as
+    // 3032025, and a one-digit 4-9 gets its slash immediately.
+    await field.pressSequentially('3032025')
+    await expect(field).toHaveValue('30/3/2025')
+    await field.fill('')
+    await field.pressSequentially('452025')
+    await expect(field).toHaveValue('4/5/2025')
   })
 
   test('each mix carries its own date and status', async ({ page }) => {
@@ -377,12 +508,14 @@ test.describe('mortgage comparison - אישור עקרוני rate validity', () 
     expect(Math.abs(geometry.chipHeight - geometry.fieldHeight)).toBeLessThanOrEqual(1)
     expect(Math.abs(geometry.chipCenterY - geometry.fieldCenterY)).toBeLessThanOrEqual(1)
 
-    // And it sits beside the date, one grid gap away, never over it.
+    // And it sits beside the date, one grid gap away, never over it. The gap
+    // is measured from the control, not the label column, so it must not
+    // grow with the label's text width (the CI font made it 17px once).
     const overlap =
       Math.min(geometry.chipRight, geometry.fieldRight) -
       Math.max(geometry.chipLeft, geometry.fieldLeft)
     expect(overlap).toBeLessThanOrEqual(1)
-    expect(geometry.gap).toBeLessThanOrEqual(12)
+    expect(geometry.gap).toBeLessThanOrEqual(9)
   })
 
   test('typing 03 03 20 keeps the date and completes the year', async ({ page }) => {
@@ -505,6 +638,6 @@ test.describe('rate validity in English (LTR)', () => {
     expect(geometry.fieldWidth).toBeLessThanOrEqual(geometry.inputClientWidth + 40)
     expect(geometry.inputScrollWidth).toBeLessThanOrEqual(geometry.inputClientWidth + 1)
     expect(Math.abs(geometry.chipCenterY - geometry.fieldCenterY)).toBeLessThanOrEqual(1)
-    expect(geometry.gap).toBeLessThanOrEqual(12)
+    expect(geometry.gap).toBeLessThanOrEqual(9)
   })
 })

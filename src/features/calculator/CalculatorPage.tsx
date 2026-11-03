@@ -431,46 +431,53 @@ export function CalculatorPage() {
                 />
               </label>
 
-              <label className="term-slider" htmlFor="term-years">
-                {/* htmlFor must name the slider, not rely on nesting: the
-                    first labelable descendant is the tooltip's "?" button, so
-                    the implicit association hijacks hover and clicks from the
-                    whole label onto that button (phantom border recolor, and
-                    the label text toggling the tip open). */}
-                <span className="label-help-row">
-                  <span className="label-help-text">{t('calculator.termLabel')}</span>
-                  <HelpTooltip
-                    label={t('calculator.help.termAria')}
-                    content={t('calculator.help.term')}
-                    linkTo="/articles/mortgage-track-types"
-                    linkLabel={t('calculator.help.readMore')}
-                    testId="help-term"
+              {/* The term slider and the actions share one sub-row: on the
+                  narrow tiers they group (the buttons ride the slider's line
+                  instead of taking a line of their own); from 651px up the
+                  wrapper dissolves, so both stay direct items of the starting
+                  row as before. */}
+              <div className="starting-term-actions">
+                <label className="term-slider" htmlFor="term-years">
+                  {/* htmlFor must name the slider, not rely on nesting: the
+                      first labelable descendant is the tooltip's "?" button, so
+                      the implicit association hijacks hover and clicks from the
+                      whole label onto that button (phantom border recolor, and
+                      the label text toggling the tip open). */}
+                  <span className="label-help-row">
+                    <span className="label-help-text">{t('calculator.termLabel')}</span>
+                    <HelpTooltip
+                      label={t('calculator.help.termAria')}
+                      content={t('calculator.help.term')}
+                      linkTo="/articles/mortgage-track-types"
+                      linkLabel={t('calculator.help.readMore')}
+                      testId="help-term"
+                    />
+                  </span>
+                  <TermSlider
+                    min={1}
+                    max={MAX_YEARS}
+                    value={store.termYears}
+                    onValueChange={(value) => store.setTermYears(value)}
+                    labelLow="1"
+                    labelHigh={String(MAX_YEARS)}
+                    ariaLabel={t('calculator.termLabel')}
+                    testId="term-years"
                   />
-                </span>
-                <TermSlider
-                  min={1}
-                  max={MAX_YEARS}
-                  value={store.termYears}
-                  onValueChange={(value) => store.setTermYears(value)}
-                  labelLow="1"
-                  labelHigh={String(MAX_YEARS)}
-                  ariaLabel={t('calculator.termLabel')}
-                  testId="term-years"
-                />
-              </label>
+                </label>
 
-              {/* Show payments is the primary action and the save control is
-                  its peer: both act on the mix the user has built, so they
-                  share one cell and the same button treatment. */}
-              <div className="starting-actions" data-testid="starting-actions">
-                <button
-                  className="calculate-button starting-calculate-button"
-                  type="submit"
-                  data-testid="show-payments"
-                >
-                  <span>{t('calculator.showPayments')}</span>
-                </button>
-                <SaveMixButton />
+                {/* Show payments is the primary action and the save control is
+                    its peer: both act on the mix the user has built, so they
+                    share one cell and the same button treatment. */}
+                <div className="starting-actions" data-testid="starting-actions">
+                  <button
+                    className="calculate-button starting-calculate-button"
+                    type="submit"
+                    data-testid="show-payments"
+                  >
+                    <span>{t('calculator.showPayments')}</span>
+                  </button>
+                  <SaveMixButton />
+                </div>
               </div>
 
             </div>

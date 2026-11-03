@@ -29,12 +29,12 @@ export function RateValidityChip({
   if (!validity) return null
 
   return (
-    <p
+    <span
       className={cn('rate-validity-chip', validity.status, className)}
       data-testid={testId}
       data-status={validity.status}
     >
       {rateValidityText(validity, t, i18n.language)}
-    </p>
+    </span>
   )
 }

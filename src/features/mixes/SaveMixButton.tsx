@@ -209,9 +209,20 @@ export function SaveMixButton() {
     }
   }
 
-  // Reserves the button's slot while the session resolves, so the primary
-  // action does not jump when the save control appears next to it.
-  if (sessionPending) return <span className="save-mix-placeholder" aria-hidden="true" />
+  // Reserves the save control's exact box while the session resolves: the same
+  // button classes and the same label, hidden. A zero-width placeholder let
+  // the control pop in late and resize the action row (the slider is on that
+  // row now), so the slot must be the real width from the first paint.
+  if (sessionPending) {
+    return (
+      <span
+        aria-hidden="true"
+        className="calculate-button save-mix-button save-mix-placeholder"
+      >
+        {t('savedMixes.signIn')}
+      </span>
+    )
+  }
 
   return (
     <>

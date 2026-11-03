@@ -136,6 +136,29 @@ export interface DateSegments {
 
 const DATE_SEGMENTS: readonly DateSegmentKey[] = ['day', 'month', 'year']
 const DATE_SEGMENT_MAX: Record<DateSegmentKey, number> = { day: 2, month: 2, year: 4 }
+/** The largest value a segment may hold, whatever its length. The year stays
+    free-form until the whole date is parsed. */
+const DATE_SEGMENT_LIMIT: Partial<Record<DateSegmentKey, number>> = { day: 31, month: 12 }
+
+/**
+ * Drops trailing digits from a rebuilt segment until it fits its calendar
+ * range, so a pasted or otherwise regrouped date cannot carry 32/13 into the
+ * field. Real-calendar checks (31/02, a leap day) still happen on parse, where
+ * the text is kept so it can be corrected.
+ */
+function fitSegment(key: DateSegmentKey, value: string): string {
+  const limit = DATE_SEGMENT_LIMIT[key]
+  if (limit === undefined) return value
+  let digits = value
+  while (digits !== '' && Number(digits) > limit) digits = digits.slice(0, -1)
+  return digits
+}
+
+const fitSegments = (segments: DateSegments): DateSegments => ({
+  day: fitSegment('day', segments.day),
+  month: fitSegment('month', segments.month),
+  year: segments.year,
+})
 
 interface DateSlot {
   key: DateSegmentKey
@@ -164,20 +187,20 @@ export function segmentsFromText(text: string): DateSegments {
     result.day = clampSegment('day', digits.slice(0, 2))
     result.month = clampSegment('month', digits.slice(2, 4))
     result.year = clampSegment('year', digits.slice(4))
-    return result
+    return fitSegments(result)
   }
 
   if (parts.length >= 3 && parts[0].length === 4) {
     result.year = clampSegment('year', parts[0])
     result.month = clampSegment('month', parts[1] ?? '')
     result.day = clampSegment('day', parts[2] ?? '')
-    return result
+    return fitSegments(result)
   }
 
   result.day = clampSegment('day', parts[0] ?? '')
   result.month = clampSegment('month', parts[1] ?? '')
   result.year = clampSegment('year', parts[2] ?? '')
-  return result
+  return fitSegments(result)
 }
 
 /**
@@ -262,8 +285,11 @@ function diffText(previous: string, next: string): TextDiff {
  * month into the year, which is why editing a full date used to jump to the
  * end. Here a removed or inserted digit stays inside the slot the caret is in,
  * separators only move the caret, and deleting a separator deletes the digit
- * before it. The returned caret is where the field should put it after the
- * edit, so the browser's default caret jump is undone.
+ * before it. A digit that cannot fit the current slot (day 32, month 13)
+ * starts the next slot when the visitor is extending a one-digit part, and a
+ * slash is shown as soon as a part can no longer grow (two digits, or a
+ * one-digit 4-9). The returned caret is where the field should put it after
+ * the edit, so the browser's default caret jump is undone.
  */
 export function editDateText(
   previousText: string,
@@ -350,36 +376,70 @@ export function editDateText(
   let grew = false
   let target = cursor
   if (insertedDigits !== '') {
-    let value = segments[cursor.key]
+    let key = cursor.key
+    let value = segments[key]
     let at = Math.min(cursor.offset, value.length)
     // Pasting a whole segment over a full one replaces it rather than keeping
     // only its last digit.
-    if (value.length === DATE_SEGMENT_MAX[cursor.key] && insertedDigits.length > 1) {
+    if (value.length === DATE_SEGMENT_MAX[key] && insertedDigits.length > 1) {
       at = 0
     }
     for (const digit of insertedDigits) {
-      if (value.length < DATE_SEGMENT_MAX[cursor.key]) {
+      const max = DATE_SEGMENT_MAX[key]
+      const limit = DATE_SEGMENT_LIMIT[key]
+      const fits = (candidate: string) => limit === undefined || Number(candidate) <= limit
+      if (value.length < max) {
         at = Math.min(at, value.length)
-        value = value.slice(0, at) + digit + value.slice(at)
-        at += 1
-        grew = true
+        const next = value.slice(0, at) + digit + value.slice(at)
+        if (fits(next)) {
+          value = next
+          at += 1
+          grew = true
+          continue
+        }
       } else {
-        const replaceAt = Math.min(at, DATE_SEGMENT_MAX[cursor.key] - 1)
-        value = value.slice(0, replaceAt) + digit + value.slice(replaceAt + 1)
-        at = replaceAt + 1
+        const replaceAt = Math.min(at, max - 1)
+        const next = value.slice(0, replaceAt) + digit + value.slice(replaceAt + 1)
+        if (fits(next)) {
+          value = next
+          at = replaceAt + 1
+          continue
+        }
+      }
+
+      // The digit cannot extend this part (a day above 31, a month above 12).
+      // When the visitor is extending a one-digit part and nothing later has
+      // been entered, the digit starts the next part instead of being dropped:
+      // 30/3 followed by 2 keeps going as 30/3/2 rather than stalling at 30/3.
+      const index = DATE_SEGMENTS.indexOf(key)
+      const nextKey = DATE_SEGMENTS[index + 1]
+      const restEmpty = DATE_SEGMENTS.slice(index + 1).every((part) => segments[part] === '')
+      if (value.length === 1 && at === value.length && nextKey !== undefined && restEmpty) {
+        segments[key] = value
+        key = nextKey
+        value = digit
+        at = 1
+        grew = true
       }
     }
-    segments[cursor.key] = value
-    target = { key: cursor.key, offset: at }
+    segments[key] = value
+    target = { key, offset: at }
   }
 
-  const nextKey = DATE_SEGMENTS[DATE_SEGMENTS.indexOf(target.key) + 1]
+  // A slash appears once the part cannot grow any further: a full two-digit
+  // day or month, or a one-digit 4-9 (no day 40+ or month 40+ exists). Parts
+  // 1-3 wait for a possible second digit (10-31, 10-12). Nothing is appended
+  // when a later part already holds a value, so a gap in the middle of an
+  // existing date is never closed by a slash at the end.
+  const targetIndex = DATE_SEGMENTS.indexOf(target.key)
+  const restEmpty = DATE_SEGMENTS.slice(targetIndex + 1).every((part) => segments[part] === '')
   const autoAdvance =
     insertedDigits !== '' &&
     grew &&
     target.key !== 'year' &&
-    target.offset === DATE_SEGMENT_MAX[target.key] &&
-    (nextKey === undefined || segments[nextKey] === '')
+    restEmpty &&
+    (target.offset === DATE_SEGMENT_MAX[target.key] ||
+      (target.offset === 1 && Number(segments[target.key]) >= 4))
 
   let text = renderDateSegments(segments)
   let caret = caretPositionFor(segments, target.key, target.offset)

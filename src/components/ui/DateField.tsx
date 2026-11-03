@@ -32,7 +32,10 @@ export interface DateFieldProps {
  * own digits, so deleting the year continues into the month instead of
  * stopping, and typing inside the month never pushes digits into the year.
  * The caret is restored after every edit, because a controlled input otherwise
- * jumps to the end when React rewrites the value.
+ * jumps to the end when React rewrites the value. A slash appears as soon as a
+ * part cannot grow (two digits, or a one-digit 4-9), and a digit that would
+ * make an impossible day or month starts the next part when the visitor is
+ * extending a one-digit part.
  *
  * A two-digit year is completed on blur (03/03/20 -> 03/03/2020) rather than
  * mid-typing, so the field never jumps while the visitor is still entering

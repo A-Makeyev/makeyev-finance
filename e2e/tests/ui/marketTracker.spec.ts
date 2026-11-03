@@ -126,6 +126,18 @@ async function expectLoopToCoverViewport(page: Page, width: number): Promise<voi
     return tracks.length > 0 && tracks.every((track) => track.children.length === ${MARQUEE_COPIES})
   })()`)
 
+  // Copies are identical, but a font swap or a skeleton -> numbers commit can
+  // land between the ready signal and this read, leaving one copy measured at
+  // a stale width. Wait for the copies to agree before reading the geometry;
+  // if they never do, this times out and the run is a real failure.
+  await page.waitForFunction(`(() => {
+    const tracks = [...document.querySelectorAll('.indexes-track, .markets-track')]
+    return tracks.every((track) => {
+      const widths = [...track.children].map((group) => group.getBoundingClientRect().width)
+      return Math.max(...widths) - Math.min(...widths) < 1
+    })
+  })()`)
+
   const tracks = (await page.evaluate(
     `(() => {
       const tracks = [...document.querySelectorAll('.indexes-track, .markets-track')]

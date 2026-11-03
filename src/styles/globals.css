@@ -4320,9 +4320,30 @@ e #name,
   padding-bottom: 48px;
 }
 
-.starting-point>label {
+/* The chip is out of flow, so it hangs past the bottom edge of the row. The
+   padding above only covers it when the date is on the LAST flex line; if the
+   row wraps (the action buttons drop to a second line on mid-width screens),
+   the chip used to land on top of them. Widen the line gap to the chip's own
+   height, so a wrapped line always starts below the message. */
+@media (min-width: 801px) {
+  .starting-point:has(.starting-approval-status) {
+    row-gap: 48px;
+  }
+}
+
+/* Descendant, not direct child: the term slider is wrapped in
+   .starting-term-actions on the narrow tiers (see the end of the file), so a
+   child selector would drop its column layout there. */
+.starting-point label {
   display: flex;
   flex-direction: column;
+}
+
+/* The term slider and the action controls share one sub-row on the narrow
+   tiers. Above them the wrapper dissolves, keeping both as flex items of the
+   starting row exactly as before. */
+.starting-term-actions {
+  display: contents;
 }
 
 /* אישור עקרוני approval date: the offer's date on the starting row, before
@@ -4343,6 +4364,7 @@ e #name,
   /* start = right in Hebrew, left in English, the same edge as the input */
   inset-inline-start: 0;
   inset-block-start: calc(100% + 6px);
+  margin-top: 2px;
   display: flex;
   justify-content: flex-start;
 }
@@ -5907,10 +5929,11 @@ html[dir='ltr'] .date-field {
   white-space: nowrap;
 }
 
-/* Reserves the save button's slot while the session is still loading. */
+/* Reserves the save control's slot while the session is still loading. It
+   carries the real button classes and label, so it is exactly as wide and
+   tall as the button that replaces it; only its paint is hidden. */
 .save-mix-placeholder {
-  display: block;
-  min-height: 46px;
+  visibility: hidden;
 }
 
 .save-mix-notice {
@@ -9155,7 +9178,7 @@ tbody tr:hover {
   }
 
   .starting-point {
-    gap: 20px;
+    gap: 15px;
     padding-bottom: 18px;
     margin-bottom: 16px;
   }
@@ -9580,6 +9603,12 @@ tbody tr:hover {
 
   .starting-point:has(.starting-approval-status) {
     padding-bottom: 24px;
+    /* The status makes the date column taller than the amount column. With
+       the row's flex-end alignment the amount was pushed down by the chip's
+       own height, so the two fields no longer shared a line. Top-aligning
+       keeps the labels and fields together and lets the message hang below
+       the date, into the row's own height. */
+    align-items: flex-start;
   }
 
   .starting-approval,
@@ -9695,9 +9724,13 @@ tbody tr:hover {
 
   /* The date field fills its own cell (and hugs its 160px box on the wide
      tier): its label's 220px flex basis otherwise left ~60px of empty space
-     before the amount sitting beside it. */
+     before the amount sitting beside it. The basis MUST stay out of this
+     tier: the approval block is a flex COLUMN here, so a 160px basis is a
+     160px HEIGHT - the date block grew past its field and the amount, bottom-
+     aligned beside it, sat ~100px lower. The width rule on the input below
+     already sizes the field here. */
   .starting-approval .rate-validity-field {
-    flex: 1 1 160px;
+    flex: 0 0 auto;
     max-width: 100%;
   }
 
@@ -9723,6 +9756,22 @@ tbody tr:hover {
   }
 }
 
+/* The date cell hugs its 160px control here, but the validity message under
+   it is wider (~194px). In flow it stretched the whole cell, so the loan
+   amount beside it sat ~35px further away than the 14px column gap. Let the
+   message hang past the cell instead: it is below the field, in the row's
+   empty bottom band, and no longer sets the cell's width. The chip keeps one
+   line so a zero-width box does not squeeze it into a narrow column. */
+@media (min-width: 651px) and (max-width: 800px) {
+  .starting-approval-status {
+    inline-size: 0;
+  }
+
+  .starting-approval-status .rate-validity-chip {
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 650px) {
 
   /* Small phones: trim the calculator's type scale and control heights one
@@ -9740,6 +9789,13 @@ tbody tr:hover {
   .starting-amount {
     flex: 1 1 0;
     min-width: 0;
+  }
+
+  /* Equal halves only read that way when the date field fills its half: the
+     label column otherwise hugged its text (~144px) and left ~70px of empty
+     space between the date and the amount beside it. */
+  .starting-approval .rate-validity-field {
+    align-self: stretch;
   }
 
   .starting-approval .input-wrap,
@@ -11178,6 +11234,16 @@ html[dir='rtl'] .comment-text {
    width and position whether or not a message is shown. Matching the date
    control's height centers the message on the field instead of hanging it at
    the bottom edge. */
+/* The chip's positioning context is the date control itself, not the label
+   column: the label text can be wider than the 14ch box, by a font-dependent
+   few pixels, which left a gap that changed with the font. */
+.compare-approval-row .compare-date-line {
+  position: relative;
+  display: block;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+}
+
 /* The status sits on the date's own line, out of grid flow. It starts one
    column gap past the date field's inline end (right in Hebrew, left in
    English) and matches the field's height, so the message is centered on the
@@ -11231,7 +11297,16 @@ html[dir='rtl'] .comment-text {
   }
 
   /* The shared grid is gone below tablet width: the date hugs its text again,
-     and the status returns to the flex row beside it. */
+     and the status returns to the flow beside it. The wrapper keeps the two
+     together as the label's own line, so they still wrap as one pair. */
+  .compare-approval-row .compare-date-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px 12px;
+    inline-size: auto;
+  }
+
   .compare-approval-row .input-wrap {
     block-size: auto;
     inline-size: fit-content;
@@ -12312,6 +12387,86 @@ html[dir='rtl'] .comment-text {
 .starting-actions>.my-mixes-menu-wrap>.calculate-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(8, 127, 120, 0.14);
+}
+
+/* On the narrow tiers the actions ride the term slider's line instead of
+   taking a line of their own; the slider gives up the width so the controls
+   (Show payments, saved mixes, save) fit beside it. The scoped selectors beat
+   the tier rules above that give the slider and the actions a full line. */
+@media (max-width: 650px) {
+  .starting-term-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    column-gap: 14px;
+    row-gap: 12px;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  /* 90px is the floor: with three controls beside it the track still gets
+     ~120px at 503px and ~100px at 481px. */
+  .starting-term-actions>.term-slider {
+    flex: 1 1 120px;
+    min-width: 90px;
+    width: auto;
+    margin-block: 0;
+  }
+
+  /* Content-sized and shrinkable: a narrower viewport wraps the buttons
+     inside this cell instead of pushing the slider off the line. */
+  .starting-term-actions>.starting-actions {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  /* The three signed-in controls share the line with the slider. Compact them
+     and drop the saved-mixes count (the trigger still names the mixes; the
+     count is on the profile) so all three fit instead of wrapping under the
+     slider's value bubble. */
+  .starting-term-actions>.starting-actions .calculate-button {
+    padding: 8px 9px;
+    font-size: 0.8rem;
+  }
+
+  .starting-term-actions>.starting-actions [data-testid='save-mix-count'] {
+    display: none;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 650px) {
+
+  /* One line, not two: the controls may shrink and wrap internally rather
+     than drop below the slider. */
+  .starting-term-actions {
+    flex-wrap: nowrap;
+  }
+
+  /* The year value bubble hangs below the track. With the slider sharing the
+     line with the action buttons, its overhang used to end 2px above the
+     row's divider; give it the same clearance the other tiers have. */
+  .starting-point,
+  .starting-point:has(.starting-approval-status) {
+    padding-bottom: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+
+  /* Below this the three controls and a usable track cannot share a line, so
+     the slider and the actions keep their own full-width lines. */
+  .starting-term-actions>.term-slider {
+    flex: 1 1 100%;
+    min-width: 0;
+    /* Clear the value bubble hanging under the track before the actions. */
+    margin-block: 16px 24px;
+  }
+
+  .starting-term-actions>.starting-actions {
+    flex: 1 1 100%;
+    width: 100%;
+  }
 }
 
 /* ---------------------------------------------------------------------------
