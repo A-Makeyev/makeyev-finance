@@ -558,71 +558,67 @@ export function ComparePage() {
         className="compare-scenario-editor"
         data-testid={`compare-scenario-editor-${scenarioIndex + 1}`}
       >
-        <div className="compare-scenario-head">
-          <input
-            type="text"
-            className="compare-scenario-name"
-            value={scenario.label}
-            placeholder={t('compare.scenarioUntitle', { index: scenarioIndex + 1 })}
-            aria-label={t('compare.scenarioLabelAria')}
-            name={`compare-scenario-name-${scenarioIndex + 1}`}
-            data-testid={`compare-scenario-name-${scenarioIndex + 1}`}
-            onChange={(event) => actions.setLabel(scenario.id, event.target.value)}
-          />
-          {scenarios.length < MAX_TRACKS && (
-            <button
-              type="button"
-              className="compare-icon-button"
-              aria-label={t('compare.scenarioDuplicate')}
-              data-testid={`compare-duplicate-${scenarioIndex + 1}`}
-              onClick={() => actions.duplicateScenario(scenario.id)}
-            >
-              ⧉
-            </button>
-          )}
-          {scenarios.length > 2 && (
-            <button
-              type="button"
-              className="compare-icon-button"
-              aria-label={t('compare.scenarioRemove')}
-              data-testid={`compare-scenario-remove-${scenarioIndex + 1}`}
-              onClick={() => actions.removeScenario(scenario.id)}
-            >
-              ×
-            </button>
-          )}
-        </div>{' '}
-        {/* תקופה: the scenario's single term control. It drives every track in
-            the scenario (there is no per-track term here - the calculator's
-            four per-track fields plus a scenario slider read as two תקופה
-            inputs in one column). It sits above the mixes because it defines
-            the term every mix below is priced at. */}
-        <label className="compare-term-row">
-          {t('compare.scenarioTermLabel')}
-          <TermSlider
-            min={1}
-            max={MAX_YEARS}
-            value={scenario.termYears}
-            onValueChange={(value) => actions.setScenarioTermYears(scenario.id, value)}
-            labelLow="1"
-            labelHigh={String(MAX_YEARS)}
-            ariaLabel={t('compare.scenarioTermLabel')}
-            testId={`compare-term-${scenarioIndex + 1}`}
-          />
-          <span>
-            {scenario.termYears} {t('compare.scenarioTermSuffix')}
-          </span>
-        </label>
-        {/* אישור עקרוני: each mix is its own offer, so each carries its own
-            approval date (and its own result, since offers compared side by
-            side rarely share one). The field, chip and hint are shared with
-            the calculator. htmlFor names the input directly: the tooltip's
-            "?" button is the label's first labelable descendant. The date and
-            the preset row share one grid, but the date field hugs its own
-            dd/mm/yyyy text at the reading start rather than stretching across
-            two presets. The status lives in the same field box but is
-            positioned out of grid flow, so showing it can never resize the
-            date or move the mixes. */}
+        <div className="compare-scenario-header">
+          <div className="compare-scenario-head">
+            <input
+              type="text"
+              className="compare-scenario-name"
+              value={scenario.label}
+              placeholder={t('compare.scenarioUntitle', { index: scenarioIndex + 1 })}
+              aria-label={t('compare.scenarioLabelAria')}
+              name={`compare-scenario-name-${scenarioIndex + 1}`}
+              data-testid={`compare-scenario-name-${scenarioIndex + 1}`}
+              onChange={(event) => actions.setLabel(scenario.id, event.target.value)}
+            />
+            <div className="compare-scenario-actions">
+              {scenarios.length < MAX_TRACKS && (
+                <button
+                  type="button"
+                  className="compare-icon-button"
+                  aria-label={t('compare.scenarioDuplicate')}
+                  data-testid={`compare-duplicate-${scenarioIndex + 1}`}
+                  onClick={() => actions.duplicateScenario(scenario.id)}
+                >
+                  ⧉
+                </button>
+              )}
+              {scenarios.length > 2 && (
+                <button
+                  type="button"
+                  className="compare-icon-button"
+                  aria-label={t('compare.scenarioRemove')}
+                  data-testid={`compare-scenario-remove-${scenarioIndex + 1}`}
+                  onClick={() => actions.removeScenario(scenario.id)}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </div>
+          {/* תקופה: the scenario's single term control. It drives every track in
+              the scenario (there is no per-track term here - the calculator's
+              four per-track fields plus a scenario slider read as two תקופה
+              inputs in one column). It sits above the mixes because it defines
+              the term every mix below is priced at. */}
+          <label className="compare-term-row">
+            {t('compare.scenarioTermLabel')}
+            <TermSlider
+              min={1}
+              max={MAX_YEARS}
+              value={scenario.termYears}
+              onValueChange={(value) => actions.setScenarioTermYears(scenario.id, value)}
+              labelLow="1"
+              labelHigh={String(MAX_YEARS)}
+              ariaLabel={t('compare.scenarioTermLabel')}
+              testId={`compare-term-${scenarioIndex + 1}`}
+            />
+            <span>
+              {t('compare.scenarioTermSuffix')}
+            </span>
+          </label>
+        </div>
+        {/* Each offer keeps its approval date and validity message together.
+            The message wraps beside the date without changing sides. */}
         <div className="compare-offer-controls">
           <div className="compare-approval-row">
             <div className="compare-approval-field">
@@ -638,11 +634,6 @@ export function ComparePage() {
                     testId={`help-approval-date-${scenarioIndex + 1}`}
                   />
                 </span>
-                {/* The status is anchored to the control, not to the label
-                    column: the label text can be a few pixels wider than the
-                    date box (and how much depends on the font), so anchoring
-                    to the column left a font-dependent gap. The wrapper is
-                    exactly the date box, and the chip sits one gap past it. */}
                 <span className="compare-date-line">
                   <span className="input-wrap">
                     <DateField

@@ -11134,13 +11134,13 @@ html[dir='rtl'] .comment-text {
 
 .compare-editors-grid {
   display: grid;
-  /* Three mixes per row on a desktop shell; the compact payments table fits the
-     narrower card. `min(100%, 360px)` lets a single column shrink on phones. */
+  /* Wide screens can fit three cards; narrower screens keep a pair. */
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
   gap: 20px;
 }
 
 .compare-scenario-editor {
+  min-inline-size: 0;
   background: var(--calc-paper);
   border: 1px solid rgba(8, 127, 120, 0.14);
   box-shadow: 0 20px 55px rgba(22, 50, 53, 0.1);
@@ -11170,16 +11170,9 @@ html[dir='rtl'] .comment-text {
 /* אישור עקרוני approval date in a scenario column: the calculator's field +
    validity chip, on one wrapping row between the term slider and the preset
    buttons. Each mix carries its own date, so the row is per scenario. */
-/* The date field and the preset row share one four-column grid, but the date
-   field does NOT stretch across preset columns: two presets made it much wider
-   than dd/mm/yyyy needs. It hugs its own text at the reading start and the
-   chip follows its inline end; both are out of grid sizing, so the preset list
-   keeps its exact columns in either direction. */
+/* Date and status stay in the same two-column row at every card width. */
 .compare-offer-controls {
-  /* The date control's height is shared by the field and its status message,
-     so the two align even though the message is out of flow. */
   --compare-date-height: 37px;
-  position: relative;
   display: grid;
   grid-template-columns: repeat(4, max-content);
   column-gap: 8px;
@@ -11192,33 +11185,24 @@ html[dir='rtl'] .comment-text {
   display: contents;
 }
 
-/* The date and its status are one field box at the grid's reading start. The
-   box takes the full row's width as available space but justifies to its own
-   content, so the date stays narrow; the status is positioned off the box's
-   inline end, anchored to the input without taking part in grid sizing. */
 .compare-approval-field {
-  position: relative;
   grid-column: 1 / -1;
   grid-row: 1;
-  justify-self: start;
-  align-self: end;
-  inline-size: fit-content;
-  max-inline-size: 100%;
-  min-width: 0;
+  min-inline-size: 0;
+  /* Only presets size the shared columns; status text wraps within them. */
+  contain: inline-size;
 }
 
 .compare-approval-row .input-group {
-  min-width: 0;
+  min-inline-size: 0;
+  inline-size: 100%;
 }
 
-/* The wrapper hugs the date field (the shared 14ch plus the calendar mark),
-   so the control is as wide as its value needs, not as wide as the grid. The
-   status message is out of flow, so nothing that appears inside it can
-   change the presets. */
 .compare-approval-row .input-wrap {
-  width: fit-content;
-  max-width: 100%;
+  inline-size: fit-content;
+  max-inline-size: 100%;
   block-size: var(--compare-date-height);
+  margin: 0;
 }
 
 .compare-approval-row .date-field {
@@ -11228,38 +11212,28 @@ html[dir='rtl'] .comment-text {
   font-size: 0.9rem;
 }
 
-/* The status sits on the date's own line, out of grid flow. As an absolutely
-   positioned grid item it is placed in the two preset columns beside the date
-   but contributes nothing to their sizing, so the mixes keep their exact
-   width and position whether or not a message is shown. Matching the date
-   control's height centers the message on the field instead of hanging it at
-   the bottom edge. */
-/* The chip's positioning context is the date control itself, not the label
-   column: the label text can be wider than the 14ch box, by a font-dependent
-   few pixels, which left a gap that changed with the font. */
 .compare-approval-row .compare-date-line {
-  position: relative;
-  display: block;
-  inline-size: fit-content;
-  max-inline-size: 100%;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  inline-size: 100%;
+  margin-block-start: 7px;
 }
 
-/* The status sits on the date's own line, out of grid flow. It starts one
-   column gap past the date field's inline end (right in Hebrew, left in
-   English) and matches the field's height, so the message is centered on the
-   input and the mixes keep their exact width and position whether or not a
-   message is shown. */
 .compare-approval-row .rate-validity-chip {
-  position: absolute;
-  inset-block-end: 0;
-  inset-inline-start: calc(100% + 8px);
   display: flex;
   align-items: center;
-  block-size: var(--compare-date-height);
-  inline-size: max-content;
-  white-space: nowrap;
-  font-size: 0.8rem;
-  padding: 5px 8px;
+  justify-self: start;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-block-size: var(--compare-date-height);
+  min-inline-size: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  padding: 2px 6px;
 }
 
 /* Preset mixes (תמהיל 1-4): the calculator's .preset-list/.preset-button
@@ -11282,44 +11256,9 @@ html[dir='rtl'] .comment-text {
     display: block;
   }
 
-  /* No shared grid to hug: the field box dissolves and its label and status
-     become the wrapping row's own items again. */
-  .compare-approval-field {
-    display: contents;
-  }
-
   .compare-approval-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 8px 12px;
-    margin-block-end: 12px;
-  }
-
-  /* The shared grid is gone below tablet width: the date hugs its text again,
-     and the status returns to the flow beside it. The wrapper keeps the two
-     together as the label's own line, so they still wrap as one pair. */
-  .compare-approval-row .compare-date-line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 8px 12px;
-    inline-size: auto;
-  }
-
-  .compare-approval-row .input-wrap {
-    block-size: auto;
-    inline-size: fit-content;
-  }
-
-  .compare-approval-row .date-field {
-    inline-size: 14ch;
-  }
-
-  .compare-approval-row .rate-validity-chip {
-    position: static;
-    block-size: auto;
     display: block;
+    margin-block-end: 12px;
   }
 
   .compare-preset-list {
@@ -11365,38 +11304,69 @@ html[dir='rtl'] .comment-text {
   color: var(--danger);
 }
 
-/* Scenario term row: the slider claims its own full-width line under the
-   "term" label / "N years" value pair (it was squeezed into 187px of the row
-   and wrapped unpredictably at narrow column widths). The bottom padding
-   mirrors .starting-point on the calculator page - it reserves the strip the
-   slider's value bubble drops into, so the bubble clears the preset buttons
-   that follow it. */
+/* Name and term share the header in either reading direction. */
+.compare-editor-cell {
+  min-inline-size: 0;
+  container-type: inline-size;
+}
+
+.compare-scenario-header {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding-block-end: 24px;
+  margin-block-end: 18px;
+  border-block-end: 1px solid var(--calc-line);
+}
+
+.compare-scenario-head {
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-block-start: 36px;
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.compare-scenario-name {
+  flex-basis: 100%;
+  inline-size: 100%;
+}
+
+/* Actions sit above the name at the card's reading edge. */
+.compare-scenario-actions {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: flex;
+  gap: 4px;
+}
+
 .compare-term-row {
   display: flex;
+  font-size: 0.8rem;
   align-items: center;
   justify-content: space-between;
-  gap: 6px 12px;
-  padding-bottom: 24px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid var(--calc-line);
+  gap: 6px;
   color: var(--calc-ink);
   flex-wrap: wrap;
+  min-inline-size: 0;
 }
 
 .compare-term-row>span {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--calc-teal-dark);
 }
 
 .compare-term-row .term-slider-wrap {
-  /* order 2: the "N years" value stays on the label line (visually after the
-     label), while the slider wraps below both. */
+  /* Keep the labels above and align the slider with the scenario name input. */
   order: 2;
   flex: 1 1 100%;
   min-width: 0;
   height: 44px;
-  margin-top: 0;
+  margin-block-start: 8px;
 }
 
 .compare-term-row .slider-current {
@@ -11545,21 +11515,9 @@ html[dir='rtl'] .comment-text {
 
 .compare-results-grid {
   display: grid;
-  /* Three mixes per row on a desktop shell, matching the editors grid, so the
-     cards stay under their mix. `min(100%, 360px)` shrinks a single column on
-     phone-width shells. */
+  /* Match the editors so each result stays under its mix. */
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
   gap: 20px;
-}
-
-/* Below the wide layout each scenario gets the whole row: a card halved into
-   ~550px was the point where the mix summary and the payments table started
-   squeezing. One per row keeps everything readable. */
-@media (max-width: 1160px) {
-  .compare-results-grid,
-  .compare-editors-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .compare-result-card {
@@ -12568,4 +12526,35 @@ html[dir='rtl'] .comment-text {
 
 .rates-num {
   font-variant-numeric: tabular-nums;
+}
+
+/* Keep compact cards readable based on their own width, not the viewport. */
+@container (max-width: 500px) {
+  .compare-shell .compare-track {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .compare-offer-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .compare-preset-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+
+}
+
+@media (max-width: 767px) {
+  .compare-results-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1160px) {
+  .compare-editors-grid,
+  .compare-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
