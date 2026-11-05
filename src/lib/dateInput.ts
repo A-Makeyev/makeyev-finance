@@ -439,7 +439,7 @@ export function editDateText(
     target.key !== 'year' &&
     restEmpty &&
     (target.offset === DATE_SEGMENT_MAX[target.key] ||
-      (target.offset === 1 && Number(segments[target.key]) >= 4))
+      (target.offset === 1 && Number(segments[target.key]) >= (target.key === 'month' ? 2 : 4)))
 
   let text = renderDateSegments(segments)
   let caret = caretPositionFor(segments, target.key, target.offset)

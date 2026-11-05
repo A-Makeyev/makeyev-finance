@@ -408,15 +408,13 @@ export function CalculatorPage() {
                 {/* The validity status hangs directly under the date input it
                     describes. Out of flow, so a long message never lifts the
                     date field away from the loan amount next to it. */}
-                {store.approvalDateText && (
-                  <div className="starting-approval-status">
-                    <RateValidityChip
-                      approvalDate={store.approvalDateText}
-                      testId="rate-validity-chip"
-                      className="rate-validity-row-chip"
-                    />
-                  </div>
-                )}
+                <div className="starting-approval-status">
+                  <RateValidityChip
+                    approvalDate={store.approvalDateText}
+                    testId="rate-validity-chip"
+                    className="rate-validity-row-chip"
+                  />
+                </div>
               </div>
 
               <label className="starting-amount">

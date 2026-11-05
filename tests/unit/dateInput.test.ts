@@ -222,6 +222,8 @@ describe('editDateText', () => {
   })
 
   it('accepts typed separators and pasted dates', () => {
+    expect(editDateText('31/', '31/ ', 4)).toEqual({ text: '31/', caret: 3 })
+    expect(editDateText('31/', '31//', 4)).toEqual({ text: '31/', caret: 3 })
     expect(editDateText('3', '3/', 2)).toEqual({ text: '3/', caret: 2 })
     expect(editDateText('3/', '3/3/', 4)).toEqual({ text: '3/3/', caret: 4 })
     expect(editDateText('', '2026-02-17', 10)).toEqual({
@@ -237,7 +239,7 @@ describe('editDateText', () => {
   it('moves a digit that cannot fit the part into the next part', () => {
     // A one-digit day or month that would go above its limit hands the digit
     // to the next part instead of stalling, so the year can still be typed.
-    expect(editDateText('3', '32', 2)).toEqual({ text: '3/2', caret: 3 })
+    expect(editDateText('3', '32', 2)).toEqual({ text: '3/2/', caret: 4 })
     expect(editDateText('30/3', '30/32', 5)).toEqual({ text: '30/3/2', caret: 6 })
     // No part ever holds an out-of-range day or month.
     expect(segmentsFromText('3/2')).toEqual({ day: '3', month: '2', year: '' })
@@ -249,6 +251,7 @@ describe('editDateText', () => {
   })
 
   it('shows the slash as soon as a part cannot grow', () => {
+    expect(editDateText('31/', '31/2', 4)).toEqual({ text: '31/2/', caret: 5 })
     // 4-9 cannot be the first of a two-digit day or month.
     expect(editDateText('', '4', 1)).toEqual({ text: '4/', caret: 2 })
     expect(editDateText('4/', '4/5', 3)).toEqual({ text: '4/5/', caret: 4 })

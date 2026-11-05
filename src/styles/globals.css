@@ -4309,25 +4309,20 @@ e #name,
      approval date matches the space between the purpose and property fields. */
   gap: 20px 18px;
   padding-bottom: 24px;
-  margin-bottom: 22px;
+  margin-bottom: 12px;
   border-bottom: 1px solid var(--calc-line);
 }
 
-/* When the validity message hangs under the date, its 33px chip plus the 6px
-   gap need room below the row before the border. Absolute positioning keeps
+/* Reserve room for the plain validity text below the date. Positioning keeps
    the date input itself aligned with the loan amount. */
 .starting-point:has(.starting-approval-status) {
-  padding-bottom: 48px;
+  padding-bottom: 34px;
 }
 
-/* The chip is out of flow, so it hangs past the bottom edge of the row. The
-   padding above only covers it when the date is on the LAST flex line; if the
-   row wraps (the action buttons drop to a second line on mid-width screens),
-   the chip used to land on top of them. Widen the line gap to the chip's own
-   height, so a wrapped line always starts below the message. */
+/* Keep wrapped controls below the message, with room for one text line. */
 @media (min-width: 801px) {
   .starting-point:has(.starting-approval-status) {
-    row-gap: 48px;
+    row-gap: 32px;
   }
 }
 
@@ -4360,6 +4355,8 @@ e #name,
 }
 
 .starting-approval-status {
+  /* Reserve one text line before a date is entered. */
+  min-block-size: calc(0.8rem * 1.4);
   position: absolute;
   /* start = right in Hebrew, left in English, the same edge as the input */
   inset-inline-start: 0;
@@ -4372,6 +4369,10 @@ e #name,
 /* A single line under the narrow date field; the chip may run past the field's
    width, but it sits in the empty space below the row, never on another field. */
 .starting-approval-status .rate-validity-chip {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.8rem;
   white-space: nowrap;
 }
 
@@ -8152,6 +8153,19 @@ html[dir='ltr'] .date-field {
   color: var(--calc-muted);
   font-size: 0.8rem;
   line-height: 1.5;
+}
+
+/* At this width the actions wrap below the date, so the date message already
+   has room above them and needs no extra clearance below the buttons. */
+@media (min-width: 801px) and (max-width: 950px) {
+  .starting-point:has(.starting-approval-status) {
+    padding-block-end: 12px;
+    margin-block-end: 12px;
+  }
+
+  .starting-actions {
+    margin-block-end: 0;
+  }
 }
 
 /* On a phone the three steps stack, each keeping its caption and figure. */
