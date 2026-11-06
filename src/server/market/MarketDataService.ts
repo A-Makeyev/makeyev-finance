@@ -37,10 +37,13 @@ import {
  *
  * Failure policy: one asset's failure never removes the whole snapshot -
  * failed rows drop out of the response (the UI keeps showing already-known
- * structure) while healthy rows render normally, and the shortfall is
- * disclosed with stale flags. A shortfall is cached only briefly (see
- * PARTIAL_TTL_MS), so a rate-limited provider gets a breather instead of being
- * hammered, and it heals on a later poll.
+ * structure) while healthy rows render normally and stay unmarked: a fresh
+ * quote from a working provider is not stale just because a different provider
+ * missed its turn (that used to dim the whole strip on every partial snapshot).
+ * Only a quote actually served from an expired cache or the disk fallback
+ * carries `stale`. A shortfall is cached only briefly (see PARTIAL_TTL_MS), so
+ * a rate-limited provider gets a breather instead of being hammered, and it
+ * heals on a later poll.
  */
 export interface MarketDataServiceOptions {
   /** Overrides the Finnhub provider (tests). undefined = build from config. */
@@ -180,8 +183,9 @@ export class MarketDataService {
    * Quotes for the requested asset ids (defaults to every registered asset).
    * Assets are grouped by provider and cadence, each group is served from its
    * own cache when fresh, and the response is assembled in the requested order.
-   * Stale data is always disclosed: a group served after a failed refresh, or
-   * the shortfall of a partial snapshot, carries `stale: true`.
+   * Stale data is always disclosed: a quote served after a failed refresh, or
+   * from the disk fallback, carries `stale: true`. Assets whose provider failed
+   * simply drop out; the rows that did arrive stay unmarked.
    */
   async getQuotes(
     assetIds: readonly string[] = MARKET_ASSETS.map((a) => a.id),
@@ -228,7 +232,7 @@ export class MarketDataService {
       this.persistThrottled({ quotes })
     }
 
-    return this.markPartial({ quotes }, assets.length)
+    return { quotes }
   }
 
   /**
@@ -343,12 +347,6 @@ export class MarketDataService {
     }
     this.lastPersistAt = now
     saveSnapshot(snapshot, this.now)
-  }
-
-  /** Partial snapshots are disclosed: their quotes carry `stale: true`. */
-  private markPartial(snapshot: MarketSnapshot, expected: number): MarketSnapshot {
-    if (snapshot.quotes.length >= expected) return snapshot
-    return { quotes: snapshot.quotes.map((quote) => ({ ...quote, stale: true })) }
   }
 
   /**

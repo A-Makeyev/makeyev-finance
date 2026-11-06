@@ -162,7 +162,7 @@ describe('MarketDataService', () => {
     await expect(service.getQuotes(['sp500'])).rejects.toMatchObject({ code: 'rate-limit' })
   })
 
-  it('discloses a partial snapshot with stale flags and keeps it cached for the full TTL', async () => {
+  it('keeps a partial snapshot\'s healthy quotes fresh and caches the shortfall briefly', async () => {
     let now = 1_000_000
     const getQuote = vi.fn(async (id: string) => {
       if (id === 'ta35') throw new MarketDataError('rate-limit', 'per-minute limit')
@@ -174,18 +174,19 @@ describe('MarketDataService', () => {
       now: () => now,
     })
 
-    // ta35 is rate-limited: the snapshot arrives without it, and its quotes
-    // are flagged so the UI never presents the shortfall as complete data.
+    // ta35 is rate-limited: it drops out, while the rows that did arrive are
+    // current and must not be dimmed as stale just because one sibling failed.
     const partial = await service.getQuotes(['sp500', 'ta35', 'bitcoin'])
     expect(partial.quotes.map((quote) => quote.assetId)).toEqual(['sp500', 'bitcoin'])
-    expect(partial.quotes.every((quote) => quote.stale === true)).toBe(true)
+    expect(partial.quotes.every((quote) => quote.stale === undefined)).toBe(true)
 
-    // Still within the TTL: served from cache (budget protection - the free
-    // key allows 25 requests/day) and still flagged.
+    // Still within the short partial TTL: served from cache (budget
+    // protection - the free key allows 25 requests/day), still fresh. Once it
+    // expires the failed row heals on a later poll.
     now += 60 * 1000
     const cached = await service.getQuotes(['sp500', 'ta35', 'bitcoin'])
     expect(getQuote).toHaveBeenCalledTimes(3) // one batch, no refetch
-    expect(cached.quotes.every((quote) => quote.stale === true)).toBe(true)
+    expect(cached.quotes.every((quote) => quote.stale === undefined)).toBe(true)
   })
 
   it('serves the persisted snapshot flagged stale when the provider fails and memory is empty', async () => {
@@ -300,8 +301,9 @@ describe('MarketDataService', () => {
       'gold',
       'bitcoin',
     ])
-    // Partial snapshot (usdils missing) is disclosed via stale flags.
-    expect(snapshot.quotes.every((quote) => quote.stale === true)).toBe(true)
+    // usdils is missing, but the rows that did arrive are fresh - a failed
+    // provider must not dim every other instrument in the strip.
+    expect(snapshot.quotes.every((quote) => quote.stale === undefined)).toBe(true)
   })
 
   it('refreshes the real-time rows faster than the delayed ones (per-provider TTLs)', async () => {

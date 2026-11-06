@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
 import { arcPath, donutSegments, formatAxisShekel, midAngle, svgRound } from '@/lib/charts'
+import { useDonutTooltipClamp } from '@/hooks/useDonutTooltipClamp'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 import { TRACK_TYPE_COLORS } from './trackColors'
 import type { TrackType } from '@/lib/amortization'
@@ -49,7 +50,11 @@ export function TrackMixDonut({
   // Whether a slice is under the pointer right now. `active` outlives it so
   // the callout keeps its slice while it fades out.
   const [hovering, setHovering] = useState(false)
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
   const showTooltip = useTooltipPresence(hovering && active !== null)
+  // Keep the callout on screen at narrow widths, where a ring near the layout
+  // edge would otherwise push it out of the viewport.
+  useDonutTooltipClamp(tooltipRef, showTooltip && active !== null ? active : null)
   const total = shares.reduce((sum, share) => sum + Math.max(0, share.amount), 0)
   const segments = donutSegments(shares.map((share) => share.amount))
   const activeShare = active !== null ? shares[active] : null
@@ -178,6 +183,7 @@ export function TrackMixDonut({
 
         {showTooltip && activeShare && activeAngle !== null && (
           <div
+            ref={tooltipRef}
             className="chart-tooltip mix-slice-tooltip"
             data-open={hovering}
             role="status"

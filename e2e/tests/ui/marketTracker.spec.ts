@@ -246,7 +246,7 @@ test.describe('Markets strip', () => {
     await expect(ta35).toHaveText(/TA-35\s*125\.32/)
     await ta35.hover()
     await expect(page.getByRole('tooltip')).toHaveText(
-      'TA-35: 125.32 (-0.78%) ~ Index level in points',
+      'TA-35: 125.32 (-0.78%) · Index level in points',
     )
     // Gold is the metal itself now (GC=F, dollars per ounce), but it is the
     // front-month CONTRACT, so the row must say which price this is instead of
@@ -256,7 +256,7 @@ test.describe('Markets strip', () => {
     await expect(gold).not.toContainText('Tracks')
     await gold.hover()
     await expect(page.getByRole('tooltip')).toHaveText(
-      'GOLD: $4,408.90 (+0.91%) ~ COMEX front-month futures, above the spot price',
+      'GOLD: $4,408.90 (+0.91%) · COMEX front-month futures, above the spot price',
     )
   })
 
@@ -1148,6 +1148,11 @@ test.describe('Markets strip', () => {
       // The bar now holds its slot with skeleton bars while the feeds load, so
       // "visible" is no longer the same as "loaded": wait for the numbers.
       await expect(bar).toHaveAttribute('data-state', 'ready')
+      // data-state turns ready as soon as the FIRST feed lands, so it does not
+      // guarantee the other two have arrived. Each successful feed renders one
+      // anchor; wait for all three before measuring, or a slower feed would
+      // leave only part of the signed values to count (a real CI flake).
+      await expect(bar.locator('a')).toHaveCount(3)
 
       // Same evaluate-string pattern as qa-visual.spec.ts (the e2e tsconfig
       // has no DOM lib; the page context provides document).
@@ -1204,6 +1209,9 @@ test.describe('Markets strip', () => {
       // Skeleton bars hold the slot until the feeds land (see the strip's
       // loading test): wait for the loaded state, not just for visibility.
       await expect(bar).toHaveAttribute('data-state', 'ready')
+      // Ready means the first feed only; wait for every anchor so all three
+      // feeds' directions are actually checked.
+      await expect(bar.locator('a')).toHaveCount(3)
 
       const directions = (await page.evaluate(
         `(() => {

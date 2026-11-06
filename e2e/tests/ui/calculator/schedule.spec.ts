@@ -857,6 +857,40 @@ test.describe('mortgage calculator - amortization schedule', () => {
       )
       expect(probe.insidePlot, 'the whole callout stays inside the plot').toBe(true)
     })
+
+    test('the cost-donut callout is pulled inside the viewport on a phone', async ({
+      localizedCalc,
+    }) => {
+      // The callout sits outside the ring on whatever side the hovered slice
+      // faces, so a ring near the layout edge could push it off screen. Every
+      // labeled slice is checked: the panel may be shifted, but never clipped.
+      await localizedCalc.goto()
+      const donut = localizedCalc.page.getByTestId('total-cost-donut')
+      await donut.scrollIntoViewIfNeeded()
+      const labels = donut.locator('svg text.donut-slice-label')
+      const count = await labels.count()
+      expect(count, 'the default mix labels at least one slice').toBeGreaterThan(0)
+
+      for (let index = 0; index < count; index++) {
+        const box = (await labels.nth(index).boundingBox())!
+        await localizedCalc.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+
+        const tip = donut.locator('.mix-slice-tooltip')
+        await expect(tip).toBeVisible()
+        const inside = await tip.evaluate((element) => {
+          const rect = element.getBoundingClientRect()
+          return (
+            rect.left >= -0.5 &&
+            rect.right <= window.innerWidth + 0.5 &&
+            rect.top >= -0.5 &&
+            rect.bottom <= window.innerHeight + 0.5
+          )
+        })
+        expect(inside, `slice ${index + 1} callout stays inside the viewport`).toBe(true)
+        await localizedCalc.page.mouse.move(0, 0)
+        await expect(tip).toHaveCount(0)
+      }
+    })
   })
 
   test('the chart hydrates without a server/client mismatch', async ({ calc }) => {

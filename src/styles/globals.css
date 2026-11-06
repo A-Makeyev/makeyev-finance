@@ -9391,8 +9391,18 @@ tbody tr:hover {
     margin: 4px 0 0;
   }
 
-  .schedule-asides .schedule-aside {
+  /* Side by side, the single side accent that reads as a card edge in the
+     stacked column turns into a fence between neighbours (one card's line
+     faces the next card, while the row's outer edge has none). Put the accent
+     on the TOP edge instead: direction-neutral, and every card reads the same
+     whether the row wraps after one card or fits two. The dir-qualified
+     selector is needed to outrank the LTR side-border override above. */
+  .schedule-asides .schedule-aside,
+  :root[dir] .schedule-asides .schedule-aside {
     flex: 0 1 240px;
+    border-right: 0;
+    border-left: 0;
+    border-top: 3px solid var(--calc-teal);
   }
 
   /* The cost donut joins the mix donut above the tables, so both read as one

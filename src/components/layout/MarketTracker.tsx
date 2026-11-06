@@ -308,7 +308,7 @@ function MarketRow({ assetId, name, quote, meta, skeleton, clone = false }: Mark
       className={rowClass}
       data-skeleton={skeleton ? 'true' : undefined}
       data-testid={clone ? undefined : `market-row-${assetId}`}
-      content={skeleton ? undefined : titleParts.join(' ~ ')}
+      content={skeleton ? undefined : titleParts.join(' · ')}
     >
       <span className="markets-name">{name}</span>
       <span className="markets-values">

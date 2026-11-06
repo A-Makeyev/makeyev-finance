@@ -52,7 +52,9 @@ test.describe('mortgage calculator - אישור עקרוני rate validity', () 
     await calc.approvalDate.fill('')
     await calc.typeApprovalDate('32')
     // 32 is not a day, so the 2 starts the month instead of being dropped.
-    await expect(calc.approvalDate).toHaveValue('3/2')
+    // A one-digit 2 cannot grow into a valid month (20+ is out of range), so
+    // the mask advances to the year immediately, exactly like 4-9 do.
+    await expect(calc.approvalDate).toHaveValue('3/2/')
     // 20 is not a month either, so the 0 starts the year.
     await calc.typeApprovalDate('0')
     await expect(calc.approvalDate).toHaveValue('3/2/0')

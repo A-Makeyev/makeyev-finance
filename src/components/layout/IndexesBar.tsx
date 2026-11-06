@@ -309,7 +309,7 @@ function kindToShortNameKey(
  * the short-name key and the feed kind.
  */
 export function indexesTooltipContent(t: TFunction, kind: CbsFeedKind): string {
-  return `${t(`indexesBar.descriptions.${kind}`)} ~ ${t(`indexesBar.mortgageEffects.${kind}`)}`
+  return `${t(`indexesBar.descriptions.${kind}`)} · ${t(`indexesBar.mortgageEffects.${kind}`)}`
 }
 
 /** Syncs the live CPI annual change into the calculator store (recalculates indexed tracks). */

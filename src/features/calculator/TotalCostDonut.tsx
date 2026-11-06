@@ -1,7 +1,8 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
 import { arcPath, donutSegments, midAngle, svgRound } from '@/lib/charts'
+import { useDonutTooltipClamp } from '@/hooks/useDonutTooltipClamp'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 
 interface TotalCostDonutProps {
@@ -74,6 +75,7 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
   // the callout keeps its slice while it fades out.
   const [hovering, setHovering] = useState(false)
   const summaryId = useId()
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
   const total = principal + indexation + totalInterest
   const interestPercent = total > 0 ? Math.round((totalInterest / total) * 100) : 0
   const percentOf = (value: number) =>
@@ -119,6 +121,9 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
     ? midAngle(activeSegment.startAngle, activeSegment.endAngle)
     : null
   const showTooltip = useTooltipPresence(hovering && active !== null)
+  // Keep the callout on screen at narrow widths, where a ring near the layout
+  // edge would otherwise push it out of the viewport.
+  useDonutTooltipClamp(tooltipRef, showTooltip && active !== null ? active : null)
 
   // Place the callout just OUTSIDE the hovered slice, on the side it faces.
   // data-side names the arrow edge = the side facing the circle, exactly like
@@ -223,6 +228,7 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
 
         {showTooltip && activeSlice && activeSegment && activeAngle !== null && (
           <div
+            ref={tooltipRef}
             className="chart-tooltip mix-slice-tooltip"
             data-open={hovering}
             role="status"
