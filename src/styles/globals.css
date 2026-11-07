@@ -5283,6 +5283,68 @@ html[dir='ltr'] .date-field {
   background: linear-gradient(85deg, var(--calc-teal), var(--calc-accent));
 }
 
+/* The dated sample quotes are a separate disclosure under the presets, not a
+   fifth preset: they load as unsaved work and are not the app's advice. */
+.sample-quotes {
+  border: 1px dashed var(--calc-line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-block: 12px 20px;
+}
+
+.sample-quotes>summary {
+  cursor: pointer;
+  color: var(--calc-teal-dark);
+  font-weight: 600;
+}
+
+.sample-quotes-note {
+  color: var(--calc-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin-block: 8px 0;
+}
+
+.sample-quotes-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-block-start: 10px;
+  padding: 0;
+}
+
+.sample-quote-button {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+  border: 1px solid var(--calc-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--calc-ink);
+  cursor: pointer;
+  text-align: start;
+}
+
+.sample-quote-button:hover,
+.sample-quote-button:focus-visible {
+  border-color: var(--calc-teal);
+}
+
+.sample-quote-button strong {
+  color: var(--calc-teal-dark);
+}
+
+@media (max-width: 480px) {
+  .sample-quotes-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* The track row's suffix sits at the field's far edge, opposite its value, but
    with only a token gap: the box is sized for the longest value it takes, the
    input gives up most of its padding on the suffix side, and the suffix keeps
@@ -5316,10 +5378,61 @@ html[dir='ltr'] .date-field {
   margin: 0;
 }
 
+/* The cadence selector gets its own short row under the six fields. Fixed
+   tracks have no such field, so giving it a first-row column would shift the
+   method select away from the remove button's chevron anchor. */
+.mortgage-track .track-cell-reset {
+  grid-column: 1 / 4;
+  grid-row: 2;
+}
+
+.mortgage-track .track-cell-margin {
+  grid-column: 5 / 6;
+  grid-row: 1;
+}
+
+.mortgage-track .track-cell-method {
+  grid-column: 6 / 7;
+  grid-row: 1;
+}
+
 .mortgage-track legend {
   color: var(--calc-teal-dark);
   font-weight: 700;
   padding: 0 8px;
+}
+
+/* Grace is the uncommon per-track term, so it sits in a disclosure spanning
+   the card's full width instead of taking two always-visible columns. */
+.mortgage-track .track-grace,
+.compare-shell .compare-track .track-grace {
+  grid-column: 1 / -1;
+}
+
+.track-grace {
+  border: 1px dashed var(--calc-line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.track-grace>summary {
+  cursor: pointer;
+  color: var(--calc-teal-dark);
+  font-weight: 600;
+}
+
+.track-grace-body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr);
+  gap: 14px;
+  align-items: start;
+  margin-top: 10px;
+}
+
+@media (max-width: 480px) {
+  .track-grace-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .mortgage-track.variable-limit-flag {
@@ -9512,28 +9625,35 @@ tbody tr:hover {
     grid-template-columns: repeat(6, 1fr);
   }
 
-  .mortgage-track .input-group:nth-of-type(1) {
+  .mortgage-track .track-cell-type {
     grid-column: 1 / 4;
   }
 
-  .mortgage-track .input-group:nth-of-type(2) {
+  .mortgage-track .track-cell-amount {
     grid-column: 4 / 7;
   }
 
-  .mortgage-track .input-group:nth-of-type(3) {
+  .mortgage-track .track-cell-years {
     grid-column: 1 / 3;
   }
 
-  .mortgage-track .input-group:nth-of-type(4) {
+  .mortgage-track .track-cell-rate {
     grid-column: 3 / 5;
   }
 
-  .mortgage-track .input-group:nth-of-type(5) {
-    grid-column: 5 / 7;
+  .mortgage-track .track-cell-reset {
+    grid-column: 1 / 4;
+    grid-row: auto;
   }
 
-  .mortgage-track .input-group:nth-of-type(6) {
+  .mortgage-track .track-cell-margin {
+    grid-column: 5 / 7;
+    grid-row: auto;
+  }
+
+  .mortgage-track .track-cell-method {
     grid-column: 1 / 7;
+    grid-row: auto;
   }
 }
 
@@ -9543,20 +9663,27 @@ tbody tr:hover {
      the market margin pairs with the repayment schedule (לוח סילוקין), which
      used to sit alone on its own row and read as a separate question. The
      rows above are type/amount and term/rate. */
-  .mortgage-track .input-group:nth-of-type(3) {
+  .mortgage-track .track-cell-years {
     grid-column: 1 / 4;
   }
 
-  .mortgage-track .input-group:nth-of-type(4) {
+  .mortgage-track .track-cell-rate {
     grid-column: 4 / 7;
   }
 
-  .mortgage-track .input-group:nth-of-type(5) {
+  .mortgage-track .track-cell-reset {
     grid-column: 1 / 4;
+    grid-row: auto;
   }
 
-  .mortgage-track .input-group:nth-of-type(6) {
+  .mortgage-track .track-cell-margin {
     grid-column: 4 / 7;
+    grid-row: auto;
+  }
+
+  .mortgage-track .track-cell-method {
+    grid-column: 4 / 7;
+    grid-row: auto;
   }
 }
 
@@ -10049,13 +10176,19 @@ tbody tr:hover {
 
   /* Neutralize the 6-col spans from the ≤1000px and ≤960px blocks - the
      pairs above come from the source order in a two-column grid. */
-  .mortgage-track .input-group:nth-of-type(1),
-  .mortgage-track .input-group:nth-of-type(2),
-  .mortgage-track .input-group:nth-of-type(3),
-  .mortgage-track .input-group:nth-of-type(4),
-  .mortgage-track .input-group:nth-of-type(5),
-  .mortgage-track .input-group:nth-of-type(6) {
+  .mortgage-track .input-group:nth-of-type(n) {
     grid-column: auto;
+  }
+
+  /* With two fields per row, the last select has to span both columns: its
+     chevron is the remove button's anchor, and a half-width last row would
+     leave the button on the card's edge instead. */
+  .mortgage-track .track-cell-method {
+    grid-column: 1 / -1;
+  }
+
+  .mortgage-track .track-cell-reset {
+    grid-row: auto;
   }
 
   /* Schedule table: tighter cells so more columns fit before the
@@ -11195,6 +11328,62 @@ html[dir='rtl'] .comment-text {
    validity chip, on one wrapping row between the term slider and the preset
    buttons. Each mix carries its own date, so the row is per scenario. */
 /* Date and status stay in the same two-column row at every card width. */
+
+/* Shown once per track/cell row inside the TrackForm / compare track grid:
+ * - left: the statutory opening-fee line (פתיחת תיק משכנתא) wrapped under the
+ *         caption, right-aligned label and its portrait-body width (responsive).
+ * - right: the projected totals card (תרחיש) labeled as a scenario, not the
+ *          official ריבית כוללת חזויה.
+ */
+.joint-stat-row {
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 20px;
+}
+
+.joint-stat-row>.input-group {
+  grid-column: span 1;
+}
+
+.joint-stat-row .stat-row-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.joint-stat-row .stat-row-cell .caption {
+  color: var(--calc-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.joint-stat-row .stat-row-cell .stat-label {
+  color: var(--calc-ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.joint-stat-row .stat-row-cell .stat-value {
+  color: var(--calc-teal-dark);
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.joint-stat-row .stat-row-cell .stat-note {
+  color: var(--calc-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 420px) {
+  .joint-stat-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .compare-offer-controls {
   --compare-date-height: 37px;
   display: grid;
@@ -11431,14 +11620,27 @@ html[dir='rtl'] .comment-text {
   grid-column: auto;
 }
 
-/* Phones below 480px: one field per line. Half a 360-420px panel leaves a
-   track's long type option ("משתנה צמודה כל 5 שנים") ~82px of text room, so
-   the select cut it to "משתנה צמ..."; the same squeeze left the ₪ side of a
-   cost pair showing only its ₪. Stacked, every field gets the card's full
-   width - the cost pairs keep their percent beside their amount, and the
-   track keeps its four fields on four rows. */
-@media (max-width: 480px) {
+.compare-shell .compare-track .track-cell-reset {
+  grid-column: auto;
+  grid-row: auto;
+}
 
+/* This compact two-column editor has no term field, so a resettable track's
+   method is the fifth field and would land in the first column. Spanning both
+   columns keeps its chevron on the card's inline-end, under the remove button. */
+.compare-shell .compare-track .track-cell-method {
+  grid-column: 1 / -1;
+}
+
+/*
+ * Phones below 480px: one field per line. Half a 360-420px panel leaves a
+ * track's long type option ("משתנה צמודה כל 5 שנים") ~82px of text room, so
+ * the select cut it to "משתנה צמ..."; the same squeeze left the ₪ side of a
+ * cost pair showing only its ₪. Stacked, every field gets the card's full
+ * width - the cost pairs keep their percent beside their amount, and the
+ * track keeps its four fields on four rows.
+ */
+@media (max-width: 480px) {
   .mortgage-track,
   .compare-shell .compare-track {
     grid-template-columns: minmax(0, 1fr);
@@ -11449,6 +11651,10 @@ html[dir='rtl'] .comment-text {
      one-column grid (phantom columns, ~123px fields). */
   .mortgage-track .input-group:nth-of-type(n) {
     grid-column: auto;
+  }
+
+  .mortgage-track .track-cell-reset {
+    grid-row: auto;
   }
 
   .costs-row,

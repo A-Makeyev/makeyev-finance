@@ -426,6 +426,48 @@ describe('prepayment - legal reductions and exemptions', () => {
     }
   })
 
+  it('derives the annual exemption from the per-track cadence, not the type name', () => {
+    const rows = schedule({ type: 'fixed' }).monthlyRows
+    const { payments, balance } = atMonth(rows, 60)
+    const atCadence = (resetMonths: number) =>
+      prepaymentFee({
+        payments,
+        balance,
+        annualRatePercent: RATE,
+        marketRatePercent: 3,
+        type: 'variable5y',
+        resetMonths,
+        indexed: false,
+        monthsSinceOrigination: 60,
+      })
+
+    expect(atCadence(12).exemptReason).toBe('frequentReset')
+    expect(atCadence(12).fee).toBe(0)
+    // 18 and 24-month tracks are not annual, so they keep the fee away from a
+    // reset date instead of carrying the annual exemption.
+    expect(atCadence(18).exemptReason).toBeNull()
+    expect(atCadence(24).exemptReason).toBeNull()
+    expect(atCadence(24).fee).toBeGreaterThan(0)
+  })
+
+  it('waives a 2+2 exit station on its 24-month reset date', () => {
+    const rows = schedule({ type: 'variable', years: 20, rate: RATE }).monthlyRows
+    const { payments, balance } = atMonth(rows, 48)
+    const fee = prepaymentFee({
+      payments,
+      balance,
+      annualRatePercent: RATE,
+      marketRatePercent: 3,
+      type: 'variable',
+      resetMonths: 24,
+      indexed: false,
+      monthsSinceOrigination: 48,
+      onExitStation: true,
+    })
+    expect(fee.exemptReason).toBe('exitStation')
+    expect(fee.fee).toBe(0)
+  })
+
   it('waives the fee at an exit station (rate reset)', () => {
     const rows = schedule({ type: 'variable5y' }).monthlyRows
     const { payments, balance } = atMonth(rows, 60)
@@ -766,6 +808,7 @@ describe('prepayment - the shared fee projection', () => {
     return {
       id,
       type: result.type,
+      resetMonths: result.resetMonths,
       monthlyRows: result.monthlyRows,
       annualRatePercent: result.annualRatePercent,
       isIndexed: result.isIndexed,
@@ -828,6 +871,17 @@ describe('prepayment - the shared fee projection', () => {
         annualInflation: 0.02,
       })[0].breakdown.fee,
     )
+  })
+
+  it('prices a 2+2 track to its next 24-month reset', () => {
+    const result = schedule({ rate: 5, years: 10, type: 'variable' })
+    // 30 months in, the next reset is at month 48: 18 months remain.
+    const track = { ...projectionTrack(result), resetMonths: 24 }
+    const row = prepaymentFeeRows([track], 30, {
+      marketRateFor: () => 2,
+      annualInflation: 0.02,
+    })[0]
+    expect(row.remainingMonths).toBe(18)
   })
 
   it('keeps the exit-station waiver on a five-year reset track', () => {

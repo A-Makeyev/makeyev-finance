@@ -2,16 +2,15 @@
  * Forward-looking scenarios for the calculator's forecast panel.
  *
  * Two assumptions drive this module, and both are shown in the UI:
- * - every five-year variable track's rate moves by `FORECAST_STEP_PERCENT`
- *   percentage points at EACH reset (cumulatively), with the base path left
+ * - every variable track's rate moves by `FORECAST_STEP_PERCENT` percentage
+ *   points at EACH contractual reset (cumulatively), with the base path left
  *   flat;
  * - the CPI path is flat at the same annual change the schedule already uses
  *   (`CalculatorSnapshot.annualInflation`).
  *
- * Only tracks whose reset dates are contractual (`variable5y`,
- * `variableIndexed5y`) take the step. Prime and annual-or-more-frequent
- * variable tracks reset on dates the contract does not fix, so a cumulative
- * step on them would invent a path; they stay flat.
+ * Only tracks with a positive `resetMonths` take the step. Prime tracks follow
+ * the Bank of Israel rate rather than a contractual calendar, and fixed tracks
+ * do not reset, so both carry `resetMonths = 0` and stay flat.
  *
  * Pure math - no React, no store; see tests/unit/forecast.test.ts.
  */
@@ -19,23 +18,15 @@
 import {
   combineMonthlySchedules,
   computeTrackResult,
+  defaultResetMonthsFor,
   isIndexedType,
   type AmortizationMethod,
   type TrackResult,
   type TrackType,
 } from './amortization'
 
-/** Five-year variable tracks reset on this cycle, counted from origination. */
-export const RESET_CYCLE_MONTHS = 60
-
 /** The forecast's per-reset rate move, in percentage points. */
 export const FORECAST_STEP_PERCENT = 1
-
-/** Track types whose reset dates the contract fixes. */
-export const CONTRACTUAL_RESET_TYPES: readonly TrackType[] = [
-  'variable5y',
-  'variableIndexed5y',
-]
 
 export interface ForecastTrackInput {
   principal: number
@@ -43,6 +34,11 @@ export interface ForecastTrackInput {
   annualRatePercent: number
   type: TrackType
   method: AmortizationMethod
+  /** Contractual reset cadence in months; 0 means no contractual reset. */
+  resetMonths?: number
+  /** Grace months at the start of the term; 0 means no grace. */
+  graceMonths?: number
+  graceMode?: 'interestOnly' | 'fullDeferral'
 }
 
 /** One plotted year: the payment at its start plus the running cost totals. */
@@ -50,7 +46,7 @@ export interface ForecastYearPoint {
   year: number
   /**
    * Combined monthly payment in the first month of the year. A reset that
-   * takes effect on month 61 therefore shows as a step in year 6.
+   * takes effect on month 25 therefore shows as a step in year 3.
    */
   payment: number
   /** Combined interest paid from month 1 through the end of this year. */
@@ -80,25 +76,26 @@ export interface Forecast {
 }
 
 /**
- * 1-based months at which `type` resets over `years` of payments. A reset
- * after `RESET_CYCLE_MONTHS` months applies from the following month, so a
- * 15-year five-year track resets at months 61 and 121. Types without a
- * contractual reset cycle, and loans that end on or before the first reset,
- * return an empty list.
+ * 1-based months at which a track with `resetMonths` resets over `years` of
+ * payments. A reset after `resetMonths` months applies from the following
+ * month, so a 24-month cadence over 10 years resets at months 25, 49, 73 and
+ * 97. A zero/negative cadence, and a loan that ends on or before the first
+ * reset, return an empty list.
  */
-export function resetMonthsFor(type: TrackType, years: number): number[] {
-  if (!CONTRACTUAL_RESET_TYPES.includes(type)) return []
+export function resetMonthsFor(resetMonths: number, years: number): number[] {
+  if (!Number.isFinite(resetMonths) || resetMonths <= 0) return []
+  const cycle = Math.round(resetMonths)
   const months = Math.round(years * 12)
   const resets: number[] = []
-  for (let month = RESET_CYCLE_MONTHS; month < months; month += RESET_CYCLE_MONTHS) {
+  for (let month = cycle; month < months; month += cycle) {
     resets.push(month + 1)
   }
   return resets
 }
 
-/** The 1-based years those reset months fall in (61 -> year 6, 121 -> 11). */
-export function resetYearsFor(type: TrackType, years: number): number[] {
-  return resetMonthsFor(type, years).map((month) => Math.ceil(month / 12))
+/** The 1-based years those reset months fall in (25 -> year 3, 49 -> 5). */
+export function resetYearsFor(resetMonths: number, years: number): number[] {
+  return resetMonthsFor(resetMonths, years).map((month) => Math.ceil(month / 12))
 }
 
 /**
@@ -152,6 +149,9 @@ export function buildForecast(
       track.annualRatePercent >= 0,
   )
 
+  const cadenceOf = (track: ForecastTrackInput): number =>
+    track.resetMonths ?? defaultResetMonthsFor(track.type)
+
   const run = (stepPercent: number): ForecastScenario => ({
     id: stepPercent > 0 ? 'up' : stepPercent < 0 ? 'down' : 'base',
     stepPercent,
@@ -164,7 +164,10 @@ export function buildForecast(
           type: track.type,
           method: track.method,
           annualInflation,
-          rateResetMonths: resetMonthsFor(track.type, track.years),
+          resetMonths: cadenceOf(track),
+          graceMonths: track.graceMonths,
+          graceMode: track.graceMode,
+          rateResetMonths: resetMonthsFor(cadenceOf(track), track.years),
           rateStepPercent: stepPercent,
         }),
       ),
@@ -173,7 +176,7 @@ export function buildForecast(
 
   const resetYears = Array.from(
     new Set(
-      validTracks.flatMap((track) => resetYearsFor(track.type, track.years)),
+      validTracks.flatMap((track) => resetYearsFor(cadenceOf(track), track.years)),
     ),
   ).sort((a, b) => a - b)
 

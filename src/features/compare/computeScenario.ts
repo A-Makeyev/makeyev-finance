@@ -23,7 +23,6 @@ import {
   assessLtv,
   assessPti,
   computeTrackResult,
-  duplicateTrackType,
   estimateClosingCosts,
   estimateTransactionCosts,
   MAX_YEARS,
@@ -51,8 +50,7 @@ export interface ScenarioResult {
   isEmpty: boolean
   /** 'positive' - a track with an amount has years outside 1..30 or a non-positive amount. */
   /** 'variableCap' - variable share exceeds the Bank of Israel 2/3 ceiling. */
-  /** 'duplicateType' - the same track type appears more than once in the mix. */
-  error: 'positive' | 'variableCap' | 'duplicateType' | null
+  error: 'positive' | 'variableCap' | null
   totals: {
     firstPayment: number
     totalPaid: number
@@ -112,9 +110,9 @@ export interface ScenarioResult {
     closing: number
   }>
   /**
-   * Track-mix composition, grouped by track type (defensive: the duplicate
-   * gate above means a priced mix holds one track per type): each slice's
-   * principal and its share of the loan. Drives the donut.
+   * Track-mix composition, one slice per priced track: its principal and its
+   * share of the loan. A repeated type stays two slices (same color), so the
+   * donut never merges tracks. Drives the donut.
    */
   mixShares: Array<{ type: string; amount: number; percent: number }>
   /**
@@ -155,6 +153,7 @@ export interface SharedBuyerInputs {
   otherMonthly: number
   /** One-time cash costs (moving, furniture) - fold into the upfront total. */
   oneTimeExpenses: number
+  /** Statutory opening fee (פתיחת תיק) - cash paid at closing. */
   ptiThresholdPercent: number
 }
 
@@ -264,6 +263,9 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
       annualRatePercent: Number(track.rateText) || 0,
       type: track.type,
       method: track.method,
+      resetMonths: track.resetMonths,
+      graceMonths: track.graceMonths,
+      graceMode: track.graceMode,
       annualInflation: FALLBACK_INFLATION,
     }),
   )
@@ -271,12 +273,6 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
   const enteredResults = enteredIndexes.map((index) => results[index])
   if (enteredResults.some((result) => !result)) {
     return { ...emptyResult, isEmpty: false, error: 'positive' }
-  }
-
-  // One track per type: a repeated type (e.g. two prime tracks) is rejected
-  // before any figure is shown, mirroring the calculator's store gate.
-  if (duplicateTrackType(enteredIndexes.map((index) => tracks[index].type))) {
-    return { ...emptyResult, isEmpty: false, error: 'duplicateType' }
   }
 
   const validResults = enteredResults.filter(Boolean) as NonNullable<
@@ -292,7 +288,10 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
   }
 
   const totals = sumTotals(validResults)
-  const firstMonthPayment = totals.firstPayment
+  const requiredPayment = validResults.reduce(
+    (sum, result) => sum + result.firstAmortizingPayment,
+    0,
+  )
   const overpayPercent = totalPrincipal > 0 ? (totals.totalInterest / totalPrincipal) * 100 : 0
   const suggested = suggestedCapital(property, totalPrincipal, capitalForLoan, inputs.purpose)
   const closingCosts = estimateClosingCosts(
@@ -332,18 +331,13 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     interest: row.interest,
     closing: row.closing,
   }))
-  // Track-mix composition for the donut: sum each type's principal, then rank
-  // the slices largest-first. The duplicate gate means each type is one track,
-  // so this grouping is defensive rather than load-bearing.
-  const amountByType = new Map<string, number>()
-  for (const result of validResults) {
-    amountByType.set(result.type, (amountByType.get(result.type) ?? 0) + result.principal)
-  }
-  const mixShares = [...amountByType.entries()]
-    .map(([type, amount]) => ({
-      type,
-      amount,
-      percent: totalPrincipal > 0 ? (amount / totalPrincipal) * 100 : 0,
+  // Track-mix composition for the donut: one slice per track, ranked
+  // largest-first. Two tracks of one type never merge into one slice.
+  const mixShares = validResults
+    .map((result) => ({
+      type: result.type,
+      amount: result.principal,
+      percent: totalPrincipal > 0 ? (result.principal / totalPrincipal) * 100 : 0,
     }))
     .sort((left, right) => right.amount - left.amount)
 
@@ -371,8 +365,8 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     summaryTypes: validResults.map((result) => result.type),
     variableSharePercent: totalPrincipal > 0 ? (variablePrincipal / totalPrincipal) * 100 : 0,
     ltv: assessLtv(totalPrincipal, property, capitalForLoan, inputs.purpose),
-    dti: assessDti(firstMonthPayment, income),
-    pti: assessPti(firstMonthPayment + inputs.otherMonthly, income, inputs.ptiThresholdPercent),
+    dti: assessDti(requiredPayment, income),
+    pti: assessPti(requiredPayment + inputs.otherMonthly, income, inputs.ptiThresholdPercent),
     capitalAssessment: assessCapital(capitalForLoan, property, totalPrincipal, inputs.purpose),
     suggestedCapital: suggested,
     closingCosts,
@@ -398,6 +392,7 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
       annualRatePercent: result.annualRatePercent,
       isIndexed: result.isIndexed,
       method: result.method,
+      resetMonths: result.resetMonths,
     })),
     // Same parsed tracks, same CPI assumption as the schedule above, so a
     // scenario's base path is its own payment path and the two step paths are
@@ -411,6 +406,9 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
           annualRatePercent: Number(track.rateText) || 0,
           type: track.type,
           method: track.method,
+          resetMonths: track.resetMonths,
+          graceMonths: track.graceMonths,
+          graceMode: track.graceMode,
         }
       }),
       FALLBACK_INFLATION,

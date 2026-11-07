@@ -15,20 +15,20 @@ const totalOf = (tracks: ReturnType<typeof useCalculatorStore.getState>['tracks'
 beforeEach(() => useCalculatorStore.getState().reset())
 
 describe('calculator autofix', () => {
-  it('repairs a duplicate track type and keeps the mortgage total', () => {
+  it('leaves a valid repeated track type alone', () => {
     useCalculatorStore.getState().setStartingAmount('1,000,000', null)
-    const fixed = useCalculatorStore
+    const variable = useCalculatorStore
       .getState()
-      .tracks.find((track) => track.type === 'fixed')!
-    useCalculatorStore.getState().changeTrackType(fixed.id, 'prime')
-    expect(useCalculatorStore.getState().error).toEqual({ kind: 'duplicateType' })
+      .tracks.find((track) => track.type === 'variableIndexed5y')!
+    // Two fixed tracks plus one prime: a valid mix with a repeated type.
+    useCalculatorStore.getState().changeTrackType(variable.id, 'fixed')
+    expect(useCalculatorStore.getState().error).toBeNull()
 
     useCalculatorStore.getState().autofixMix()
 
     const s = useCalculatorStore.getState()
     expect(s.error).toBeNull()
-    const types = s.tracks.map((track) => track.type)
-    expect(new Set(types).size).toBe(types.length)
+    expect(s.tracks.filter((track) => track.type === 'fixed')).toHaveLength(2)
     expect(totalOf(s.tracks)).toBe(1_000_000)
   })
 

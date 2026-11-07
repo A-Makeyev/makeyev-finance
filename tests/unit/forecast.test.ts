@@ -2,11 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { computeTrackResult } from '@/lib/amortization'
 import {
   buildForecast,
-  CONTRACTUAL_RESET_TYPES,
   FORECAST_STEP_PERCENT,
   resetMonthsFor,
   resetYearsFor,
-  RESET_CYCLE_MONTHS,
   type ForecastTrackInput,
 } from '@/lib/forecast'
 
@@ -16,6 +14,7 @@ const fixed: ForecastTrackInput = {
   annualRatePercent: 5,
   type: 'fixed',
   method: 'spitzer',
+  resetMonths: 0,
 }
 
 const fiveYearVariable: ForecastTrackInput = {
@@ -24,27 +23,28 @@ const fiveYearVariable: ForecastTrackInput = {
   annualRatePercent: 4,
   type: 'variable5y',
   method: 'spitzer',
+  resetMonths: 60,
 }
 
 describe('resetMonthsFor / resetYearsFor', () => {
-  it('steps the month AFTER each five-year block', () => {
-    expect(resetMonthsFor('variable5y', 15)).toEqual([61, 121])
-    expect(resetYearsFor('variable5y', 15)).toEqual([6, 11])
-    expect(resetMonthsFor('variableIndexed5y', 10)).toEqual([61])
+  it('steps the month AFTER each cadence block', () => {
+    expect(resetMonthsFor(60, 15)).toEqual([61, 121])
+    expect(resetYearsFor(60, 15)).toEqual([6, 11])
+    expect(resetMonthsFor(24, 10)).toEqual([25, 49, 73, 97])
+    expect(resetYearsFor(24, 10)).toEqual([3, 5, 7, 9])
+    expect(resetMonthsFor(18, 10)).toEqual([19, 37, 55, 73, 91, 109])
+    expect(resetMonthsFor(12, 3)).toEqual([13, 25])
   })
 
   it('has no reset when the loan ends on or before the first cycle', () => {
-    expect(resetMonthsFor('variable5y', 5)).toEqual([])
-    expect(resetMonthsFor('variable5y', 1)).toEqual([])
+    expect(resetMonthsFor(60, 5)).toEqual([])
+    expect(resetMonthsFor(24, 2)).toEqual([])
+    expect(resetMonthsFor(60, 1)).toEqual([])
   })
 
-  it('only prices contractual reset types', () => {
-    expect(CONTRACTUAL_RESET_TYPES).toEqual(['variable5y', 'variableIndexed5y'])
-    expect(resetMonthsFor('prime', 30)).toEqual([])
-    expect(resetMonthsFor('variable', 30)).toEqual([])
-    expect(resetMonthsFor('variableIndexed', 30)).toEqual([])
-    expect(resetMonthsFor('fixedIndexed', 30)).toEqual([])
-    expect(RESET_CYCLE_MONTHS).toBe(60)
+  it('treats a zero cadence as no contractual reset', () => {
+    expect(resetMonthsFor(0, 30)).toEqual([])
+    expect(resetMonthsFor(-12, 30)).toEqual([])
     expect(FORECAST_STEP_PERCENT).toBe(1)
   })
 })
@@ -105,14 +105,31 @@ describe('buildForecast', () => {
     expect(forecast.resetYears).toEqual([6])
   })
 
-  it('keeps prime and frequent-reset tracks flat across scenarios', () => {
-    const prime: ForecastTrackInput = { ...fiveYearVariable, type: 'prime' }
-    const annual: ForecastTrackInput = { ...fiveYearVariable, type: 'variable' }
+  it('keeps prime flat but steps an annual cadence', () => {
+    const prime: ForecastTrackInput = { ...fiveYearVariable, type: 'prime', resetMonths: 0 }
+    const annual: ForecastTrackInput = { ...fiveYearVariable, type: 'variable', resetMonths: 12 }
     const forecast = buildForecast([prime, annual], 0.02)
-    const [base, up, down] = forecast.scenarios
-    expect(forecast.resetYears).toEqual([])
-    expect(up.points).toEqual(base.points)
-    expect(down.points).toEqual(base.points)
+    const [base, up] = forecast.scenarios
+    expect(forecast.resetYears).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10])
+    // Year 1 is before the first annual reset at month 13.
+    expect(up.points[0].payment).toBeCloseTo(base.points[0].payment, 6)
+    // Year 2 runs one point higher after that reset.
+    expect(up.points[1].payment).toBeGreaterThan(base.points[1].payment)
+  })
+
+  it('steps a 2+2 cadence from year 3', () => {
+    const twoPlusTwo: ForecastTrackInput = {
+      ...fiveYearVariable,
+      type: 'variable',
+      resetMonths: 24,
+    }
+    const forecast = buildForecast([twoPlusTwo], 0.02)
+    const [base, up] = forecast.scenarios
+    expect(forecast.resetYears).toEqual([3, 5, 7, 9])
+    for (let year = 0; year < 2; year++) {
+      expect(up.points[year].payment).toBeCloseTo(base.points[year].payment, 6)
+    }
+    expect(up.points[2].payment).toBeGreaterThan(base.points[2].payment)
   })
 
   it('carries the flat CPI path into cumulative indexation', () => {
@@ -122,6 +139,7 @@ describe('buildForecast', () => {
       annualRatePercent: 3,
       type: 'fixedIndexed',
       method: 'spitzer',
+      resetMonths: 0,
     }
     const forecast = buildForecast([indexed], 0.02)
     const base = forecast.scenarios[0]

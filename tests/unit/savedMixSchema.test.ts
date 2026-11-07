@@ -83,6 +83,29 @@ describe('savedMixInputSchema', () => {
     }
   })
 
+  it('accepts the supported reset cadences and rejects other values', () => {
+    for (const resetMonths of [0, 12, 18, 24, 30, 36, 48, 60, 84, 120]) {
+      expect(
+        savedMixInputSchema.safeParse({
+          ...validMix,
+          tracks: [{ ...track, resetMonths }],
+        }).success,
+      ).toBe(true)
+    }
+    for (const resetMonths of [-12, 6, 72, 121, 12.5]) {
+      expect(
+        savedMixInputSchema.safeParse({
+          ...validMix,
+          tracks: [{ ...track, resetMonths }],
+        }).success,
+      ).toBe(false)
+    }
+  })
+
+  it('still accepts a track with no reset cadence (an older saved mix)', () => {
+    expect(savedMixInputSchema.safeParse(validMix).success).toBe(true)
+  })
+
   it('rejects amount text that is not the calculator format', () => {
     expect(
       savedMixInputSchema.safeParse({ ...validMix, tracks: [{ ...track, amountText: '12 345' }] })

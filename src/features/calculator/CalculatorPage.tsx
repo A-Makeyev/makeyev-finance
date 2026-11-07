@@ -22,6 +22,7 @@ import { ScrollCue } from '@/components/layout/ScrollCue'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { AppModal } from '@/components/ui/AppModal'
 import { PresetSelector } from './PresetSelector'
+import { SampleQuotesMenu } from './SampleQuotesMenu'
 import { TrackForm } from './TrackForm'
 import { ResultsCards } from './ResultsCards'
 import { ScheduleSection } from './ScheduleSection'
@@ -811,6 +812,7 @@ export function CalculatorPage() {
             )}
 
             <PresetSelector />
+            <SampleQuotesMenu />
 
             <div id="tracks-list" data-testid="tracks-list">
               {store.tracks.map((track, index) => (

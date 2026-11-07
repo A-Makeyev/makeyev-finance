@@ -71,8 +71,8 @@ function useWholeRowTable() {
 /**
  * Rate-reset and CPI forecast panel. Two forward assumptions are stated in
  * the panel itself, never hidden:
- * - a contractual five-year reset moves the rate by `FORECAST_STEP_PERCENT`
- *   points in each direction, cumulatively;
+ * - each contractual reset (12, 18, 24 or 60 months, per track) moves the
+ *   rate by `FORECAST_STEP_PERCENT` points in each direction, cumulatively;
  * - the CPI runs flat at the same annual change the schedule already uses.
  *
  * The reset chart plots the combined payment at the start of each year under
@@ -102,6 +102,9 @@ export function ForecastSection() {
           annualRatePercent: track.annualRatePercent,
           type: track.type,
           method: track.method,
+          resetMonths: track.resetMonths,
+          graceMonths: track.graceMonths,
+          graceMode: track.graceMode,
         })),
         annualInflation,
       ),

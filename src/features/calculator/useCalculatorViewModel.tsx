@@ -344,7 +344,7 @@ export function useCalculatorViewModel() {
   // "חורג מהמותר") per feedback; kept terse: "פחות" without naming the
   // payments, "נדרשת הכנסה" without repeating the payment (the 💡 fact line
   // above carries it).
-  const firstPayment = snapshot.totals.firstPayment
+  const requiredPayment = snapshot.requiredPayment
   const allowedPayment = allowedMonthlyPayment(incomeValue, otherTotal, ptiThresholdPercent)
   // The term behind the required payment: every amount-bearing track's
   // years. Tracks usually share the term slider, printing "15"; when they
@@ -372,14 +372,14 @@ export function useCalculatorViewModel() {
   // quotes and calculators that assume another term. Order 1 places it right
   // after the purchase-tax line (order 0, which leads the 💡 group) and
   // ahead of the transaction-cost line (feedback).
-  if (firstPayment > 0) {
+  if (requiredPayment > 0) {
     warningMessages.push(
       mark(
         'info',
         <Trans
           i18nKey="calculator.warnings.requiredPayment"
           count={termCount}
-          values={{ payment: formatCurrency(firstPayment), term: termText ?? '' }}
+          values={{ payment: formatCurrency(requiredPayment), term: termText ?? '' }}
           components={[<strong key="rp-term" />, <strong key="rp-payment" />]}
         />,
         1,
@@ -407,7 +407,7 @@ export function useCalculatorViewModel() {
       )
     }
   }
-  if (allowedPayment !== null && firstPayment > 0) {
+  if (allowedPayment !== null && requiredPayment > 0) {
     if (allowedPayment === 0) {
       // The listed monthly payments exhaust the whole net income - "up to 0 ₪"
       // would be nonsense, so say outright that there is no room.
@@ -431,7 +431,7 @@ export function useCalculatorViewModel() {
         ),
       )
     } else {
-      const overAllowance = paymentExceedsAllowed(firstPayment, allowedPayment)
+      const overAllowance = paymentExceedsAllowed(requiredPayment, allowedPayment)
       // Every variant shows the entered income in the 33% parenthetical so
       // the verdict stands on the entered figures; a תשלום חודשי is
       // additionally addressed by name with its number (income minus
@@ -443,11 +443,11 @@ export function useCalculatorViewModel() {
       // payment itself (the figure the income must cover) instead of the
       // allowance, per feedback.
       const minIncome = overAllowance
-        ? suggestedIncomeForAllowance(firstPayment, otherTotal, ptiThresholdPercent)
+        ? suggestedIncomeForAllowance(requiredPayment, otherTotal, ptiThresholdPercent)
         : null
       const allowanceValues = {
         allowed: formatCurrency(allowedPayment),
-        payment: formatCurrency(firstPayment),
+        payment: formatCurrency(requiredPayment),
         income: formatCurrency(incomeValue),
         percent: String(ptiThresholdPercent),
         liabilities: formatCurrency(otherTotal),
@@ -511,8 +511,6 @@ export function useCalculatorViewModel() {
         return t('calculator.errors.positiveAmounts')
       case 'variableCap':
         return `${t('calculator.errors.variableCapLine1')}<br />${t('calculator.errors.variableCapLine2')}`
-      case 'duplicateType':
-        return t('calculator.errors.duplicateType')
     }
   })()
 
@@ -711,23 +709,26 @@ export function useCalculatorViewModel() {
       )
     }
     if (tx !== null) {
-      const items: Array<{ label: string; amount: string }> = [
-        { label: t('calculator.feeLabels.realtor'), amount: formatCurrency(tx.realtor) },
-        { label: t('calculator.feeLabels.lawyer'), amount: formatCurrency(tx.lawyer) },
-      ]
-      // שמאי appears only when typed - a blank field means "no appraiser",
-      // so the line never advertises a cost the user didn't enter.
-      if (tx.appraiser > 0) {
-        items.push({
-          label: t('calculator.feeLabels.appraiser'),
-          amount: formatCurrency(tx.appraiser),
-        })
-      }
-      if (tx.renovations > 0) {
-        items.push({
-          label: t('calculator.feeLabels.renovations'),
-          amount: formatCurrency(tx.renovations),
-        })
+      const items: Array<{ label: string; amount: string }> = []
+      if (tx !== null) {
+        items.push(
+          { label: t('calculator.feeLabels.realtor'), amount: formatCurrency(tx.realtor) },
+          { label: t('calculator.feeLabels.lawyer'), amount: formatCurrency(tx.lawyer) },
+        )
+        // שמאי appears only when typed - a blank field means "no appraiser",
+        // so the line never advertises a cost the user didn't enter.
+        if (tx.appraiser > 0) {
+          items.push({
+            label: t('calculator.feeLabels.appraiser'),
+            amount: formatCurrency(tx.appraiser),
+          })
+        }
+        if (tx.renovations > 0) {
+          items.push({
+            label: t('calculator.feeLabels.renovations'),
+            amount: formatCurrency(tx.renovations),
+          })
+        }
       }
       for (const expense of otherExpenses) {
         const oneTime = parseAmountText(expense.oneTimeAmountText)
@@ -777,7 +778,12 @@ export function useCalculatorViewModel() {
   // (feedback request), with one uniform font size and no yellow tint.
   // Within a group an explicit `order` ranks ahead of insertion order - the
   // payment fact leads the info group, before the transaction-cost line.
-  const summaryNotes: NoteLine[] = [...capitalNoteLines, ...warningMessages].sort((a, b) => {
+  const summaryNotes: NoteLine[] = [...capitalNoteLines, ...warningMessages, mark('info', (
+    <Trans
+      i18nKey="calculator.openingFeeInfo"
+      components={[<strong key="opening-fee" />]}
+    />
+  ))].sort((a, b) => {
     const byStatus = STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]
     if (byStatus !== 0) return byStatus
     const aOrder = a.order ?? Number.POSITIVE_INFINITY

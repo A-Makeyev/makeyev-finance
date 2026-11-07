@@ -6,9 +6,9 @@ test.describe('mortgage calculator - tracks and allocation', () => {
     await calc.goto()
   })
 
-  test('default mix has three tracks; removal keeps at least one', async ({ calc }) => {
+  test('default mix has three tracks; add is available; removal keeps at least one', async ({ calc }) => {
     await expect(calc.page.getByTestId('track-3')).toBeVisible()
-    await expect(calc.addTrackButton).toBeHidden()
+    await expect(calc.addTrackButton).toBeVisible()
 
     await calc.track(3).removeTrack()
     await expect(calc.page.getByTestId('track-3')).toHaveCount(0)
@@ -42,6 +42,25 @@ test.describe('mortgage calculator - tracks and allocation', () => {
       })()`)) as number
       expect(gap, `× vs chevron column at ${width}px`).toBeLessThanOrEqual(1)
     }
+  })
+
+  test('per-track reset cadence defaults by type and drives forecast resets', async ({ calc }) => {
+    // Default basket4: prime, fixed and a 5-year variable track. Only the
+    // resettable one exposes a cadence, defaulting to its type's 60 months.
+    await expect(calc.track(1).resetCadence()).toHaveCount(0)
+    await expect(calc.track(2).resetCadence()).toHaveCount(0)
+    const variable = calc.track(3)
+    await expect(variable.resetCadence()).toHaveValue('60')
+    await expect(calc.forecast.resetRows).toHaveCount(2)
+
+    // Changing the type to the annual variant moves the default to 12 months;
+    // the user can then override it with a 2+2 cadence.
+    await variable.setType('variable')
+    await expect(variable.resetCadence()).toHaveValue('12')
+    await variable.setResetCadence('24')
+    await expect(variable.resetCadence()).toHaveValue('24')
+    // 15 years at 24 months resets in years 3, 5, 7, 9, 11, 13 and 15.
+    await expect(calc.forecast.resetRows).toHaveCount(7)
   })
 
   test('manual rate override is respected (autoRate cleared)', async ({ calc }) => {
@@ -122,27 +141,28 @@ test.describe('mortgage calculator - tracks and allocation', () => {
     await expect(calc.startingAmount).toHaveValue('1,500,000')
   })
 
-  test('a repeated track type is rejected with an error', async ({ calc }) => {
+  test('accepts a repeated track type and still enforces the variable cap', async ({ calc }) => {
     // Default basket4 mix: prime / fixed / variable-indexed-5y. Turning the
-    // fixed track into a second prime repeats a type, which the mix rejects.
+    // fixed track into a second prime is allowed now; all three tracks are
+    // variable, so the Bank of Israel 2/3 cap is what blocks the mix.
     await expect(calc.formError).toBeHidden()
     const track2 = calc.track(2)
     await expect(async () => {
       await track2.setType('prime')
       await expect(track2.type()).toHaveValue('prime')
     }).toPass()
-    await expect(calc.formError).toContainText('לא ניתן לחזור על אותו מסלול')
-    // Both repeated-type rows are flagged, and auto-fix repairs it: the repeat
-    // moves onto the first type the mix does not already hold.
+    await expect(calc.track(1).type()).toHaveValue('prime')
+    await expect(calc.formError).toContainText('66.66%')
+    // Every variable row is flagged for the cap, including both primes.
     await expect(calc.track(1).legend()).toHaveClass(/variable-limit-flag/)
     await expect(track2.legend()).toHaveClass(/variable-limit-flag/)
+    await expect(calc.track(3).legend()).toHaveClass(/variable-limit-flag/)
     await expect(calc.autofixButton).toBeVisible()
 
+    // Auto-fix repairs the cap, not the repeat.
     await calc.autofixButton.click()
     await expect(calc.formError).toBeHidden()
     await expect(calc.autofixButton).toBeHidden()
-    await expect(track2.type()).not.toHaveValue('prime')
-    await expect(track2.legend()).not.toHaveClass(/variable-limit-flag/)
   })
 
   test('typing a home amount fills empty tracks with the recommended mix', async ({ calc }) => {

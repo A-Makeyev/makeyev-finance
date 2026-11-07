@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  GRACE_MODES,
   MAX_OTHER_EXPENSES,
   MAX_TRACKS,
   MAX_YEARS,
@@ -51,6 +52,16 @@ function amountValue(text: string): number {
 export const savedTrackSchema = z
   .object({
     type: z.enum(TRACK_TYPES),
+    /**
+     * Optional so mixes saved before the cadence field still load. The
+     * supported cadences are 1, 1.5, 2, 2.5, 3, 4, 5, 7 and 10 years, plus 0
+     * for fixed and prime tracks; anything else is rejected rather than
+     * silently stored.
+     */
+    resetMonths: z.number().int().min(0).max(120).optional(),
+    /** Optional so mixes saved before grace support still load. */
+    graceMonths: z.number().int().min(0).max(MAX_YEARS * 12).optional(),
+    graceMode: z.enum(GRACE_MODES).optional(),
     amountText: z.string().max(20).regex(AMOUNT_TEXT),
     yearsText: z.string().max(4).regex(YEARS_TEXT),
     rateText: z.string().max(8).regex(RATE_TEXT),
@@ -88,6 +99,19 @@ export const savedTrackSchema = z
     },
     { message: 'track rate is out of range', path: ['rateText'] },
   )
+  .refine(
+    (track) =>
+      track.resetMonths === undefined ||
+      [0, 12, 18, 24, 30, 36, 48, 60, 84, 120].includes(track.resetMonths),
+    {
+      message: 'track reset cadence is unsupported',
+      path: ['resetMonths'],
+    },
+  )
+  .refine((track) => (track.graceMonths ?? 0) <= Number(track.yearsText) * 12, {
+    message: 'track grace months cannot exceed the term',
+    path: ['graceMonths'],
+  })
 
 const MAX_TEXT = 20
 
@@ -114,6 +138,11 @@ export const savedMixScenarioSchema = z.object({
   realtorPercentText: z.string().max(8).regex(RATE_TEXT),
   lawyerPercentText: z.string().max(8).regex(RATE_TEXT),
   appraiserFeeText: z.string().max(MAX_TEXT).regex(AMOUNT_TEXT),
+  /**
+   * Accept the former editable fee in older payloads for compatibility.
+   * The calculator ignores this field; the fee is informational only.
+   */
+  openingFeeText: z.string().max(MAX_TEXT).regex(AMOUNT_TEXT).optional(),
   renovationAmountText: z.string().max(MAX_TEXT).regex(AMOUNT_TEXT),
   otherExpenses: z.array(savedExpenseSchema).max(MAX_OTHER_EXPENSES),
   ptiThresholdPercent: z

@@ -47,7 +47,7 @@ import {
 
 const round2 = (value: number) => Math.round(value * 100) / 100
 
-describe('duplicateTrackType / nextFreeTrackType (one track per type)', () => {
+describe('duplicateTrackType helper / nextFreeTrackType', () => {
   it('returns null when every type is distinct', () => {
     expect(duplicateTrackType(['fixed', 'prime', 'variable'])).toBeNull()
   })
@@ -244,6 +244,150 @@ describe('computeTrackResult - rate-reset steps', () => {
     const month61 = result.monthlyRows[60]
     expect(month61.principal).toBeCloseTo(first.principal, 6)
     expect(month61.interest).toBeCloseTo((previousClosing * 0.06) / 12, 6)
+  })
+})
+
+describe('computeTrackResult - grace periods', () => {
+  const base = {
+    principal: 100_000,
+    years: 5,
+    annualRatePercent: 6,
+    type: 'fixed' as const,
+    method: 'spitzer' as const,
+  }
+
+  it('interest-only grace keeps principal flat and pays only interest', () => {
+    const plain = computeTrackResult(base)!
+    const grace = computeTrackResult({
+      ...base,
+      graceMonths: 12,
+      graceMode: 'interestOnly',
+    })!
+
+    expect(grace.graceMonths).toBe(12)
+    expect(grace.firstPayment).toBeCloseTo(500, 6)
+    expect(grace.monthlyRows[0].principal).toBe(0)
+    expect(grace.monthlyRows[0].interest).toBeCloseTo(500, 6)
+    expect(grace.monthlyRows[11].closing).toBeCloseTo(100_000, 6)
+    expect(grace.monthlyRows[12].principal).toBeGreaterThan(0)
+    expect(grace.firstAmortizingPayment).toBeCloseTo(grace.monthlyRows[12].paid, 6)
+    expect(grace.firstAmortizingPayment).toBeGreaterThan(grace.firstPayment)
+    expect(grace.totalInterest).toBeGreaterThan(plain.totalInterest)
+    expect(grace.totalCapitalizedInterest).toBe(0)
+    expect(grace.monthlyRows[59].closing).toBeCloseTo(0, 2)
+    expect(grace.totalPaid).toBeCloseTo(base.principal + grace.totalInterest, 2)
+  })
+
+  it('full deferral capitalizes interest into a growing balance', () => {
+    const plain = computeTrackResult(base)!
+    const grace = computeTrackResult({
+      ...base,
+      graceMonths: 12,
+      graceMode: 'fullDeferral',
+    })!
+
+    expect(grace.firstPayment).toBe(0)
+    expect(grace.monthlyRows[0].paid).toBe(0)
+    expect(grace.monthlyRows[0].interest).toBe(0)
+    expect(grace.monthlyRows[0].capitalizedInterest).toBeCloseTo(500, 6)
+    expect(grace.monthlyRows[0].closing).toBeCloseTo(100_500, 6)
+    expect(grace.monthlyRows[11].closing).toBeGreaterThan(100_000)
+    expect(grace.monthlyRows[12].principal).toBeGreaterThan(0)
+    expect(grace.firstAmortizingPayment).toBeCloseTo(grace.monthlyRows[12].paid, 6)
+    expect(grace.firstAmortizingPayment).toBeGreaterThan(plain.firstPayment)
+    expect(grace.totalCapitalizedInterest).toBeGreaterThan(0)
+    expect(grace.totalInterest).toBeGreaterThan(plain.totalInterest)
+    expect(grace.monthlyRows[59].closing).toBeCloseTo(0, 2)
+    expect(grace.totalPaid).toBeCloseTo(base.principal + grace.totalInterest, 2)
+  })
+
+  it('a full-term full deferral is one maturity bullet', () => {
+    const bullet = computeTrackResult({
+      principal: 100_000,
+      years: 2,
+      annualRatePercent: 6,
+      type: 'fixed',
+      method: 'spitzer',
+      graceMonths: 24,
+      graceMode: 'fullDeferral',
+    })!
+
+    expect(bullet.firstPayment).toBe(0)
+    expect(bullet.monthlyRows.slice(0, 23).every((row) => row.paid === 0)).toBe(true)
+    expect(bullet.monthlyRows[23].paid).toBeCloseTo(100_000 + bullet.totalInterest, 2)
+    expect(bullet.monthlyRows[23].closing).toBeCloseTo(0, 2)
+    expect(bullet.firstAmortizingPayment).toBeCloseTo(bullet.monthlyRows[23].paid, 6)
+    expect(bullet.highestPayment).toBeCloseTo(bullet.monthlyRows[23].paid, 6)
+    expect(bullet.totalCapitalizedInterest).toBeGreaterThan(0)
+  })
+
+  it('a full-term interest-only grace leaves a principal bullet', () => {
+    const bullet = computeTrackResult({
+      principal: 100_000,
+      years: 2,
+      annualRatePercent: 6,
+      type: 'fixed',
+      method: 'spitzer',
+      graceMonths: 24,
+      graceMode: 'interestOnly',
+    })!
+
+    expect(bullet.monthlyRows[0].paid).toBeCloseTo(500, 6)
+    expect(bullet.monthlyRows[0].principal).toBe(0)
+    expect(bullet.monthlyRows[22].closing).toBeCloseTo(100_000, 2)
+    expect(bullet.monthlyRows[23].principal).toBeCloseTo(100_000, 2)
+    expect(bullet.monthlyRows[23].closing).toBeCloseTo(0, 2)
+    expect(bullet.firstAmortizingPayment).toBeCloseTo(bullet.monthlyRows[23].paid, 6)
+  })
+
+  it('equal-principal grace spreads the same real principal over fewer months', () => {
+    const grace = computeTrackResult({
+      ...base,
+      method: 'equalPrincipal',
+      graceMonths: 12,
+      graceMode: 'interestOnly',
+    })!
+
+    expect(grace.monthlyRows[0].principal).toBe(0)
+    expect(grace.monthlyRows[11].principal).toBe(0)
+    // 100,000 spread over the 48 months left after a one-year grace.
+    expect(grace.monthlyRows[12].principal).toBeCloseTo(100_000 / 48, 2)
+    expect(grace.monthlyRows[59].closing).toBeCloseTo(0, 2)
+  })
+
+  it('indexed grace still closes and reports CPI drift', () => {
+    const grace = computeTrackResult({
+      principal: 100_000,
+      years: 5,
+      annualRatePercent: 4,
+      type: 'fixedIndexed',
+      method: 'equalPrincipal',
+      annualInflation: 0.02,
+      graceMonths: 12,
+      graceMode: 'interestOnly',
+    })!
+
+    expect(grace.monthlyRows[0].principal).toBe(0)
+    expect(grace.totalIndexation).toBeGreaterThan(0)
+    expect(grace.monthlyRows[59].closing).toBeCloseTo(0, 2)
+    expect(grace.monthlyRows[59].principalIndexation).toBeGreaterThan(0)
+  })
+
+  it('normalizes grace to the term and treats zero as no grace', () => {
+    const plain = computeTrackResult(base)!
+    const zero = computeTrackResult({ ...base, graceMonths: 0 })!
+    const clamped = computeTrackResult({
+      ...base,
+      graceMonths: 999,
+      graceMode: 'fullDeferral',
+    })!
+    const negative = computeTrackResult({ ...base, graceMonths: -12 })!
+
+    expect(zero.monthlyRows).toEqual(plain.monthlyRows)
+    expect(zero.totalPaid).toBeCloseTo(plain.totalPaid, 6)
+    expect(zero.firstAmortizingPayment).toBeCloseTo(plain.firstPayment, 6)
+    expect(clamped.graceMonths).toBe(60)
+    expect(negative.graceMonths).toBe(0)
   })
 })
 
@@ -1323,6 +1467,7 @@ describe('peakPaymentYear (advisor row)', () => {
     indexation: 0,
     principalIndexation: 0,
     interest: 0,
+    capitalizedInterest: 0,
     paid,
     closing: 0,
   })
@@ -1821,5 +1966,23 @@ describe('paymentExceedsAllowed', () => {
 
   it('is true only when the payment is strictly above the allowance', () => {
     expect(paymentExceedsAllowed(13_001, 13_000)).toBe(true)
+  })
+})
+
+
+describe('full-deferral equal-principal repayment', () => {
+  it.each([0, 6, 12])('settles all debt with %i grace months', (graceMonths) => {
+    const result = computeTrackResult({ principal: 120000, years: 1,
+      annualRatePercent: 12, type: 'fixed', method: 'equalPrincipal',
+      graceMonths, graceMode: 'fullDeferral' })!
+    expect(result.monthlyRows.at(-1)!.closing).toBeCloseTo(0, 8)
+    expect(result.totalPaid).toBeCloseTo(120000 + result.totalInterest, 6)
+    if (graceMonths === 6) {
+      expect(result.monthlyRows[6].principal).toBeCloseTo(21230.40301202, 6)
+    }
+  })
+  it('rejects a non-finite term', () => {
+    expect(computeTrackResult({ principal: 120000, years: NaN,
+      annualRatePercent: 12, type: 'fixed', method: 'spitzer' })).toBeNull()
   })
 })

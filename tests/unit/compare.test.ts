@@ -9,6 +9,7 @@ import {
   DEFAULT_TERM_YEARS,
   MAX_OTHER_EXPENSES,
   computeTrackResult,
+  defaultResetMonthsFor,
   type PropertyPurpose,
 } from '@/lib/amortization'
 import { parseAmountText } from '@/lib/format'
@@ -22,12 +23,16 @@ import type { TrackState } from '@/stores/calculatorStore'
  */
 
 function track(overrides: Partial<TrackState> = {}): TrackState {
+  const type = overrides.type ?? 'fixed'
   return {
     id: 't1',
-    type: 'fixed',
+    type,
     amountText: '1,000,000',
     yearsText: '15',
     rateText: '4.5',
+    resetMonths: defaultResetMonthsFor(type),
+    graceMonths: 0,
+    graceMode: 'interestOnly',
     method: 'spitzer',
     isAutoRate: true,
     loanShareMemory: null,
@@ -188,6 +193,20 @@ describe('computeScenario - chart series', () => {
     expect(monthly[11].closing).toBeCloseTo(result.schedule[0].closing, 6)
   })
 
+  it('carries a 2+2 cadence into the forecast and fee projection', () => {
+    const result = computeScenario(
+      [
+        track({ amountText: '500,000' }),
+        track({ type: 'variable', amountText: '500,000', resetMonths: 24 }),
+      ],
+      baseInputs,
+    )
+    expect(result.error).toBeNull()
+    // 15 years, reset every 24 months: months 25, 49, ... 169 -> odd years.
+    expect(result.forecast.resetYears).toEqual([3, 5, 7, 9, 11, 13, 15])
+    expect(result.prepaymentTracks[1].resetMonths).toBe(24)
+  })
+
   it('builds the rate scenarios the calculator would draw for the same mix', () => {
     // A half-fixed, half-five-year mix: the variable half carries the reset.
     const result = computeScenario(
@@ -297,8 +316,8 @@ describe('computeScenario - errors and caps', () => {
     expect(result.error).toBe('variableCap')
   })
 
-  it('flags a repeated track type with no numbers', () => {
-    // Two prime tracks (one per type rule): error gates all figures.
+  it('prices two tracks of the same type as two separate slices', () => {
+    // Two prime tracks (real offers carry these) are priced, not rejected.
     const result = computeScenario(
       [
         track({ id: 'a', type: 'prime', amountText: '300,000', rateText: '5.75' }),
@@ -307,10 +326,11 @@ describe('computeScenario - errors and caps', () => {
       ],
       baseInputs,
     )
-    expect(result.error).toBe('duplicateType')
-    expect(result.totals.firstPayment).toBe(0)
-    expect(result.loanAmount).toBe(0)
-    expect(result.mixShares).toEqual([])
+    expect(result.error).toBeNull()
+    expect(result.totals.firstPayment).toBeGreaterThan(0)
+    expect(result.loanAmount).toBe(1_000_000)
+    expect(result.mixShares).toHaveLength(3)
+    expect(result.mixShares.filter((share) => share.type === 'prime')).toHaveLength(2)
   })
 
   it('reports LTV violation above the purpose limit', () => {
@@ -479,28 +499,33 @@ describe('comparisonStore', () => {
     expect(after.scenarios[0].tracks[0].amountText).toBe('400,000')
   })
 
-  it('enforces the 2..3 scenario window and the 1..3 track window', () => {
+  it('enforces the 2..4 scenario window and the 1..6 track window', () => {
     const store = useComparisonStore.getState()
     store.addScenario()
     expect(useComparisonStore.getState().scenarios).toHaveLength(3)
     store.addScenario()
-    expect(useComparisonStore.getState().scenarios).toHaveLength(3)
+    expect(useComparisonStore.getState().scenarios).toHaveLength(4)
+    store.addScenario()
+    expect(useComparisonStore.getState().scenarios).toHaveLength(4)
 
+    store.removeScenario(useComparisonStore.getState().scenarios[0].id)
+    expect(useComparisonStore.getState().scenarios).toHaveLength(3)
     store.removeScenario(useComparisonStore.getState().scenarios[0].id)
     expect(useComparisonStore.getState().scenarios).toHaveLength(2)
     store.removeScenario(useComparisonStore.getState().scenarios[0].id)
     expect(useComparisonStore.getState().scenarios).toHaveLength(2)
 
     // The track window is exercised on scenario 2 (opens with one track);
-    // scenario 1 already sits at the 3-track max with the default mix.
+    // scenario 1 already sits at the 6-track max with the default mix.
     const blank = useComparisonStore.getState().scenarios[1]
+    for (let index = 0; index < 5; index++) {
+      useComparisonStore.getState().addTrack(blank.id)
+    }
+    expect(useComparisonStore.getState().scenarios[1].tracks).toHaveLength(6)
     useComparisonStore.getState().addTrack(blank.id)
-    useComparisonStore.getState().addTrack(blank.id)
-    expect(useComparisonStore.getState().scenarios[1].tracks).toHaveLength(3)
-    useComparisonStore.getState().addTrack(blank.id)
-    expect(useComparisonStore.getState().scenarios[1].tracks).toHaveLength(3)
+    expect(useComparisonStore.getState().scenarios[1].tracks).toHaveLength(6)
     useComparisonStore.getState().removeTrack(blank.id, blank.tracks[0].id)
-    expect(useComparisonStore.getState().scenarios[1].tracks).toHaveLength(2)
+    expect(useComparisonStore.getState().scenarios[1].tracks).toHaveLength(5)
   })
 
   it('a new track in a blank scenario is funded from the shared loan', () => {
@@ -593,8 +618,8 @@ describe('comparisonStore', () => {
     const scenario = store.scenarios[1]
     store.loadScenarioPreset(scenario.id, 'basket2')
     const fixedTrack = useComparisonStore.getState().scenarios[1].tracks[0]
-    // A distinct variable type (not a repeat of the prime track) makes the mix
-    // 100% variable, tripping the 2/3 cap rather than the duplicate-type rule.
+    // A distinct variable type makes the mix 100% variable and trips the
+    // Bank of Israel 2/3 cap.
     useComparisonStore.getState().changeTrackType(scenario.id, fixedTrack.id, 'variable5y')
     expect(useComparisonStore.getState().results[1].error).toBe('variableCap')
 

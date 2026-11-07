@@ -9,28 +9,31 @@
  * the same curve from the same arithmetic, and neither re-derives a balance,
  * a reset or a rate addition in a component.
  *
- * A five-year track is priced only to its next rate reset (section 4(1)), as
- * the panel's table already does. The projection uses the schedule's current
- * rate and the caller's comparison-rate function; it does not model future
- * resets.
+ * A track with a contractual reset is priced only to its next reset
+ * (section 4(1)), as the panel's table already does. The projection uses the
+ * schedule's current rate and the caller's comparison-rate function; it does
+ * not model future resets.
  */
-import type { AmortizationMethod, MonthlyRow, TrackType } from './amortization'
 import {
-  EXIT_STATION_TYPES,
+  defaultResetMonthsFor,
+  type AmortizationMethod,
+  type MonthlyRow,
+  type TrackType,
+} from './amortization'
+import {
   feeAsAnnualRateAddition,
   prepaymentFee,
   streamToRateReset,
   type PrepaymentFeeBreakdown,
 } from './prepayment'
 
-/** Five-year variable tracks reset on this cycle, counted from origination. */
-const RESET_EVERY_MONTHS = 60
-
 /** One track as its remaining schedule presents it to the fee model. */
 export interface PrepaymentProjectionTrack {
   /** Stable id within the mix: the track type plus its entry index. */
   id: string
   type: TrackType
+  /** Contractual reset cadence in months; 0 means no contractual reset. */
+  resetMonths?: number
   monthlyRows: readonly MonthlyRow[]
   annualRatePercent: number
   isIndexed: boolean
@@ -91,15 +94,15 @@ export function prepaymentFeeRows(
     const nextRow = track.monthlyRows[months]
     if (!nextRow) continue
 
+    const resetMonths = track.resetMonths ?? defaultResetMonthsFor(track.type)
     let remainingMonths = trackMonths - months
     let payments = track.monthlyRows.slice(months).map((row) => row.paid)
-    // A five-year track's current rate is only fixed until its next reset.
-    // Section 4(1) prices it to that date, with the reset balance as the last
-    // future payment, rather than pretending the rate runs to the end.
-    if (EXIT_STATION_TYPES.includes(track.type)) {
-      const monthsIntoBlock = months % RESET_EVERY_MONTHS
-      const untilReset =
-        monthsIntoBlock === 0 ? RESET_EVERY_MONTHS : RESET_EVERY_MONTHS - monthsIntoBlock
+    // The current rate is only fixed until the track's next reset. Section
+    // 4(1) prices it to that date, with the reset balance as the last future
+    // payment, rather than pretending the rate runs to the end.
+    if (resetMonths > 0) {
+      const monthsIntoBlock = months % resetMonths
+      const untilReset = monthsIntoBlock === 0 ? resetMonths : resetMonths - monthsIntoBlock
       if (untilReset < remainingMonths) {
         const balanceAtReset = track.monthlyRows[months + untilReset - 1].closing
         payments = streamToRateReset(payments, balanceAtReset, untilReset)
@@ -122,6 +125,7 @@ export function prepaymentFeeRows(
       marketRatePercent: marketRate,
       originationAverageRatePercent: capRateFor?.(track.id),
       type: track.type,
+      resetMonths,
       indexed: track.isIndexed,
       annualInflation,
       monthsSinceOrigination: months,
@@ -138,7 +142,7 @@ export function prepaymentFeeRows(
       annualRatePercent: track.annualRatePercent,
       nextPayment: nextRow.paid,
       nextPrincipal: nextRow.principal,
-      remainingMonths: trackMonths - months,
+      remainingMonths,
       breakdown,
       rateAddition: feeAsAnnualRateAddition({
         openingBalances,

@@ -59,8 +59,8 @@ const amountText = (amount: number): string =>
  * order. A total entered once spreads cheapest-first across the tracks, and the
  * per-track amounts it fills can then be moved between mixes; those same
  * amounts drive both legal outcomes of a partial prepayment: finish earlier, or
- * keep the maturity and lower the payment. A five-year track is
- * priced only to its next reset (section 4(1)), matching the law's shorter
+ * keep the maturity and lower the payment. A track with a contractual reset
+ * is priced only to its next reset (section 4(1)), matching the law's shorter
  * horizon.
  *
  * `priceAt` is the whole computation for one prepayment month; the selected
@@ -146,6 +146,7 @@ export function PrepaymentSection() {
       tracks.map((track, index) => ({
         id: `${track.type}-${index}`,
         type: track.type,
+        resetMonths: track.resetMonths,
         monthlyRows: track.monthlyRows,
         annualRatePercent: track.annualRatePercent,
         isIndexed: track.isIndexed,

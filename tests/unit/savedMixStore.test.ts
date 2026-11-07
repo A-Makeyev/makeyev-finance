@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   isMixDirty,
+  serializeSavableTracks,
   serializeScenario,
   useCalculatorStore,
   type SavedMixScenario,
@@ -170,6 +171,35 @@ describe('loadSavedMix', () => {
 
     useCalculatorStore.getState().loadSavedMix([fixed('100,000', '30', '4.8')], 30)
     expect(useCalculatorStore.getState().startingAmountText).toBe(derived)
+  })
+
+  it('loads a saved cadence and fills the type default for an older mix', () => {
+    useCalculatorStore.getState().loadSavedMix(
+      [
+        { ...fixed('100,000', '30', '4.5'), type: 'variable5y', resetMonths: 24 },
+        { ...fixed('100,000', '30', '4.5'), type: 'variable5y' },
+        fixed('100,000', '30', '4.5'),
+      ],
+      30,
+    )
+
+    const state = useCalculatorStore.getState()
+    expect(state.tracks[0].resetMonths).toBe(24)
+    // Missing on an older saved five-year track: migrate to its default.
+    expect(state.tracks[1].resetMonths).toBe(60)
+    expect(state.tracks[2].resetMonths).toBe(0)
+    expect(isMixDirty(state)).toBe(false)
+  })
+
+  it('sends the cadence in the save payload', () => {
+    useCalculatorStore
+      .getState()
+      .loadSavedMix(
+        [{ ...fixed('100,000', '30', '4.5'), type: 'variable5y', resetMonths: 24 }],
+        30,
+      )
+    const payload = serializeSavableTracks(useCalculatorStore.getState().tracks)
+    expect(payload[0].resetMonths).toBe(24)
   })
 
   it('round-trips the display-only market margin and exposes it on the track', () => {

@@ -79,6 +79,7 @@ describe('upfront total through the store', () => {
     const capital = s.snapshot.suggestedCapital ?? 0
     const tax = s.snapshot.closingCosts?.purchaseTax ?? 0
     const tx = s.snapshot.transactionCosts!.total
+    // The statutory opening fee ( ₪360 ) is cash paid at closing too.
     expect(s.snapshot.upfrontTotal).toBe(capital + tax + tx)
     expect(s.snapshot.suggestedCapital).toBe(250_000)
   })
@@ -116,7 +117,8 @@ describe('upfront total through the store', () => {
     expect(s.snapshot.transactionCosts!.appraiser).toBe(0)
     // 25% of the 5-basis → 1.25 → 500 on suggestedCapital's ₪500 grid.
     expect(s.snapshot.suggestedCapital).toBe(500)
-    // 500 capital + 0 tax + (0.118 realtor + 7,080 lawyer) = 7,580.118, exact.
+    // 500 capital + 0 tax + (0.118 realtor + 7,080 lawyer)
+    // = 7,580.118, exact.
     expect(s.snapshot.upfrontTotal).toBeCloseTo(500 + 7_080.118, 2)
     // At display precision the shown lines (0 + 7,080 + capital 500) sum to
     // the shown total (7,580).

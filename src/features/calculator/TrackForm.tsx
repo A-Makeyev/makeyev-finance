@@ -2,7 +2,9 @@ import { useTranslation } from 'react-i18next'
 import {
   MAX_RATE_PERCENT,
   MAX_YEARS,
+  RESET_MONTH_OPTIONS,
   TRACK_TYPES,
+  defaultResetMonthsFor,
   type AmortizationMethod,
   type TrackType,
 } from '@/lib/amortization'
@@ -11,6 +13,7 @@ import { MoneyInput } from '@/components/ui/MoneyInput'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { cn } from '@/lib/cn'
+import { TrackGraceFields } from './TrackGraceFields'
 
 /**
  * One mortgage track fieldset - semantic fieldset/legend structure preserved
@@ -30,6 +33,9 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
   const updateTrackMargin = useCalculatorStore((s) => s.updateTrackMargin)
   const primeRate = useCalculatorStore((s) => s.primeRate)
   const changeTrackType = useCalculatorStore((s) => s.changeTrackType)
+  const changeTrackResetMonths = useCalculatorStore((s) => s.changeTrackResetMonths)
+  const changeTrackGraceMonths = useCalculatorStore((s) => s.changeTrackGraceMonths)
+  const changeTrackGraceMode = useCalculatorStore((s) => s.changeTrackGraceMode)
   const changeTrackMethod = useCalculatorStore((s) => s.changeTrackMethod)
   const removeTrack = useCalculatorStore((s) => s.removeTrack)
 
@@ -66,7 +72,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         ×
       </button>
 
-      <label className="input-group" htmlFor={`track-type-${track.id}`}>
+      <label className="input-group track-cell-type" htmlFor={`track-type-${track.id}`}>
         {/* htmlFor must name the select, not rely on nesting: the first
             labelable descendant is the tooltip's "?" button, so the implicit
             association hijacks hover and clicks from the label onto that
@@ -100,7 +106,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         </FlipSelect>
       </label>
 
-      <label className="input-group">
+      <label className="input-group track-cell-amount">
         {t('calculator.track.amountLabel')}
         <MoneyInput
           value={track.amountText}
@@ -112,7 +118,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         />
       </label>
 
-      <label className="input-group">
+      <label className="input-group track-cell-years">
         {t('calculator.track.yearsLabel')}
         <div className="input-wrap">
           <input
@@ -133,7 +139,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         </div>
       </label>
 
-      <label className="input-group">
+      <label className="input-group track-cell-rate">
         {t('calculator.track.rateLabel')}
         <div className="input-wrap">
           <input
@@ -153,7 +159,34 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         </div>
       </label>
 
-      <label className="input-group" htmlFor={`track-margin-${track.id}`}>
+      {defaultResetMonthsFor(track.type) > 0 && (
+        <label className="input-group track-cell-reset" htmlFor={`track-reset-${track.id}`}>
+          <span className="label-help-row">
+            <span className="label-help-text">{t('calculator.track.resetLabel')}</span>
+            <HelpTooltip
+              label={t('calculator.help.resetCadenceAria')}
+              content={t('calculator.help.resetCadence')}
+              linkTo="/articles/mortgage-track-types"
+              linkLabel={t('calculator.help.readMore')}
+              testId={`help-reset-cadence-${index + 1}`}
+            />
+          </span>
+          <FlipSelect
+            value={String(track.resetMonths)}
+            onChange={(value) => changeTrackResetMonths(track.id, Number(value))}
+            selectId={`track-reset-${track.id}`}
+            testId={`track-reset-${index + 1}`}
+          >
+            {RESET_MONTH_OPTIONS.map((months) => (
+              <option key={months} value={months}>
+                {t(`calculator.track.resetMonths${months}`)}
+              </option>
+            ))}
+          </FlipSelect>
+        </label>
+      )}
+
+      <label className="input-group track-cell-margin" htmlFor={`track-margin-${track.id}`}>
         {/* Explicit htmlFor, like the type and method selects: the tooltip's
             "?" button must not become the label's implicit control. */}
         <span className="label-help-row">
@@ -185,7 +218,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         </div>
       </label>
 
-      <label className="input-group" htmlFor={`track-method-${track.id}`}>
+      <label className="input-group track-cell-method" htmlFor={`track-method-${track.id}`}>
         {/* Same htmlFor binding as the type select above: the tooltip button
             must not become the label's control. */}
         <span className="label-help-row">
@@ -209,6 +242,16 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
           <option value="equalPrincipal">{t('calculator.track.methodEqualPrincipal')}</option>
         </FlipSelect>
       </label>
+
+      <TrackGraceFields
+        graceMonths={track.graceMonths}
+        graceMode={track.graceMode}
+        termYearsText={track.yearsText}
+        onChangeMonths={(months) => changeTrackGraceMonths(track.id, months)}
+        onChangeMode={(mode) => changeTrackGraceMode(track.id, mode)}
+        idPrefix={`track-${track.id}`}
+        testIdPrefix={`track-${index + 1}`}
+      />
     </fieldset>
   )
 }

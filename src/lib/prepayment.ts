@@ -58,7 +58,12 @@
  * Those are added on top of `fee`, never inside it.
  */
 
-import { FALLBACK_INFLATION, type AmortizationMethod, type TrackType } from './amortization'
+import {
+  FALLBACK_INFLATION,
+  defaultResetMonthsFor,
+  type AmortizationMethod,
+  type TrackType,
+} from './amortization'
 
 /**
  * Legal reduction by loan age, from the Banking Order (2002) as amended:
@@ -69,22 +74,6 @@ export const AGE_DISCOUNT_TIERS = [
   { afterMonths: 60, discount: 0.3 },
   { afterMonths: 36, discount: 0.2 },
 ] as const
-
-/**
- * Loans whose rate resets at least once a year are exempt from the היוון fee:
- * prime and the annual variable tracks (Banking Order, section 4(2)).
- */
-export const FREQUENT_RESET_EXEMPT_TYPES: readonly TrackType[] = [
-  'prime',
-  'variable',
-  'variableIndexed',
-]
-
-/**
- * Types with a known five-year reset, so a prepayment on the reset date is an
- * exit station (תחנת יציאה) and the היוון fee is waived (section 4(3)).
- */
-export const EXIT_STATION_TYPES: readonly TrackType[] = ['variable5y', 'variableIndexed5y']
 
 /**
  * The Banking Order lets a bank charge up to ₪60 per loan for handling an
@@ -278,9 +267,14 @@ export interface PrepaymentFeeInput {
   /** Months from origination to the prepayment (drives the age reductions). */
   monthsSinceOrigination: number
   /**
-   * True when the prepayment lands on a rate reset (תחנת יציאה). Only the
-   * five-year reset tracks have one; for any other type the flag is ignored,
-   * because a fixed or annually-reset loan has no exit station on that date.
+   * Contractual reset cadence in months; 0 means no contractual reset. When
+   * omitted, the legacy type's default is used (12 for annual variable, 60 for
+   * five-year variable).
+   */
+  resetMonths?: number
+  /**
+   * True when the prepayment lands on a rate reset (תחנת יציאה). Only a track
+   * with a contractual reset has one; for any other type the flag is ignored.
    */
   onExitStation?: boolean
 }
@@ -337,11 +331,13 @@ export function prepaymentFee(input: PrepaymentFeeInput): PrepaymentFeeBreakdown
     originationAverageRatePercent,
     originationAverageRateIsEffective = true,
     type,
+    resetMonths: inputResetMonths,
     indexed,
     annualInflation,
     monthsSinceOrigination,
     onExitStation = false,
   } = input
+  const resetMonths = inputResetMonths ?? defaultResetMonthsFor(type)
 
   const empty: PrepaymentFeeBreakdown = {
     marketPresentValue: 0,
@@ -375,12 +371,14 @@ export function prepaymentFee(input: PrepaymentFeeInput): PrepaymentFeeBreakdown
   const contractualPresentValue = presentValue(real, loanRate)
   const grossFee = Math.max(0, marketPresentValue - contractualPresentValue)
   const ageDiscount = ageDiscountFor(monthsSinceOrigination)
+  // Section 4(2): a loan whose rate resets at least once a year is exempt.
+  // Section 4(3): a less frequent reset has an exit station on its reset date.
   const exemptReason: PrepaymentExemption | null =
     type === 'prime'
       ? 'prime'
-      : FREQUENT_RESET_EXEMPT_TYPES.includes(type)
+      : resetMonths > 0 && resetMonths <= 12
         ? 'frequentReset'
-        : onExitStation && EXIT_STATION_TYPES.includes(type)
+        : onExitStation && resetMonths > 0
           ? 'exitStation'
           : null
 

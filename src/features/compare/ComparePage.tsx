@@ -7,9 +7,12 @@ import { ScrollCue } from '@/components/layout/ScrollCue'
 import {
   FALLBACK_INFLATION,
   LAWYER_MINIMUM_FEE,
+  MAX_MIXES,
   MAX_TRACKS,
   MAX_YEARS,
+  RESET_MONTH_OPTIONS,
   TRACK_TYPES,
+  defaultResetMonthsFor,
   VAT_RATE,
   isVariableType,
   type AmortizationMethod,
@@ -38,6 +41,7 @@ import { useAverageRates } from '@/services/rates'
 import { useMediaQuery } from '@/hooks/useScrolled'
 import { useComparisonStore } from '@/stores/comparisonStore'
 import { TrackMixDonut } from '@/features/calculator/TrackMixDonut'
+import { TrackGraceFields } from '@/features/calculator/TrackGraceFields'
 import { sharedInputSuggestions, type ScenarioResult } from './computeScenario'
 import { CompareTrendChart, type RateScenarioGroup, type TrendSeries } from './CompareTrendChart'
 import { ScheduleTable } from './ScheduleTable'
@@ -126,6 +130,9 @@ export function ComparePage() {
     updateTrackRate: useComparisonStore((s) => s.updateTrackRate),
     commitTrackRateBlur: useComparisonStore((s) => s.commitTrackRateBlur),
     changeTrackType: useComparisonStore((s) => s.changeTrackType),
+    changeTrackResetMonths: useComparisonStore((s) => s.changeTrackResetMonths),
+    changeTrackGraceMonths: useComparisonStore((s) => s.changeTrackGraceMonths),
+    changeTrackGraceMode: useComparisonStore((s) => s.changeTrackGraceMode),
     changeTrackMethod: useComparisonStore((s) => s.changeTrackMethod),
     setScenarioTermYears: useComparisonStore((s) => s.setScenarioTermYears),
     setMortgageSum: useComparisonStore((s) => s.setMortgageSum),
@@ -502,9 +509,6 @@ export function ComparePage() {
     if (result.error === 'variableCap') {
       return [{ ok: false, text: t('compare.statusErrorVariableCap') }, ...rateLine]
     }
-    if (result.error === 'duplicateType') {
-      return [{ ok: false, text: t('compare.statusErrorDuplicateType') }, ...rateLine]
-    }
     if (result.isEmpty) return [{ ok: null, text: t('compare.statusEmpty') }, ...rateLine]
     const lines: Array<{ ok: boolean | null; text: string }> = []
     if (result.ltv) {
@@ -543,16 +547,10 @@ export function ComparePage() {
     if (!scenario) return null
     // The Bank of Israel 2/3 variable cap is caused by the variable tracks'
     // share, so flag THOSE rows red (like the calculator's flagged tracks)
-    // instead of tinting the whole result card. A duplicate type flags every
-    // row carrying the repeated type, so the user sees which to change.
+    // instead of tinting the whole result card.
     const error = results[scenarioIndex]?.error
-    const typeCounts = new Map<string, number>()
-    scenario.tracks.forEach((track) => {
-      typeCounts.set(track.type, (typeCounts.get(track.type) ?? 0) + 1)
-    })
     const flagTrack = (track: (typeof scenario.tracks)[number]) =>
-      (error === 'variableCap' && isVariableType(track.type)) ||
-      (error === 'duplicateType' && (typeCounts.get(track.type) ?? 0) > 1)
+      error === 'variableCap' && isVariableType(track.type)
     return (
       <div
         className="compare-scenario-editor"
@@ -571,7 +569,7 @@ export function ComparePage() {
               onChange={(event) => actions.setLabel(scenario.id, event.target.value)}
             />
             <div className="compare-scenario-actions">
-              {scenarios.length < MAX_TRACKS && (
+              {scenarios.length < MAX_MIXES && (
                 <button
                   type="button"
                   className="compare-icon-button"
@@ -711,7 +709,7 @@ export function ComparePage() {
               </button>
             )}
 
-            <label className="input-group">
+            <label className="input-group track-cell-type">
               {t('compare.trackTypeLabel')}
               <FlipSelect
                 value={track.type}
@@ -726,7 +724,7 @@ export function ComparePage() {
               </FlipSelect>
             </label>
 
-            <label className="input-group">
+            <label className="input-group track-cell-amount">
               {t('compare.trackAmountLabel')}
               <MoneyInput
                 value={track.amountText}
@@ -740,7 +738,7 @@ export function ComparePage() {
               />
             </label>
 
-            <label className="input-group">
+            <label className="input-group track-cell-rate">
               {t('compare.trackRateLabel')}
               <div className="input-wrap">
                 <input
@@ -762,7 +760,27 @@ export function ComparePage() {
               </div>
             </label>
 
-            <label className="input-group">
+            {defaultResetMonthsFor(track.type) > 0 && (
+              <label className="input-group track-cell-reset" htmlFor={`compare-track-reset-${scenarioIndex + 1}-${trackIndex + 1}`}>
+                {t('calculator.track.resetLabel')}
+                <FlipSelect
+                  value={String(track.resetMonths)}
+                  onChange={(value) =>
+                    actions.changeTrackResetMonths(scenario.id, track.id, Number(value))
+                  }
+                  selectId={`compare-track-reset-${scenarioIndex + 1}-${trackIndex + 1}`}
+                  testId={`compare-track-reset-${scenarioIndex + 1}-${trackIndex + 1}`}
+                >
+                  {RESET_MONTH_OPTIONS.map((months) => (
+                    <option key={months} value={months}>
+                      {t(`calculator.track.resetMonths${months}`)}
+                    </option>
+                  ))}
+                </FlipSelect>
+              </label>
+            )}
+
+            <label className="input-group track-cell-method">
               {t('compare.trackMethodLabel')}
               <FlipSelect
                 value={track.method}
@@ -775,6 +793,18 @@ export function ComparePage() {
                 <option value="equalPrincipal">{t('calculator.track.methodEqualPrincipal')}</option>
               </FlipSelect>
             </label>
+
+            <TrackGraceFields
+              graceMonths={track.graceMonths}
+              graceMode={track.graceMode}
+              termYearsText={track.yearsText}
+              onChangeMonths={(months) =>
+                actions.changeTrackGraceMonths(scenario.id, track.id, months)
+              }
+              onChangeMode={(mode) => actions.changeTrackGraceMode(scenario.id, track.id, mode)}
+              idPrefix={`compare-track-${scenarioIndex + 1}-${trackIndex + 1}`}
+              testIdPrefix={`compare-track-${scenarioIndex + 1}-${trackIndex + 1}`}
+            />
           </fieldset>
         ))}
         {scenario.tracks.length < MAX_TRACKS && (
@@ -1134,6 +1164,7 @@ export function ComparePage() {
             )}
           </div>
 
+
         </section>
 
         {/* Scenario editors: table columns on desktop, the active scenario's
@@ -1172,7 +1203,7 @@ export function ComparePage() {
               {renderScenarioEditor(clampedMobileIndex)}
             </>
           )}
-          {scenarios.length < MAX_TRACKS && (
+          {scenarios.length < MAX_MIXES && (
             <button
               type="button"
               className="compare-add-scenario"

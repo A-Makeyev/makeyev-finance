@@ -182,8 +182,8 @@ export const en: { translation: Translation } = {
             text: 'Under Bank of Israel rules, a prime track is exempt from the prepayment penalty. Its rate follows the Bank of Israel rate, so the bank has no locked-in future profit to be compensated for.',
           },
           reset: {
-            title: 'Annual or five-year resets: an exit point at every reset',
-            text: 'A track whose rate resets every year or every five years has an exit point: at every rate reset you can repay it without the discounting penalty (עמלת היוון). An annually-reset track is exempt throughout; a five-year track is exempt on the reset date itself. Small operational fees may still apply.',
+            title: 'Rate resets: an exit point at every reset',
+            text: 'A track with a contractual rate reset has an exit point: at every rate reset you can repay it without the discounting penalty (עמלת היוון). A track that resets at least once a year is exempt throughout; a less frequent reset is exempt on the reset date itself. Small operational fees may still apply.',
           },
           fixed: {
             title: 'Fixed-rate tracks: no exemption',
@@ -388,6 +388,7 @@ export const en: { translation: Translation } = {
       realtorPercentLabel: 'Realtor fee',
       lawyerPercentLabel: 'Lawyer fee',
       appraiserFeeLabel: 'Appraiser fee',
+      openingFeeInfo: 'Opening case fee up to <0>360₪</0> not included in the displayed totals',
       renovationsLabel: 'Renovations',
       realtorAmountLabel: 'Realtor fee - amount incl. VAT',
       lawyerAmountLabel: 'Lawyer fee - amount incl. VAT',
@@ -416,6 +417,18 @@ export const en: { translation: Translation } = {
       presetBasket2: 'Mix 2',
       presetBasket3: 'Mix 3',
       presetBasket4: 'Recommended mix',
+      sampleQuotes: {
+        heading: 'Load a sample quote',
+        note: 'Real quotes from the example set, with no customer details. Loading replaces the current mix.',
+        replaceTitle: 'Load a sample quote?',
+        replaceBody: 'The current mix has unsaved changes. Loading a quote will replace them.',
+        replaceAction: 'Load quote',
+        banks: {
+          mizrahi: 'Mizrahi Tefahot',
+          leumi: 'Leumi',
+          discount: 'Discount',
+        },
+      },
       addTrack: 'Add track +',
       autofix: 'Auto-fix mix',
       noNeed: 'No need 🥳',
@@ -440,6 +453,16 @@ export const en: { translation: Translation } = {
         legend: 'Track {{index}}',
         removeAria: 'Remove track',
         typeLabel: 'Track type',
+        resetLabel: 'Rate update',
+        resetMonths12: 'Every 12 months',
+        resetMonths18: 'Every 18 months',
+        resetMonths24: 'Every 24 months (2+2)',
+        resetMonths30: 'Every 30 months (2.5 years)',
+        resetMonths36: 'Every 36 months (3 years)',
+        resetMonths48: 'Every 48 months (4 years)',
+        resetMonths60: 'Every 60 months (5 years)',
+        resetMonths84: 'Every 84 months (7 years)',
+        resetMonths120: 'Every 120 months (10 years)',
         amountLabel: 'Amount',
         yearsLabel: 'Term',
         yearsSuffix: 'years',
@@ -448,10 +471,22 @@ export const en: { translation: Translation } = {
         methodLabel: 'Amortization',
         methodSpitzer: 'Spitzer',
         methodEqualPrincipal: 'Equal principal',
+        specialTerms: 'Special terms',
+        graceMonthsLabel: 'Grace period',
+        graceMonthsSuffix: 'months',
+        graceModeLabel: 'Grace type',
+        graceModeInterestOnly: 'Interest only',
+        graceModeFullDeferral: 'Full deferral (principal and interest)',
       },
       help: {
         readMore: 'Read more',
         trackTypeAria: 'More about the track types',
+        resetCadenceAria: 'More about the rate-update cadence',
+        resetCadence:
+          'The rate-update cadence is how often the bank reprices this variable track. 2+2 means an update every 24 months. Between updates the track behaves like a fixed rate, and every update is a penalty-free exit point. The track type name is a default; this field sets the actual cadence.',
+        graceAria: 'More about the grace period',
+        grace:
+          'A grace period is the opening months of a track in which no principal is repaid. Interest-only grace pays the interest each month; full deferral pays nothing and adds the interest to the balance. The payment used for the income check is the first payment after grace ends.',
         trackTypes: {
           // Each body opens with the track's own select label (the test below
           // guards it), so the tip reads "<name> is..." and never forces the
@@ -676,14 +711,14 @@ export const en: { translation: Translation } = {
         orderAllocateAria: 'Amount to repay from the {{track}} track',
         orderNoAmount: 'With no amount there is no partial prepayment - the list shows only the ranking.',
         zeroWhy:
-          'Prime and annually reset tracks are always exempt. A five-year track is exempt on its reset date, and when the comparison rate is not below the track rate there is no fee to pay.',
+          'Prime and tracks that reset at least once a year are always exempt. A less frequent reset is exempt on its reset date, and when the comparison rate is not below the track rate there is no fee to pay.',
         noFee: 'No fee',
         noFeeWhy:
           'The comparison rate is not below this track’s rate, so early repayment carries no discounting fee here.',
         capped: 'Capped',
         chartTitle: 'Discounting fee by repayment date',
         chartLead:
-          'Later in the schedule the balance is smaller and the fee falls; each rate reset of a five-year variable track steps it down. An exempt track stays on zero all the way.',
+          'Later in the schedule the balance is smaller and the fee falls; each contractual rate reset of a variable track steps it down. An exempt track stays on zero all the way.',
         chartRateNote:
           'The bank charges a discounting fee only when the market rate falls below the loan rate, so when the two are close the chart stays flat on zero. Current comparison rate: {{rate}}%.',
         chartCaption: 'Click the chart to pick a repayment date',
@@ -748,7 +783,7 @@ export const en: { translation: Translation } = {
         resetYears: 'Rate resets in years {{years}}',
         costCaption: 'Indexation is shown at a flat {{cpi}}% CPI a year',
         noReset:
-          'No rate reset falls inside the loan term, so all scenarios are identical. Only five-year variable tracks have a contractual reset date.',
+          'No rate reset falls inside the loan term, so all scenarios are identical. Only a track with a contractual reset cadence has a reset date.',
         costHeading: 'Cumulative interest and indexation',
         costLead: 'What has accrued each year on the base rate path.',
         noIndexation:
@@ -773,7 +808,7 @@ export const en: { translation: Translation } = {
         chartResetAria: 'Monthly payment by rate scenario, with reset dates marked',
         chartCostAria: 'Cumulative interest and indexation over the term',
         disclaimer:
-          'The forecast is an illustration only, not a forecast of rates or the CPI. Assumptions: at every reset of a five-year variable track the rate moves by ±{{step}} percentage point (pp) in each scenario, and the CPI rises at a flat {{cpi}}% a year. The actual rate, reset dates and CPI may differ, and the monthly payment is recalculated at every reset. It is not financial advice.',
+          'The forecast is an illustration only, not a forecast of rates or the CPI. Assumptions: at every reset of a variable track the rate moves by ±{{step}} percentage point (pp) in each scenario, and the CPI rises at a flat {{cpi}}% a year. The actual rate, reset dates and CPI may differ, and the monthly payment is recalculated at every reset. It is not financial advice.',
       },
       dynamicNotes: {
         indexedLabel: 'Highest payment',
@@ -782,7 +817,7 @@ export const en: { translation: Translation } = {
         equalPrincipalNote: 'With equal principal, the payment decreases over the years',
         variableLabel: 'Current monthly payment',
         variableFiveYearNote:
-          'Variable rates are guaranteed only until their reset date (every 5 years)',
+          'Variable rates are guaranteed only until their next reset date',
         variableNote: 'Assumes rates stay unchanged (in practice they may change)',
         fixedLabel: 'Fixed monthly payment',
         fixedNote: 'A non-indexed Spitzer mix keeps the payment constant throughout',
@@ -794,8 +829,6 @@ export const en: { translation: Translation } = {
         variableCapLine1:
           'Per Bank of Israel, variable-rate tracks marked below cannot exceed 66.66% of the total mortgage',
         variableCapLine2: ' Reduce a marked track or increase a fixed-rate track',
-        duplicateType:
-          'A track type cannot repeat within one mix. Pick a different type for one of the marked tracks.',
       },
       warnings: {
         capital: 'Capital is <0>{{percent}}%</0> of the property value',
@@ -944,7 +977,6 @@ export const en: { translation: Translation } = {
       statusEmpty: 'Add tracks to see figures',
       statusErrorPositive: 'Enter a positive amount and a 1-30 year term in every track',
       statusErrorVariableCap: 'Exceeds the Bank of Israel two-thirds variable-rate cap',
-      statusErrorDuplicateType: 'The same track type appears more than once in this mix',
       // Mobile stacked view.
       scenarioSwitcherAria: 'Switch between mixes',
       bestBadge: 'Best',
@@ -973,7 +1005,7 @@ export const en: { translation: Translation } = {
       rateMixResetYears: 'Rate resets: {{years}}',
       rateMixNoReset: 'No rate reset',
       rateScenarioPartialNote:
-        'The range is shown only for mixes with a five-year variable track. A mix without one stays a single line, even if it is CPI-indexed.',
+        'The range is shown only for mixes with a track that has a contractual reset. A mix without one stays a single line, even if it is CPI-indexed.',
       rateScenarioNoResetNote:
         'No rate reset falls inside the term, so every scenario is identical and each mix draws a single line.',
       rateSeriesLabel: '{{mix}}: {{scenario}}',

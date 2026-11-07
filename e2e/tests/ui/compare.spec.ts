@@ -653,7 +653,7 @@ test.describe('mortgage comparison - /compare', () => {
     // The caption explains why the fixed mix has one line while the variable
     // mix has a shaded range, and the reset list says which is which.
     const note = page.getByTestId('compare-rate-chart-note')
-    await expect(note).toContainText('מסלול משתנה ל-5 שנים')
+    await expect(note).toContainText('מועד עדכון ריבית חוזי')
     const resetList = chart.locator('.compare-rate-mix-list')
     await expect(resetList.locator('li')).toHaveCount(2)
     await expect(resetList).toContainText('עדכוני ריבית')
@@ -829,9 +829,8 @@ test.describe('mortgage comparison - /compare', () => {
     await page.goto('/compare')
     await expect(page.getByTestId('compare-shell')).toBeVisible()
     const card = page.getByTestId('compare-result-card-1')
-    // Turning the opening mix's fixed track into another variable type (not a
-    // repeat of the prime track, which the duplicate-type rule rejects) puts
-    // 100% on variable tracks, over the Bank of Israel ⅔ ceiling. A freshly
+    // Turning the opening mix's fixed track into a variable type puts 100% on
+    // variable tracks, over the Bank of Israel ⅔ ceiling. A freshly
     // hydrated page can replace the select right after the first change, so
     // retry until the controlled value sticks instead of assuming the first
     // shot landed.
@@ -855,24 +854,26 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(fix).toHaveCount(0)
   })
 
-  test('a repeated track type in a scenario is rejected and auto-fixable', async ({ page }) => {
+  test('a repeated track type is allowed and the variable cap still blocks', async ({ page }) => {
     await page.goto('/compare')
     const card = page.getByTestId('compare-result-card-1')
     // Scenario 1's default basket4 mix: prime / fixed / variable-indexed-5y.
-    // Turning the fixed track into a second prime repeats a track type.
+    // Turning the fixed track into a second prime repeats a type, which is now
+    // allowed, but every track is variable so the Bank of Israel cap applies.
     const typeSelect = page.getByTestId('compare-track-type-1-2')
     await expect(typeSelect).toHaveValue('fixed')
     await expect(async () => {
       await typeSelect.selectOption('prime')
       await expect(typeSelect).toHaveValue('prime')
     }).toPass()
-    await expect(card).toContainText('אותו מסלול מופיע יותר מפעם אחת בתמהיל')
+    await expect(card).toContainText('חריגה מתקרת הריבית המשתנה')
+    await expect(card).not.toContainText('אותו מסלול מופיע יותר מפעם אחת בתמהיל')
 
-    // One-click repair restores a distinct type and keeps the shared loan.
+    // One-click repair restores a valid mix and keeps the shared loan.
     const fix = page.getByTestId('compare-autofix-1')
     await expect(fix).toBeVisible()
     await fix.click()
-    await expect(card).not.toContainText('אותו מסלול מופיע יותר מפעם אחת בתמהיל')
+    await expect(card).not.toContainText('חריגה מתקרת הריבית המשתנה')
     await expect(page.getByTestId('compare-metric-loan-1')).toContainText(ils(1_000_000))
     await expect(fix).toHaveCount(0)
   })
@@ -1002,6 +1003,7 @@ const LAYOUT_PROBLEMS = `(() => {
   // vocabulary (longest entry wishes it had 400px), so only the chosen value
   // has to be readable.
   document.querySelectorAll('.compare-track select').forEach((select, index) => {
+    if (!select.checkVisibility()) return
     const chosen = select.options[select.selectedIndex]
     fits(select, [chosen ? chosen.text : ''], 'track select ' + (index + 1))
   })
@@ -1032,6 +1034,7 @@ const LAYOUT_PROBLEMS = `(() => {
         problems.push(where + ' sits ' + Math.round(trackBox.width) + 'px wide in a ' + Math.round(cardBox.width) + 'px card')
       }
       track.querySelectorAll('.input-wrap, .select-wrap').forEach((wrap, wrapIndex) => {
+        if (!wrap.checkVisibility()) return
         const wrapBox = wrap.getBoundingClientRect()
         if (!within(wrapBox, trackBox, 1)) {
           problems.push(where + ' field ' + (wrapIndex + 1) + ' spills out of the track')
@@ -1057,7 +1060,7 @@ const LAYOUT_PROBLEMS = `(() => {
       // floating in the card's corner. The two-equal-column track puts the last
       // field (method, a select) on the inline-end, so its chevron is the one
       // the absolutely positioned button lines up with.
-      const chevrons = track.querySelectorAll('.select-chevron')
+      const chevrons = Array.from(track.querySelectorAll('.select-chevron')).filter((element) => element.checkVisibility())
       const chevron = chevrons[chevrons.length - 1]
       if (remove && chevron) {
         const a = remove.getBoundingClientRect()

@@ -6,12 +6,18 @@ import {
   DEFAULT_LAWYER_PERCENT,
   DEFAULT_REALTOR_PERCENT,
   DEFAULT_TERM_YEARS,
+  DEFAULT_GRACE_MODE,
+  defaultResetMonthsFor,
+  normalizeGraceMode,
+  normalizeGraceMonths,
+  normalizeResetMonths,
   deriveLoanAmount,
   distributeEqually,
   isVariableType,
   LAWYER_MINIMUM_FEE,
   lawyerFee,
   MAX_HOME_VALUE,
+  MAX_MIXES,
   MAX_OTHER_EXPENSES,
   MAX_TRACKS,
   MAX_YEARS,
@@ -21,6 +27,7 @@ import {
   scaleTrackAmounts,
   splitLargestForNewTrack,
   VAT_RATE,
+  type GraceMode,
   type PresetId,
   type PropertyPurpose,
   type TrackType,
@@ -107,6 +114,7 @@ export interface ComparisonSharedInputs {
   realtorAmountText: string
   lawyerAmountText: string
   appraiserFeeText: string
+  /** Statutory opening fee (פתיחת תיק) as entered text; 0 waives it. */
   renovationAmountText: string
   /** Repeatable expense rows (calculator parity): the monthly amounts fold
       into the payment-to-income check, the one-time amounts join the upfront
@@ -193,6 +201,9 @@ export interface ComparisonActions {
   updateTrackRate(scenarioId: string, trackId: string, raw: string): void
   commitTrackRateBlur(scenarioId: string, trackId: string): void
   changeTrackType(scenarioId: string, trackId: string, type: TrackState['type']): void
+  changeTrackResetMonths(scenarioId: string, trackId: string, resetMonths: number): void
+  changeTrackGraceMonths(scenarioId: string, trackId: string, graceMonths: number): void
+  changeTrackGraceMode(scenarioId: string, trackId: string, graceMode: GraceMode): void
   changeTrackMethod(scenarioId: string, trackId: string, method: TrackState['method']): void
   setScenarioTermYears(scenarioId: string, years: number): void
   setMortgageSum(raw: string, caret: number | null): { text: string; caret: number | null }
@@ -244,6 +255,9 @@ function blankTrack(termYears: number, type: TrackType = 'fixed'): TrackState {
     amountText: '',
     yearsText: String(termYears),
     rateText: defaultRateFor(type),
+    resetMonths: defaultResetMonthsFor(type),
+    graceMonths: 0,
+    graceMode: DEFAULT_GRACE_MODE,
     method: 'spitzer',
     isAutoRate: true,
     loanShareMemory: null,
@@ -812,7 +826,7 @@ export const useComparisonStore = create<ComparisonStore>()(
 
     addScenario: () => {
       set((s) => {
-        if (s.scenarios.length >= MAX_TRACKS) return
+        if (s.scenarios.length >= MAX_MIXES) return
         s.scenarios.push({
           id: makeScenarioId(),
           label: '',
@@ -829,7 +843,7 @@ export const useComparisonStore = create<ComparisonStore>()(
 
     duplicateScenario: (id) => {
       set((s) => {
-        if (s.scenarios.length >= MAX_TRACKS) return
+        if (s.scenarios.length >= MAX_MIXES) return
         const index = s.scenarios.findIndex((entry) => entry.id === id)
         if (index < 0) return
         const source = s.scenarios[index]
@@ -859,8 +873,7 @@ export const useComparisonStore = create<ComparisonStore>()(
       set((s) => {
         const scenario = s.scenarios.find((entry) => entry.id === scenarioId)
         if (!scenario || scenario.tracks.length >= MAX_TRACKS) return
-        // One track per type: seed the new track with a type the scenario does
-        // not already hold, so adding a track never trips the duplicate gate.
+        // Prefer a type the scenario does not already hold; repeats are fine.
         const freeType = nextFreeTrackType(scenario.tracks.map((track) => track.type)) ?? 'fixed'
         const track = blankTrack(scenario.termYears, freeType)
         scenario.tracks.push(track)
@@ -991,6 +1004,7 @@ export const useComparisonStore = create<ComparisonStore>()(
         const track = findTrack(s, scenarioId, trackId)
         if (!track) return
         track.type = type
+        track.resetMonths = defaultResetMonthsFor(type)
         // Reseed the default rate unless the user typed a custom one (same
         // rule as the main calculator's applyTrackTypeLogic).
         if (track.rateText.trim() && !track.isAutoRate) {
@@ -999,6 +1013,36 @@ export const useComparisonStore = create<ComparisonStore>()(
         }
         track.rateText = defaultRateFor(type)
         track.isAutoRate = true
+        recompute(s)
+      })
+    },
+
+    changeTrackResetMonths: (scenarioId, trackId, resetMonths) => {
+      set((s) => {
+        const track = findTrack(s, scenarioId, trackId)
+        if (!track) return
+        track.resetMonths = normalizeResetMonths(track.type, resetMonths)
+        recompute(s)
+      })
+    },
+
+    changeTrackGraceMonths: (scenarioId, trackId, graceMonths) => {
+      set((s) => {
+        const track = findTrack(s, scenarioId, trackId)
+        if (!track) return
+        track.graceMonths = normalizeGraceMonths(
+          graceMonths,
+          (Number(track.yearsText) || 0) * 12,
+        )
+        recompute(s)
+      })
+    },
+
+    changeTrackGraceMode: (scenarioId, trackId, graceMode) => {
+      set((s) => {
+        const track = findTrack(s, scenarioId, trackId)
+        if (!track) return
+        track.graceMode = normalizeGraceMode(graceMode)
         recompute(s)
       })
     },
@@ -1020,6 +1064,7 @@ export const useComparisonStore = create<ComparisonStore>()(
         // The slider drives every track's term (same legacy rule).
         scenario.tracks.forEach((track) => {
           track.yearsText = String(years)
+          track.graceMonths = normalizeGraceMonths(track.graceMonths, years * 12)
         })
         recompute(s)
       })
@@ -1057,6 +1102,7 @@ export const useComparisonStore = create<ComparisonStore>()(
           if (fix.convertedToFixedIndex !== null) {
             const converted = scenario.tracks[fix.convertedToFixedIndex]
             converted.type = 'fixed'
+            converted.resetMonths = 0
             // Same rule as changeTrackType: keep a custom rate, reseed an auto one.
             if (!converted.rateText.trim() || converted.isAutoRate) {
               converted.rateText = defaultRateFor('fixed')
@@ -1098,24 +1144,6 @@ export const useComparisonStore = create<ComparisonStore>()(
             }
           }
           // The repaired mix no longer matches the preset that seeded it.
-          scenario.activePreset = null
-        } else if (error === 'duplicateType') {
-          // One track per type: walk the mix and move every repeat onto the
-          // first type it does not already hold (reseed the rate, same rule as
-          // changeTrackType), so the fix is one click like the variable cap.
-          const used = new Set<TrackType>()
-          for (const track of scenario.tracks) {
-            if (used.has(track.type)) {
-              const free = nextFreeTrackType([...used])
-              if (!free) break
-              track.type = free
-              if (!track.rateText.trim() || track.isAutoRate) {
-                track.rateText = defaultRateFor(free)
-                track.isAutoRate = true
-              }
-            }
-            used.add(track.type)
-          }
           scenario.activePreset = null
         } else {
           // 'positive': every track needs a 1..30 year term and a positive
@@ -1160,6 +1188,9 @@ export const useComparisonStore = create<ComparisonStore>()(
           amountText: displayAmountText(entry.amount),
           yearsText: String(scenario.termYears),
           rateText: String(entry.rate),
+          resetMonths: defaultResetMonthsFor(entry.type),
+          graceMonths: 0,
+          graceMode: DEFAULT_GRACE_MODE,
           method: 'spitzer',
           isAutoRate: true,
           loanShareMemory: null,

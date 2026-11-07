@@ -382,6 +382,10 @@ export class TrackPanel {
   rate(): Locator {
     return this.root(this.index).getByTestId(`track-rate-${this.index}`)
   }
+  /** Contractual reset cadence, present only on resettable track types. */
+  resetCadence(): Locator {
+    return this.root(this.index).getByTestId(`track-reset-${this.index}`)
+  }
   margin(): Locator {
     return this.root(this.index).getByTestId(`track-margin-${this.index}`)
   }
@@ -405,6 +409,10 @@ export class TrackPanel {
 
   async setType(value: string): Promise<void> {
     await this.type().selectOption(value)
+  }
+
+  async setResetCadence(value: string): Promise<void> {
+    await this.resetCadence().selectOption(value)
   }
 
   async removeTrack(): Promise<void> {

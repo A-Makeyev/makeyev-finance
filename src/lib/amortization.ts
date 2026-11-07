@@ -5,7 +5,12 @@
  * see tests/unit/amortization.test.ts for golden values.
  */
 
-export const MAX_TRACKS = 3
+/** Cap on tracks in one mix. Real quotes reach four; six leaves headroom
+ * without letting a single mix become an unbounded form. */
+export const MAX_TRACKS = 6
+/** Scenarios on the compare page are capped separately from a mix's tracks:
+ * four side-by-side columns fit the page without pagination. */
+export const MAX_MIXES = 4
 /** Cap on repeatable other-expense rows (feedback request). */
 export const MAX_OTHER_EXPENSES = 3
 export const MAX_YEARS = 30
@@ -94,6 +99,66 @@ export const VARIABLE_TRACK_TYPES: readonly TrackType[] = [
 
 export type AmortizationMethod = 'spitzer' | 'equalPrincipal'
 
+/**
+ * What happens during a track's grace period:
+ * - `interestOnly`: the borrower pays interest, principal stays flat;
+ * - `fullDeferral`: nothing is paid and interest is capitalized into the
+ *   balance (a bridge loan is this mode for its whole term).
+ */
+export const GRACE_MODES = ['interestOnly', 'fullDeferral'] as const
+export type GraceMode = (typeof GRACE_MODES)[number]
+export const DEFAULT_GRACE_MODE: GraceMode = 'interestOnly'
+
+/**
+ * Cadences exposed by the calculator's per-track reset selector: 1, 1.5, 2,
+ * 2.5, 3, 4, 5, 7 and 10 years. 18 months is kept because bank quotes use it
+ * even though it is not a standard menu item; 30 is the 2.5-year product.
+ */
+export const RESET_MONTH_OPTIONS = [12, 18, 24, 30, 36, 48, 60, 84, 120] as const
+
+/**
+ * The cadence a track type starts with. Prime follows the Bank of Israel
+ * rate and fixed tracks never reset, so both carry 0; the named five-year
+ * types carry 60 and the generic variable types update annually.
+ */
+export function defaultResetMonthsFor(type: TrackType): number {
+  switch (type) {
+    case 'variable5y':
+    case 'variableIndexed5y':
+      return 60
+    case 'variable':
+    case 'variableIndexed':
+      return 12
+    default:
+      return 0
+  }
+}
+
+/**
+ * Clamp a cadence to a supported option. A type that does not reset keeps 0;
+ * an unsupported value falls back to the type's own default instead of
+ * inventing a calendar the bank does not sell.
+ */
+export function normalizeResetMonths(type: TrackType, resetMonths: number): number {
+  const fallback = defaultResetMonthsFor(type)
+  if (fallback === 0) return 0
+  if (!Number.isFinite(resetMonths)) return fallback
+  const rounded = Math.round(resetMonths)
+  return (RESET_MONTH_OPTIONS as readonly number[]).includes(rounded) ? rounded : fallback
+}
+
+/** Clamp grace to the track's own term; negative/NaN means no grace. */
+export function normalizeGraceMonths(graceMonths: number, termMonths: number): number {
+  const max = Number.isFinite(termMonths) ? Math.max(0, Math.round(termMonths)) : 0
+  if (!Number.isFinite(graceMonths)) return 0
+  return Math.min(max, Math.max(0, Math.round(graceMonths)))
+}
+
+/** Only the two documented modes are accepted; anything else is interest-only. */
+export function normalizeGraceMode(graceMode: GraceMode | string | undefined): GraceMode {
+  return graceMode === 'fullDeferral' ? 'fullDeferral' : DEFAULT_GRACE_MODE
+}
+
 export type PropertyPurpose = 'first' | 'upgrade' | 'investment'
 
 export const PURPOSE_LIMITS: Record<PropertyPurpose, { limit: number }> = {
@@ -168,6 +233,13 @@ export interface TrackComputationInput {
   type: TrackType
   method: AmortizationMethod
   annualInflation?: number
+  /** Contractual reset cadence in months; 0 means no reset. Carried through
+   * to the result so the prepayment projection can use it. */
+  resetMonths?: number
+  /** Grace months at the start of the term; 0 means no grace. */
+  graceMonths?: number
+  /** What happens during grace; defaults to interest-only. */
+  graceMode?: GraceMode
   /**
    * 1-based month indices at which the annual rate steps by
    * `rateStepPercent` (e.g. [61, 121] for five-year resets). Omitted means
@@ -222,6 +294,12 @@ export interface MonthlyRow {
   /** The part of this month's principal payment that covers the CPI drift. */
   principalIndexation: number
   interest: number
+  /**
+   * Interest accrued but added to the balance instead of paid this month
+   * (full-deferral grace only; 0 otherwise). It is already part of `interest`
+   * and therefore of `totalInterest`, never a second charge.
+   */
+  capitalizedInterest: number
   paid: number
   closing: number
 }
@@ -280,6 +358,20 @@ export interface TrackResult {
   paybackRatio: number
   /** Annual rate (percent, e.g. 4.5), carried through for the aggregate rate-helpers. */
   annualRatePercent: number
+  /** Contractual reset cadence in months; 0 means no reset. */
+  resetMonths: number
+  /** Grace months applied at the start of the term (0 means none). */
+  graceMonths: number
+  graceMode: GraceMode
+  /**
+   * The first payment that actually repays principal. Equals `firstPayment`
+   * without grace; during interest-only grace it is the first post-grace
+   * payment, and for a full-term deferral it is the maturity bullet. This is
+   * the figure affordability checks should use, not a zero grace payment.
+   */
+  firstAmortizingPayment: number
+  /** Interest capitalized into the balance during full-deferral grace. */
+  totalCapitalizedInterest: number
 }
 
 /**
@@ -292,6 +384,8 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
   if (
     !Number.isFinite(principal) ||
     principal <= 0 ||
+    !Number.isFinite(months) ||
+    !Number.isInteger(months) ||
     months <= 0 ||
     months > MAX_YEARS * 12 ||
     !Number.isFinite(annualRatePercent) ||
@@ -303,9 +397,12 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
   const inflationRate = input.annualInflation ?? FALLBACK_INFLATION
   let monthlyRate = annualRatePercent / 100 / 12
   const monthlyInflation = Math.pow(1 + inflationRate, 1 / 12)
+  const graceMonths = normalizeGraceMonths(input.graceMonths ?? 0, months)
+  const graceMode = normalizeGraceMode(input.graceMode)
+  const resetCadence = normalizeResetMonths(type, input.resetMonths ?? defaultResetMonthsFor(type))
   // Reset steps: `nextResetIndex` walks the sorted reset months once, so the
   // monthly loop stays O(months) even on a 30-year schedule.
-  const resetMonths = input.rateResetMonths ?? []
+  const rateResets = input.rateResetMonths ?? []
   const rateStepPercent = input.rateStepPercent ?? 0
   let nextResetIndex = 0
 
@@ -313,7 +410,9 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
   let totalPaid = 0
   let totalInterest = 0
   let totalIndexation = 0
+  let totalCapitalizedInterest = 0
   let firstPayment = 0
+  let firstAmortizingPayment = 0
   let highestPayment = 0
   let indexFactor = 1
   const yearlyRows: YearlyRow[] = []
@@ -330,7 +429,7 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     // second five-year block). The stepped rate is cumulative and floored at
     // zero, so a -1pp scenario can never produce a negative rate.
     if (rateStepPercent !== 0) {
-      while (nextResetIndex < resetMonths.length && month >= resetMonths[nextResetIndex]) {
+      while (nextResetIndex < rateResets.length && month >= rateResets[nextResetIndex]) {
         nextResetIndex++
       }
       if (nextResetIndex > 0) {
@@ -349,21 +448,45 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
       balance *= monthlyInflation
       indexation = balance - beforeInflation
     }
-    const remaining = months - month + 1
+
+    const inGrace = month <= graceMonths
     const interest = balance * monthlyRate
-    let principalPart: number
-    let payment: number
-    if (method === 'equalPrincipal') {
-      principalPart = (principal * indexFactor) / months
-      payment = principalPart + interest
+    let principalPart = 0
+    let payment = 0
+    let capitalizedInterest = 0
+
+    if (inGrace) {
+      if (graceMode === 'interestOnly') {
+        // Interest is paid, principal stays flat.
+        payment = interest
+      } else {
+        // Nothing is paid; interest joins the balance and is repaid later.
+        capitalizedInterest = interest
+        balance += capitalizedInterest
+      }
+      // A grace that runs to maturity ends in one bullet. The final month is
+      // the amortizing month even though it is still inside the grace window.
+      if (month === months) {
+        principalPart = balance
+        payment = graceMode === 'interestOnly' ? principalPart + interest : principalPart
+      }
     } else {
-      payment =
-        monthlyRate === 0
-          ? balance / remaining
-          : (balance * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -remaining))
-      principalPart = payment - interest
+      const remaining = months - month + 1
+      if (method === 'equalPrincipal') {
+        // Spread the remaining real principal over the months that actually
+        // amortize, so a grace period does not leave a balloon behind.
+        principalPart = balance / remaining
+        payment = principalPart + interest
+      } else {
+        payment =
+          monthlyRate === 0
+            ? balance / remaining
+            : (balance * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -remaining))
+        principalPart = payment - interest
+      }
     }
     if (month === 1) firstPayment = payment
+    if (principalPart > 0 && firstAmortizingPayment === 0) firstAmortizingPayment = payment
     highestPayment = Math.max(highestPayment, payment)
 
     // Split the principal payment into the real principal and the part that
@@ -379,6 +502,7 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     balance = Math.max(0, balance - principalPart)
     totalPaid += payment
     totalInterest += interest
+    totalCapitalizedInterest += capitalizedInterest
     totalIndexation += indexation
     yearPrincipal += principalPart
     yearPrincipalIndexation += principalIndexation
@@ -386,14 +510,17 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     yearInterest += interest
     yearIndexation += indexation
 
-    // Record the per-month row (monthly schedule view).
+    // Record the per-month row (monthly schedule view). During a full
+    // deferral the month's interest is capitalized rather than paid, so the
+    // paid-interest field stays 0 and the capitalized figure carries it.
     monthlyRows.push({
       month: ((month - 1) % 12) + 1,
       year: Math.ceil(month / 12),
       principal: principalPart,
       indexation,
       principalIndexation,
-      interest,
+      interest: graceMode === 'fullDeferral' && inGrace ? 0 : interest,
+      capitalizedInterest,
       paid: payment,
       closing: balance,
     })
@@ -434,6 +561,11 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     method,
     paybackRatio: totalPaid / principal,
     annualRatePercent,
+    resetMonths: resetCadence,
+    graceMonths,
+    graceMode,
+    firstAmortizingPayment,
+    totalCapitalizedInterest,
   }
 }
 
@@ -513,6 +645,9 @@ export function firstPaymentWithRateBump(
       type: result.type,
       method: result.method,
       annualInflation,
+      resetMonths: result.resetMonths,
+      graceMonths: result.graceMonths,
+      graceMode: result.graceMode,
     })
     return sum + (stressed?.firstPayment ?? 0)
   }, 0)
@@ -598,6 +733,8 @@ export interface CombinedMonthlyRow {
   /** The part of the combined principal payment that covers CPI. */
   principalIndexation: number
   interest: number
+  /** Interest capitalized into the combined balance that month. */
+  capitalizedInterest: number
   paid: number
   closing: number
 }
@@ -622,6 +759,7 @@ export function combineMonthlySchedules(results: TrackResult[]): CombinedMonthly
       principalIndexation: rows.reduce((sum, row) => sum + row.principalIndexation, 0),
       paid: rows.reduce((sum, row) => sum + row.paid, 0),
       interest: rows.reduce((sum, row) => sum + row.interest, 0),
+      capitalizedInterest: rows.reduce((sum, row) => sum + row.capitalizedInterest, 0),
       closing: rows.reduce((sum, row) => sum + row.closing, 0),
     })
   }
@@ -1067,9 +1205,10 @@ export const MINIMUM_EQUITY = 100_000
  * picture must add them. Only the closing-cost estimate's PURCHASE TAX
  * enters - the estimate's 1.5% side-cost item is deliberately excluded
  * because it prices the lawyer and surveyor that the itemized fee fields
- * already cost individually; adding both charged them twice. The sum is
- * exact - every shekel in the total traces to a shown line item, no hidden
- * rounding buffer. Null when there is no basis.
+ * already cost individually; adding both charged them twice. The opening fee
+ * is the statutory bank charge (360 shekels by default) and joins the same
+ * cash pool. The sum is exact - every shekel in the total traces to a shown
+ * line item, no hidden rounding buffer. Null when there is no basis.
  */
 export function totalUpfrontCash(
   requiredCapital: number | null,
@@ -1080,7 +1219,12 @@ export function totalUpfrontCash(
   // A null capital (no equity basis) contributes zero - fees alone still
   // draw from savings, so the total must still show.
   const capital = requiredCapital ?? 0
-  if (capital <= 0 && closingCosts === null && transactionCosts === null && oneTimeExpenses <= 0) {
+  if (
+    capital <= 0 &&
+    closingCosts === null &&
+    transactionCosts === null &&
+    oneTimeExpenses <= 0
+  ) {
     return null
   }
   const oneTime = Number.isFinite(oneTimeExpenses) ? Math.max(0, oneTimeExpenses) : 0

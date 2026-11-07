@@ -9,6 +9,7 @@ import {
   FALLBACK_INFLATION,
   FALLBACK_PRIME_RATE,
   DEFAULT_RATES_BY_TYPE,
+  DEFAULT_GRACE_MODE,
   PRESETS,
   allocatePreset,
   assessDti,
@@ -24,7 +25,6 @@ import {
   computeTrackResult,
   deriveLoanAmount,
   distributeEqually,
-  duplicateTrackType,
   EMPTY_TOTALS,
   estimateClosingCosts,
   estimateTransactionCosts,
@@ -39,6 +39,10 @@ import {
   first5yInterestShare,
   firstPaymentWithRateBump,
   isVariableType,
+  defaultResetMonthsFor,
+  normalizeGraceMode,
+  normalizeGraceMonths,
+  normalizeResetMonths,
   nextFreeTrackType,
   paymentPer100k,
   peakPaymentYear,
@@ -60,6 +64,7 @@ import {
   type CapitalAssessment,
   type TransactionCostsEstimate,
   type LtvWarning,
+  type GraceMode,
   type PaymentLabelResolution,
   type PresetId,
   type PropertyPurpose,
@@ -78,6 +83,8 @@ import {
 } from '@/lib/format'
 import { parseDateOnly } from '@/lib/rateValidity'
 
+/** The statutory opening-fee cap is the field's starting value; 0 waives it. */
+
 export interface TrackState {
   id: string
   type: TrackType
@@ -85,6 +92,11 @@ export interface TrackState {
   amountText: string
   yearsText: string
   rateText: string
+  /** Contractual reset cadence in months; 0 for fixed/prime tracks. */
+  resetMonths: number
+  /** Grace months at the start of the term; 0 means no grace. */
+  graceMonths: number
+  graceMode: GraceMode
   /**
    * Optional market margin (מרווח שוק) the user entered for this track, in
    * percentage points. Display only: the effective rate stays in `rateText`,
@@ -102,7 +114,6 @@ export type CalculationError =
   | { kind: 'term' }
   | { kind: 'positive' }
   | { kind: 'variableCap' }
-  | { kind: 'duplicateType' }
 
 /**
  * A track as it is persisted in a saved mortgage mix: the user-entered fields
@@ -115,6 +126,11 @@ export interface SavedTrackInput {
   amountText: string
   yearsText: string
   rateText: string
+  /** Optional so mixes saved before the cadence field still load. */
+  resetMonths?: number
+  /** Optional so mixes saved before grace support still load. */
+  graceMonths?: number
+  graceMode?: GraceMode
   /** Optional display-only market margin; absent on mixes saved before it. */
   marginText?: string
   method: AmortizationMethod
@@ -148,6 +164,7 @@ export interface SavedMixScenario {
   realtorPercentText: string
   lawyerPercentText: string
   appraiserFeeText: string
+  /** Statutory opening fee (פתיחת תיק) as entered text; 0 waives it. */
   renovationAmountText: string
   otherExpenses: Array<Pick<OtherExpense, 'label' | 'amountText' | 'oneTimeAmountText'>>
   ptiThresholdPercent: number
@@ -182,10 +199,16 @@ export interface TrackSchedule {
   isIndexed: boolean
   /** Full term in years, for the remaining-term bucket of the market rate. */
   years: number
+  /** Contractual reset cadence in months; 0 for fixed/prime tracks. */
+  resetMonths: number
+  graceMonths: number
+  graceMode: GraceMode
 }
 
 export interface CalculatorSnapshot {
   totals: TotalsSummary
+  /** First payment after grace, used for affordability rather than display. */
+  requiredPayment: number
   /** Interest as a share of the loan (percent) - cost of borrowing at a glance. */
   overpayPercent: number
   /** Total paid ÷ full term in months - the "typical" monthly payment. */
@@ -292,6 +315,9 @@ function trackFromValues(
     amountText: displayAmount,
     yearsText: String(values.years ?? selectedYears),
     rateText: rateValue,
+    resetMonths: defaultResetMonthsFor(type),
+    graceMonths: 0,
+    graceMode: DEFAULT_GRACE_MODE,
     marginText: '',
     method: 'spitzer',
     isAutoRate: Boolean(rateValue),
@@ -320,6 +346,9 @@ interface CalculatorData {
   lawyerPercentText: string
   /** Appraiser flat fee (before VAT). */
   appraiserFeeText: string
+  /** Statutory opening fee (פתיחת תיק) in shekels, as entered text. It is
+      paid at closing like the other one-time costs, so it joins the upfront
+      cash total but never changes the loan or the monthly payment. */
   /** Planned renovation budget (שיפוצים) - entered as the actual VAT-inclusive
       price; it eats into the initial capital and lands in the costs total. */
   renovationAmountText: string
@@ -434,6 +463,9 @@ export interface CalculatorActions {
   updateTrackRate(id: string, raw: string): void
   updateTrackMargin(id: string, raw: string): void
   changeTrackType(id: string, type: TrackType): void
+  changeTrackResetMonths(id: string, resetMonths: number): void
+  changeTrackGraceMonths(id: string, graceMonths: number): void
+  changeTrackGraceMode(id: string, graceMode: GraceMode): void
   changeTrackMethod(id: string, method: AmortizationMethod): void
   loadPreset(presetId: PresetId): void
   /**
@@ -487,6 +519,9 @@ export function serializeMix(mix: Pick<CalculatorData, 'tracks' | 'termYears'>):
       amountText: track.amountText,
       yearsText: track.yearsText,
       rateText: track.rateText,
+      resetMonths: track.resetMonths,
+      graceMonths: track.graceMonths,
+      graceMode: track.graceMode,
       marginText: track.marginText ?? '',
       method: track.method,
     })),
@@ -506,6 +541,9 @@ export function serializeSavableTracks(tracks: TrackState[]): SavedTrackInput[] 
       amountText: track.amountText,
       yearsText: track.yearsText,
       rateText: track.rateText,
+      resetMonths: track.resetMonths,
+      graceMonths: track.graceMonths,
+      graceMode: track.graceMode,
       marginText: track.marginText ?? '',
       method: track.method,
     }))
@@ -596,6 +634,7 @@ export function isMixDirty(
 
 const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   totals: EMPTY_TOTALS,
+  requiredPayment: 0,
   overpayPercent: 0,
   avgMonthlyPayment: 0,
   firstPaymentInterestShare: 0,
@@ -883,6 +922,8 @@ function syncTermYearsFromTracks(s: CalculatorData): void {
  * rate unless the user typed a custom one (autoRate cleared on edit).
  */
 function applyTrackTypeLogic(s: CalculatorData, track: TrackState, type: TrackType): void {
+  // The type names are defaults; the live cadence is the per-track field.
+  track.resetMonths = defaultResetMonthsFor(type)
   if (track.rateText.trim() && !track.isAutoRate) return
   const rate = type === 'prime' ? (s.primeRate ?? FALLBACK_PRIME_RATE) : DEFAULT_RATES_BY_TYPE[type]
   if (Number.isFinite(rate)) {
@@ -1000,6 +1041,9 @@ function recalculate(s: CalculatorState): void {
       annualRatePercent: Number(track.rateText) || 0,
       type: track.type,
       method: track.method,
+      resetMonths: track.resetMonths,
+      graceMonths: track.graceMonths,
+      graceMode: track.graceMode,
       annualInflation: inflation,
     }),
   )
@@ -1017,6 +1061,7 @@ function recalculate(s: CalculatorState): void {
     const closing = estimateClosingCosts(property, 0, capitalForLoan, s.purpose)
     s.snapshot = {
       totals: EMPTY_TOTALS,
+      requiredPayment: 0,
       overpayPercent: 0,
       avgMonthlyPayment: 0,
       firstPaymentInterestShare: 0,
@@ -1038,7 +1083,12 @@ function recalculate(s: CalculatorState): void {
       capitalShortfall: capitalForLoan > 0 && suggested !== null && suggested > capitalForLoan,
       closingCosts: closing,
       transactionCosts,
-      upfrontTotal: totalUpfrontCash(suggested, closing, transactionCosts, oneTimeTotal),
+      upfrontTotal: totalUpfrontCash(
+        suggested,
+        closing,
+        transactionCosts,
+        oneTimeTotal,
+      ),
       avgInterestRate: 0,
       weightedAvgInterestRate: 0,
       avgPaybackRatio: 0,
@@ -1059,17 +1109,6 @@ function recalculate(s: CalculatorState): void {
   const enteredResults = enteredIndexes.map((index) => results[index])
   if (enteredResults.some((result) => !result)) {
     s.error = { kind: 'positive' }
-    return
-  }
-
-  const duplicate = duplicateTrackType(enteredIndexes.map((index) => s.tracks[index].type))
-  if (duplicate) {
-    // One track per type in a mix: flag every entered track carrying the
-    // repeated type so the user sees which ones to change.
-    s.flaggedTrackIds = s.tracks
-      .filter((track, index) => enteredIndexes.includes(index) && track.type === duplicate)
-      .map((track) => track.id)
-    s.error = { kind: 'duplicateType' }
     return
   }
 
@@ -1096,6 +1135,13 @@ function recalculate(s: CalculatorState): void {
   const totals = sumTotals(validResults)
   const combinedRows = combineSchedules(validResults)
   const firstMonthPayment = totals.firstPayment
+  // Affordability uses the first payment that actually repays principal, so an
+  // interest-only grace does not understate the required payment and a fully
+  // deferred bridge is judged on its bullet rather than on zero.
+  const requiredPayment = validResults.reduce(
+    (sum, result) => sum + result.firstAmortizingPayment,
+    0,
+  )
   const suggested = suggestedCapital(property, totalPrincipal, capitalForLoan, s.purpose)
   const closingCosts = estimateClosingCosts(property, totalPrincipal, capitalForLoan, s.purpose)
 
@@ -1134,6 +1180,7 @@ function recalculate(s: CalculatorState): void {
 
   s.snapshot = {
     totals,
+    requiredPayment,
     overpayPercent,
     avgMonthlyPayment,
     firstPaymentRateUp1,
@@ -1152,20 +1199,25 @@ function recalculate(s: CalculatorState): void {
     highestLabel: resolvePaymentLabel(validResults),
     capitalAssessment: assessCapital(capitalForLoan, property, totalPrincipal, s.purpose),
     ltv: assessLtv(totalPrincipal, property, capitalForLoan, s.purpose),
-    dti: assessDti(firstMonthPayment, income),
+    dti: assessDti(requiredPayment, income),
     incomePlaceholder:
-      firstMonthPayment > 0
+      requiredPayment > 0
         ? // Allowance-based hint: the income at which the ceiling allowance
         // (the PTI share of income minus liabilities) covers the required
         // payment, matching the summary's monthlyAllowance line.
-        suggestedIncomeForAllowance(firstMonthPayment, otherMonthly, ptiThreshold)
+        suggestedIncomeForAllowance(requiredPayment, otherMonthly, ptiThreshold)
         : s.snapshot.incomePlaceholder,
     suggestedCapital: suggested,
     capitalShortfall: capitalForLoan > 0 && suggested !== null && suggested > capitalForLoan,
     closingCosts: closingCosts,
     transactionCosts,
-    upfrontTotal: totalUpfrontCash(suggested, closingCosts, transactionCosts, oneTimeTotal),
-    pti: assessPti(firstMonthPayment + otherMonthly, income, ptiThreshold),
+    upfrontTotal: totalUpfrontCash(
+      suggested,
+      closingCosts,
+      transactionCosts,
+      oneTimeTotal,
+    ),
+    pti: assessPti(requiredPayment + otherMonthly, income, ptiThreshold),
     avgInterestRate: averageInterestRate(validResults),
     weightedAvgInterestRate: calculateWeightedAvgInterestRate(validResults),
     avgPaybackRatio: averagePaybackRatio(validResults),
@@ -1190,6 +1242,9 @@ function recalculate(s: CalculatorState): void {
       method: result.method,
       isIndexed: result.isIndexed,
       years: result.years,
+      resetMonths: result.resetMonths,
+      graceMonths: result.graceMonths,
+      graceMode: result.graceMode,
     })),
     annualInflation: inflation,
     scheduleMonthlyRows: combinedMonthlyRows,
@@ -1573,10 +1628,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
 
     addTrack: (values) => {
       set((s) => {
-        if (s.tracks.length >= 3) return
+        if (s.tracks.length >= MAX_TRACKS) return
         const wasDirty = isMixDirty(s)
-        // One track per type: seed the new track with a type the mix does not
-        // already hold, so adding a track never trips the duplicate-type gate.
+        // Prefer a type the mix does not already hold; a repeated type is fine.
         const freeType = nextFreeTrackType(s.tracks.map((track) => track.type)) ?? 'fixed'
         const track = trackFromValues(
           { ...(values ?? { years: s.termYears }), type: values?.type ?? freeType },
@@ -1741,6 +1795,42 @@ export const useCalculatorStore = create<CalculatorStore>()(
       })
     },
 
+    changeTrackResetMonths: (id, resetMonths) => {
+      set((s) => {
+        const track = s.tracks.find((t) => t.id === id)
+        if (!track) return
+        const normalized = normalizeResetMonths(track.type, resetMonths)
+        if (track.resetMonths === normalized) return
+        track.resetMonths = normalized
+        recalculate(s)
+      })
+    },
+
+    changeTrackGraceMonths: (id, graceMonths) => {
+      set((s) => {
+        const track = s.tracks.find((t) => t.id === id)
+        if (!track) return
+        const normalized = normalizeGraceMonths(
+          graceMonths,
+          (Number(track.yearsText) || 0) * 12,
+        )
+        if (track.graceMonths === normalized) return
+        track.graceMonths = normalized
+        recalculate(s)
+      })
+    },
+
+    changeTrackGraceMode: (id, graceMode) => {
+      set((s) => {
+        const track = s.tracks.find((t) => t.id === id)
+        if (!track) return
+        const normalized = normalizeGraceMode(graceMode)
+        if (track.graceMode === normalized) return
+        track.graceMode = normalized
+        recalculate(s)
+      })
+    },
+
     changeTrackMethod: (id, method) => {
       set((s) => {
         const track = s.tracks.find((t) => t.id === id)
@@ -1793,6 +1883,12 @@ export const useCalculatorStore = create<CalculatorStore>()(
           amountText: track.amountText,
           yearsText: track.yearsText,
           rateText: track.rateText,
+          resetMonths: normalizeResetMonths(track.type, track.resetMonths ?? 0),
+          graceMonths: normalizeGraceMonths(
+            track.graceMonths ?? 0,
+            (Number(track.yearsText) || 0) * 12,
+          ),
+          graceMode: normalizeGraceMode(track.graceMode),
           marginText: track.marginText ?? '',
           method: track.method,
           isAutoRate: Boolean(track.rateText.trim()),
@@ -1822,6 +1918,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           s.realtorPercentText = scenario.realtorPercentText
           s.lawyerPercentText = scenario.lawyerPercentText
           s.appraiserFeeText = scenario.appraiserFeeText
+          // Older saved mixes predate the fee field; the statutory default
+          // is the safe migration, not zero.
           s.renovationAmountText = scenario.renovationAmountText
           s.ptiThresholdPercent = clampPtiThreshold(scenario.ptiThresholdPercent)
           s.otherExpenses = scenario.otherExpenses.slice(0, MAX_OTHER_EXPENSES).map((expense) => ({
@@ -1899,23 +1997,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
           }
         })
 
-        // 2. Duplicate types: one track per type, the same rule adding a track
-        // uses. Walk the mix and move every repeat onto the first type it does
-        // not already hold, reseeding an auto rate.
         let typesChanged = false
-        const used = new Set<TrackType>()
-        for (const track of s.tracks) {
-          if (used.has(track.type)) {
-            const free = nextFreeTrackType([...used])
-            if (!free) break
-            track.type = free
-            applyTrackTypeLogic(s, track, free)
-            typesChanged = true
-          }
-          used.add(track.type)
-        }
 
-        // 3. Positive amounts: a non-empty field that parses to zero can never
+        // 2. Positive amounts: a non-empty field that parses to zero can never
         // produce a schedule, so clear it instead of leaving the mix blocked.
         s.tracks.forEach((track) => {
           if (track.amountText.trim() !== '' && parseAmountText(track.amountText) <= 0) {
@@ -1923,11 +2007,11 @@ export const useCalculatorStore = create<CalculatorStore>()(
           }
         })
 
-        // 4. Variable-rate ceiling: trim the variable side and, when every
+        // 3. Variable-rate ceiling: trim the variable side and, when every
         // track is variable, convert one to fixed to anchor the 2/3 rule.
         // Only run this when the ceiling is actually breached - autofix now
         // shows for every error kind, and an empty all-variable lineup must
-        // not be silently re-typed for a term or duplicate error.
+        // not be silently re-typed for a term error.
         const applyVariableCap = () => {
           const fix = autoFixVariableMix(
             s.tracks.map((track) => ({
@@ -1956,7 +2040,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
           applyVariableCap()
         }
 
-        // 5. Preserve the mortgage total. The cap trim takes the excess off
+        // 4. Preserve the mortgage total. The cap trim takes the excess off
         // the variable side; put it back into a fixed track instead of
         // shrinking the loan the user typed. With every track empty, allocate
         // the target across the lineup first (preset proportions when the

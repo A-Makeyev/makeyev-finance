@@ -1749,3 +1749,249 @@ Non-negotiable rules
 - Keep statutory fees separate from principal, indexation, and interest.
 - Label forecasts as assumptions, not predictions or official rates.
 - A phase is not complete just because the UI looks correct: tests, compatibility, localization, accessibility, and required official sources are part of done.
+
+---
+
+## Mortgage mix examples (reviewed 2026-11-07)
+
+### Why this section exists
+
+36 real Israeli bank quote sheets were collected in `examples/` (pre-approvals and mix sheets dated 18.10.2026 to 05.11.2026, from Leumi, Mizrahi Tefahot, Discount, Mercantile and Hapoalim, plus several screenshots whose lender is cropped or unclear). This section records what those mixes contain, what the regulation and common practice say, how the current calculator compares, what was verified in code, and what remains. It does not replace the numbered checklist above; it feeds it.
+
+### Inventory of the source images
+
+Amounts are shekels, terms are months, rates are the sheet's annual rate as printed. "2+2" is a variable track updated every two years. "Subsidized" is a זכות / מחיר למשתכן style directed loan. "Unclear" means the value or lender could not be read reliably and was not guessed.
+
+| File (2026-11-06) | Lender | Loan | Tracks as printed | First payment |
+| --- | --- | --- | --- | --- |
+| 09.12.09 | Leumi | 900,000 | fixed 200k/60m/4.20%; variable annual CPI 150k/336m/2.69%; 2+2 449k/336m/3.99%; fixed 101k/180m/4.50% | 7,330.94 |
+| 09.15.19 | unclear | 880,000 | fixed 285k/360m/4.80%; prime 145k/360m/4.11%; 2+2 440k/360m/4.44%; subsidized 10k/120m/2.19% | 4,456.14 |
+| 09.18.10 | Mizrahi Tefahot | 640,000 | fixed 214k/144m/4.66%; prime 426k/360m/4.29% | 4,069.16 |
+| 09.18.31 | unclear (cropped) | 300,000 | fixed 101k/168m/4.54%; prime 199k/168m/4.15% | 2,364.68 |
+| 09.20.11 | Leumi | 350,000 | 2+2 210k/72m/4.42%; fixed 140k/72m/4.00% | 5,516.16 |
+| 09.20.47 | Mizrahi Tefahot | 800,000 | fixed 268k/144m/4.47%; 2+2 232k/312m/4.05%; prime 300k/300m/4.00% | 5,207.96 |
+| 09.21.33 | Mercantile | 1,484,000 | variable annual 324k/324m/4.06% matched (3.99% nominal); fixed 580k/324m/4.75% matched (4.65% nominal); prime 580k/324m/4.07% matched (4.00% nominal) | 7,711.35 |
+| 09.21.58 | Leumi | 1,905,000 | fixed 670k/288m/4.52%; 2+2 854k/288m/4.43%; prime 381k/288m/4.20% | 10,738.76 |
+| 09.22.28 | Leumi | 502,000 | fixed 485k/240m/4.90%; prime 17k/300m/4.25% | 3,266.16 |
+| 09.22.31 | Mizrahi Tefahot | 2,650,000 | two CPI-linked bridge tracks, 1,325k each / 24m / 2.85%, 23-month grace | 0, single bullet 2,835,376 |
+| 09.22.34 | Leumi | 599,000 | prime 185k/156m/4.25%; variable annual 186k/156m/4.22%; fixed CPI 80k/108m/4.80%; prime 148k/108m/6.25% | 5,805.63 |
+| 09.32.35 | Mizrahi Tefahot | 900,000 | fixed 306k/304m/4.68%; 2+2 254k/360m/4.11%; prime 340k/360m/4.00% | 4,587.29 |
+| 09.32.39 | unclear | 1,200,000 | fixed 408k/264m/4.68%; prime 456k/336m/3.95%; variable annual 336k/336m/4.08% | 6,402 |
+| 09.32.42 | unclear (screenshot) | 1,046,000 | fixed 355k/240m/4.66%; prime 420k/336m/3.95%; variable annual 271k/336m/4.18% | 5,714 |
+| 10.39.42 | Hapoalim | 630,000 | prime 338k/322m/4.25%; variable 18-month 292k/324m/4.45% | 3,311.32 |
+| 10.39.43 | unclear | 1,250,000 | CPI-linked fixed bridge 1,250k/24m/2.85%, 23-month grace | 0, single bullet 1,374,278 |
+| 10.40.02 | unclear (cropped) | 930,000 | fixed 168k/300m/4.89%; 2+2 166k/288m/4.65%; prime 166k/300m/4.13% | 5,836.56 |
+| 10.40.05 | Leumi | 1,300,000 | fixed 434k/180m/4.45%; variable annual 433k/300m/4.23%; prime 433k/300m/4.00% | 7,935.42 |
+| 10.40.22 | unclear (screen photo) | 1,412,500 | fixed 560k/312m/4.89%; 2+2 400k/360m/4.49%; prime 412.5k/360m/4.13%; subsidized 40k/66m/2.02% | 7,122.91 |
+| 10.49.36 | unclear | 1,300,000 | fixed 441k/120m/4.70%; 2+2 465k/240m/4.50%; prime 394k/240m/3.85% | 9,900.68 |
+| 10.49.39 | Discount | 1,185,000 | fixed 395,001/240m/4.65% (4.55% nominal); prime 354,999/264m/4.02% (3.95%); 2+2 435k/264m/4.43% (4.34%) | 7,084.68 |
+| 10.49.58 | Leumi | 1,000,000 | fixed 334k/120m/4.55%; prime 666k/120m/3.85% | 10,165.13 |
+| 10.50.35 | Mizrahi Tefahot | 900,000 | fixed 301k/204m/4.53%; 2+2 349k/240m/4.45%; prime 250k/240m/4.25% | 5,875.94 |
+| 10.51.03 | Mizrahi Tefahot | 1,200,000 | fixed 400.5k/240m/4.65%; 2+2 499.5k/360m/4.23%; prime 300k/360m/4.00% | 6,463.19 |
+| 10.51.27 | unclear (cropped) | 160,000 | fixed 55k/360m/4.93%; prime 105k/360m/4.90% (P-0.10) | 850.18 |
+| 10.53.33 | Mizrahi Tefahot | 1,700,000 | fixed 578k/168m/4.58%; 2+2 561k/192m/4.23%; prime 561k/180m/3.90% | 12,835.58 |
+| 10.54.45 | unclear | 1,180,000 | fixed 413k/240m/4.70%; 2+2 472k/360m/4.44%; prime 295k/360m/4.13% | 6,401.74 |
+| 11.33.27 | unclear | 800,000 | fixed 252k/360m/4.90% + 36-month grace; prime 267k/360m/4.13% + 24-month grace; subsidized 15k/360m/2.78%; 2+2 266k/360m/4.54% | 2,954.76 |
+| 13.17.08 | unclear (cropped) | 930,000 | fixed 285k/168m/4.39%; 2+2 310k/192m/4.35%; prime 310k/216m/3.90%; subsidized 25k/120m/2.24% | 6,750 (sum of printed parts) |
+| 13.58.06 | Leumi | 750,000 | fixed 250k/120m/4.15%; prime 500k/120m/4.00% | 7,611.25 |
+| 14.01.27 | Leumi | 858,000 | 2+2 single track 858k/192m/4.47% | 6,263.63 |
+| 14.01.30 | Mercantile | 1,719,900 | fixed 525k/300m/4.81% matched (4.71% nominal); 2+2 576.9k/360m/4.42% matched (4.33% nominal); prime 568k/360m/4.07% matched (4.00% nominal); subsidized 50k/300m/2.63% matched (2.60% nominal) | 8,785.03 |
+| 14.02.31 | unclear (cropped) | 213,000 | fixed 71k/180m/4.52%; 18-month variable 142k/234m/4.28% | 1,439.80 |
+| 14.02.34 | unclear (cropped) | 860,000 | fixed 287k/360m/4.79%; 2+2 423k/360m/4.44%; prime 150k/360m/4.07% | 4,308.62 |
+| 14.11.46 | unclear | 290,000 | prime 90k/360m/4.11%; 2+2 100k/360m/4.49%; fixed 100k/360m/4.80% | 1,450.62 |
+| 14.12.47 | unclear | 400,000 | fixed 168k/120m/4.34%; 2+2 100k/120m/4.07%; prime 132k/120m/3.90% | 4,074.17 |
+
+### What the examples show
+
+1. **Three tracks is the norm, four is common, more exists.** The visible sheets use one to four tracks; several are cropped after a fourth column. Two prime tracks in one mix (09.22.34) and two fixed tracks (09.12.09) appear, which the current calculator rejects by design.
+2. **The dominant variable track is 2+2, not annual or five-year.** 12 of the 36 sheets use a track updated every two years, anchored to government bond yields. A few use 12 months (מק"מ) or 18 months. Five-year tracks do not appear in these quotes.
+3. **Terms differ per track inside one mix.** 60 to 360 months, usually with the fixed leg shorter (120 to 240) and the variable/prime legs longer (240 to 360). The calculator supports per-track terms; only the presets cannot express them.
+4. **Almost everything is unlinked.** CPI linkage appears only on the 24-month bridge loans (2.85%) and on a few small tracks. The classic "1/3 fixed + 1/3 prime + 1/3 variable indexed 5y" is a teaching mix, not what these banks actually quoted in this batch.
+5. **Rates in this batch:** fixed unlinked 4.34% to 4.80%; prime 3.85% to 4.25% (margins from -0.90 to -0.15, with one +1.50 on a small short track); 2+2 unlinked 4.05% to 4.54%; directed/subsidized loans 2.02% to 2.78%.
+6. **Grace periods are real and material.** Five sheets carry a deferment: 23 months on the bridge loans, 24 and 36 months on ordinary tracks (11.33.27). A bridge loan is a 24-month bullet: no monthly payment, one repayment of 1,374,278 on a 1,250,000 principal.
+7. **A 360 shekel opening fee appears on every sheet** as a separate row, outside the interest totals.
+8. **The sheets print both rate bases.** Newer quotes show "4.65% מתואמת / 4.55% נומינלית". The app's rate field is nominal (it divides by 12), and its effective-rate helper reproduces the מתואמת figure.
+9. **Lifetime totals are projections, not nominal sums.** Row 10 for a variable track runs well above payment times term (for example 584,610 for a prime track whose payments sum to about 531,857) because the bank projects future rate resets. Row 7 (הריבית הכוללת החזויה, 4.84% to 6.29%) is correspondingly above the printed track rates.
+10. **Early repayment is priced per track.** Every sheet has a row stating whether an early-repayment fee exists; prime tracks are marked exempt, fixed tracks are marked as fee-bearing, and variable tracks vary.
+
+### Reference mixes used for verification
+
+These five mixes are encoded in `tests/unit/exampleMixes.test.ts`. Rates are the nominal annual rates the app's engine uses. Totals in the last column are the sheet's first-month payment only; lifetime totals are handled separately below.
+
+| Source | Track | Type | Amount | Term | Nominal rate | Sheet payment |
+| --- | --- | --- | --- | --- | --- | --- |
+| 10.50.35 | fixed | fixed unlinked | 301,000 | 204m | 4.53% | 2,118.49 |
+| 10.50.35 | 2+2 | variable unlinked | 349,000 | 240m | 4.45% | 2,198.54 |
+| 10.50.35 | prime | prime | 250,000 | 240m | 4.25% | 1,558.91 |
+| 10.49.58 | fixed | fixed unlinked | 334,000 | 120m | 4.55% | 3,469.58 |
+| 10.49.58 | prime | prime | 666,000 | 120m | 3.85% | 6,695.55 |
+| 10.49.39 | fixed | fixed unlinked | 395,001 | 240m | 4.55% | 2,509.64 |
+| 10.49.39 | prime | prime | 354,999 | 264m | 3.95% | 2,014.61 |
+| 10.49.39 | 2+2 | variable unlinked | 435,000 | 264m | 4.34% | 2,560.43 |
+| 10.51.03 | fixed | fixed unlinked | 400,500 | 240m | 4.65% | 2,566.30 |
+| 10.51.03 | 2+2 | variable unlinked | 499,500 | 360m | 4.23% | 2,451.39 |
+| 10.51.03 | prime | prime | 300,000 | 360m | 4.00% | 1,445.50 |
+| 09.20.11 | 2+2 | variable unlinked | 210,000 | 72m | 4.42% | 3,325.83 |
+| 09.20.11 | fixed | fixed unlinked | 140,000 | 72m | 4.00% | 2,190.33 |
+
+### Research: regulation versus common practice
+
+| Rule or figure | Value | Status | Source |
+| --- | --- | --- | --- |
+| Variable-rate share of a housing loan | At most 66.66% of the loan; at least one third must be fixed-rate for the full term | Verified, official (Directive 329 section 7) | https://boi.org.il/media/uckpqztg/329_et.pdf |
+| Separate prime cap | None since the 2020 amendment; prime counts inside the two-thirds | Verified, official definition plus plain-language summary | https://boi.org.il/media/uckpqztg/329_et.pdf , https://mixo.co.il/en/articles/limits |
+| LTV limits | 75% sole dwelling, 70% replacement dwelling, 50% investment | Verified, official | https://boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/the-reform-to-increase-information-transparency-and-competition-in-mortgages/ |
+| Payment-to-income | Hard cap 50% of disposable income; above 40% the loan carries a 100% risk weight | Verified, official (Directive 329 sections 5-6) | https://boi.org.il/media/uckpqztg/329_et.pdf |
+| Maximum term | 30 years | Verified, official | https://boi.org.il/media/uckpqztg/329_et.pdf |
+| Approval-in-principle rate validity | 24 days from issue | Verified, official | https://boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/the-reform-to-increase-information-transparency-and-competition-in-mortgages/ |
+| Prime definition | Bank of Israel rate plus 1.5 percentage points | Verified, official | https://boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/the-reform-to-increase-information-transparency-and-competition-in-mortgages/ |
+| Common mix patterns published by the Bank of Israel | 100% fixed; 1/3 fixed + 1/3 variable indexed every 5 years + 1/3 prime; 1/2 fixed + 1/2 prime | Verified, official as examples of common mixes | https://boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/the-reform-to-increase-information-transparency-and-competition-in-mortgages/ |
+| Reset anchors for non-prime variable tracks | Government bond yields, updated every 12, 18, 24 or 60 months depending on the track | Common practice; observed in the examples and in bank product terms | https://www.bankjerusalem.co.il/mortgage/linked-variable-interest-mortgage |
+| CPI linkage | Principal linked to the CPI; the rate may still be fixed or variable | Verified, official | https://boi.org.il/en/information-and-service-to-the-public/banking-customer-service-information/financial-education/the-reform-to-increase-information-transparency-and-competition-in-mortgages/ |
+| Grace / deferment periods | Bank product feature, typically during construction or on a bridge loan | Common practice; observed on 5 sheets, no regulatory figure found | Examples in this folder |
+| Opening fee of 360 shekels | Charged per loan file on every sheet in this batch | Statutory cap under the Banking (Service to Customer) Law, section 9z(a1); section 9z(d) provides annual CPI indexation, while published guides and every 2025-2026 source checked still show 360 | https://www.nevo.co.il/law_html/law01/047_016.htm , https://www.kolzchut.org.il/he/פתיחת_תיק_משכנתא |
+| Early-repayment formula | היוון formula from the Banking Order and BOI circular 2103, with exemptions and age reductions | Verified official source; current implementation noted below | https://www.boi.org.il/roles/supervisionregulation/circulars/cir2103/ |
+
+The app already implements the 66.66% variable cap, the 75/70/50 LTV limits, the 50% DTI and the adjustable PTI ceiling (default 33%), the 30-year cap and the 24-day rate validity. No regulatory change was needed.
+
+### Gap table
+
+| Feature or data point | In the examples | In the app today | Gap | Proposed change | Effort |
+| --- | --- | --- | --- | --- | --- |
+| Fixed unlinked, fixed CPI-linked, prime, annual variable, five-year variable (+ indexed variants) | Yes | Yes | None, covered today | Keep | Done |
+| Per-track amount, term and rate | Yes | Yes | None, covered today | Keep | Done |
+| Early repayment and statutory fee estimate | Yes (per-track fee row) | Yes (היוון panel, exemptions, age discount) | None for a plain track; grace and bullet interplay missing | Extend after grace lands | Done |
+| Charts and comparison | Not in the sheets | Yes (track-mix donut, cost donut, amortization, per-track, forecast, compare) | None | Keep | Done |
+| LTV, DTI, PTI, variable cap, rate validity | Implied | Yes | None | Keep | Done |
+| Reset cadence | 2+2 dominates; 18-month exists; banks sell 1, 2, 2.5, 3, 4, 5, 7 and 10 years | Per-track cadence field (12/18/24/60 months) on the calculator and compare editors | None for the supported options; 2.5/3/7/10-year cadences are not in the picker yet | Keep and extend the option list only when those terms need to be reproduced | Done |
+| Grace periods and deferment | 23 to 36 months, five sheets | Engine only: `graceMonths` plus `graceMode` on the schedule, tested for interest-only, full deferral and a full-term bullet; no calculator or compare control yet | The math exists but a user cannot enter a grace period | Add per-track grace months with an explicit mode: interest-only or fully deferred (capitalized). Both are bank products; a bridge is full deferral for the whole term | L |
+| Two tracks of the same type | Yes (two primes, two fixed) | Rejected as a duplicate | Cannot reproduce several real offers | Done: duplicates allowed end to end, variable cap still enforced | Done |
+| More than three tracks | Four tracks, more cropped | `MAX_TRACKS = 3` | Cannot enter the full offer | Done: `MAX_TRACKS = 6` per mix, `MAX_MIXES = 4` scenarios | Done |
+| Lifetime total for variable tracks | Projected with expected rate rises (row 10, row 7) | Constant-rate schedule | Our total is lower than the sheet's | Show a scenario total from the existing forecast, labeled תרחיש. Do not use the ריבית כוללת חזויה label unless the BoI forecast series is ingested | M |
+| Nominal versus matched rate | Both printed; the payment follows the nominal rate | Nominal field, no guidance | Users may copy the מתואמת figure and overstate the payment by about 0.1pp | Label the field as nominal, show the effective rate per track, and offer a one-time matched-to-nominal conversion | S |
+| Prime payment convention | Some banks price prime on the matched rate | Nominal/12 | Explained: Mizrahi's six prime tracks match matched/12; Leumi, Discount, Hapoalim and Mercantile match nominal/12 | Keep nominal/12 as the default, document the Mizrahi convention, add a bank-basis flag only if quote reproduction is required | S |
+| Opening fee | 360 shekels on every sheet; it is the statutory cap, CPI-linked | Constant defined as `STATUTORY_OPENING_FEE`; not yet in totals, IRR or the UI | Upfront cash is understated by 360 | Add an editable upfront opening-fee line defaulting to 360, included in total cost and IRR | S |
+| Bridge / bullet loan | Three sheets, 24-month bullet | None | Cannot model the bridge | Implement as full-deferral grace over the whole term (one bullet payment) | L |
+| Directed / subsidized tracks (זכות, מחיר למשתכן) | Five tracks at 2.02% to 2.78% | A fixed track at a custom rate works | Only a labeling gap | Add an optional label or note; no new math | S |
+| Per-track terms in presets | Every mix uses different terms per track | Manual entry supports it; presets force one term | Presets are less realistic than every quote | Add an optional term per preset track; update the article and compare parity | S/M |
+| Four-decimal rate precision | 4.2004% printed | Two decimals | Reproduces payment to about 1 shekel, not to the agora | Allow four decimals in the rate field, schema and formatting | S |
+
+### Implemented in this pass
+
+- Added `tests/unit/exampleMixes.test.ts`: five reference mixes from the sheets, 13 tracks, 26 assertions. It verifies each track's first payment, each mix's combined first payment, the fixed tracks' lifetime totals, the nominal-to-effective conversion (`4.55%` nominal gives the sheet's `4.65%` matched rate; `4.34%` gives `4.43%`), and each bank's prime pricing basis.
+- Result: `npx vitest run tests/unit/exampleMixes.test.ts` passes, 26 tests.
+- Production change (2026-11-07, second pass): a mix now holds up to six tracks and may repeat a track type. The duplicate-type gate was removed from the calculator store, autofix, comparison store, compare computation, chart grouping and i18n; the 2/3 variable cap, LTV, PTI and per-track validation are unchanged. Compared scenarios are now capped separately at `MAX_MIXES = 4`. Compare's donut keeps one slice per track, so two primes stay two slices. Unit tests were rewritten for the new rule, and the calculator e2e expectation that the add button is hidden at three tracks was updated.
+- Production change (2026-11-07, third pass): every track carries `resetMonths` (12, 18, 24 including 2+2, or 60), defaulted from its type when an older saved mix has no field. The forecast steps each contractual reset and the prepayment projection prices to the next one; a cadence of 12 months or less keeps the annual exemption, and a 24-month reset is an exit station on its reset date. Locked by unit tests for the 12/18/24/60 boundaries, legacy saved-mix loading, save-payload round-trip, and the 2+2 compare path, plus a calculator e2e that checks the selector and forecast rows.
+- Production change (2026-11-07, fourth pass): the schedule now accepts `graceMonths` and `graceMode` (`interestOnly` or `fullDeferral`) and models capitalized interest separately from charged interest. Affordability (DTI/PTI and the required-payment warning) uses the first payment that repays principal, so interest-only grace is not understated and a fully deferred bridge is judged on its bullet rather than on zero. The fields flow through `TrackState`, saved-mix serialization and schema validation, the forecast, the compare computation and the prepayment projection; unit tests cover 12-month interest-only grace, 12-month full deferral, a 24-month full-deferral bridge bullet and equal-principal grace. The calculator and compare editors do not expose grace yet, so a user cannot set it from the UI.
+- No calculation formula changed for a track without grace. The remaining gaps (grace UI, opening-fee totals, projected total) are still proposed rather than decided silently.
+- Verified findings, not fixed: fixed and unlinked-variable tracks reproduce the sheets to the agora; fixed-track lifetime totals agree within 0.05%; prime payments follow the bank's basis (Mizrahi matched/12, Leumi and Discount nominal/12), now encoded in the test; variable-track totals differ because the sheets project rate rises.
+
+### Backlog, by priority
+
+**P1, needed to reproduce a real quote end to end**
+1. Done: reset-cadence input on variable tracks (2+2 being the most common in this batch).
+2. Grace/deferment periods, including the bridge bullet, with a documented interest convention. Engine and tests landed 2026-11-07; the calculator and compare controls remain.
+3. Done: duplicate track types and a higher track cap, with the 66.66% cap still enforced.
+
+**P2, accuracy and presentation**
+4. Nominal-versus-matched rate guidance and per-track effective rate.
+5. Projected lifetime total for variable tracks, labeled as an assumption.
+6. Opening fee as an editable upfront line.
+7. Prime payment-convention research before any formula change.
+
+**P3, completeness**
+8. Per-track terms in the presets, if presets are kept as the sample-scenario surface.
+9. Optional label for directed/subsidized tracks.
+10. Four-decimal rate precision.
+
+**P4, later**
+11. Import an אישור עקרוני into the calculator (already Step 25 in the checklist) so these sheets can be loaded instead of retyped.
+
+### Research answers and decisions (2026-11-07)
+
+Each open question from the first pass is answered below from a bank product page, the regulation, or arithmetic on the quotes.
+
+**1. Reset cadence: a per-track field, not new track types.**
+Bank product pages sell variable tracks with reset periods of 1, 2, 2.5, 3, 4, 5, 7 and 10 years, anchored to a government bond yield of the matching term plus a margin fixed for the life of the loan. Leumi's 2+2 explicitly uses the two-year unindexed government bond yield; Mizrahi lists 2/5/7 unindexed and 2.5/5/7/10 indexed. A `resetMonths` field plus the existing indexed flag covers every combination; separate types would multiply and still miss 2.5/7/10.
+Decision: add `resetMonths` to a track (default 60 on the current five-year types, 12 on `variable`), derive exit stations in `prepayment` and reset dates in `forecast` from it, and migrate saved mixes by writing the default. Keep the current type names as compatibility aliases for one release.
+Implemented 2026-11-07: the calculator and compare expose the cadence only on resettable types; 12, 18, 24 (2+2) and 60 months are supported, and the saved-mix schema treats a missing value as the type default.
+Sources: https://www.mortgage.leumi.co.il/Articles/225 , https://www.mizrahi-tefahot.co.il/mortgages/takemortgagelib/mortgage-types/bond-variable-interest-non-index-mortgage/ , https://www.moti.org.il/interest/leumi-no-inflation
+
+**2. Grace: both modes, chosen per track.**
+Mizrahi's own page separates דחייה מלאה (קרן וריבית) from דחייה חלקית (ריבית בלבד); in the partial mode the principal does not decrease, and in the full mode neither principal nor interest is paid, so the interest accrues onto the balance. Bank Jerusalem defines the same pair and notes a full balloon is equivalent to a full freeze. The sheets do not state which mode they used, and the choice changes both the total and the PTI.
+Decision: `graceMonths` plus `graceMode: 'interestOnly' | 'fullDeferral'`, default interest-only; a bridge is full deferral for the whole term, one bullet payment. PTI is checked on the first payment after grace, not on zero, and capitalized interest joins the balance. This is a financial convention, flagged for review.
+Sources: https://www.mizrahi-tefahot.co.il/mortgages/updatemortgage/mortgage-break/ , https://www.bankjerusalem.co.il/mortgage/mortgage_glossary
+
+**3. Duplicates and track cap: allow duplicates, cap at 6.**
+No Bank of Israel rule limits the number of tracks; the only composition rule is the 66.66% variable share in Directive 329 section 7. This batch reaches four tracks and two tracks of one type, and common advice is 2-4 tracks.
+Decision: remove the duplicate-type rejection, raise `MAX_TRACKS` to 6 (covers every sampled quote with headroom, still bounded), and keep the variable-share cap, LTV, PTI and per-track validations. Six cards must reflow at 360px and on the compare page.
+Implemented 2026-11-07: the calculator and compare now accept six tracks and repeated types; scenarios are capped separately at `MAX_MIXES = 4`.
+Source: https://boi.org.il/media/uckpqztg/329_et.pdf
+
+**4. Opening fee: informational summary note only (supersedes the initial editable-line proposal).**
+The fee is capped by law at 360 shekels for a housing loan since 22.8.2022, and the cap is CPI-linked; Discount's fees page and kolzchut both state the cap, and every sampled quote charges exactly 360.
+Final decision: show the statutory cap in summary-notes using note-line info, excluding it from calculations. No editable fee, automatic charge or IRR calculation.
+Sources: https://mortgage.discountbank.co.il/get-mortgage/additional-expences , https://www.kolzchut.org.il/he/פתיחת_תיק_משכנתא , https://main.knesset.gov.il/News/PressReleases/Pages/press14062022K.aspx
+
+**5. Dated quotes stay fixtures, not presets.**
+The four presets are shared by the calculator, the compare page and an article written around `basket1..4`; turning 36 dated bank offers into presets would make the selector a price list that goes stale and break that one-to-one mapping.
+Decision: keep them in `tests/unit/exampleMixes.test.ts`. If they should be visible, add a separate "load a sample quote" action labeled with bank and date, not a fifth preset. Not built in this pass.
+
+**6. Projected total: a scenario, not the official ריבית כוללת חזויה.**
+The Bank of Israel requires every אישור עקרוני to show the IRR (ריבית כוללת חזויה), the projected total payments, the first payment and the highest expected payment. The IRR uses the Bank of Israel's CPI and interest-rate forecasts for the reporting month, not a fixed stress path; the app's forecast panel is a +1pp stress scenario.
+Decision: keep the constant-rate total, show the +1/-1 totals labeled תרחיש, and add the highest expected payment figure the sheets print (row 9). Only use the ריבית כוללת חזויה label if the BoI forecast series is ingested, which is a separate data dependency.
+Sources: https://www.boi.org.il/information/bank-paymnts/financial-education/competition-in-mortgages , https://www.boi.org.il/information/bank-paymnts/financial-education/campaigns/boi-equator/mortgage , https://www.bizportal.co.il/realestates/news/article/20038356
+
+**7. Prime: bank-specific basis, nominal/12 stays the default.**
+Arithmetic on the quotes separates the banks:
+- Leumi 666,000/120 at 3.850% gives 6,695.55 at nominal/12, exactly the sheet; Hapoalim and every other Leumi mix imply the printed nominal within 0.001pp.
+- Discount 354,999/264 at 3.95% gives 2,014.61 at nominal/12, exactly the sheet.
+- Mizrahi's six prime tracks imply 0.074-0.082pp above the printed nominal, which is the nominal-to-effective gap (4.25% nominal is 4.3338% matched): its payments are the matched rate divided by 12. For example 250,000/240 at 4.25% gives 1,558.91 on the sheet, 1,548.09 at nominal/12, and 1,559.28 at matched/12.
+- Mercantile's apparent residual was a transcription mix-up, not a bank basis: the first pass compared its printed matched rate (4.07%) as if it were nominal. With the printed nominal rates (3.99/4.65/4.00 on 09.21.33 and 4.71/4.33/4.00/2.60 on 14.01.30), the first three payments on each sheet match nominal/12 within 0.01 shekel. The 50,000 subsidized track on 14.01.30 is 0.36 shekel above nominal/12 because 2.60% is rounded (the implied rate is about 2.615%). No rate-table error remains.
+Decision: keep nominal/12 as the engine default (it is the standard and matches three of the four banks), document the Mizrahi convention in the field help, and add a per-track bank-pricing-basis flag only if reproducing a specific bank quote becomes a requirement. A matched-to-nominal helper is still worth adding, because Discount prints both figures and users may copy the matched one.
+Sources: the quote images in `examples/`.
+
+**Still genuinely open**
+- Resolved 2026-11-07: Mercantile's prime "residual" was the matched rate read as nominal; the printed nominal rates reproduce the sheet (see item 7 above).
+- Whether to ingest the Bank of Israel forecast series to show the official IRR.
+- Sample-quote loading is implemented; validate displayed sample dates and bank-specific rate precision before treating it as exact quote reproduction.
+
+### Follow-up workspace audit (2026-11-07)
+
+The working tree contains expanded reset options (12/18/24/30/36/48/60/84/120), opening-fee state and upfront-total wiring, shared per-track grace controls, and a separate five-quote sample loader. This is ahead of the handoff summary; these changes must not be treated as newly verified based on the earlier passing checks.
+
+Validation attempted in this session: npm run typecheck, npm run lint, npm test, npm run build. All four stopped before executing their checks with Node EPERM on lstat C:\Users\anato. Current sandbox permissions do not permit escalation. Browser, responsive, RTL/LTR, and theme verification of these follow-ups remains pending.
+
+Retained assumptions: nominal annual rate divided by 12; opening fee contributes to upfront cash only; dated quotes remain distinct from recommended presets. Retained discrepancies: Mizrahi prime convention is not applied globally; Mercantile nominal/matched confusion is resolved; the subsidized Mercantile track retains the documented 0.36 ILS rounding residual. Unreadable source values remain unclear.
+
+Open work: verify the current follow-up implementation and regression coverage in an environment where Node can start; confirm mobile/tablet/desktop, both directions and themes. BoI forecast ingestion remains deferred. The .joint-stat-row owner decision remains open.
+
+
+### Opening-fee correction (2026-11-07)
+
+Removed the calculator and compare opening-fee inputs at user request, replacing them with a localized informational note explicitly excluding the fee from displayed totals. Existing saved fee fields remain compatible but no longer contribute to calculator/compare totals. Root cause of the displayed undefined value: CalculatorPage referenced fee properties absent from its local store binding. Updated upfront-total regression expectations and made legacy comparison inputs compatible.
+
+Validation: typecheck and lint passed using Node symlink-preservation flags. Unit tests could not start because esbuild cannot traverse the restricted parent directory; production build still fails with EPERM on C:\Users\anato. Full financial audit and responsive/browser validation are not complete.
+
+### Calculation code review (2026-11-07)
+
+Confirmed and fixed: equal-principal amortization after full deferral used original principal, leaving capitalized interest outstanding at maturity. A 120,000 ILS, 12%, 12-month loan with six deferred months left 7,382.418072 ILS unpaid. Repayment now divides remaining balance by remaining periods; first amortizing principal is 21,230.403012 ILS and final balance is zero. Added unit regressions for 0/6/12 grace months and rejected non-finite/fractional-month terms.
+
+Direct execution of the actual TypeScript engine via the installed TypeScript transpiler passed 12 combinations of grace length, amortization method and indexation, checking final balance and paid = principal + interest + indexation. Independent payment checks: 334,000 at 4.55% over 120 months = 3,469.578628; 395,001 at 4.55% over 240 months = 2,509.644880; 120,000 at zero interest over 120 months = 1,000. Purchase tax checks: 1,978,745 = zero; 2,000,000 = 743.925 before display rounding.
+
+Official data checked: https://www.gov.il/he/service/real_eatate_taxsimulator and https://www.gov.il/BlobFolder/policy/inst-01-2026/he/realestate_inst-01-2026.pdf confirm the single-home brackets; additional-home temporary rates expire 31 December 2026 and need revalidation then. https://www.boi.org.il/information/bank-paymnts/financial-education/competition-in-mortgages/ confirms purchase LTV caps 75/70/50. This is a targeted review, not certification of every financial output. Sample loader rounds converted Mizrahi rates to two decimals, so loaded samples may differ from fixtures using full precision; needs further review alongside sample dates and forecast assumptions.
+
+
+### Cleanup and release review (2026-11-07)
+
+Removed obsolete opening-fee store fields, setters, serialization, compare wiring and unreachable fee breakdown code. Retained the optional server schema field solely to accept existing payloads; it is ignored by calculations. The summary note is the only opening-fee UI.
+
+Source images retained locally, excluded from this commit: the review is not finished enough to delete evidence. Remaining work is to reconcile Mizrahi matched-rate rounding versus fixture tolerances, verify sample dates against printed dates rather than filenames, and add browser coverage for sample loading and grace controls. Do not infer official bank forecast totals from constant-rate schedules. No changes to .joint-stat-row.
+
+
+### Permission recovery and final checks (2026-11-07)
+
+After enabling full access, typecheck, lint, all 76 test files (1,115 tests), and the production build passed. Removed the unused opening-fee math parameter and constant as well; all 270 affected amortization, transaction-cost and comparison tests passed again. Prior permission-blocker entries above are historical, not current blockers. Source images remain local pending the documented sample-date and Mizrahi precision checks.
+
+Browser verification: 52 of 55 targeted checks passed initially. Three layout assertions incorrectly measured controls in collapsed grace disclosures; updated the existing layout helper to check visible controls and chevrons. All three passed on rerun across Hebrew/English and phone/tablet/desktop widths. Theme suite passed. This does not replace dedicated interaction coverage for opening the grace disclosure or loading sample quotes.
+
