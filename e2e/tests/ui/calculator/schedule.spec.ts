@@ -172,11 +172,12 @@ test.describe('mortgage calculator - amortization schedule', () => {
   test('the cost donut prints each slice share inside the slice, readable in both themes', async ({
     calc,
   }) => {
-    // The share used to live only in the hover callout. It now also sits inside
-    // the slice from 8% up, and the ink is picked PER SLICE: white reads on the
-    // teal and purple fills but only 2.2:1 on the gold interest slice, so that
-    // one takes near-black. This probe reads the rendered colors and measures
-    // contrast, so a palette or token change that kills legibility fails here.
+    // The share used to live only in the hover callout. It now sits inside
+    // every slice - flat on wide slices, rotated along the radius on thin ones
+    // - and the ink is picked PER SLICE: white reads on the teal and purple
+    // fills but only 2.2:1 on the gold interest slice, so that one takes
+    // near-black. This probe reads the rendered colors and measures contrast,
+    // so a palette or token change that kills legibility fails here.
     const probe = `(() => {
       const donut = document.querySelector('[data-testid="total-cost-donut"]')
       if (!donut) return null
@@ -221,11 +222,8 @@ test.describe('mortgage calculator - amortization schedule', () => {
       expect(donut, `cost donut rendered (${theme})`).not.toBeNull()
       expect(donut!.slices.length).toBeGreaterThanOrEqual(2)
       for (const slice of donut!.slices) {
-        if (slice.share < 8) {
-          // Too thin to hold a number; the hover callout still carries it.
-          expect(slice.label, `${theme}: thin slice stays unlabeled`).toBeNull()
-          continue
-        }
+        // Every slice carries its share now: wide slices print it flat, thin
+        // ones rotate it along the radius instead of hiding it.
         expect(slice.label, `${theme}: ${slice.share}% slice label`).toBe(`${slice.share}%`)
         // AA for normal text: the number has to be readable on its own fill.
         expect(slice.contrast, `${theme}: ${slice.share}% label contrast`).toBeGreaterThanOrEqual(

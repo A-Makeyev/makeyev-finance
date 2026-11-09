@@ -8,6 +8,7 @@ import {
   type AmortizationMethod,
   type TrackType,
 } from '@/lib/amortization'
+import { suggestPrimeMargin } from '@/lib/marketMargin'
 import { useCalculatorStore, type TrackState } from '@/stores/calculatorStore'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { FlipSelect } from '@/components/ui/FlipSelect'
@@ -21,7 +22,7 @@ import { TrackGraceFields } from './TrackGraceFields'
  * from the verbatim calculators.css port.
  */
 export function TrackForm({ track, index }: { track: TrackState; index: number }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const flagged = useCalculatorStore((s) => s.flaggedTrackIds.includes(track.id))
   const rebalanced = useCalculatorStore((s) => s.rebalancedTrackIds.includes(track.id))
   const updateTrackAmount = useCalculatorStore((s) => s.updateTrackAmount)
@@ -40,18 +41,13 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
   const removeTrack = useCalculatorStore((s) => s.removeTrack)
 
   /**
-   * A prime track's margin is its rate minus the prime rate, so the live Bank
-   * of Israel rate can suggest it. Other tracks' margins are a spread over a
-   * bank-set reference rate the app does not hold, so they get no suggestion.
+   * A prime track's margin is its rate minus the prime rate. While the rate is
+   * still at prime (the default), there is nothing to subtract, so the
+   * placeholder falls back to the typical discount banks currently grant.
+   * Other tracks' margins are a spread over a bank-set reference rate the app
+   * does not hold, so they get no suggestion.
    */
-  const primeMarginSuggestion = (() => {
-    if (track.type !== 'prime' || primeRate === null) return ''
-    const enteredRate = Number.parseFloat(track.rateText)
-    if (!Number.isFinite(enteredRate)) return ''
-    const margin = enteredRate - primeRate
-    if (!Number.isFinite(margin) || margin <= 0) return ''
-    return margin.toFixed(2)
-  })()
+  const primeMarginSuggestion = suggestPrimeMargin(track.type, track.rateText, primeRate)
 
   return (
     <fieldset
@@ -159,65 +155,6 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         </div>
       </label>
 
-      {defaultResetMonthsFor(track.type) > 0 && (
-        <label className="input-group track-cell-reset" htmlFor={`track-reset-${track.id}`}>
-          <span className="label-help-row">
-            <span className="label-help-text">{t('calculator.track.resetLabel')}</span>
-            <HelpTooltip
-              label={t('calculator.help.resetCadenceAria')}
-              content={t('calculator.help.resetCadence')}
-              linkTo="/articles/mortgage-track-types"
-              linkLabel={t('calculator.help.readMore')}
-              testId={`help-reset-cadence-${index + 1}`}
-            />
-          </span>
-          <FlipSelect
-            value={String(track.resetMonths)}
-            onChange={(value) => changeTrackResetMonths(track.id, Number(value))}
-            selectId={`track-reset-${track.id}`}
-            testId={`track-reset-${index + 1}`}
-          >
-            {RESET_MONTH_OPTIONS.map((months) => (
-              <option key={months} value={months}>
-                {t(`calculator.track.resetMonths${months}`)}
-              </option>
-            ))}
-          </FlipSelect>
-        </label>
-      )}
-
-      <label className="input-group track-cell-margin" htmlFor={`track-margin-${track.id}`}>
-        {/* Explicit htmlFor, like the type and method selects: the tooltip's
-            "?" button must not become the label's implicit control. */}
-        <span className="label-help-row">
-          <span className="label-help-text">{t('calculator.track.marginLabel')}</span>
-          <HelpTooltip
-            label={t('calculator.help.marginAria')}
-            content={t('calculator.help.margin')}
-            testId={`help-margin-${index + 1}`}
-          />
-        </span>
-        <div className="input-wrap">
-          <input
-            id={`track-margin-${track.id}`}
-            type="number"
-            min={0}
-            max={MAX_RATE_PERCENT}
-            step={0.01}
-            value={track.marginText ?? ''}
-            onInput={(event) => updateTrackMargin(track.id, event.currentTarget.value)}
-            // Suggested, not entered: on a prime track the margin is the
-            // tracked rate minus the live prime rate. Kept as a placeholder so
-            // a suggestion never turns into saved state the reader did not set.
-            placeholder={primeMarginSuggestion || undefined}
-            aria-label={`${t('calculator.track.marginLabel')} ${index + 1}`}
-            name={`track-margin-${index + 1}`}
-            data-testid={`track-margin-${index + 1}`}
-          />
-          <span>%</span>
-        </div>
-      </label>
-
       <label className="input-group track-cell-method" htmlFor={`track-method-${track.id}`}>
         {/* Same htmlFor binding as the type select above: the tooltip button
             must not become the label's control. */}
@@ -243,15 +180,82 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         </FlipSelect>
       </label>
 
-      <TrackGraceFields
-        graceMonths={track.graceMonths}
-        graceMode={track.graceMode}
-        termYearsText={track.yearsText}
-        onChangeMonths={(months) => changeTrackGraceMonths(track.id, months)}
-        onChangeMode={(mode) => changeTrackGraceMode(track.id, mode)}
-        idPrefix={`track-${track.id}`}
-        testIdPrefix={`track-${index + 1}`}
-      />
+      <div className="track-extra-row">
+        <label className="input-group track-cell-margin" htmlFor={`track-margin-${track.id}`}>
+          {/* Explicit htmlFor, like the type and method selects: the tooltip's
+              "?" button must not become the label's implicit control. */}
+          <span className="label-help-row">
+            <span className="label-help-text">{t('calculator.track.marginLabel')}</span>
+            <HelpTooltip
+              label={t('calculator.help.marginAria')}
+              content={t('calculator.help.margin')}
+              testId={`help-margin-${index + 1}`}
+            />
+          </span>
+          <div className="input-wrap">
+            <input
+              id={`track-margin-${track.id}`}
+              type="number"
+              dir="ltr"
+              style={{ textAlign: i18n.dir() === 'rtl' ? 'right' : 'left' }}
+              min={-MAX_RATE_PERCENT}
+              max={MAX_RATE_PERCENT}
+              step={0.01}
+              value={track.marginText ?? ''}
+              onInput={(event) => updateTrackMargin(track.id, event.currentTarget.value)}
+              // Suggested, not entered: on a prime track the margin is the
+              // tracked rate minus the live prime rate, or the typical market
+              // discount while the rate is still prime. Kept as a placeholder
+              // so a suggestion never turns into saved state the reader did not set.
+              placeholder={primeMarginSuggestion || undefined}
+              aria-label={`${t('calculator.track.marginLabel')} ${index + 1}`}
+              name={`track-margin-${index + 1}`}
+              data-testid={`track-margin-${index + 1}`}
+            />
+            <span>%</span>
+          </div>
+        </label>
+
+        <TrackGraceFields
+          graceMonths={track.graceMonths}
+          graceMode={track.graceMode}
+          termYearsText={track.yearsText}
+          onChangeMonths={(months) => changeTrackGraceMonths(track.id, months)}
+          onChangeMode={(mode) => changeTrackGraceMode(track.id, mode)}
+          idPrefix={`track-${track.id}`}
+          testIdPrefix={`track-${index + 1}`}
+        />
+
+        {/* The rate-update selector is conditional, so it is last in the row:
+            its absence never leaves a gap in front of the visible fields. */}
+        {defaultResetMonthsFor(track.type) > 0 && (
+          <label className="input-group track-cell-reset" htmlFor={`track-reset-${track.id}`}>
+            <span className="label-help-row">
+              <span className="label-help-text">{t('calculator.track.resetLabel')}</span>
+              <HelpTooltip
+                label={t('calculator.help.resetCadenceAria')}
+                content={t('calculator.help.resetCadence')}
+                linkTo="/articles/mortgage-track-types"
+                linkLabel={t('calculator.help.readMore')}
+                testId={`help-reset-cadence-${index + 1}`}
+              />
+            </span>
+            <FlipSelect
+              value={String(track.resetMonths)}
+              onChange={(value) => changeTrackResetMonths(track.id, Number(value))}
+              selectId={`track-reset-${track.id}`}
+              testId={`track-reset-${index + 1}`}
+            >
+              {RESET_MONTH_OPTIONS.map((months) => (
+                <option key={months} value={months}>
+                  {t(`calculator.track.resetMonths${months}`)}
+                </option>
+              ))}
+            </FlipSelect>
+          </label>
+        )}
+      </div>
+
     </fieldset>
   )
 }

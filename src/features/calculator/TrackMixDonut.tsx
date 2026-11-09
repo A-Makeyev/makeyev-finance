@@ -1,7 +1,14 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
-import { arcPath, donutSegments, formatAxisShekel, midAngle, svgRound } from '@/lib/charts'
+import {
+  arcPath,
+  donutSegments,
+  formatAxisShekel,
+  midAngle,
+  radialLabelAngle,
+  svgRound,
+} from '@/lib/charts'
 import { useDonutTooltipClamp } from '@/hooks/useDonutTooltipClamp'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 import { TRACK_TYPE_COLORS } from './trackColors'
@@ -123,6 +130,8 @@ export function TrackMixDonut({
             if (insetEnd <= insetStart) return null
             const mid = midAngle(insetStart, insetEnd)
             const labelRadius = (rOuter + rInner) / 2
+            const labelX = svgRound(center + labelRadius * Math.cos(mid))
+            const labelY = svgRound(center + labelRadius * Math.sin(mid))
             const percent = Math.round(segment.fraction * 100)
             const isActive = hovering && active === index
             // The slice and its % label share one animated group, so the
@@ -142,15 +151,27 @@ export function TrackMixDonut({
                   d={arcPath(center, center, rOuter, rInner, insetStart, insetEnd)}
                   fill={TRACK_TYPE_COLORS[share.type]}
                 />
-                {percent >= 8 && (
+                {/* Every slice carries its share. Wide slices print it flat;
+                    thin ones rotate it along the radius so the number still
+                    fits inside the ring instead of disappearing. */}
+                {percent >= 8 ? (
                   <text
                     // Rounded like every other chart coordinate: Math.cos/sin
                     // are not required to be correctly rounded, so Node and
                     // the browser can differ in the last bit and React reports
                     // the serialized attribute as a hydration mismatch.
-                    x={svgRound(center + labelRadius * Math.cos(mid))}
-                    y={svgRound(center + labelRadius * Math.sin(mid))}
+                    x={labelX}
+                    y={labelY}
                     className="donut-slice-label"
+                  >
+                    {percent}%
+                  </text>
+                ) : (
+                  <text
+                    x={labelX}
+                    y={labelY}
+                    className="donut-slice-label"
+                    transform={`rotate(${svgRound(radialLabelAngle(mid))} ${labelX} ${labelY})`}
                   >
                     {percent}%
                   </text>

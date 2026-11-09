@@ -50,8 +50,8 @@ export function SampleQuotesMenu() {
                 onClick={() => select(quote)}
               >
                 <strong>{t(`calculator.sampleQuotes.banks.${quote.bank}`)}</strong>
-                <span>{quote.date}</span>
-                <span>{formatCurrency(quote.loan)}</span>
+                <span className="sample-quote-date">{quote.date}</span>
+                <span className="sample-quote-amount">{formatCurrency(quote.loan)}</span>
               </button>
             </li>
           ))}

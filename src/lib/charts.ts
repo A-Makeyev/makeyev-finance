@@ -104,7 +104,7 @@ export function niceRange(
  * "Nice" axis ticks from 0 to `max` (inclusive): picks a step from the
  * 1/2/2.5/5×10ⁿ families so labels stay round. Always returns 0 first, plus
  * `max` itself only when it sits on the grid or clears the last round tick
- * by a quarter step (closer than that, its label would overlap).
+ * by at least half a step (closer labels crowd the compact chart panels).
  */
 export function niceTicks(max: number, targetCount = 4): number[] {
   if (!Number.isFinite(max) || max <= 0) return [0]
@@ -120,13 +120,13 @@ export function niceTicks(max: number, targetCount = 4): number[] {
   }
   // The axis can end above the last round tick - show the true max too,
   // but only when it stays legible: it must clear the last round tick by
-  // at least a quarter step (any closer and its label prints on top of the
+  // at least half a step (any closer and its label crowds the
   // round one below), and its abbreviated label must differ from that
   // tick's (₪7,500 and ₪8,200 both print "₪8K", which read as the same
   // payment shown twice). Failing either check, the round tick stays the
   // top label, just shy of the plot's top edge.
   const last = ticks[ticks.length - 1]
-  if (max - last > step * 0.25 && formatAxisShekel(max) !== formatAxisShekel(last)) {
+  if (max - last >= step * 0.5 && formatAxisShekel(max) !== formatAxisShekel(last)) {
     ticks.push(Number(max.toFixed(6)))
   }
   return ticks
@@ -285,6 +285,19 @@ export function arcPath(
 /** Mid-angle of a slice - used to place percentage labels. */
 export function midAngle(startAngle: number, endAngle: number): number {
   return (startAngle + endAngle) / 2
+}
+
+/**
+ * Rotation (degrees) for a share printed along a slice's radius. Normalising
+ * into the readable half of the circle keeps the number from rendering upside
+ * down on the left-hand slices while its baseline still follows the radius.
+ * Thin slices use this because a flat label would spill past their narrow arc.
+ */
+export function radialLabelAngle(mid: number): number {
+  let degrees = (mid * 180) / Math.PI
+  while (degrees > 90) degrees -= 180
+  while (degrees < -90) degrees += 180
+  return degrees
 }
 
 export interface XTick {

@@ -418,8 +418,8 @@ export const en: { translation: Translation } = {
       presetBasket3: 'Mix 3',
       presetBasket4: 'Recommended mix',
       sampleQuotes: {
-        heading: 'Load a sample quote',
-        note: 'Real quotes from the example set, with no customer details. Loading replaces the current mix.',
+        heading: 'Sample quote',
+        note: 'Real quotes from the example set. Loading replaces the current mix.',
         replaceTitle: 'Load a sample quote?',
         replaceBody: 'The current mix has unsaved changes. Loading a quote will replace them.',
         replaceAction: 'Load quote',
@@ -471,7 +471,6 @@ export const en: { translation: Translation } = {
         methodLabel: 'Amortization',
         methodSpitzer: 'Spitzer',
         methodEqualPrincipal: 'Equal principal',
-        specialTerms: 'Special terms',
         graceMonthsLabel: 'Grace period',
         graceMonthsSuffix: 'months',
         graceModeLabel: 'Grace type',
@@ -508,7 +507,7 @@ export const en: { translation: Translation } = {
         },
         marginAria: 'More about the market margin',
         margin:
-          'The market margin is the gap between the track rate and its reference rate ~ for prime, the Bank of Israel rate. It is display-only and does not change the calculation. On a prime track it is suggested automatically from the rate entered minus the prime rate; on other tracks, enter it from the bank offer.',
+          'The market margin is the gap between the track rate and its reference rate ~ on a prime track, the prime rate. It is display-only and does not change the calculation. On a prime track it is suggested from the rate entered minus prime, and while the rate still equals prime it shows a typical recent market margin; on other tracks, enter it from the bank offer.',
         methodAria: 'More about the amortization schedule',
         method:
           'Spitzer keeps the payment constant; equal principal starts higher, declines over time and saves on total interest. This is a whole-loan decision based on your cash flow, not a separate choice per track.',
@@ -643,6 +642,7 @@ export const en: { translation: Translation } = {
         netPrincipalLabel: 'Net principal',
         costAria: 'Principal, indexation and interest over the full term',
         perTrackAria: 'Per-track balance comparison over the term',
+        graceLabel: 'Grace',
         mixTotalLabel: 'Total mortgage',
         costCenterLabel: 'interest',
         costSliceLine: '{{label}}: {{amount}}, {{percent}}%',

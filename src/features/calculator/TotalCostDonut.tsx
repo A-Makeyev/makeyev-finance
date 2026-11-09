@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
-import { arcPath, donutSegments, midAngle, svgRound } from '@/lib/charts'
+import { arcPath, donutSegments, midAngle, radialLabelAngle, svgRound } from '@/lib/charts'
 import { useDonutTooltipClamp } from '@/hooks/useDonutTooltipClamp'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 
@@ -60,8 +60,8 @@ const SLICE_LABEL_COLORS = [
  * Hovering a slice behaves like the track-mix donut: the slice pops out and a
  * callout with the amount and share appears just outside it, on the side the
  * slice faces. Like that donut, each slice also carries its own share inside
- * the ring (from 8% up, where the number still fits) in a text color picked
- * for that slice's fill, and the legend repeats the share.
+ * the ring in a text color picked for that slice's fill - flat on wide slices,
+ * rotated along the radius on thin ones - and the legend repeats the share.
  *
  * A donut is picture-only, so the same figures are written out for assistive
  * tech in a visually-hidden list that the SVG points at with
@@ -178,6 +178,8 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
             const isActive = hovering && active === index
             const mid = midAngle(insetStart, insetEnd)
             const labelRadius = (R_OUTER + R_INNER) / 2
+            const labelX = svgRound(CENTER + labelRadius * Math.cos(mid))
+            const labelY = svgRound(CENTER + labelRadius * Math.sin(mid))
             const percent = slice.percent
             return (
               // The slice and its % label share one animated group, so the
@@ -196,18 +198,29 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
                   d={arcPath(CENTER, CENTER, R_OUTER, R_INNER, insetStart, insetEnd)}
                   fill={slice.color}
                 />
-                {/* Same 8% floor as the mix donut: below that the number
-                    would spill past the slice's edges. */}
-                {percent >= 8 && (
+                {/* Every slice carries its share. Wide slices print it flat;
+                    thin ones rotate it along the radius so the number still
+                    fits inside the ring instead of disappearing. */}
+                {percent >= 8 ? (
                   <text
                     // Rounded like every other chart coordinate: Math.cos/sin
                     // are not required to be correctly rounded, so Node and
                     // the browser can differ in the last bit and React reports
                     // the serialized attribute as a hydration mismatch.
-                    x={svgRound(CENTER + labelRadius * Math.cos(mid))}
-                    y={svgRound(CENTER + labelRadius * Math.sin(mid))}
+                    x={labelX}
+                    y={labelY}
                     className="donut-slice-label"
                     style={{ fill: slice.labelColor }}
+                  >
+                    {percent}%
+                  </text>
+                ) : (
+                  <text
+                    x={labelX}
+                    y={labelY}
+                    className="donut-slice-label"
+                    style={{ fill: slice.labelColor }}
+                    transform={`rotate(${svgRound(radialLabelAngle(mid))} ${labelX} ${labelY})`}
                   >
                     {percent}%
                   </text>

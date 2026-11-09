@@ -3,10 +3,11 @@ import { formatGroupedNumber } from '@/lib/format'
 import type { SavedTrackInput } from '@/stores/calculatorStore'
 
 /**
- * The five reference quotes from `examples/` that the engine is tested
+ * The six reference quotes recorded in `tests/unit/exampleMixes.test.ts` that the engine is tested
  * against. They are loaded into the calculator as an UNSAVED mix (never as a
  * preset): presets are shared with the comparison page and an article, while
- * these are dated bank offers.
+ * these are dated bank offers. Original image filenames are recorded in that
+ * test; not all source images are present in every checkout.
  *
  * The rate stored is the one the APP divides by 12. That is the quote's
  * nominal figure for fixed, unlinked-variable, Leumi/Discount prime tracks,
@@ -74,6 +75,20 @@ export const SAMPLE_QUOTES: SampleQuote[] = [
     tracks: [
       track('fixed', 334_000, 10, 4.55),
       track('prime', 666_000, 10, 3.85),
+    ],
+  },
+  {
+    id: 'leumi-1.3m-2026-11-06',
+    bank: 'leumi',
+    date: '06/11/2026',
+    loan: 1_300_000,
+    firstPayment: 7_935.42,
+    tracks: [
+      track('fixed', 434_000, 15, 4.45),
+      // Annual variable (מק"מ), so the reset is 12 months, not the 24 the
+      // five-year type defaults to.
+      track('variable', 433_000, 25, 4.23, 12),
+      track('prime', 433_000, 25, 4.0),
     ],
   },
   {

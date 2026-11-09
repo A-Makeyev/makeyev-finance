@@ -147,7 +147,10 @@ export function ForecastChart({
     if (!zeroBased) {
       const minValue = Math.min(...values)
       const padding = Math.max((maxValue - minValue) * 0.08, maxValue * 0.01, 1)
-      const range = niceRange(Math.max(0, minValue - padding), maxValue + padding)
+      // A zoomed payment window spans only a few hundred shekels, and a
+      // target of 4 can still round outward to six labels at 0.2K steps.
+      // Asking for 3 keeps at most five labels on the same 240px axis.
+      const range = niceRange(Math.max(0, minValue - padding), maxValue + padding, 3)
       axisMin = range.axisMin
       axisMax = range.axisMax
       ticks = range.ticks

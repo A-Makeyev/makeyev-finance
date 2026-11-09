@@ -915,7 +915,10 @@ export function RateScenarioChart({
     // zero baseline would flatten every path into the same line. The detailed
     // tick formatter keeps the shekel labels distinct on that narrow range.
     const padding = Math.max((maxValue - minValue) * 0.08, maxValue * 0.01, 1)
-    const range = niceRange(Math.max(0, minValue - padding), maxValue + padding)
+    // A payment window of a few hundred shekels can round outward to six
+    // labels at 0.2K steps with a target of 4; asking for 3 keeps at most
+    // five on the same 240px axis.
+    const range = niceRange(Math.max(0, minValue - padding), maxValue + padding, 3)
     const span = Math.max(range.axisMax - range.axisMin, 1e-9)
     const y = (value: number) =>
       svgRound(

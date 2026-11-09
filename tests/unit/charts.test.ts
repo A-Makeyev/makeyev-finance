@@ -6,6 +6,7 @@ import {
   formatAxisShekel,
   formatAxisShekelDetailed,
   midAngle,
+  radialLabelAngle,
   niceRange,
   niceTicks,
   svgRound,
@@ -130,6 +131,10 @@ describe('niceRange', () => {
 })
 
 describe('niceTicks', () => {
+  it('keeps a half-step gap before an extra maximum label', () => {
+    expect(niceTicks(46_000)).toEqual([0, 20_000, 40_000])
+    expect(niceTicks(115_000)).toEqual([0, 50_000, 100_000])
+  })
   it('picks round steps covering the range', () => {
     expect(niceTicks(1_000_000)).toEqual([0, 250_000, 500_000, 750_000, 1_000_000])
     expect(niceTicks(900_000)).toEqual([0, 250_000, 500_000, 750_000, 900_000])
@@ -272,6 +277,18 @@ describe('donutSegments', () => {
     const segments = donutSegments([-5, 10])
     expect(segments[0].fraction).toBe(0)
     expect(segments[1].fraction).toBe(1)
+  })
+})
+
+describe('radialLabelAngle', () => {
+  it('keeps radial slice labels in the readable half of the circle', () => {
+    // Text along the radius stays upright: the left-hand half is flipped by
+    // 180 degrees instead of rendering the number upside down.
+    expect(radialLabelAngle(0)).toBe(0)
+    expect(radialLabelAngle(Math.PI / 2)).toBeCloseTo(90)
+    expect(radialLabelAngle(Math.PI)).toBeCloseTo(0)
+    expect(radialLabelAngle((3 * Math.PI) / 2)).toBeCloseTo(90)
+    expect(radialLabelAngle(-Math.PI / 2)).toBeCloseTo(-90)
   })
 })
 

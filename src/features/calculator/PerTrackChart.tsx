@@ -97,6 +97,27 @@ export function PerTrackChart({
   const ticks = niceTicks(maxBalance)
   const xTicks = xAxisTicks(rowCount, monthly)
 
+  // Grace phase per track: a wash from the first period through the track's
+  // last grace period, in the track's own color so it reads as that line's
+  // opening phase. Monthly ends on the exact month; yearly covers the year the
+  // grace ends in.
+  const graceBands = nonEmpty.flatMap((entry, trackIndex) => {
+    const months = entry.track.graceMonths
+    if (!months || months <= 0 || entry.series.length === 0) return []
+    const lastIndex = monthly ? months - 1 : Math.ceil(months / 12) - 1
+    const end = Math.min(lastIndex, entry.series.length - 1)
+    if (end < 0) return []
+    const start = x(0)
+    return [
+      {
+        key: `grace-${trackIndex}-${entry.track.type}`,
+        color: TRACK_TYPE_COLORS[entry.track.type],
+        start,
+        width: Math.max(0, Math.min(MARGIN.left + INNER_W, x(end) + step / 2) - start),
+      },
+    ]
+  })
+
   /** Points of the hovered period, one per track (tracks ending early skip). */
   const activePoints =
     hover !== null
@@ -183,6 +204,7 @@ export function PerTrackChart({
             />
             <span className="chart-legend-name">
               {t(`calculator.trackTypes.${entry.track.type}`)}
+              {entry.track.graceMonths > 0 && ` · ${t('calculator.charts.graceLabel')}`}
             </span>
           </span>
         ))}
@@ -239,6 +261,20 @@ export function PerTrackChart({
                 {formatAxisShekel(tick)}
               </text>
             </g>
+          ))}
+
+          {/* Grace phase: a low-opacity band under each track's opening
+              periods, drawn before the lines so it never hides them. */}
+          {graceBands.map((band) => (
+            <rect
+              key={band.key}
+              x={band.start}
+              y={MARGIN.top}
+              width={band.width}
+              height={INNER_H}
+              fill={band.color}
+              className="per-track-grace-band"
+            />
           ))}
 
           {xTicks.map((tick) => (
