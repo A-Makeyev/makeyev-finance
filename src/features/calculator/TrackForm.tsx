@@ -22,7 +22,7 @@ import { TrackGraceFields } from './TrackGraceFields'
  * from the verbatim calculators.css port.
  */
 export function TrackForm({ track, index }: { track: TrackState; index: number }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const flagged = useCalculatorStore((s) => s.flaggedTrackIds.includes(track.id))
   const rebalanced = useCalculatorStore((s) => s.rebalancedTrackIds.includes(track.id))
   const updateTrackAmount = useCalculatorStore((s) => s.updateTrackAmount)
@@ -114,11 +114,12 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
         />
       </label>
 
-      <label className="input-group track-cell-years">
-        {t('calculator.track.yearsLabel')}
+      <div className="input-group track-cell-years">
+        <label htmlFor={`track-years-${track.id}`}>{t('calculator.track.yearsLabel')}</label>
         <div className="input-wrap">
           <input
             type="number"
+            id={`track-years-${track.id}`}
             inputMode="numeric"
             min={1}
             max={MAX_YEARS}
@@ -133,7 +134,7 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
           />
           <span>{t('calculator.track.yearsSuffix')}</span>
         </div>
-      </label>
+      </div>
 
       <label className="input-group track-cell-rate">
         {t('calculator.track.rateLabel')}
@@ -196,8 +197,6 @@ export function TrackForm({ track, index }: { track: TrackState; index: number }
             <input
               id={`track-margin-${track.id}`}
               type="number"
-              dir="ltr"
-              style={{ textAlign: i18n.dir() === 'rtl' ? 'right' : 'left' }}
               min={-MAX_RATE_PERCENT}
               max={MAX_RATE_PERCENT}
               step={0.01}

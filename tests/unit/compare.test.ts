@@ -499,17 +499,15 @@ describe('comparisonStore', () => {
     expect(after.scenarios[0].tracks[0].amountText).toBe('400,000')
   })
 
-  it('enforces the 2..4 scenario window and the 1..6 track window', () => {
+  it('enforces the 2..3 scenario window and the 1..6 track window', () => {
     const store = useComparisonStore.getState()
     store.addScenario()
     expect(useComparisonStore.getState().scenarios).toHaveLength(3)
     store.addScenario()
-    expect(useComparisonStore.getState().scenarios).toHaveLength(4)
-    store.addScenario()
-    expect(useComparisonStore.getState().scenarios).toHaveLength(4)
-
-    store.removeScenario(useComparisonStore.getState().scenarios[0].id)
     expect(useComparisonStore.getState().scenarios).toHaveLength(3)
+    store.duplicateScenario(useComparisonStore.getState().scenarios[0].id)
+    expect(useComparisonStore.getState().scenarios).toHaveLength(3)
+
     store.removeScenario(useComparisonStore.getState().scenarios[0].id)
     expect(useComparisonStore.getState().scenarios).toHaveLength(2)
     store.removeScenario(useComparisonStore.getState().scenarios[0].id)

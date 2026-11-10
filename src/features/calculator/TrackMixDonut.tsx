@@ -6,7 +6,6 @@ import {
   donutSegments,
   formatAxisShekel,
   midAngle,
-  radialLabelAngle,
   svgRound,
 } from '@/lib/charts'
 import { useDonutTooltipClamp } from '@/hooks/useDonutTooltipClamp'
@@ -151,10 +150,9 @@ export function TrackMixDonut({
                   d={arcPath(center, center, rOuter, rInner, insetStart, insetEnd)}
                   fill={TRACK_TYPE_COLORS[share.type]}
                 />
-                {/* Every slice carries its share. Wide slices print it flat;
-                    thin ones rotate it along the radius so the number still
-                    fits inside the ring instead of disappearing. */}
-                {percent >= 8 ? (
+                {/* Small slices stay true to their size; omit labels that
+                    cannot fit clearly inside the ring. */}
+                {percent >= 8 && (
                   <text
                     // Rounded like every other chart coordinate: Math.cos/sin
                     // are not required to be correctly rounded, so Node and
@@ -163,15 +161,6 @@ export function TrackMixDonut({
                     x={labelX}
                     y={labelY}
                     className="donut-slice-label"
-                  >
-                    {percent}%
-                  </text>
-                ) : (
-                  <text
-                    x={labelX}
-                    y={labelY}
-                    className="donut-slice-label"
-                    transform={`rotate(${svgRound(radialLabelAngle(mid))} ${labelX} ${labelY})`}
                   >
                     {percent}%
                   </text>

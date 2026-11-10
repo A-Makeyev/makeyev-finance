@@ -110,7 +110,7 @@ export function useCalculatorViewModel() {
   const snapshot = useCalculatorStore((s) => s.snapshot)
   const error = useCalculatorStore((s) => s.error)
   const flaggedTrackIds = useCalculatorStore((s) => s.flaggedTrackIds)
-  const termYears = useCalculatorStore((s) => s.termYears)
+  const termYears = useCalculatorStore((s) => s.snapshot.maxEnteredYears)
   const purpose = useCalculatorStore((s) => s.purpose)
   const propertyValueText = useCalculatorStore((s) => s.propertyValueText)
   const capitalText = useCalculatorStore((s) => s.capitalText)

@@ -64,6 +64,7 @@ export const savedTrackSchema = z
     graceMode: z.enum(GRACE_MODES).optional(),
     amountText: z.string().max(20).regex(AMOUNT_TEXT),
     yearsText: z.string().max(4).regex(YEARS_TEXT),
+    yearsOverridden: z.boolean().optional(),
     rateText: z.string().max(8).regex(RATE_TEXT),
     /**
      * Optional display-only market margin. Blank is "not entered". It never

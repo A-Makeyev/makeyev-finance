@@ -193,7 +193,7 @@ export function SavedMixesSection() {
                   <div className="saved-mix-donut" data-testid="saved-mix-donut">
                     {/* Term phrase sits centered directly above the ring. */}
                     <span className="text-sm font-medium text-ink-muted" data-testid="saved-mix-term">
-                      {t('savedMixes.termFor', { count: mix.termYears })}
+                      {t('savedMixes.termFor', { count: Math.max(...mix.tracks.map((track) => Number(track.yearsText) || 0)) })}
                     </span>
                     <TrackMixDonut
                       shares={summary.parts.map((part, index) => ({

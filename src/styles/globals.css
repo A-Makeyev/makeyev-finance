@@ -1454,6 +1454,45 @@ img {
   gap: 0.75rem;
 }
 
+/* Pair the confirmation actions on one baseline. The global calculate button
+   has a top margin, while reset-button is an underlined text link. */
+.term-confirm-actions .calculate-button,
+.term-confirm-actions .term-confirm-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 132px;
+  min-height: 46px;
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.term-confirm-actions .term-confirm-cancel {
+  border: 1px solid var(--calc-line);
+  background: var(--calc-paper);
+  color: var(--calc-ink);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+}
+
+.term-confirm-actions .term-confirm-cancel:hover {
+  border-color: var(--calc-teal);
+  background: var(--calc-field);
+  color: var(--calc-teal-dark);
+}
+
+.term-confirm-actions :is(.term-confirm-cancel, .calculate-button):focus-visible {
+  outline: 2px solid var(--calc-teal);
+  outline-offset: 3px;
+}
+
 [role='dialog'][dir='rtl'] .modal-actions-reversed {
   flex-direction: row-reverse;
 }
@@ -2197,7 +2236,7 @@ img {
    a GOLD down row can look like it has its own green is the flash rectangle's
    alpha wash over red text; the hue itself is identical to the row text. */
 .markets-tick-up {
-  background-color: rgba(35, 210, 65, 0.14);
+  background-color: rgba(35, 185, 55, 0.14);
 }
 
 .markets-tick-down {
@@ -2238,16 +2277,16 @@ img {
   font-variant-numeric: tabular-nums;
 }
 
-/* Keep movement colors identical to the Indexes strip: rising red, falling
-   green, and flat light blue. */
+/* Use the Indexes palette with ticker semantics: rising green, falling
+   red, and flat light blue. */
 .markets-row.market-change-up .markets-price,
 .markets-row.market-change-up .markets-change {
-  color: var(--soft-red);
+  color: var(--soft-green);
 }
 
 .markets-row.market-change-down .markets-price,
 .markets-row.market-change-down .markets-change {
-  color: var(--soft-green);
+  color: var(--soft-red);
 }
 
 .markets-row.market-change-flat .markets-price,
@@ -5315,12 +5354,11 @@ html[dir='ltr'] .date-field {
 
 .sample-quote-button {
   width: 100%;
-  /* Bank, date and amount share one row in three fixed columns, so the date
-     and amount line up from card to card instead of drifting with the bank
-     name's width. */
+  /* Equal outer columns keep the date at the button's exact center.
+     Grid order follows the language: bank at start, amount at end. */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 5.2em 6em;
-  align-items: baseline;
+  grid-template-columns: minmax(0, 1fr) 5.2em minmax(0, 1fr);
+  align-items: center;
   column-gap: 10px;
   border: 1px solid var(--calc-line);
   border-radius: 8px;
@@ -5783,6 +5821,24 @@ html[dir='ltr'] .date-field {
 .input-wrap:focus-within {
   box-shadow: 0 0 0 3px rgba(8, 127, 120, 0.12);
   outline: none;
+}
+
+/* Hide native number arrows while preserving numeric validation and keyboard controls. */
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Numeric fields follow the surrounding language. */
+.input-wrap input[type='number'] {
+  direction: inherit;
+  text-align: start;
 }
 
 .input-wrap span {
@@ -11111,7 +11167,7 @@ html[dir='rtl'] .comment-text {
    Reuses the calculator's field classes (input-group/input-wrap/mortgage-track)
    and its theme tokens (--calc-*), so RTL mirroring and dark mode come from
    the same machinery. Layout logic is direction-agnostic (logical properties
-   only) and switches table -> stacked cards at 768px via useMediaQuery.
+   only) and switches table -> stacked cards at 1001px via useMediaQuery.
 =========================================================================== */
 .compare-shell {
   /* Its original 1240px frame plus a little: wide enough for a two-card row and
@@ -11636,6 +11692,43 @@ html[dir='rtl'] .comment-text {
 
 .compare-shell .compare-track .track-cell-reset + .track-cell-method {
   grid-column: 1 / -1;
+}
+
+/* Keep the amortization method and both grace controls together in one row. */
+.compare-shell .compare-track .compare-track-term-options {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1.2fr);
+  gap: 8px;
+  align-items: start;
+  min-inline-size: 0;
+}
+
+.compare-shell .compare-track .compare-track-term-options .track-cell-method {
+  grid-column: auto;
+}
+
+/* With a rate reset, keep the four controls in reading order in two pairs. */
+.compare-shell .compare-track .compare-track-term-options:has(.track-cell-reset) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.compare-shell .compare-track .compare-track-term-options .track-grace,
+.compare-shell .compare-track .compare-track-term-options .track-grace-body {
+  display: contents;
+}
+
+.compare-shell .compare-track .compare-track-term-options .input-group {
+  min-inline-size: 0;
+}
+
+.compare-shell .compare-track .compare-track-term-options .input-wrap span {
+  padding-inline: 6px;
+}
+
+.compare-shell .compare-track .compare-track-term-options .input-wrap input {
+  min-inline-size: 0;
+  padding-inline: 6px;
 }
 
 /* In the calculator, keep the market margin, grace months and grace type in
@@ -12833,8 +12926,9 @@ html[dir='rtl'] .comment-text {
 
 /* Keep compact cards readable based on their own width, not the viewport. */
 @container (max-width: 500px) {
-  .compare-shell .compare-track {
-    grid-template-columns: minmax(0, 1fr);
+  .compare-shell .compare-track .compare-track-term-options {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1.2fr);
+    gap: 5px;
   }
 
   .compare-offer-controls {
@@ -12849,13 +12943,13 @@ html[dir='rtl'] .comment-text {
 
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1000px) {
   .compare-results-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (min-width: 768px) and (max-width: 1160px) {
+@media (min-width: 1001px) and (max-width: 1160px) {
   .compare-editors-grid,
   .compare-results-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

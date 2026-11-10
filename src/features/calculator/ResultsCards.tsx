@@ -108,7 +108,7 @@ export function ResultsCards() {
   const wishlistItems = useQuestionWishlist((s) => s.items)
   const addToWishlist = useQuestionWishlist((s) => s.add)
   const removeFromWishlist = useQuestionWishlist((s) => s.remove)
-  const termYears = useCalculatorStore((s) => s.termYears)
+  const termYears = useCalculatorStore((s) => s.snapshot.maxEnteredYears)
   const highestLabelKind = useCalculatorStore((s) => s.snapshot.highestLabel?.kind ?? null)
   const exitTimer = useRef<number | null>(null)
   const toggleTimer = useRef<number | null>(null)

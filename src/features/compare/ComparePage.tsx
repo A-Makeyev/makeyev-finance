@@ -30,7 +30,7 @@ import { PRESET_IDS } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { DateField } from '@/components/ui/DateField'
 import { FlipSelect } from '@/components/ui/FlipSelect'
-import { TermSlider } from '@/components/ui/TermSlider'
+import { ConfirmedTermSlider } from '@/components/ui/ConfirmedTermSlider'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { RateValidityChip } from '@/components/ui/RateValidityChip'
 import { averageRateForTerm, FALLBACK_MARKET_RATE_PERCENT, type AverageRateKind } from '@/lib/averageRates'
@@ -86,7 +86,7 @@ const LAWYER_FLOOR_WITH_VAT = formatGroupedNumber(Math.round(LAWYER_MINIMUM_FEE 
 
 export function ComparePage() {
   const { t, i18n } = useTranslation()
-  const isDesktop = useMediaQuery('(min-width: 768px)')
+  const isDesktop = useMediaQuery('(min-width: 1001px)')
   // Which scenario the mobile stacked view shows (index into scenarios).
   const [mobileIndex, setMobileIndex] = useState(0)
 
@@ -135,6 +135,8 @@ export function ComparePage() {
     changeTrackGraceMode: useComparisonStore((s) => s.changeTrackGraceMode),
     changeTrackMethod: useComparisonStore((s) => s.changeTrackMethod),
     setScenarioTermYears: useComparisonStore((s) => s.setScenarioTermYears),
+    updateTrackYears: useComparisonStore((s) => s.updateTrackYears),
+    commitTrackYearsBlur: useComparisonStore((s) => s.commitTrackYearsBlur),
     setMortgageSum: useComparisonStore((s) => s.setMortgageSum),
     fixScenario: useComparisonStore((s) => s.fixScenario),
     loadScenarioPreset: useComparisonStore((s) => s.loadScenarioPreset),
@@ -593,14 +595,11 @@ export function ComparePage() {
               )}
             </div>
           </div>
-          {/* תקופה: the scenario's single term control. It drives every track in
-              the scenario (there is no per-track term here - the calculator's
-              four per-track fields plus a scenario slider read as two תקופה
-              inputs in one column). It sits above the mixes because it defines
-              the term every mix below is priced at. */}
-          <label className="compare-term-row">
-            {t('compare.scenarioTermLabel')}
-            <TermSlider
+          {/* Customized terms require confirmation before changing the whole scenario. */}
+          <div className="compare-term-row">
+            <label htmlFor={`compare-term-${scenarioIndex + 1}`}>{t('compare.scenarioTermLabel')}</label>
+            <ConfirmedTermSlider
+              requiresConfirmation={scenario.tracks.some((track) => track.yearsOverridden || Number(track.yearsText) !== scenario.termYears)}
               min={1}
               max={MAX_YEARS}
               value={scenario.termYears}
@@ -608,12 +607,13 @@ export function ComparePage() {
               labelLow="1"
               labelHigh={String(MAX_YEARS)}
               ariaLabel={t('compare.scenarioTermLabel')}
+              inputId={`compare-term-${scenarioIndex + 1}`}
               testId={`compare-term-${scenarioIndex + 1}`}
             />
             <span>
               {t('compare.scenarioTermSuffix')}
             </span>
-          </label>
+          </div>
         </div>
         {/* Each offer keeps its approval date and validity message together.
             The message wraps beside the date without changing sides. */}
@@ -738,6 +738,28 @@ export function ComparePage() {
               />
             </label>
 
+            <div className="input-group track-cell-years">
+              <label htmlFor={`compare-track-years-${scenarioIndex + 1}-${trackIndex + 1}`}>
+                {t('calculator.track.yearsLabel')}
+              </label>
+              <div className="input-wrap">
+                <input
+                  id={`compare-track-years-${scenarioIndex + 1}-${trackIndex + 1}`}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={MAX_YEARS}
+                  step={1}
+                  value={track.yearsText}
+                  onInput={(event) => actions.updateTrackYears(scenario.id, track.id, event.currentTarget.value)}
+                  onBlur={() => actions.commitTrackYearsBlur(scenario.id, track.id)}
+                  required
+                  data-testid={`compare-track-years-${scenarioIndex + 1}-${trackIndex + 1}`}
+                />
+                <span>{t('calculator.track.yearsSuffix')}</span>
+              </div>
+            </div>
+
             <label className="input-group track-cell-rate">
               {t('compare.trackRateLabel')}
               <div className="input-wrap">
@@ -760,51 +782,51 @@ export function ComparePage() {
               </div>
             </label>
 
-            {defaultResetMonthsFor(track.type) > 0 && (
-              <label className="input-group track-cell-reset" htmlFor={`compare-track-reset-${scenarioIndex + 1}-${trackIndex + 1}`}>
-                {t('calculator.track.resetLabel')}
+            <div className="compare-track-term-options">
+              <label className="input-group track-cell-method">
+                {t('compare.trackMethodLabel')}
                 <FlipSelect
-                  value={String(track.resetMonths)}
+                  value={track.method}
                   onChange={(value) =>
-                    actions.changeTrackResetMonths(scenario.id, track.id, Number(value))
+                    actions.changeTrackMethod(scenario.id, track.id, value as AmortizationMethod)
                   }
-                  selectId={`compare-track-reset-${scenarioIndex + 1}-${trackIndex + 1}`}
-                  testId={`compare-track-reset-${scenarioIndex + 1}-${trackIndex + 1}`}
+                  testId={`compare-track-method-${scenarioIndex + 1}-${trackIndex + 1}`}
                 >
-                  {RESET_MONTH_OPTIONS.map((months) => (
-                    <option key={months} value={months}>
-                      {t(`calculator.track.resetMonths${months}`)}
-                    </option>
-                  ))}
+                  <option value="spitzer">{t('calculator.track.methodSpitzer')}</option>
+                  <option value="equalPrincipal">{t('calculator.track.methodEqualPrincipal')}</option>
                 </FlipSelect>
               </label>
-            )}
-
-            <label className="input-group track-cell-method">
-              {t('compare.trackMethodLabel')}
-              <FlipSelect
-                value={track.method}
-                onChange={(value) =>
-                  actions.changeTrackMethod(scenario.id, track.id, value as AmortizationMethod)
+              <TrackGraceFields
+                graceMonths={track.graceMonths}
+                graceMode={track.graceMode}
+                termYearsText={track.yearsText}
+                onChangeMonths={(months) =>
+                  actions.changeTrackGraceMonths(scenario.id, track.id, months)
                 }
-                testId={`compare-track-method-${scenarioIndex + 1}-${trackIndex + 1}`}
-              >
-                <option value="spitzer">{t('calculator.track.methodSpitzer')}</option>
-                <option value="equalPrincipal">{t('calculator.track.methodEqualPrincipal')}</option>
-              </FlipSelect>
-            </label>
-
-            <TrackGraceFields
-              graceMonths={track.graceMonths}
-              graceMode={track.graceMode}
-              termYearsText={track.yearsText}
-              onChangeMonths={(months) =>
-                actions.changeTrackGraceMonths(scenario.id, track.id, months)
-              }
-              onChangeMode={(mode) => actions.changeTrackGraceMode(scenario.id, track.id, mode)}
-              idPrefix={`compare-track-${scenarioIndex + 1}-${trackIndex + 1}`}
-              testIdPrefix={`compare-track-${scenarioIndex + 1}-${trackIndex + 1}`}
-            />
+                onChangeMode={(mode) => actions.changeTrackGraceMode(scenario.id, track.id, mode)}
+                idPrefix={`compare-track-${scenarioIndex + 1}-${trackIndex + 1}`}
+                testIdPrefix={`compare-track-${scenarioIndex + 1}-${trackIndex + 1}`}
+              />
+              {defaultResetMonthsFor(track.type) > 0 && (
+                <label className="input-group track-cell-reset" htmlFor={`compare-track-reset-${scenarioIndex + 1}-${trackIndex + 1}`}>
+                  {t('calculator.track.resetLabel')}
+                  <FlipSelect
+                    value={String(track.resetMonths)}
+                    onChange={(value) =>
+                      actions.changeTrackResetMonths(scenario.id, track.id, Number(value))
+                    }
+                    selectId={`compare-track-reset-${scenarioIndex + 1}-${trackIndex + 1}`}
+                    testId={`compare-track-reset-${scenarioIndex + 1}-${trackIndex + 1}`}
+                  >
+                    {RESET_MONTH_OPTIONS.map((months) => (
+                      <option key={months} value={months}>
+                        {t(`calculator.track.resetMonths${months}`)}
+                      </option>
+                    ))}
+                  </FlipSelect>
+                </label>
+              )}
+            </div>
           </fieldset>
         ))}
         {scenario.tracks.length < MAX_TRACKS && (

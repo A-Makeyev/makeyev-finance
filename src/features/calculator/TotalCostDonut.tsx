@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
-import { arcPath, donutSegments, midAngle, radialLabelAngle, svgRound } from '@/lib/charts'
+import { arcPath, donutSegments, midAngle, svgRound } from '@/lib/charts'
 import { useDonutTooltipClamp } from '@/hooks/useDonutTooltipClamp'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 
@@ -198,10 +198,9 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
                   d={arcPath(CENTER, CENTER, R_OUTER, R_INNER, insetStart, insetEnd)}
                   fill={slice.color}
                 />
-                {/* Every slice carries its share. Wide slices print it flat;
-                    thin ones rotate it along the radius so the number still
-                    fits inside the ring instead of disappearing. */}
-                {percent >= 8 ? (
+                {/* Small slices stay true to their size; omit labels that
+                    cannot fit clearly inside the ring. */}
+                {percent >= 8 && (
                   <text
                     // Rounded like every other chart coordinate: Math.cos/sin
                     // are not required to be correctly rounded, so Node and
@@ -211,16 +210,6 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
                     y={labelY}
                     className="donut-slice-label"
                     style={{ fill: slice.labelColor }}
-                  >
-                    {percent}%
-                  </text>
-                ) : (
-                  <text
-                    x={labelX}
-                    y={labelY}
-                    className="donut-slice-label"
-                    style={{ fill: slice.labelColor }}
-                    transform={`rotate(${svgRound(radialLabelAngle(mid))} ${labelX} ${labelY})`}
                   >
                     {percent}%
                   </text>

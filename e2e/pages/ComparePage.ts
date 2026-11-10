@@ -8,6 +8,16 @@ export class ComparePage {
     await expect(this.page.getByTestId('compare-scenario-editor-1')).toBeVisible()
   }
 
+  async expectMixSwitcher() {
+    await expect(this.page.getByTestId('compare-switcher')).toBeVisible()
+    await this.page.getByTestId('compare-switch-tab-2').click()
+    await expect(this.page.getByTestId('compare-scenario-editor-2')).toBeVisible()
+    await expect(this.page.getByTestId('compare-scenario-editor-1')).toBeHidden()
+    await expect(this.page.getByTestId('compare-card')).toBeVisible()
+    await this.page.getByTestId('compare-switch-tab-1').click()
+    await expect(this.page.getByTestId('compare-scenario-editor-1')).toBeVisible()
+  }
+
   async expectPairedCards() {
     await expect(async () => {
       for (const prefix of ['compare-scenario-editor', 'compare-result-card']) {

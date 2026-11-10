@@ -543,7 +543,7 @@ test.describe('Markets strip', () => {
       return { up: read('bitcoin'), down: read('nasdaq'), flat: read('sp500') }
     })()`)) as Record<'up' | 'down' | 'flat', string[]>
 
-    const TICKER_UP_GREEN = 'rgb(35, 210, 65)'
+    const TICKER_UP_GREEN = 'rgb(35, 185, 55)'
     const TICKER_DOWN_RED = 'rgb(210, 60, 60)'
     const NEUTRAL_FLAT = 'rgb(173, 216, 230)' // computed `lightblue`
     expect(colours.up).toEqual([TICKER_UP_GREEN, TICKER_UP_GREEN])

@@ -130,7 +130,7 @@ export interface LocalizedWishlistTopic {
  */
 export function useLocalizedResultsTopics(items: QuestionWishlistItem[]): LocalizedWishlistTopic[] {
   const { t } = useTranslation()
-  const termYears = useCalculatorStore((s) => s.termYears)
+  const termYears = useCalculatorStore((s) => s.snapshot.maxEnteredYears)
   const highestLabelKind = useCalculatorStore((s) => s.snapshot.highestLabel?.kind ?? null)
   const context: ResultsTopicContext = { termYears, highestLabelKind }
   return items.map((item) =>

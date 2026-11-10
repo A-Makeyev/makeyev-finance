@@ -6,14 +6,15 @@ for (const language of ['hebrew', 'english']) {
     await page.addInitScript((lang) => localStorage.setItem('site_language', lang), language)
     const compare = new ComparePage(page)
     await compare.goto()
-    for (const width of [1600, 1160, 1024, 900, 800, 768]) {
+    for (const width of [1600, 1160, 1024, 1001]) {
       await page.setViewportSize({ width, height: 1000 })
       await compare.expectPairedCards()
       await compare.expectHeaderRow()
     }
-    for (const width of [420, 360]) {
+    for (const width of [1000, 960, 900, 800, 768, 420, 360]) {
       await page.setViewportSize({ width, height: 1000 })
       await compare.expectHeaderRow()
+      await compare.expectMixSwitcher()
     }
   })
 }

@@ -30,6 +30,14 @@ describe('savedMixInputSchema', () => {
     expect(savedMixInputSchema.safeParse(validMix).success).toBe(true)
   })
 
+  it('preserves boolean term overrides and rejects non-boolean flags', () => {
+    for (const yearsOverridden of [true, false]) {
+      const parsed = savedMixInputSchema.parse({ ...validMix, tracks: [{ ...track, yearsOverridden }] })
+      expect(parsed.tracks[0].yearsOverridden).toBe(yearsOverridden)
+    }
+    expect(savedMixInputSchema.safeParse({ ...validMix, tracks: [{ ...track, yearsOverridden: 'false' }] }).success).toBe(false)
+  })
+
   it('trims the label', () => {
     const parsed = savedMixInputSchema.parse({ ...validMix, label: '  Home  ' })
     expect(parsed.label).toBe('Home')

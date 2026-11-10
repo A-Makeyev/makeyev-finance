@@ -9,8 +9,8 @@
  * without letting a single mix become an unbounded form. */
 export const MAX_TRACKS = 6
 /** Scenarios on the compare page are capped separately from a mix's tracks:
- * four side-by-side columns fit the page without pagination. */
-export const MAX_MIXES = 4
+ * compare up to three mixes at a time. */
+export const MAX_MIXES = 3
 /** Cap on repeatable other-expense rows (feedback request). */
 export const MAX_OTHER_EXPENSES = 3
 export const MAX_YEARS = 30

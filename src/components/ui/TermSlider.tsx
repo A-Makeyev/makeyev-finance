@@ -5,6 +5,8 @@ export interface TermSliderProps {
   max: number
   value: number
   onValueChange: (value: number) => void
+  /** Finish a drag, keyboard adjustment, or assistive-technology edit. */
+  onValueCommit?: () => void
   labelLow: string
   labelHigh: string
   ariaLabel: string
@@ -35,6 +37,7 @@ export function TermSlider({
   max,
   value,
   onValueChange,
+  onValueCommit,
   labelLow,
   labelHigh,
   ariaLabel,
@@ -119,6 +122,12 @@ export function TermSlider({
           aria-label={ariaLabel}
           data-testid={testId}
           onChange={(event) => onValueChange(Number(event.target.value))}
+          onPointerUp={onValueCommit}
+          onPointerCancel={onValueCommit}
+          onKeyUp={(event) => {
+            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) onValueCommit?.()
+          }}
+          onBlur={onValueCommit}
         />
         <output
           className="slider-current"

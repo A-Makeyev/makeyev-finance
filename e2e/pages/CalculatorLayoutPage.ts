@@ -17,6 +17,10 @@ export class CalculatorLayoutPage {
         width: rect.width,
         height: rect.height,
         centers: children.map((child) => child.y + child.height / 2),
+        dateOffset: Math.abs(children[1].x + children[1].width / 2 - (rect.x + rect.width / 2)),
+        ordered: getComputedStyle(element).direction === 'rtl'
+          ? children[0].x > children[1].x && children[1].x > children[2].x
+          : children[0].x < children[1].x && children[1].x < children[2].x,
         overflow: element.scrollWidth > element.clientWidth,
       }
     }))
@@ -25,6 +29,8 @@ export class CalculatorLayoutPage {
       expect(card.height).toBe(dimensions[0].height)
       expect(Math.max(...card.centers) - Math.min(...card.centers)).toBeLessThan(4)
       expect(card.overflow).toBe(false)
+      expect(card.dateOffset).toBeLessThan(1)
+      expect(card.ordered).toBe(true)
     }
   }
 
@@ -41,7 +47,6 @@ export class CalculatorLayoutPage {
 
   async expectNegativeMarginAccepted() {
     const margin = this.page.getByTestId('track-margin-1')
-    expect(await margin.evaluate((element) => getComputedStyle(element).direction)).toBe('ltr')
     await margin.fill('-0.70')
     expect(await margin.evaluate((element: HTMLInputElement) => element.validity.valid)).toBe(true)
     await expect(margin).toHaveValue('-0.70')
@@ -52,11 +57,17 @@ export class CalculatorLayoutPage {
   }
 
   async expectMarginDirection() {
+    const numbers = this.page.locator('.calculator-panel .input-wrap input[type="number"]')
+    for (const input of await numbers.all()) {
+      expect(await input.evaluate((element) =>
+        getComputedStyle(element).direction === getComputedStyle(element.closest('.input-wrap')!).direction,
+      )).toBe(true)
+    }
     const margin = this.page.getByTestId('track-margin-1')
     expect(await margin.evaluate((element) => {
       const style = getComputedStyle(element)
-      const rtl = getComputedStyle(element.closest('fieldset')!).direction === 'rtl'
-      return style.direction === 'ltr' && style.textAlign === (rtl ? 'right' : 'left')
+      const direction = getComputedStyle(element.closest('fieldset')!).direction
+      return style.direction === direction && style.textAlign === 'start'
     })).toBe(true)
     await expect(this.page.getByTestId('track-margin-2')).not.toHaveAttribute('placeholder')
   }

@@ -32,7 +32,7 @@ import {
   type PropertyPurpose,
   type TrackType,
 } from '@/lib/amortization'
-import { formatAmountWithCaret, formatGroupedNumber, parseAmountText } from '@/lib/format'
+import { constrainYearsText, formatAmountWithCaret, formatGroupedNumber, parseAmountText } from '@/lib/format'
 import { parseDateOnly } from '@/lib/rateValidity'
 import {
   computeScenario,
@@ -40,7 +40,7 @@ import {
   type ScenarioResult,
   type SharedBuyerInputs,
 } from '@/features/compare/computeScenario'
-import { createInitialTracks, type TrackState } from '@/stores/calculatorStore'
+import { createInitialTracks, syncTermYearsFromTracks, type TrackState } from '@/stores/calculatorStore'
 
 /**
  * Comparison feature state - Option A (separate store), confirmed with the
@@ -206,6 +206,8 @@ export interface ComparisonActions {
   changeTrackGraceMode(scenarioId: string, trackId: string, graceMode: GraceMode): void
   changeTrackMethod(scenarioId: string, trackId: string, method: TrackState['method']): void
   setScenarioTermYears(scenarioId: string, years: number): void
+  updateTrackYears(scenarioId: string, trackId: string, raw: string): void
+  commitTrackYearsBlur(scenarioId: string, trackId: string): void
   setMortgageSum(raw: string, caret: number | null): { text: string; caret: number | null }
   /**
    * One-click repair of a scenario's error state: trims an over-cap variable
@@ -254,6 +256,7 @@ function blankTrack(termYears: number, type: TrackType = 'fixed'): TrackState {
     type,
     amountText: '',
     yearsText: String(termYears),
+    yearsOverridden: false,
     rateText: defaultRateFor(type),
     resetMonths: defaultResetMonthsFor(type),
     graceMonths: 0,
@@ -361,6 +364,7 @@ function toComputeInputs(shared: ComparisonSharedInputs): SharedBuyerInputs {
 
 /** Re-runs every scenario's numbers against the (possibly changed) shared inputs. */
 function recompute(s: ComparisonState): void {
+  s.scenarios.forEach(syncTermYearsFromTracks)
   syncFeeDialogue(s)
   s.results = s.scenarios.map((scenario) =>
     computeScenario(scenario.tracks, toComputeInputs(s.shared)),
@@ -1059,13 +1063,33 @@ export const useComparisonStore = create<ComparisonStore>()(
     setScenarioTermYears: (scenarioId, years) => {
       set((s) => {
         const scenario = s.scenarios.find((entry) => entry.id === scenarioId)
-        if (!scenario) return
+        if (!scenario || !Number.isFinite(years)) return
+        years = Math.min(MAX_YEARS, Math.max(1, Math.round(years)))
         scenario.termYears = years
-        // The slider drives every track's term (same legacy rule).
         scenario.tracks.forEach((track) => {
+          track.yearsOverridden = false
           track.yearsText = String(years)
           track.graceMonths = normalizeGraceMonths(track.graceMonths, years * 12)
         })
+        recompute(s)
+      })
+    },
+
+    updateTrackYears: (scenarioId, trackId, raw) => {
+      set((s) => {
+        const track = findTrack(s, scenarioId, trackId)
+        if (!track) return
+        track.yearsText = constrainYearsText(raw, MAX_YEARS)
+        track.yearsOverridden = true
+      })
+    },
+
+    commitTrackYearsBlur: (scenarioId, trackId) => {
+      set((s) => {
+        const track = findTrack(s, scenarioId, trackId)
+        if (!track) return
+        track.yearsText = constrainYearsText(track.yearsText, MAX_YEARS) || '1'
+        track.graceMonths = normalizeGraceMonths(track.graceMonths, Number(track.yearsText) * 12)
         recompute(s)
       })
     },
@@ -1187,6 +1211,7 @@ export const useComparisonStore = create<ComparisonStore>()(
           type: entry.type,
           amountText: displayAmountText(entry.amount),
           yearsText: String(scenario.termYears),
+          yearsOverridden: false,
           rateText: String(entry.rate),
           resetMonths: defaultResetMonthsFor(entry.type),
           graceMonths: 0,

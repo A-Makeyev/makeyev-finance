@@ -377,6 +377,9 @@ export const en: { translation: Translation } = {
       resetCancel: 'Cancel',
       startingAmountLabel: 'Mortgage amount',
       termLabel: 'Mortgage term in years',
+      termChangeTitle: 'Update all track terms?',
+      termChangeBody: 'You have adjusted individual track terms. Set every track in this mix to {{years}} years? Cancel to keep the current terms.',
+      termChangeApply: 'Update all tracks',
       showPayments: 'Show payments',
       purposeLabel: 'Purpose of purchase',
       purposeFirst: 'First home (75% financing)',
@@ -512,7 +515,7 @@ export const en: { translation: Translation } = {
         method:
           'Spitzer keeps the payment constant; equal principal starts higher, declines over time and saves on total interest. This is a whole-loan decision based on your cash flow, not a separate choice per track.',
         termAria: 'More about the mortgage term',
-        term: 'The slider sets the term for all tracks at once, and each track can still be adjusted in its own years field. A longer term lowers the monthly payment but raises the total interest.',
+        term: 'The slider shows the longest track term. Each track can have its own term. Moving the slider changes all tracks together; if you have customized any track term, you will be asked to confirm first.',
         presetAria: 'More about the ready-made mixes',
         preset:
           'A ready-made mix fills the tracks with a fixed split between fixed, prime and variable-indexed tracks, as a starting point to tweak. The article explains what each mix contains.',

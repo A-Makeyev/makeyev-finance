@@ -17,7 +17,7 @@ import { DateField } from '@/components/ui/DateField'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { RateValidityChip } from '@/components/ui/RateValidityChip'
 import { HoverTooltip } from '@/components/ui/HoverTooltip'
-import { TermSlider } from '@/components/ui/TermSlider'
+import { ConfirmedTermSlider } from '@/components/ui/ConfirmedTermSlider'
 import { ScrollCue } from '@/components/layout/ScrollCue'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { AppModal } from '@/components/ui/AppModal'
@@ -436,14 +436,10 @@ export function CalculatorPage() {
                   wrapper dissolves, so both stay direct items of the starting
                   row as before. */}
               <div className="starting-term-actions">
-                <label className="term-slider" htmlFor="term-years">
-                  {/* htmlFor must name the slider, not rely on nesting: the
-                      first labelable descendant is the tooltip's "?" button, so
-                      the implicit association hijacks hover and clicks from the
-                      whole label onto that button (phantom border recolor, and
-                      the label text toggling the tip open). */}
+                <div className="term-slider">
+                  {/* Keep the label bound to the slider, separate from its actions. */}
                   <span className="label-help-row">
-                    <span className="label-help-text">{t('calculator.termLabel')}</span>
+                    <label className="label-help-text" htmlFor="term-years">{t('calculator.termLabel')}</label>
                     <HelpTooltip
                       label={t('calculator.help.termAria')}
                       content={t('calculator.help.term')}
@@ -452,7 +448,8 @@ export function CalculatorPage() {
                       testId="help-term"
                     />
                   </span>
-                  <TermSlider
+                  <ConfirmedTermSlider
+                    requiresConfirmation={store.tracks.some((track) => track.yearsOverridden || Number(track.yearsText) !== store.termYears)}
                     min={1}
                     max={MAX_YEARS}
                     value={store.termYears}
@@ -462,7 +459,7 @@ export function CalculatorPage() {
                     ariaLabel={t('calculator.termLabel')}
                     testId="term-years"
                   />
-                </label>
+                </div>
 
                 {/* Show payments is the primary action and the save control is
                     its peer: both act on the mix the user has built, so they

@@ -91,6 +91,8 @@ export interface TrackState {
   /** Formatted display text ('' allowed) - math parses from this text exactly like the legacy DOM. */
   amountText: string
   yearsText: string
+  /** True once the user sets this track's own term. */
+  yearsOverridden?: boolean
   rateText: string
   /** Contractual reset cadence in months; 0 for fixed/prime tracks. */
   resetMonths: number
@@ -125,6 +127,8 @@ export interface SavedTrackInput {
   type: TrackType
   amountText: string
   yearsText: string
+  /** Older saved offers have no flag; preserve their individual terms on load. */
+  yearsOverridden?: boolean
   rateText: string
   /** Optional so mixes saved before the cadence field still load. */
   resetMonths?: number
@@ -314,6 +318,7 @@ function trackFromValues(
     type,
     amountText: displayAmount,
     yearsText: String(values.years ?? selectedYears),
+    yearsOverridden: false,
     rateText: rateValue,
     resetMonths: defaultResetMonthsFor(type),
     graceMonths: 0,
@@ -518,6 +523,7 @@ export function serializeMix(mix: Pick<CalculatorData, 'tracks' | 'termYears'>):
       type: track.type,
       amountText: track.amountText,
       yearsText: track.yearsText,
+      yearsOverridden: track.yearsOverridden ?? false,
       rateText: track.rateText,
       resetMonths: track.resetMonths,
       graceMonths: track.graceMonths,
@@ -540,6 +546,7 @@ export function serializeSavableTracks(tracks: TrackState[]): SavedTrackInput[] 
       type: track.type,
       amountText: track.amountText,
       yearsText: track.yearsText,
+      yearsOverridden: track.yearsOverridden ?? false,
       rateText: track.rateText,
       resetMonths: track.resetMonths,
       graceMonths: track.graceMonths,
@@ -900,21 +907,20 @@ function fillTracksFromLoanInput(s: CalculatorState): void {
   snapTracksToLoan(s)
 }
 
-/** Legacy applySelectedYears - slider drives every track's term. */
+/** Called only after a slider change has been accepted. */
 function applySelectedYears(s: CalculatorData): void {
   s.tracks.forEach((track) => {
+    track.yearsOverridden = false
     track.yearsText = String(s.termYears)
+    track.graceMonths = normalizeGraceMonths(track.graceMonths, s.termYears * 12)
   })
 }
 
-/** Legacy syncTermSliderFromTracks (calculator.js:214-224) - slider follows max track term. */
-function syncTermYearsFromTracks(s: CalculatorData): void {
-  const yearValues = s.tracks
-    .map((track) => Number(track.yearsText))
+/** Each calculator/scenario displays its longest track without rewriting others. */
+export function syncTermYearsFromTracks(s: { tracks: TrackState[]; termYears: number }): void {
+  const years = s.tracks.map((track) => Number(track.yearsText))
     .filter((value) => Number.isFinite(value) && value >= 1)
-  if (!yearValues.length) return
-  const maxYears = Math.min(MAX_YEARS, Math.max(...yearValues))
-  if (maxYears !== s.termYears) s.termYears = maxYears
+  if (years.length) s.termYears = Math.min(MAX_YEARS, Math.max(...years))
 }
 
 /**
@@ -934,6 +940,7 @@ function applyTrackTypeLogic(s: CalculatorData, track: TrackState, type: TrackTy
 
 /** Core recalculation - a faithful port of legacy calculate() (calculator.js:526-644). */
 function recalculate(s: CalculatorState): void {
+  syncTermYearsFromTracks(s)
   const property = parseAmountText(s.propertyValueText)
   const capital = parseAmountText(s.capitalText)
   const income = parseAmountText(s.incomeText)
@@ -1396,8 +1403,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
 
     setTermYears: (years) => {
       set((s) => {
-        s.termYears = years
-        s.startingPointDirty = true
+        if (!Number.isFinite(years)) return
+        s.termYears = Math.min(MAX_YEARS, Math.max(1, Math.round(years)))
         applySelectedYears(s)
         recalculate(s)
       })
@@ -1733,6 +1740,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
         const track = s.tracks.find((t) => t.id === id)
         if (!track) return
         track.yearsText = constrained
+        track.yearsOverridden = true
       })
       return constrained
     },
@@ -1743,7 +1751,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
         if (!track) return
         track.yearsText = constrainYearsText(track.yearsText, MAX_YEARS)
         if (!track.yearsText) track.yearsText = '1'
-        syncTermYearsFromTracks(s)
+        track.graceMonths = normalizeGraceMonths(track.graceMonths, Number(track.yearsText) * 12)
         recalculate(s)
       })
     },
@@ -1882,6 +1890,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
           type: track.type,
           amountText: track.amountText,
           yearsText: track.yearsText,
+          yearsOverridden: track.yearsOverridden ?? true,
           rateText: track.rateText,
           resetMonths: normalizeResetMonths(track.type, track.resetMonths ?? 0),
           graceMonths: normalizeGraceMonths(
@@ -2128,18 +2137,24 @@ export const useCalculatorStore = create<CalculatorStore>()(
             )
             const startingAmount = getLoanAmount(s) || existingTotal
             const allocated = allocatePreset(s.activePreset, startingAmount, s.primeRate)
-            s.tracks = allocated.map((entry) =>
-              trackFromValues(
+            s.tracks = allocated.map((entry) => {
+              const previous = s.tracks.find((track) => track.type === entry.type)
+              const next = trackFromValues(
                 { type: entry.type, amount: entry.amount, years: s.termYears, rate: entry.rate },
                 s.termYears,
                 s.primeRate,
-              ),
-            )
+              )
+              if (previous) {
+                next.yearsText = previous.yearsText
+                next.yearsOverridden = previous.yearsOverridden
+                next.graceMonths = previous.graceMonths
+              }
+              return next
+            })
             s.startingPointDirty = false
           }
         } else if (s.startingPointDirty) {
           scaleTracks(s)
-          applySelectedYears(s)
           s.startingPointDirty = false
         }
         recalculate(s)
@@ -2157,6 +2172,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
     reset: () => {
       set((s) => {
         const resetLoadedMix = Boolean(s.loadedMixId)
+        s.termYears = DEFAULT_TERM_YEARS
         // A zero loan allocates zero amounts, which trackFromValues renders as
         // blank inputs (not "0") - no "positive amount" error fires and the
         // calculator returns to a clean empty state. External live data
@@ -2194,7 +2210,6 @@ export const useCalculatorStore = create<CalculatorStore>()(
         // The אישור עקרוני date belongs to one offer, so a reset drops it with
         // the rest of the mix's work.
         s.approvalDateText = ''
-        s.termYears = DEFAULT_TERM_YEARS
         s.scheduleExpanded = false
         s.activePreset = 'basket4'
         s.startingPointDirty = false
