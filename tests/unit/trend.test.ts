@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  annualTrendValues,
   compositionSegments,
   trendValues,
   type TrendSourceRow,
@@ -97,6 +98,31 @@ describe('trendValues', () => {
       { year: 1, value: 900 },
       { year: 2, value: 1900 },
     ])
+  })
+})
+
+describe('annualTrendValues', () => {
+  it('returns each year\'s interest, not the running total', () => {
+    expect(annualTrendValues(rows, 'interest')).toEqual([
+      { year: 1, value: 4000 },
+      { year: 2, value: 3600 },
+    ])
+  })
+
+  it('returns each year\'s CPI drift, and keeps a zero year explicit', () => {
+    const indexed: TrendSourceRow[] = [
+      { year: 1, paid: 12000, principal: 8000, indexation: 900, interest: 4000, closing: 92900 },
+      { year: 2, paid: 12400, principal: 8600, indexation: 0, interest: 3800, closing: 85300 },
+    ]
+    expect(annualTrendValues(indexed, 'indexation')).toEqual([
+      { year: 1, value: 900 },
+      { year: 2, value: 0 },
+    ])
+  })
+
+  it('handles an empty schedule', () => {
+    expect(annualTrendValues([], 'interest')).toEqual([])
+    expect(annualTrendValues([], 'indexation')).toEqual([])
   })
 })
 

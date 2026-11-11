@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { computeTrackResult } from '@/lib/amortization'
 import {
+  annualCostsFor,
   buildForecast,
   FORECAST_STEP_PERCENT,
   resetMonthsFor,
@@ -164,5 +165,50 @@ describe('buildForecast', () => {
     expect(forecast.resetYears).toEqual([])
     expect(forecast.hasIndexation).toBe(false)
     expect(forecast.hasResetTracks).toBe(false)
+  })
+})
+
+describe('annualCostsFor', () => {
+  it('turns cumulative points into yearly amounts that add back up', () => {
+    const costs = annualCostsFor([
+      { year: 1, payment: 0, cumulativeInterest: 1_000, cumulativeIndexation: 200 },
+      { year: 2, payment: 0, cumulativeInterest: 1_900, cumulativeIndexation: 450 },
+      { year: 3, payment: 0, cumulativeInterest: 2_700, cumulativeIndexation: 750 },
+    ])
+
+    expect(costs.map((cost) => cost.interest)).toEqual([1_000, 900, 800])
+    expect(costs.map((cost) => cost.indexation)).toEqual([200, 250, 300])
+    expect(costs.map((cost) => cost.cumulativeTotal)).toEqual([1_200, 2_350, 3_450])
+    // The running total is the one the line plots: interest + indexation.
+    expect(costs[2].cumulativeTotal).toBe(
+      costs[2].cumulativeInterest + costs[2].cumulativeIndexation,
+    )
+  })
+
+  it('telescopes to the same totals as the real forecast', () => {
+    const indexed: ForecastTrackInput = {
+      principal: 100_000,
+      years: 30,
+      annualRatePercent: 3,
+      type: 'fixedIndexed',
+      method: 'spitzer',
+      resetMonths: 0,
+    }
+    const base = buildForecast([indexed], 0.02).scenarios[0]
+    const costs = annualCostsFor(base.points)
+    const last = costs[costs.length - 1]
+
+    const yearlyInterest = costs.reduce((sum, cost) => sum + cost.interest, 0)
+    const yearlyIndexation = costs.reduce((sum, cost) => sum + cost.indexation, 0)
+    expect(yearlyInterest).toBeCloseTo(last.cumulativeInterest, 6)
+    expect(yearlyIndexation).toBeCloseTo(last.cumulativeIndexation, 6)
+    expect(last.cumulativeTotal).toBeCloseTo(
+      last.cumulativeInterest + last.cumulativeIndexation,
+      6,
+    )
+  })
+
+  it('returns nothing for an empty forecast', () => {
+    expect(annualCostsFor([])).toEqual([])
   })
 })

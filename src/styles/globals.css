@@ -8790,6 +8790,15 @@ input[type='number']::-webkit-outer-spin-button {
   overflow: visible;
 }
 
+/* The plot rule above would stretch a legend's line swatch to the full row
+   width and push its label onto a second line. Swatches keep their fixed
+   size; only the plot fills the card. */
+.forecast-chart .chart-swatch-line {
+  width: 18px;
+  height: 12px;
+  flex: none;
+}
+
 /* The forecast chart sits in a half-width card on wide screens, so its
    900-unit viewBox renders smaller than the schedule charts; the tick size
    compensates there, while the full-width tablet layout keeps the base size. */
@@ -12062,7 +12071,8 @@ html[dir='rtl'] .comment-text {
 .compare-trend-inline-legend {
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 6px 14px;
   min-height: 18px;
   margin-bottom: 6px;
   font-size: 0.8rem;
@@ -12095,15 +12105,20 @@ html[dir='rtl'] .comment-text {
   background: var(--cost-donut-indexation, #7b5cc4);
 }
 
-/* One visual language per metric so the five panels never read as copies:
-   balance is a filled area, cumulative paid a line with year dots, cumulative
-   interest a dashed line, cumulative indexation a dotted line. */
-.compare-trend-line-dashed {
-  stroke-dasharray: 7 5;
+/* The cost panels' yearly bars take each mix's soft tint; the swatch stays
+   neutral so it describes the mark (a bar), not one mix. */
+.compare-trend-swatch-annual {
+  background: var(--calc-muted);
+  opacity: 0.45;
+  border-radius: 2px;
 }
 
-.compare-trend-line-dotted {
-  stroke-dasharray: 2 5;
+/* One visual language per metric so the five panels never read as copies:
+   balance is a filled area, cumulative paid a line with year dots, the cost
+   panels pair yearly bars with a dashed running-total line, and the
+   prepayment fee is a plain line. */
+.compare-trend-line-dashed {
+  stroke-dasharray: 7 5;
 }
 
 .compare-trend-point {
@@ -12170,6 +12185,12 @@ html[dir='rtl'] .comment-text {
   font-size: 13px;
 }
 
+/* The cost panels' right-hand axis title runs along the running-total ticks;
+   the left axis keeps the standard title. */
+.compare-trend-axis-title-side {
+  font-size: 11px;
+}
+
 /* Area metrics: a per-mix gradient under the line (color fading to
    transparent), so overlapping mixes stay colorful instead of blending grey. */
 .compare-trend-area {
@@ -12185,6 +12206,13 @@ html[dir='rtl'] .comment-text {
   fill: var(--cost-donut-indexation, #7b5cc4);
 }
 
+/* Cost panels: one yearly bar per mix, behind the running-total line. The
+   fill is the mix's soft tint (set inline), so the bar and the line read as
+   the same series on two scales. */
+.compare-trend-cost-bar {
+  stroke: none;
+}
+
 /* Interior zero line for a composition whose net principal is negative. */
 .compare-trend-zero-line {
   stroke: var(--calc-muted);
@@ -12194,6 +12222,11 @@ html[dir='rtl'] .comment-text {
 
 .compare-trend-tick-end {
   text-anchor: end;
+}
+
+/* The cost panels' running-total labels sit to the right of the plot. */
+.compare-trend-tick-start {
+  text-anchor: start;
 }
 
 .compare-trend-line {

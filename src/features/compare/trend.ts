@@ -64,6 +64,21 @@ export function compositionSegments(rows: TrendSourceRow[]): CompositionSegment[
   })
 }
 
+/** The cost metrics whose panels pair yearly bars with a running-total line. */
+export type AnnualTrendMetric = 'interest' | 'indexation'
+
+/**
+ * One schedule's per-year amount for a cost metric: the bar in that year,
+ * before any accumulation. `trendValues` is the running total the same panel
+ * draws as a line, so the two views can never disagree.
+ */
+export function annualTrendValues(
+  rows: TrendSourceRow[],
+  metric: AnnualTrendMetric,
+): TrendPoint[] {
+  return rows.map((row) => ({ year: row.year, value: row[metric] }))
+}
+
 /**
  * One schedule's values for a metric:
  * - payment: the year's average monthly payment (the yearly total over 12)

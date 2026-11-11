@@ -788,9 +788,10 @@ export const en: { translation: Translation } = {
         noReset:
           'No rate reset falls inside the loan term, so all scenarios are identical. Only a track with a contractual reset cadence has a reset date.',
         costHeading: 'Cumulative interest and indexation',
-        costLead: 'What has accrued each year on the base rate path.',
+        costLead:
+          "Each year's interest and indexation as bars, with the running total as a line. Base rate path.",
         noIndexation:
-          'The mix has no CPI-indexed track, so there is no indexation to show. The line shows cumulative interest only.',
+          "The mix has no CPI-indexed track, so there is no indexation to show. The bars show each year's interest and the line the running total.",
         tableYear: 'Year',
         tableInterest: 'Cumulative interest',
         tableIndexation: 'Cumulative indexation',
@@ -804,12 +805,16 @@ export const en: { translation: Translation } = {
         series: {
           interest: 'Cumulative interest',
           indexation: 'Cumulative indexation',
+          annualInterest: 'Annual interest',
+          annualIndexation: 'Annual indexation',
+          cumulativeTotal: 'Running total',
         },
         yearLabel: 'Year {{year}}',
         axisPayment: 'Monthly payment',
+        axisAnnual: 'Annual cost',
         axisCumulative: 'Cumulative amount',
         chartResetAria: 'Monthly payment by rate scenario, with reset dates marked',
-        chartCostAria: 'Cumulative interest and indexation over the term',
+        chartCostAria: 'Interest and indexation by year, with the running total',
         disclaimer:
           'The forecast is an illustration only, not a forecast of rates or the CPI. Assumptions: at every reset of a variable track the rate moves by ±{{step}} percentage point (pp) in each scenario, and the CPI rises at a flat {{cpi}}% a year. The actual rate, reset dates and CPI may differ, and the monthly payment is recalculated at every reset. It is not financial advice.',
       },

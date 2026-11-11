@@ -423,14 +423,34 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(compositionTable.locator('thead')).toContainText('קרן נטו')
     await expect(compositionTable.locator('thead')).toContainText('הצמדה')
     const oneMixBars = await compositionPanel.locator('.compare-trend-bar').count()
+    const oneMixCostBars = await page
+      .getByTestId('compare-trend-interest')
+      .locator('.compare-trend-cost-bar')
+      .count()
 
     // The other five panels each have their own visual language, so they do
     // not read as copies: balance is a filled area, total carries a dot per
-    // year, interest is a dashed line, indexation a dotted one, and the
-    // prepayment fee is a plain line.
+    // year, the two cost panels pair yearly bars with a dashed running-total
+    // line, and the prepayment fee is a plain line.
     await expect(page.getByTestId('compare-trend-balance').locator('.compare-trend-area')).toHaveCount(1)
-    await expect(page.getByTestId('compare-trend-interest').locator('.compare-trend-line-dashed')).toHaveCount(1)
-    await expect(page.getByTestId('compare-trend-indexation').locator('.compare-trend-line-dotted')).toHaveCount(1)
+    for (const metric of ['interest', 'indexation']) {
+      const panel = page.getByTestId(`compare-trend-${metric}`)
+      // One bar per schedule year per priced mix, plus the mix's cumulative
+      // line: the annual amount and the running total share the panel.
+      await expect(panel.locator('.compare-trend-cost-bar')).toHaveCount(15)
+      await expect(panel.locator('.compare-trend-line-dashed')).toHaveCount(1)
+      await expect(panel.locator('.compare-trend-line')).toHaveCount(1)
+    }
+    const interestLegend = page
+      .getByTestId('compare-trend-interest')
+      .locator('.compare-trend-inline-legend')
+    await expect(interestLegend).toContainText('ריבית שנתית')
+    await expect(interestLegend).toContainText('סה"כ מצטבר')
+    const indexationLegend = page
+      .getByTestId('compare-trend-indexation')
+      .locator('.compare-trend-inline-legend')
+    await expect(indexationLegend).toContainText('הצמדה שנתית')
+    await expect(indexationLegend).toContainText('סה"כ מצטבר')
     await expect(page.getByTestId('compare-trend-prepayment')).toContainText(
       'עמלת פירעון מוקדם לאורך זמן',
     )
@@ -506,6 +526,13 @@ test.describe('mortgage comparison - /compare', () => {
     }
     // The second mix stacks its own bars alongside the first.
     expect(await compositionPanel.locator('.compare-trend-bar').count()).toBeGreaterThan(oneMixBars)
+    // The cost panels add the second mix's annual bars and line too.
+    expect(
+      await page.getByTestId('compare-trend-interest').locator('.compare-trend-cost-bar').count(),
+    ).toBeGreaterThan(oneMixCostBars)
+    await expect(
+      page.getByTestId('compare-trend-indexation').locator('.compare-trend-line-dashed'),
+    ).toHaveCount(2)
   })
 
   test('the composition tooltip keeps its width at the last year', async ({ page }) => {

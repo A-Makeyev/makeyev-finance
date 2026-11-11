@@ -76,6 +76,51 @@ export interface Forecast {
 }
 
 /**
+ * One year of the cost chart: the year's own accrual plus the running totals.
+ * The chart draws the yearly interest/indexation as stacked bars and the
+ * combined running total as a line, so the reader sees both what a single year
+ * costs and how the cost accumulates over the term.
+ */
+export interface ForecastAnnualCost {
+  year: number
+  /** Interest accrued in this year alone (not cumulative). */
+  interest: number
+  /** CPI drift added in this year alone (0 without an indexed track). */
+  indexation: number
+  cumulativeInterest: number
+  cumulativeIndexation: number
+  /** Interest + indexation accrued from month 1 through this year. */
+  cumulativeTotal: number
+}
+
+/**
+ * Splits the cumulative points into each year's own accrual and the running
+ * total. The yearly figures are the difference between adjacent cumulative
+ * totals, so they sum back to the same amounts; no rounding is applied, since
+ * the chart only draws them and the table keeps the exact cumulative values.
+ */
+export function annualCostsFor(
+  points: readonly ForecastYearPoint[],
+): ForecastAnnualCost[] {
+  let previousInterest = 0
+  let previousIndexation = 0
+  return points.map((point) => {
+    const interest = point.cumulativeInterest - previousInterest
+    const indexation = point.cumulativeIndexation - previousIndexation
+    previousInterest = point.cumulativeInterest
+    previousIndexation = point.cumulativeIndexation
+    return {
+      year: point.year,
+      interest,
+      indexation,
+      cumulativeInterest: point.cumulativeInterest,
+      cumulativeIndexation: point.cumulativeIndexation,
+      cumulativeTotal: point.cumulativeInterest + point.cumulativeIndexation,
+    }
+  })
+}
+
+/**
  * 1-based months at which a track with `resetMonths` resets over `years` of
  * payments. A reset after `resetMonths` months applies from the following
  * month, so a 24-month cadence over 10 years resets at months 25, 49, 73 and

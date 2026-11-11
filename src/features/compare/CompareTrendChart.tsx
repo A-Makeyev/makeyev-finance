@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
 import {
+  alignedDualTicks,
   formatAxisShekel,
   formatAxisShekelDetailed,
   niceRange,
@@ -13,8 +14,10 @@ import {
 } from '@/lib/charts'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
 import {
+  annualTrendValues,
   compositionSegments,
   trendValues,
+  type AnnualTrendMetric,
   type CompositionSegment,
   type TrendMetric,
   type TrendSourceRow,
@@ -29,13 +32,13 @@ import {
  * columns per mix per year, from the same shared payment-composition helper.
  * The other metrics fall two per row beneath it, each with its own
  * visual language so they do not read as copies: remaining debt is a filled
- * area, cumulative paid a line with a dot per year, cumulative interest a
- * dashed line, cumulative indexation a dotted line, and the early-repayment
- * fee (the היוון a mix would owe at each year end) a plain line with a dot per
- * priced year. The rate-reset panel (the calculator's base / +step / -step
- * payment paths) is a peer of those line panels, next to the fee curve rather
- * than a section of its own: one card, one mix color, a no-change line and a
- * shaded step range.
+ * area, cumulative paid a line with a dot per year, the two cost metrics pair
+ * yearly bars (interest or CPI drift) with a dashed running-total line on a
+ * second aligned axis, and the early-repayment fee (the היוון a mix would owe
+ * at each year end) a plain line with a dot per priced year. The rate-reset
+ * panel (the calculator's base / +step / -step payment paths) is a peer of
+ * those line panels, next to the fee curve rather than a section of its own:
+ * one card, one mix color, a no-change line and a shaded step range.
  * Indexation is optional (hidden when no mix is indexed), and so is the fee
  * (hidden when no mix owes anything). The rate panel stays for every priced
  * mix: a mix with no contractual reset draws its no-change path alone, so a
@@ -94,6 +97,11 @@ const TOP = 18
 const BOTTOM = 40
 const MARGIN_LEFT = 78
 const MARGIN_RIGHT = 18
+/** Extra right margin for the cost panels' running-total scale. */
+const COST_MARGIN_RIGHT = 64
+
+/** The cost metrics drawn as yearly bars plus a cumulative line. */
+const COST_METRICS: PanelMetric[] = ['interest', 'indexation']
 
 /** The chart heading for each metric (also its screen-reader summary heading). */
 function metricTitleKey(metric: PanelMetric): string {
@@ -121,11 +129,11 @@ function metricAxisKey(metric: PanelMetric): string {
     case 'balance':
       return 'calculator.charts.axisBalance'
     case 'interest':
-      return 'compare.axisCumulativeInterest'
+      return 'calculator.forecast.series.annualInterest'
     case 'total':
       return 'compare.axisTotalPaid'
     case 'indexation':
-      return 'compare.axisCumulativeIndexation'
+      return 'calculator.forecast.series.annualIndexation'
     case 'prepayment':
       return 'compare.axisPrepaymentFee'
     default:
@@ -152,9 +160,25 @@ function useMeasuredWidth(element: HTMLDivElement | null): number {
 interface TrendLine {
   label: string
   token: string
+  /** The lighter mix shade, for the annual cost bars. */
+  tokenSoft?: string
   points: { year: number; value: number }[]
+  /** Per-year amounts for the cost metrics; the bars behind the line. */
+  annual?: { year: number; value: number }[]
   /** Last year the mix actually runs (the horizon when it is the longest). */
   termYear: number
+}
+
+/** The two value scales a cost panel's grid and line are drawn against. */
+interface TrendGeometry {
+  /** Gridline values for the bars' scale (the line's own scale elsewhere). */
+  gridTicks: number[]
+  gridY: (value: number) => number
+  /** The scale the drawn line uses (the running total on cost panels). */
+  lineY: (value: number) => number
+  /** Right-axis tick values for the line; present only on cost panels. */
+  lineTicks?: number[]
+  zeroY: number
 }
 
 /** One mix's per-year amount split into its three stack segments (monthly ₪). */
@@ -199,8 +223,15 @@ function TrendPanel({
   const width = useMeasuredWidth(plotEl)
   useTooltipClamp(tooltipRef, plotRef, active)
 
+  const isCostMetric = COST_METRICS.includes(metric)
   const title = t(metricTitleKey(metric))
   const axisLabel = t(metricAxisKey(metric))
+  const annualLabel = t(
+    metric === 'indexation'
+      ? 'calculator.forecast.series.annualIndexation'
+      : 'calculator.forecast.series.annualInterest',
+  )
+  const cumulativeLabel = t('calculator.forecast.series.cumulativeTotal')
   // Unique per panel: gradients/patterns are referenced by id, and the id has to
   // stay stable across renders (React re-uses the same <defs>).
   const areaId = (index: number) => `${testIdPrefix}-area-${index}`
@@ -210,14 +241,17 @@ function TrendPanel({
 
   const layout = useMemo(() => {
     if (width <= 0 || maxYear === 0) return null
-    const innerW = Math.max(1, width - MARGIN_LEFT - MARGIN_RIGHT)
+    // The cost panels carry a second axis on the right, so their plot is a
+    // little narrower; the other panels keep the old margin.
+    const right = isCostMetric ? COST_MARGIN_RIGHT : MARGIN_RIGHT
+    const innerW = Math.max(1, width - MARGIN_LEFT - right)
     const innerH = HEIGHT - TOP - BOTTOM
     const pad = Math.min(innerW * 0.03, 14)
     const plotW = innerW - pad * 2
     const slot = plotW / maxYear
     const x = (year: number) => svgRound(MARGIN_LEFT + pad + slot * (year - 0.5))
-    return { innerW, innerH, pad, slot, x }
-  }, [width, maxYear])
+    return { innerW, innerH, pad, slot, x, right }
+  }, [width, maxYear, isCostMetric])
 
   // Net principal can dip below zero on a long indexed mix, so the
   // composition panel needs room under the axis instead of clamping it.
@@ -226,8 +260,36 @@ function TrendPanel({
   const hasIndexation =
     bars?.some((bar) => bar.segments.some((segment) => segment.indexation > 0)) ?? false
 
-  const geometry = useMemo(() => {
+  const geometry = useMemo<TrendGeometry | null>(() => {
     if (!layout) return null
+    if (isCostMetric) {
+      // A single year's cost is small next to a total that has been
+      // accumulating for a decade, so the bars and the line get two scales
+      // whose gridlines share rows (`alignedDualTicks`), never a shared axis
+      // that would flatten the bars into a strip.
+      const annualMax = Math.max(
+        0,
+        ...lines.flatMap((line) => (line.annual ?? []).map((point) => point.value)),
+      )
+      const cumulativeMax = Math.max(
+        0,
+        ...lines.flatMap((line) => line.points.map((point) => point.value)),
+      )
+      if (!Number.isFinite(annualMax) || !Number.isFinite(cumulativeMax)) return null
+      const aligned = alignedDualTicks(annualMax, cumulativeMax)
+      const gridTicks = aligned ? aligned.paymentTicks : niceTicks(annualMax)
+      const lineTicks = aligned ? aligned.balanceTicks : niceTicks(cumulativeMax)
+      const annualScale = aligned ? aligned.scaleMaxPayment : Math.max(annualMax, 1)
+      const cumulativeScale = aligned ? aligned.scaleMaxBalance : Math.max(cumulativeMax, 1)
+      const gridY = (value: number) =>
+        svgRound(TOP + layout.innerH * (1 - value / annualScale))
+      // The running-total scale starts at the bars' zero line, so the dashed
+      // line never introduces a second baseline.
+      const zeroY = gridY(0)
+      const lineY = (value: number) =>
+        svgRound(zeroY - (value / cumulativeScale) * (zeroY - TOP))
+      return { gridTicks, lineTicks, gridY, lineY, zeroY }
+    }
     const maxValue = Math.max(
       1,
       ...lines.flatMap((line) => line.points.map((point) => point.value)),
@@ -243,8 +305,8 @@ function TrendPanel({
       : Math.max(maxValue, ticks[ticks.length - 1] ?? maxValue)
     const y = (value: number) =>
       svgRound(TOP + layout.innerH * (1 - (value - axisMin) / (scaleMax - axisMin)))
-    return { ticks, y, zeroY: y(0) }
-  }, [layout, lines, bars])
+    return { gridTicks: ticks, gridY: y, lineY: y, zeroY: y(0) }
+  }, [layout, lines, bars, isCostMetric])
 
   const yearTicks = useMemo(() => xAxisTicks(maxYear, false), [maxYear])
 
@@ -258,10 +320,10 @@ function TrendPanel({
     if (!layout || !geometry) return ''
     const segments = line.points.map(
       (point, index) =>
-        `${index === 0 ? 'M' : 'L'} ${layout.x(point.year)} ${geometry.y(point.value)}`,
+        `${index === 0 ? 'M' : 'L'} ${layout.x(point.year)} ${geometry.lineY(point.value)}`,
     )
     if (metric === 'interest' && line.termYear > 0 && line.termYear < maxYear) {
-      segments.push(`L ${layout.x(line.termYear)} ${geometry.y(0)}`)
+      segments.push(`L ${layout.x(line.termYear)} ${geometry.lineY(0)}`)
     }
     return segments.join(' ')
   }
@@ -298,6 +360,28 @@ function TrendPanel({
             <span>
               <i className="compare-trend-swatch compare-trend-swatch-interest" />
               {t('calculator.schedule.interestHeader')}
+            </span>
+          </>
+        )}
+        {isCostMetric && (
+          <>
+            <span>
+              <i className="compare-trend-swatch compare-trend-swatch-annual" aria-hidden="true" />
+              {annualLabel}
+            </span>
+            <span>
+              <svg className="chart-swatch-line" width="18" height="12" aria-hidden="true">
+                <line
+                  x1="0"
+                  y1="6"
+                  x2="18"
+                  y2="6"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeDasharray="7 5"
+                />
+              </svg>
+              {cumulativeLabel}
             </span>
           </>
         )}
@@ -346,13 +430,13 @@ function TrendPanel({
               ))}
             </defs>
 
-            {geometry.ticks.map((tick) => (
+            {geometry.gridTicks.map((tick) => (
               <line
                 key={`grid-${tick}`}
                 x1={MARGIN_LEFT}
-                x2={width - MARGIN_RIGHT}
-                y1={geometry.y(tick)}
-                y2={geometry.y(tick)}
+                x2={width - layout.right}
+                y1={geometry.gridY(tick)}
+                y2={geometry.gridY(tick)}
                 className="compare-trend-gridline"
               />
             ))}
@@ -377,9 +461,9 @@ function TrendPanel({
                   return bars.map((bar, barIndex) => {
                     const segment = bar.segments[yearIndex]
                     if (!segment) return null
-                    const netTop = geometry.y(segment.principalNet)
-                    const principalTop = geometry.y(segment.principalNet + segment.indexation)
-                    const paymentTop = geometry.y(segment.payment)
+                    const netTop = geometry.gridY(segment.principalNet)
+                    const principalTop = geometry.gridY(segment.principalNet + segment.indexation)
+                    const paymentTop = geometry.gridY(segment.payment)
                     return (
                       <g key={`bar-${year}-${barIndex}`}>
                         <rect
@@ -413,16 +497,49 @@ function TrendPanel({
                 })
               : (
                   <>
+                    {isCostMetric &&
+                      lines.length > 0 &&
+                      Array.from({ length: maxYear }, (_, yearIndex) => {
+                        const year = yearIndex + 1
+                        // One group of side-by-side annual bars per year (one
+                        // per mix), behind the running-total line. Each mix
+                        // keeps its own soft tint, so the bars and the line
+                        // read as the same series at two scales.
+                        const groupW = Math.min(layout.slot * 0.82, lines.length * 20)
+                        const barW = groupW / lines.length
+                        const groupLeft = layout.x(year) - groupW / 2
+                        const gap = Math.max(0.6, barW * 0.14)
+                        const barX = (barIndex: number) =>
+                          svgRound(groupLeft + barIndex * barW + gap / 2)
+                        const barWidth = svgRound(Math.max(0.8, barW - gap))
+                        return lines.map((line, barIndex) => {
+                          const annualPoint = line.annual?.[yearIndex]
+                          if (!annualPoint) return null
+                          const top = geometry.gridY(annualPoint.value)
+                          return (
+                            <rect
+                              key={`cost-bar-${year}-${barIndex}`}
+                              x={barX(barIndex)}
+                              y={Math.min(geometry.zeroY, top)}
+                              width={barWidth}
+                              height={Math.abs(geometry.zeroY - top)}
+                              className="compare-trend-cost-bar"
+                              style={{ fill: line.tokenSoft ?? line.token }}
+                            />
+                          )
+                        })
+                      })}
+
                     {isArea &&
                       lines.map((line, index) => {
                         const first = line.points[0]
                         const last = line.points[line.points.length - 1]
                         if (!first || !last) return null
-                        const baseline = geometry.y(0)
+                        const baseline = geometry.lineY(0)
                         const top = line.points
                           .map(
                             (point, pointIndex) =>
-                              `${pointIndex === 0 ? 'M' : 'L'} ${layout.x(point.year)} ${geometry.y(point.value)}`,
+                              `${pointIndex === 0 ? 'M' : 'L'} ${layout.x(point.year)} ${geometry.lineY(point.value)}`,
                           )
                           .join(' ')
                         return (
@@ -440,11 +557,9 @@ function TrendPanel({
                         key={`line-${index}`}
                         d={linePath(line)}
                         className={
-                          metric === 'interest'
+                          isCostMetric
                             ? 'compare-trend-line compare-trend-line-dashed'
-                            : metric === 'indexation'
-                              ? 'compare-trend-line compare-trend-line-dotted'
-                              : 'compare-trend-line'
+                            : 'compare-trend-line'
                         }
                         style={{ stroke: line.token }}
                       />
@@ -460,7 +575,7 @@ function TrendPanel({
                           <circle
                             key={`point-${index}-${point.year}`}
                             cx={layout.x(point.year)}
-                            cy={geometry.y(point.value)}
+                            cy={geometry.lineY(point.value)}
                             r={2.4}
                             className="compare-trend-point"
                             style={{ stroke: line.token }}
@@ -476,7 +591,7 @@ function TrendPanel({
             {hasNegativeNet && (
               <line
                 x1={MARGIN_LEFT}
-                x2={width - MARGIN_RIGHT}
+                x2={width - layout.right}
                 y1={geometry.zeroY}
                 y2={geometry.zeroY}
                 className="compare-trend-zero-line"
@@ -500,7 +615,7 @@ function TrendPanel({
                       <circle
                         key={`dot-${index}`}
                         cx={layout.x(point.year)}
-                        cy={geometry.y(point.value)}
+                        cy={geometry.lineY(point.value)}
                         r={5}
                         className="compare-trend-dot"
                         style={{ stroke: line.token }}
@@ -511,12 +626,24 @@ function TrendPanel({
             )}
 
             {/* Axis text drawn last so the series can never cover it. */}
-            {geometry.ticks.map((tick) => (
+            {geometry.gridTicks.map((tick) => (
               <text
                 key={`tick-${tick}`}
                 x={MARGIN_LEFT - 8}
-                y={geometry.y(tick) + 4}
+                y={geometry.gridY(tick) + 4}
                 className="compare-trend-tick compare-trend-tick-end"
+              >
+                {formatAxisShekel(tick)}
+              </text>
+            ))}
+            {/* The cost panels' second scale: the running total, labelled on
+                the right so it reads as the line's axis, not the bars'. */}
+            {geometry.lineTicks?.map((tick) => (
+              <text
+                key={`line-tick-${tick}`}
+                x={width - layout.right + 8}
+                y={geometry.lineY(tick) + 4}
+                className="compare-trend-tick compare-trend-tick-start"
               >
                 {formatAxisShekel(tick)}
               </text>
@@ -546,6 +673,19 @@ function TrendPanel({
             >
               {axisLabel}
             </text>
+            {isCostMetric && (
+              <text
+                x={width - 8}
+                y={TOP + layout.innerH / 2}
+                textAnchor="middle"
+                className="compare-trend-axis-title compare-trend-axis-title-side"
+                transform={`rotate(90 ${width - 8} ${TOP + layout.innerH / 2})`}
+              >
+                {metric === 'indexation'
+                  ? t('compare.axisCumulativeIndexation')
+                  : t('compare.axisCumulativeInterest')}
+              </text>
+            )}
           </svg>
         )}
 
@@ -589,6 +729,7 @@ function TrendPanel({
               : lines.map((line, index) => {
                   const point = line.points[activeYear - 1]
                   if (!point) return null
+                  const annualPoint = line.annual?.[activeYear - 1]
                   return (
                     <span key={`tip-${index}`} className="compare-trend-tooltip-row">
                       <i
@@ -596,7 +737,16 @@ function TrendPanel({
                         style={{ background: line.token }}
                         aria-hidden="true"
                       />
-                      {line.label}: {formatCurrency(point.value)}
+                      {line.label}:{' '}
+                      {isCostMetric ? (
+                        <>
+                          {annualLabel} {formatCurrency(annualPoint?.value ?? 0)}
+                          {' · '}
+                          {cumulativeLabel} {formatCurrency(point.value)}
+                        </>
+                      ) : (
+                        formatCurrency(point.value)
+                      )}
                     </span>
                   )
                 })}
@@ -605,8 +755,9 @@ function TrendPanel({
       </div>
 
       {/* Text equivalent of the chart (charts are never chart-only). The
-          composition panel repeats every component year by year; the line
-          panels keep their from-to summary. */}
+          composition panel repeats every component year by year; the cost
+          panels repeat the annual bar and its running total; the remaining
+          line panels keep their from-to summary. */}
       <h4 className="sr-only">{title}</h4>
       {bars ? (
         <div className="sr-only" data-testid={`${testIdPrefix}-summary`}>
@@ -632,6 +783,34 @@ function TrendPanel({
                     <td>{formatCurrency(segment.principalNet)}</td>
                     {hasIndexation && <td>{formatCurrency(segment.indexation)}</td>}
                     <td>{formatCurrency(segment.interest)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ))}
+        </div>
+      ) : isCostMetric ? (
+        <div className="sr-only" data-testid={`${testIdPrefix}-summary`}>
+          {lines.map((line, index) => (
+            <table
+              key={`sum-${index}`}
+              data-testid={`${testIdPrefix}-table-${index}`}
+              aria-label={line.label}
+            >
+              <caption>{line.label}</caption>
+              <thead>
+                <tr>
+                  <th>{t('calculator.forecast.tableYear')}</th>
+                  <th>{annualLabel}</th>
+                  <th>{cumulativeLabel}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {line.points.map((point, pointIndex) => (
+                  <tr key={point.year}>
+                    <th scope="row">{point.year}</th>
+                    <td>{formatCurrency(line.annual?.[pointIndex]?.value ?? 0)}</td>
+                    <td>{formatCurrency(point.value)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -707,9 +886,15 @@ export function CompareTrendChart({
   /** One mix's per-year series for a metric. */
   const lineFor = (entry: TrendSeries, index: number, metric: TrendMetric): TrendLine => {
     const points = trendValues(entry.schedule, metric)
+    const annualMetric: AnnualTrendMetric | null =
+      metric === 'interest' || metric === 'indexation' ? metric : null
     return {
       label: entry.label,
       token: SERIES_TOKENS[index % SERIES_TOKENS.length],
+      tokenSoft: annualMetric
+        ? SERIES_SOFT_TOKENS[index % SERIES_SOFT_TOKENS.length]
+        : undefined,
+      annual: annualMetric ? annualTrendValues(entry.schedule, annualMetric) : undefined,
       termYear: points[points.length - 1]?.year ?? 0,
       points,
     }

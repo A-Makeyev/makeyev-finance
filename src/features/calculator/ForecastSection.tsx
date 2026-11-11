@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency, formatRatePercent } from '@/lib/format'
 import {
+  annualCostsFor,
   buildForecast,
   FORECAST_STEP_PERCENT,
   type ForecastScenarioId,
@@ -9,15 +10,14 @@ import {
 import { useCalculatorViewModel } from './useCalculatorViewModel'
 import { formatAxisShekelDetailed } from '@/lib/charts'
 import { ForecastChart, type ForecastSeries } from './ForecastChart'
+import { ForecastCostChart } from './ForecastCostChart'
 
-/** One color per scenario / cost line, reusing the chart palette tokens. */
+/** One color per scenario line, reusing the chart palette tokens. */
 const SCENARIO_COLORS: Record<ForecastScenarioId, string> = {
   base: 'var(--chart-balance, #111111)',
   up: 'var(--chart-interest, #d2762e)',
   down: 'var(--chart-principal, #0aa89f)',
 }
-const INTEREST_COLOR = 'var(--chart-interest, #d2762e)'
-const INDEXATION_COLOR = 'var(--cost-donut-indexation, #7b5cc4)'
 
 /**
  * Fit a whole number of table rows into the chart-height viewport.
@@ -137,30 +137,10 @@ export function ForecastSection() {
     points: scenario.points.map((point) => ({ year: point.year, value: point.payment })),
   }))
 
-  const costSeries: ForecastSeries[] = [
-    {
-      id: 'interest',
-      label: t('calculator.forecast.series.interest'),
-      color: INTEREST_COLOR,
-      area: true,
-      points: base.points.map((point) => ({
-        year: point.year,
-        value: point.cumulativeInterest,
-      })),
-    },
-  ]
-  if (forecast.hasIndexation) {
-    costSeries.push({
-      id: 'indexation',
-      label: t('calculator.forecast.series.indexation'),
-      color: INDEXATION_COLOR,
-      area: true,
-      points: base.points.map((point) => ({
-        year: point.year,
-        value: point.cumulativeIndexation,
-      })),
-    })
-  }
+  // The cost chart's bars are each year's own accrual; the line is the
+  // combined running total. `annualCostsFor` derives both from the same
+  // cumulative points the table below renders.
+  const costRows = annualCostsFor(base.points)
 
   return (
     <section className="schedule-section forecast-section" data-testid="forecast-section">
@@ -243,10 +223,10 @@ export function ForecastSection() {
             {t('calculator.forecast.costLead', { cpi: cpiText })}
           </p>
 
-          <ForecastChart
-            series={costSeries}
+          <ForecastCostChart
+            rows={costRows}
+            hasIndexation={forecast.hasIndexation}
             ariaLabel={t('calculator.forecast.chartCostAria')}
-            axisTitle={t('calculator.forecast.axisCumulative')}
             testId="forecast-cost-chart"
           />
           {forecast.hasIndexation ? (
