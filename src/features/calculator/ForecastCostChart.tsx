@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
 import {
   alignedDualTicks,
-  formatAxisShekel,
+  formatAxisShekelDetailed,
   niceTicks,
   svgRound,
   xAxisTicks,
 } from '@/lib/charts'
 import type { ForecastAnnualCost } from '@/lib/forecast'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
+import { useTooltipPointer } from '@/hooks/useTooltipPointer'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 
 interface ForecastCostChartProps {
@@ -60,7 +61,13 @@ export function ForecastCostChart({
   const showTooltip = useTooltipPresence(hovering && active !== null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const plotRef = useRef<HTMLDivElement | null>(null)
-  useTooltipClamp(tooltipRef, plotRef, active)
+  // The callout sits just above the cursor, not at a fixed height.
+  const { pointerY, trackPointer } = useTooltipPointer()
+  useTooltipClamp(
+    tooltipRef,
+    plotRef,
+    active !== null ? `${active}:${Math.round(pointerY)}` : null,
+  )
 
   const geometry = useMemo(() => {
     if (rows.length === 0) return null
@@ -136,6 +143,7 @@ export function ForecastCostChart({
     const relative = ((event.clientX - bounds.left) / bounds.width) * WIDTH - MARGIN.left
     const index = Math.floor((relative - pad) / Math.max(slot, 1e-9))
     setActive(Math.max(0, Math.min(rows.length - 1, index)))
+    trackPointer(event, event.currentTarget)
     setHovering(true)
   }
 
@@ -206,7 +214,7 @@ export function ForecastCostChart({
                 dy="0.32em"
                 className="chart-tick chart-tick-end"
               >
-                {formatAxisShekel(tick)}
+                {formatAxisShekelDetailed(tick)}
               </text>
             </g>
           ))}
@@ -228,7 +236,7 @@ export function ForecastCostChart({
                 dy="0.32em"
                 className="chart-tick chart-tick-balance"
               >
-                {formatAxisShekel(tick)}
+                {formatAxisShekelDetailed(tick)}
               </text>
             </g>
           ))}
@@ -331,9 +339,9 @@ export function ForecastCostChart({
             role="status"
             style={{
               left: `${svgRound((x(active!) / WIDTH) * 100)}%`,
-              // Anchor above the running-total line: that is the curve being
-              // read, while the bars behind it are a tall block.
-              top: `${svgRound((yCumulative(activeRow.cumulativeTotal) / HEIGHT) * 100)}%`,
+              // Follow the cursor vertically; the clamp hook keeps the callout
+              // inside the plot near an edge.
+              top: `${svgRound(pointerY)}%`,
               translate: '0 calc(-100% - 10px)',
             }}
           >

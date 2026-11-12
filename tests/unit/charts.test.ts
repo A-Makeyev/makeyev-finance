@@ -73,8 +73,24 @@ describe('formatAxisShekelDetailed', () => {
     expect(formatAxisShekelDetailed(8_400)).toBe('₪8.4K')
   })
 
-  it('keeps two decimals on the M scale', () => {
+  it('keeps a 2.5-step gridline honest instead of rounding it away', () => {
+    // The bug this guards: formatAxisShekel rounds 2,500 to "₪3K" and 7,500
+    // to "₪8K", so a 2.5-step axis printed values the gridlines never had.
+    expect(formatAxisShekelDetailed(2_500)).toBe('₪2.5K')
+    expect(formatAxisShekelDetailed(7_500)).toBe('₪7.5K')
+    expect(formatAxisShekelDetailed(8_200)).toBe('₪8.2K')
+    expect(niceTicks(8_993).map(formatAxisShekelDetailed)).toEqual([
+      '₪0',
+      '₪2.5K',
+      '₪5K',
+      '₪7.5K',
+      '₪9K',
+    ])
+  })
+
+  it('keeps two decimals on the M scale and trims trailing zeros', () => {
     expect(formatAxisShekelDetailed(1_250_000)).toBe('₪1.25M')
+    expect(formatAxisShekelDetailed(1_400_000)).toBe('₪1.4M')
     expect(formatAxisShekelDetailed(2_000_000)).toBe('₪2M')
     expect(formatAxisShekelDetailed(750)).toBe('₪750')
     expect(formatAxisShekelDetailed(0)).toBe('₪0')

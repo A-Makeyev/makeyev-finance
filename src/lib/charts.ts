@@ -58,13 +58,17 @@ export function formatAxisShekelDetailed(value: number): string {
   if (!Number.isFinite(value) || value === 0) return '₪0'
   const sign = value < 0 ? '-' : ''
   const magnitude = Math.abs(value)
+  // Trim trailing zeros so a round tick still reads "₪8K", not "₪8.0K",
+  // while a 2.5-step tick keeps its half: "₪2.5K" / "₪7.5K". Without the
+  // half, formatAxisShekel rounds 2,500 to "₪3K" and 7,500 to "₪8K", which
+  // misstates the gridline by ₪500.
   if (magnitude >= 1_000_000) {
-    const millions = magnitude / 1_000_000
-    return `${sign}₪${Number.isInteger(millions) ? millions : millions.toFixed(2)}M`
+    const millions = (magnitude / 1_000_000).toFixed(2).replace(/\.?0+$/, '')
+    return `${sign}₪${millions}M`
   }
   if (magnitude >= 1_000) {
-    const thousands = magnitude / 1_000
-    return `${sign}₪${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}K`
+    const thousands = (magnitude / 1_000).toFixed(1).replace(/\.?0+$/, '')
+    return `${sign}₪${thousands}K`
   }
   return `${sign}₪${Math.round(magnitude)}`
 }

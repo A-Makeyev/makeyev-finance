@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
 import {
   alignedDualTicks,
-  formatAxisShekel,
   formatAxisShekelDetailed,
   niceRange,
   niceTicks,
@@ -13,6 +12,7 @@ import {
   xAxisTicks,
 } from '@/lib/charts'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
+import { useTooltipPointer } from '@/hooks/useTooltipPointer'
 import {
   annualTrendValues,
   compositionSegments,
@@ -32,10 +32,11 @@ import {
  * columns per mix per year, from the same shared payment-composition helper.
  * The other metrics fall two per row beneath it, each with its own
  * visual language so they do not read as copies: remaining debt is a filled
- * area, cumulative paid a line with a dot per year, the two cost metrics pair
- * yearly bars (interest or CPI drift) with a dashed running-total line on a
- * second aligned axis, and the early-repayment fee (the היוון a mix would owe
- * at each year end) a plain line with a dot per priced year. The rate-reset
+ * area, cumulative paid a line with a dot per year, interest pairs yearly bars
+ * with a dashed running-total line on a second aligned axis, indexation uses
+ * thin annual stems with a solid diamond-marked running-total line, and the
+ * early-repayment fee (the היוון a mix would owe at each year end) a plain line
+ * with a dot per priced year. The rate-reset
  * panel (the calculator's base / +step / -step payment paths) is a peer of
  * those line panels, next to the fee curve rather than a section of its own:
  * one card, one mix color, a no-change line and a shaded step range.
@@ -221,9 +222,16 @@ function TrendPanel({
     setPlotEl(node)
   }, [])
   const width = useMeasuredWidth(plotEl)
-  useTooltipClamp(tooltipRef, plotRef, active)
+  // The callout sits just above the cursor, not pinned to the plot's top.
+  const { pointerY, trackPointer } = useTooltipPointer()
+  useTooltipClamp(tooltipRef, plotRef, active !== null ? `${active}:${Math.round(pointerY)}` : null)
 
   const isCostMetric = COST_METRICS.includes(metric)
+  // Interest and indexation share the dual-axis cost layout, but not the marks:
+  // identical bars + dashed lines made the two panels read as copies. Interest
+  // keeps annual bars; indexation uses annual stems so the running-total line
+  // is the only heavy stroke in its panel.
+  const isIndexation = metric === 'indexation'
   const title = t(metricTitleKey(metric))
   const axisLabel = t(metricAxisKey(metric))
   const annualLabel = t(
@@ -334,6 +342,7 @@ function TrendPanel({
     const relative = ((event.clientX - bounds.left) / bounds.width) * width - MARGIN_LEFT
     const index = Math.floor((relative - layout.pad) / Math.max(layout.slot, 1e-9))
     setActive(Math.max(0, Math.min(maxYear - 1, index)))
+    trackPointer(event, event.currentTarget)
   }
 
   const activeYear = active !== null ? active + 1 : null
@@ -366,11 +375,31 @@ function TrendPanel({
         {isCostMetric && (
           <>
             <span>
-              <i className="compare-trend-swatch compare-trend-swatch-annual" aria-hidden="true" />
+              {isIndexation ? (
+                <svg className="chart-swatch-line" width="18" height="12" aria-hidden="true">
+                  <line x1="9" y1="11" x2="9" y2="4" stroke="currentColor" strokeWidth="2" />
+                  <circle cx="9" cy="3.5" r="2.4" fill="currentColor" />
+                </svg>
+              ) : (
+                <i
+                  className="compare-trend-swatch compare-trend-swatch-annual"
+                  aria-hidden="true"
+                />
+              )}
               {annualLabel}
             </span>
             <span>
               <svg className="chart-swatch-line" width="18" height="12" aria-hidden="true">
+                {isIndexation && (
+                  <rect
+                    x="7"
+                    y="3"
+                    width="6"
+                    height="6"
+                    transform="rotate(45 10 6)"
+                    fill="currentColor"
+                  />
+                )}
                 <line
                   x1="0"
                   y1="6"
@@ -378,7 +407,7 @@ function TrendPanel({
                   y2="6"
                   stroke="currentColor"
                   strokeWidth="2.5"
-                  strokeDasharray="7 5"
+                  strokeDasharray={isIndexation ? undefined : '7 5'}
                 />
               </svg>
               {cumulativeLabel}
@@ -516,6 +545,31 @@ function TrendPanel({
                           const annualPoint = line.annual?.[yearIndex]
                           if (!annualPoint) return null
                           const top = geometry.gridY(annualPoint.value)
+                          if (isIndexation) {
+                            // Indexation gets a stem-and-dot mark instead of a
+                            // bar: the same annual amount, a different visual
+                            // language from the interest panel beside it.
+                            const stemX = svgRound(barX(barIndex) + barWidth / 2)
+                            return (
+                              <g key={`cost-stem-${year}-${barIndex}`}>
+                                <line
+                                  x1={stemX}
+                                  x2={stemX}
+                                  y1={geometry.zeroY}
+                                  y2={top}
+                                  className="compare-trend-cost-stem"
+                                  style={{ stroke: line.token }}
+                                />
+                                <circle
+                                  cx={stemX}
+                                  cy={top}
+                                  r={2.6}
+                                  className="compare-trend-cost-dot"
+                                  style={{ fill: line.token }}
+                                />
+                              </g>
+                            )
+                          }
                           return (
                             <rect
                               key={`cost-bar-${year}-${barIndex}`}
@@ -558,12 +612,33 @@ function TrendPanel({
                         d={linePath(line)}
                         className={
                           isCostMetric
-                            ? 'compare-trend-line compare-trend-line-dashed'
+                            ? isIndexation
+                              ? 'compare-trend-line'
+                              : 'compare-trend-line compare-trend-line-dashed'
                             : 'compare-trend-line'
                         }
                         style={{ stroke: line.token }}
                       />
                     ))}
+
+                    {/* Indexation accumulates in yearly steps, so its running
+                        total carries a diamond per year instead of the dashed
+                        interest line's smooth stroke. */}
+                    {isIndexation &&
+                      lines.map((line, index) =>
+                        line.points.map((point) => (
+                          <rect
+                            key={`diamond-${index}-${point.year}`}
+                            x={svgRound(layout.x(point.year) - 3)}
+                            y={svgRound(geometry.lineY(point.value) - 3)}
+                            width={6}
+                            height={6}
+                            transform={`rotate(45 ${layout.x(point.year)} ${geometry.lineY(point.value)})`}
+                            className="compare-trend-diamond"
+                            style={{ fill: line.token }}
+                          />
+                        )),
+                      )}
 
                     {/* Cumulative paid and the fee curve carry a dot per year:
                         points-in-time read differently from the smooth
@@ -633,7 +708,7 @@ function TrendPanel({
                 y={geometry.gridY(tick) + 4}
                 className="compare-trend-tick compare-trend-tick-end"
               >
-                {formatAxisShekel(tick)}
+                {formatAxisShekelDetailed(tick)}
               </text>
             ))}
             {/* The cost panels' second scale: the running total, labelled on
@@ -645,7 +720,7 @@ function TrendPanel({
                 y={geometry.lineY(tick) + 4}
                 className="compare-trend-tick compare-trend-tick-start"
               >
-                {formatAxisShekel(tick)}
+                {formatAxisShekelDetailed(tick)}
               </text>
             ))}
             {yearTicks.map((tick) => {
@@ -694,7 +769,12 @@ function TrendPanel({
             ref={tooltipRef}
             className={`compare-trend-tooltip${bars ? ' compare-trend-tooltip-composition' : ''}`}
             role="status"
-            style={{ left: `${((layout.x(activeYear) / width) * 100).toFixed(1)}%` }}
+            style={{
+              left: `${((layout.x(activeYear) / width) * 100).toFixed(1)}%`,
+              top: `${pointerY}%`,
+              // Bottom edge just clear of the cursor, with a small gap.
+              translate: '0 calc(-100% - 10px)',
+            }}
           >
             <strong>{t('calculator.charts.yearLabel', { year: activeYear })}</strong>
             {bars
@@ -1021,7 +1101,9 @@ export function RateScenarioChart({
     setPlotEl(node)
   }, [])
   const width = useMeasuredWidth(plotEl)
-  useTooltipClamp(tooltipRef, plotRef, active)
+  // The callout sits just above the cursor, not pinned to the plot's top.
+  const { pointerY, trackPointer } = useTooltipPointer()
+  useTooltipClamp(tooltipRef, plotRef, active !== null ? `${active}:${Math.round(pointerY)}` : null)
 
   // A locale-aware list ("6 and 11" / "6 ו-11") so the years do not reverse
   // visually in RTL.
@@ -1140,6 +1222,7 @@ export function RateScenarioChart({
     const relative = ((event.clientX - bounds.left) / bounds.width) * width - MARGIN_LEFT
     const index = Math.floor((relative - layout.pad) / Math.max(layout.slot, 1e-9))
     setActive(Math.max(0, Math.min(maxYear - 1, index)))
+    trackPointer(event, event.currentTarget)
   }
 
   const pathFor = (path: RateScenarioPath): string => {
@@ -1359,7 +1442,12 @@ export function RateScenarioChart({
             ref={tooltipRef}
             className="compare-trend-tooltip"
             role="status"
-            style={{ left: `${((layout.x(activeYear) / width) * 100).toFixed(1)}%` }}
+            style={{
+              left: `${((layout.x(activeYear) / width) * 100).toFixed(1)}%`,
+              top: `${pointerY}%`,
+              // Bottom edge just clear of the cursor, with a small gap.
+              translate: '0 calc(-100% - 10px)',
+            }}
           >
             <strong>{t('calculator.charts.yearLabel', { year: activeYear })}</strong>
             {paths.map((path) => {

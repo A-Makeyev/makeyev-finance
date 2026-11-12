@@ -719,38 +719,25 @@ test.describe('mortgage calculator - amortization schedule', () => {
       .toBeGreaterThan(0)
   })
 
-  test('chart tooltips hang just above the hovered data, not at the pointer', async ({ calc }) => {
-    // The callout belongs to the graph: its bottom edge sits a fixed 10px above
-    // the hovered point, and moving the cursor up or down inside one period
-    // cannot move it. It used to track the pointer's height, which left it
-    // wherever the cursor happened to be rather than on the line being read.
+  test('chart tooltips hang just above the pointer in every chart', async ({ calc }) => {
+    // The callout follows the pointer's height: its bottom edge sits a fixed
+    // 10px above the cursor, so it stays next to where the user is pointing
+    // instead of at a fixed height (or on a data line far from the cursor).
     const readTip = (selector: string) =>
       calc.page.evaluate(
         `(() => {
           const root = document.querySelector('${selector}')
           if (!root) return null
-          const svg = root.querySelector('svg')
           const tip = root.querySelector('.chart-tooltip')
           if (!tip) return null
-          const vbH = Number(svg.getAttribute('viewBox').split(' ')[3])
-          const svgRect = svg.getBoundingClientRect()
-          const plotRect = svg.parentElement.getBoundingClientRect()
+          const plotRect = root.querySelector('svg').parentElement.getBoundingClientRect()
           const tipRect = tip.getBoundingClientRect()
-          const dots = [
-            ...root.querySelectorAll(
-              'circle.chart-dot, circle.chart-dot-track, circle.forecast-hover-dot',
-            ),
-          ]
-          const anchorY = dots.length
-            ? Math.min(...dots.map((dot) => Number(dot.getAttribute('cy'))))
-            : null
           // Measured from the plot's top edge, so a scroll between the two
           // hovers cannot masquerade as the tooltip moving.
           return {
             top: tipRect.top - plotRect.top,
             bottom: tipRect.bottom - plotRect.top,
             plotHeight: plotRect.height,
-            anchorPx: anchorY === null ? null : (anchorY / vbH) * svgRect.height,
           }
         })()`,
       )
@@ -759,7 +746,6 @@ test.describe('mortgage calculator - amortization schedule', () => {
       top: number
       bottom: number
       plotHeight: number
-      anchorPx: number | null
     } | null
 
     const hoverAt = async (selector: string, xFraction: number, yFraction: number) => {
@@ -767,32 +753,43 @@ test.describe('mortgage calculator - amortization schedule', () => {
       await svg.scrollIntoViewIfNeeded()
       const box = (await svg.boundingBox())!
       await svg.hover({ position: { x: box.width * xFraction, y: box.height * yFraction } })
-      return (await readTip(selector)) as TipProbe
+      const tip = (await readTip(selector)) as TipProbe
+      return { tip, pointerPx: box.height * yFraction }
     }
 
-    const expectDataAnchored = async (selector: string, name: string) => {
+    const expectPointerAnchored = async (selector: string, name: string) => {
       const lowered = await hoverAt(selector, 0.5, 0.8)
       const raised = await hoverAt(selector, 0.5, 0.2)
-      expect(lowered, `${name}: tooltip rendered`).not.toBeNull()
-      expect(raised, `${name}: tooltip rendered`).not.toBeNull()
-      // Same period, very different pointer heights: the callout must not move.
-      expect(raised!.top, `${name}: pointer height is ignored`).toBeCloseTo(lowered!.top, 0)
-      expect(raised!.bottom, `${name}: pointer height is ignored`).toBeCloseTo(lowered!.bottom, 0)
-      // Never outside the plot, even when the point sits near its top edge.
-      expect(lowered!.top, `${name}: stays inside the plot`).toBeGreaterThanOrEqual(-0.5)
-      expect(lowered!.bottom, `${name}: stays inside the plot`).toBeLessThanOrEqual(
-        lowered!.plotHeight + 0.5,
+      expect(lowered.tip, `${name}: tooltip rendered`).not.toBeNull()
+      expect(raised.tip, `${name}: tooltip rendered`).not.toBeNull()
+      // Low in the plot there is room above the pointer, so the bottom edge is
+      // the pointer minus the fixed gap. The pointer is tracked in whole
+      // percentages, hence the few pixels of tolerance.
+      expect(
+        Math.abs(lowered.tip!.bottom - (lowered.pointerPx - 10)),
+        `${name}: hangs 10px above the pointer`,
+      ).toBeLessThanOrEqual(6)
+      // Same period, very different pointer heights: the callout must move up
+      // with the pointer rather than staying put.
+      expect(raised.tip!.top, `${name}: follows the pointer's height`).toBeLessThan(
+        lowered.tip!.top - 10,
       )
-      // And when there is room above the point, the gap is the fixed 10px.
-      if (lowered!.anchorPx !== null && lowered!.top > 1) {
-        expect(lowered!.bottom, `${name}: hangs 10px above the data`).toBeCloseTo(
-          lowered!.anchorPx - 10,
-          0,
+      // Never outside the plot, even when the pointer sits near its top edge.
+      for (const [label, probe] of [
+        ['low', lowered],
+        ['high', raised],
+      ] as const) {
+        expect(probe.tip!.top, `${name}: ${label} stays inside the plot`).toBeGreaterThanOrEqual(
+          -0.5,
         )
+        expect(
+          probe.tip!.bottom,
+          `${name}: ${label} stays inside the plot`,
+        ).toBeLessThanOrEqual(probe.tip!.plotHeight + 0.5)
       }
     }
 
-    await expectDataAnchored('[data-testid="amortization-chart"]', 'amortization')
+    await expectPointerAnchored('[data-testid="amortization-chart"]', 'amortization')
 
     // The callout fades: it is a live element while hovering, and the CSS
     // transition on opacity is what runs when it closes. Without the transition
@@ -811,11 +808,11 @@ test.describe('mortgage calculator - amortization schedule', () => {
     await expect(amortTip).toHaveCount(0)
 
     await calc.page.getByTestId('schedule-view-separate').click()
-    await expectDataAnchored('[data-testid="per-track-chart"]', 'per-track')
+    await expectPointerAnchored('[data-testid="per-track-chart"]', 'per-track')
     // The forecast charts share the same contract, hover dots included: the
-    // callout hangs above the highest dot at the hovered year.
+    // callout follows the pointer's height at the hovered year.
     await calc.forecast.scrollTo()
-    await expectDataAnchored('[data-testid="forecast-reset-chart"]', 'forecast')
+    await expectPointerAnchored('[data-testid="forecast-reset-chart"]', 'forecast')
   })
 
   test.describe('narrow screens', () => {

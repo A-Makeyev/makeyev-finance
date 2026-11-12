@@ -50,16 +50,6 @@ async function toggleTheme(page: Page): Promise<void> {
   // runway the spec already budgets for the fade (500ms bar transition + 200ms
   // per readSettled attempt x 20 attempts = 4s, plenty to clear a 500ms fade).
   await page.waitForTimeout(800)
-      // The bar, the links and the logos all transition over 0.5s, so the paint
-      // settles AFTER data-theme flips on <html>. Give the transition the same
-      // runway the spec already budgets for the fade (500ms bar transition + 200ms
-      // per readSettled attempt x 20 attempts = 4s, plenty to clear a 500ms fade).
-      await page.waitForTimeout(800)
-  // The bar, the links and the logos all transition over 0.5s, so the paint
-  // settles AFTER data-theme flips on <html>. Give the transition the same
-  // runway the spec already budgets for the fade (500ms bar transition + 200ms
-  // per readSettled attempt x 20 attempts = 4s, plenty to clear a 500ms fade).
-  await page.waitForTimeout(800)
 }
 
 test.describe('theme toggle', () => {

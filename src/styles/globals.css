@@ -354,8 +354,16 @@ html *::-webkit-scrollbar {
   -webkit-tap-highlight-color: transparent;
 }
 
-.remove-highlight:focus {
-  outline: none !important;
+/* Mouse clicks should not paint a focus ring, but keyboard focus must stay
+   visible: the old blanket `outline: none !important` also hid the ring on
+   nav links, footer links, social icons and hero CTAs (WCAG 2.4.7). */
+.remove-highlight:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.remove-highlight:focus-visible {
+  outline: 2px solid var(--soft-blue);
+  outline-offset: 2px;
 }
 
 /* Inner scrollers (tables, chart legends, panels) keep scrolling by wheel,
@@ -12114,9 +12122,10 @@ html[dir='rtl'] .comment-text {
 }
 
 /* One visual language per metric so the five panels never read as copies:
-   balance is a filled area, cumulative paid a line with year dots, the cost
-   panels pair yearly bars with a dashed running-total line, and the
-   prepayment fee is a plain line. */
+   balance is a filled area, cumulative paid a line with year dots, interest
+   pairs yearly bars with a dashed running-total line, indexation pairs annual
+   stems with a solid diamond-marked line, and the prepayment fee is a plain
+   line. */
 .compare-trend-line-dashed {
   stroke-dasharray: 7 5;
 }
@@ -12206,11 +12215,30 @@ html[dir='rtl'] .comment-text {
   fill: var(--cost-donut-indexation, #7b5cc4);
 }
 
-/* Cost panels: one yearly bar per mix, behind the running-total line. The
+/* Interest panel: one yearly bar per mix, behind the running-total line. The
    fill is the mix's soft tint (set inline), so the bar and the line read as
    the same series on two scales. */
 .compare-trend-cost-bar {
   stroke: none;
+}
+
+/* Indexation panel: the annual amount is a thin stem with a dot, not a bar,
+   so the two cost panels never read as copies. */
+.compare-trend-cost-stem {
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+
+.compare-trend-cost-dot {
+  stroke: none;
+}
+
+/* The indexation running total carries one diamond per year; the paper-colored
+   outline keeps it legible where several mixes overlap. */
+.compare-trend-diamond {
+  stroke: var(--calc-paper);
+  stroke-width: 1.2;
 }
 
 /* Interior zero line for a composition whose net principal is negative. */
@@ -12959,6 +12987,14 @@ html[dir='rtl'] .comment-text {
 
 /* Keep compact cards readable based on their own width, not the viewport. */
 @container (max-width: 500px) {
+  /* Type and amount take a full row in a narrow card: half of a ~430px track
+     leaves the type select 148px of text room, while the English label
+     "Variable indexed every 5 years" needs 176px and would be cut. */
+  .compare-shell .compare-track .track-cell-type,
+  .compare-shell .compare-track .track-cell-amount {
+    grid-column: 1 / -1;
+  }
+
   .compare-shell .compare-track .compare-track-term-options {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1.2fr);
     gap: 5px;
@@ -12974,6 +13010,18 @@ html[dir='rtl'] .comment-text {
   }
 
 
+}
+
+/* Phones: the outer track stacks, but the method/grace/reset controls are a
+   nested grid of their own, so the ≤480px one-column rule never reached them.
+   Three columns of a ~284px track left the method select 47px of text room
+   ("ריבית בלבד" needs 61px) and the rate-reset select 84px against its 119px
+   label. Give every control the full row once the card is this narrow. */
+@media (max-width: 480px) {
+  .compare-shell .compare-track .compare-track-term-options,
+  .compare-shell .compare-track .compare-track-term-options:has(.track-cell-reset) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 1000px) {

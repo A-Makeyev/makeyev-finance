@@ -1,8 +1,9 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
-import { formatAxisShekel, niceRange, niceTicks, svgRound, xAxisTicks } from '@/lib/charts'
+import { formatAxisShekelDetailed, niceRange, niceTicks, svgRound, xAxisTicks } from '@/lib/charts'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
+import { useTooltipPointer } from '@/hooks/useTooltipPointer'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 
 /** One plotted point: a 1-based loan year and its value. */
@@ -69,8 +70,9 @@ interface ForecastChartProps {
    */
   zeroBased?: boolean
   /**
-   * Axis-label formatter. A zoomed payment axis needs a decimal ("₪7.8K");
-   * the default whole-K formatter rounds every label to the same "₪8K".
+   * Axis-label formatter. The default keeps one decimal on the K scale, so a
+   * 2.5-step gridline prints "₪2.5K" instead of rounding to "₪3K"; a zoomed
+   * payment axis still gets its "₪7.8K" label.
    */
   formatTick?: (value: number) => string
   /**
@@ -111,7 +113,7 @@ export function ForecastChart({
   selectedYear,
   onSelectYear,
   zeroBased = true,
-  formatTick = formatAxisShekel,
+  formatTick = formatAxisShekelDetailed,
   height = DEFAULT_HEIGHT,
   testId,
 }: ForecastChartProps) {
@@ -128,7 +130,13 @@ export function ForecastChart({
   const showTooltip = useTooltipPresence(hovering && activeYear !== null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const plotRef = useRef<HTMLDivElement | null>(null)
-  useTooltipClamp(tooltipRef, plotRef, activeYear)
+  // The callout sits just above the cursor, not at a fixed height.
+  const { pointerY, trackPointer } = useTooltipPointer()
+  useTooltipClamp(
+    tooltipRef,
+    plotRef,
+    activeYear !== null ? `${activeYear}:${Math.round(pointerY)}` : null,
+  )
 
   const geometry = useMemo(() => {
     const nonEmpty = series.filter((entry) => entry.points.length > 0)
@@ -214,12 +222,14 @@ export function ForecastChart({
 
   const handleMove = (event: React.MouseEvent<SVGSVGElement>) => {
     setActiveYear(yearAt(event))
+    trackPointer(event, event.currentTarget)
     setHovering(true)
   }
 
   const handleClick = (event: React.MouseEvent<SVGSVGElement>) => {
     const year = yearAt(event)
     setActiveYear(year)
+    trackPointer(event, event.currentTarget)
     setHovering(true)
     onSelectYear?.(year)
   }
@@ -235,11 +245,6 @@ export function ForecastChart({
             row.point !== undefined,
           )
       : []
-
-  // The tooltip hangs just above the highest series at the hovered year, so it
-  // points at the graph instead of trailing the pointer.
-  const activeYs = activeRows.map(({ point }) => y(point.value))
-  const anchorY = activeYs.length > 0 ? Math.min(...activeYs) : MARGIN.top
 
   return (
     <div className="forecast-chart" data-testid={testId}>
@@ -436,8 +441,8 @@ export function ForecastChart({
             style={{
               left: `${(x(activeYear) / WIDTH) * 100}%`,
               // `translate` composes with the clamp hook's `transform`.
-              top: `${(anchorY / height) * 100}%`,
-              // Bottom edge just clear of the line, with a small gap.
+              top: `${pointerY}%`,
+              // Bottom edge just clear of the cursor, with a small gap.
               translate: '0 calc(-100% - 10px)',
             }}
           >

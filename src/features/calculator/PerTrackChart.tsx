@@ -1,8 +1,9 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
-import { formatAxisShekel, niceTicks, xAxisTicks } from '@/lib/charts'
+import { formatAxisShekelDetailed, niceTicks, xAxisTicks } from '@/lib/charts'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
+import { useTooltipPointer } from '@/hooks/useTooltipPointer'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 import { TRACK_TYPE_COLORS } from './trackColors'
 import type { TrackSchedule } from '@/stores/calculatorStore'
@@ -74,9 +75,15 @@ export function PerTrackChart({
   // Tooltip element + plot container, for the edge-clamp hook.
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const plotRef = useRef<HTMLDivElement | null>(null)
-  // Re-clamp whenever the tooltip re-anchors or the hovered track changes
-  // (the hovered track reorders rows, which can change the tooltip width).
-  useTooltipClamp(tooltipRef, plotRef, hover ? `${hover.index}:${hover.nearestTrack}` : null)
+  // The callout sits just above the cursor, not at a fixed height.
+  const { pointerY, trackPointer } = useTooltipPointer()
+  // Re-clamp whenever the tooltip re-anchors, the pointer moves vertically, or
+  // the hovered track changes (it reorders rows and can change the width).
+  useTooltipClamp(
+    tooltipRef,
+    plotRef,
+    hover ? `${hover.index}:${hover.nearestTrack}:${Math.round(pointerY)}` : null,
+  )
 
   const geometry = useMemo(() => {
     const nonEmpty = tracks
@@ -153,19 +160,9 @@ export function PerTrackChart({
       }
     })
     setHover({ index: clamped, nearestTrack })
+    trackPointer(event, event.currentTarget)
     setHovering(true)
   }
-
-  // Vertical anchor: just above the highest line at the hovered period. The
-  // callout belongs to the graph, not to the pointer, so moving the cursor up
-  // and down inside one period leaves it where it is.
-  const hoveredYs = hover
-    ? nonEmpty.flatMap((entry) => {
-        const point = entry.series[hover.index]
-        return point ? [y(Math.max(0, point.balance))] : []
-      })
-    : []
-  const hoverAnchorY = hoveredYs.length > 0 ? Math.min(...hoveredYs) : MARGIN.top
 
   // Reorder for the tooltip: nearest track first, the rest in track order.
   const orderedPoints =
@@ -258,7 +255,7 @@ export function PerTrackChart({
                 dy="0.32em"
                 className="chart-tick chart-tick-end"
               >
-                {formatAxisShekel(tick)}
+                {formatAxisShekelDetailed(tick)}
               </text>
             </g>
           ))}
@@ -388,8 +385,8 @@ export function PerTrackChart({
               // property from `transform`) lifts the callout above the hovered
               // line without fighting that clamp.
               left: `${(x(hover.index) / WIDTH) * 100}%`,
-              top: `${(hoverAnchorY / HEIGHT) * 100}%`,
-              // Bottom edge just clear of the line, with a small gap.
+              top: `${pointerY}%`,
+              // Bottom edge just clear of the cursor, with a small gap.
               translate: '0 calc(-100% - 10px)',
             }}
           >

@@ -430,17 +430,22 @@ test.describe('mortgage comparison - /compare', () => {
 
     // The other five panels each have their own visual language, so they do
     // not read as copies: balance is a filled area, total carries a dot per
-    // year, the two cost panels pair yearly bars with a dashed running-total
-    // line, and the prepayment fee is a plain line.
+    // year, interest pairs yearly bars with a dashed running-total line,
+    // indexation pairs annual stems with a solid diamond-marked line, and the
+    // prepayment fee is a plain line.
     await expect(page.getByTestId('compare-trend-balance').locator('.compare-trend-area')).toHaveCount(1)
-    for (const metric of ['interest', 'indexation']) {
-      const panel = page.getByTestId(`compare-trend-${metric}`)
-      // One bar per schedule year per priced mix, plus the mix's cumulative
-      // line: the annual amount and the running total share the panel.
-      await expect(panel.locator('.compare-trend-cost-bar')).toHaveCount(15)
-      await expect(panel.locator('.compare-trend-line-dashed')).toHaveCount(1)
-      await expect(panel.locator('.compare-trend-line')).toHaveCount(1)
-    }
+    const interestPanel = page.getByTestId('compare-trend-interest')
+    await expect(interestPanel.locator('.compare-trend-cost-bar')).toHaveCount(15)
+    await expect(interestPanel.locator('.compare-trend-line-dashed')).toHaveCount(1)
+    await expect(interestPanel.locator('.compare-trend-line')).toHaveCount(1)
+    const indexationPanel = page.getByTestId('compare-trend-indexation')
+    // One stem and one diamond per schedule year per priced mix; no bars and
+    // no dashed stroke, so the panel cannot be mistaken for the interest one.
+    await expect(indexationPanel.locator('.compare-trend-cost-stem')).toHaveCount(15)
+    await expect(indexationPanel.locator('.compare-trend-diamond')).toHaveCount(15)
+    await expect(indexationPanel.locator('.compare-trend-cost-bar')).toHaveCount(0)
+    await expect(indexationPanel.locator('.compare-trend-line-dashed')).toHaveCount(0)
+    await expect(indexationPanel.locator('.compare-trend-line')).toHaveCount(1)
     const interestLegend = page
       .getByTestId('compare-trend-interest')
       .locator('.compare-trend-inline-legend')
@@ -526,12 +531,18 @@ test.describe('mortgage comparison - /compare', () => {
     }
     // The second mix stacks its own bars alongside the first.
     expect(await compositionPanel.locator('.compare-trend-bar').count()).toBeGreaterThan(oneMixBars)
-    // The cost panels add the second mix's annual bars and line too.
+    // The cost panels add the second mix's annual marks and line too.
     expect(
       await page.getByTestId('compare-trend-interest').locator('.compare-trend-cost-bar').count(),
     ).toBeGreaterThan(oneMixCostBars)
     await expect(
-      page.getByTestId('compare-trend-indexation').locator('.compare-trend-line-dashed'),
+      page.getByTestId('compare-trend-indexation').locator('.compare-trend-cost-stem'),
+    ).toHaveCount(30)
+    await expect(
+      page.getByTestId('compare-trend-indexation').locator('.compare-trend-diamond'),
+    ).toHaveCount(30)
+    await expect(
+      page.getByTestId('compare-trend-indexation').locator('.compare-trend-line'),
     ).toHaveCount(2)
   })
 

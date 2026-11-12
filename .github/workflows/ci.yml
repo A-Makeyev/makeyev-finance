@@ -75,8 +75,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Keep the browser binaries between runs: a cache hit still runs the apt
+      # dependency install, but skips the large CDN download that failed
+      # transiently in run #135.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      # The browser download and the apt dependency install both hit external
+      # mirrors, and either can fail transiently (run #135 failed here and the
+      # test step was skipped, so the report had no results at all). Retry the
+      # whole install a few times before giving up.
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: |
+          for attempt in 1 2 3; do
+            if npx playwright install --with-deps chromium; then
+              exit 0
+            fi
+            echo "::warning::Playwright browser install failed (attempt $attempt of 3); retrying in 15s."
+            sleep 15
+          done
+          echo "::error::Playwright browsers could not be installed after 3 attempts."
+          exit 1
 
       # One config, one app: the webServer builds and boots the production
       # Next server (see playwright.config.ts). No separate legacy suite.
@@ -149,7 +173,15 @@ jobs:
       - name: Fail the run when tests failed
         if: always() && steps.test-step.outcome != 'success'
         run: |
-          echo "::error::Playwright outcome was '${{ steps.test-step.outcome }}'. Report published; failing the run."
+          outcome="${{ steps.test-step.outcome }}"
+          if [ "$outcome" = "skipped" ]; then
+            # 'skipped' means an earlier step failed (usually the browser
+            # install), not that the tests failed. Point at the real cause
+            # instead of reporting a Playwright outcome that never happened.
+            echo "::error::Playwright never ran: an earlier step failed. Fix the first failing step above; this report has no test results."
+          else
+            echo "::error::Playwright outcome was '$outcome'. Report published; failing the run."
+          fi
           exit 1
 
   deploy:

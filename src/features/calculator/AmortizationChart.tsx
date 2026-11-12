@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
 import {
   alignedDualTicks,
-  formatAxisShekel,
+  formatAxisShekelDetailed,
   niceRange,
   niceTicks,
   svgRound,
@@ -11,6 +11,7 @@ import {
 } from '@/lib/charts'
 import { paymentComposition } from '@/lib/amortization'
 import { useTooltipClamp } from '@/hooks/useTooltipClamp'
+import { useTooltipPointer } from '@/hooks/useTooltipPointer'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 
 /** One chart-ready period row - mapped from the schedule table's source. */
@@ -75,8 +76,11 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
   // Tooltip element + plot box, for the edge-clamp hook.
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const plotRef = useRef<HTMLDivElement | null>(null)
-  // Re-clamp whenever the tooltip re-anchors to another period.
-  useTooltipClamp(tooltipRef, plotRef, active)
+  // The callout sits just above the cursor, not at a fixed height.
+  const { pointerY, trackPointer } = useTooltipPointer()
+  // Re-clamp whenever the tooltip re-anchors to another period or the pointer
+  // moves vertically and the callout has to be pulled back inside the plot.
+  useTooltipClamp(tooltipRef, plotRef, active !== null ? `${active}:${Math.round(pointerY)}` : null)
 
   const geometry = useMemo(() => {
     if (rows.length === 0) return null
@@ -169,12 +173,6 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
 
   const activeRow = active !== null ? rows[active] : null
   const activeComponent = active !== null ? components[active] : null
-  // The tooltip hangs just above the balance line at the hovered period - the
-  // line is the curve being read, and the payment bars behind it are a tall
-  // block on every period, so anchoring to those would pin the callout near
-  // the top of the chart. It deliberately does NOT follow the pointer: the
-  // callout belongs to the graph, not to the cursor.
-  const activeAnchorY = activeRow ? yBalance(activeRow.balance) : MARGIN.top
   const xTicks = xAxisTicks(rows.length, monthly)
   // The payments axis is a DIFFERENT scale per granularity: a yearly row
   // carries the 12 monthly payments of its year, a monthly row one payment.
@@ -193,6 +191,7 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
     const relative = ((event.clientX - bounds.left) / bounds.width) * WIDTH - MARGIN.left
     const index = Math.floor((relative - pad) / Math.max(slot, 1e-9))
     setActive(Math.max(0, Math.min(rows.length - 1, index)))
+    trackPointer(event, event.currentTarget)
     setHovering(true)
   }
 
@@ -245,7 +244,7 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
                 dy="0.32em"
                 className="chart-tick chart-tick-end"
               >
-                {formatAxisShekel(tick)}
+                {formatAxisShekelDetailed(tick)}
               </text>
             </g>
           ))}
@@ -270,7 +269,7 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
                 dy="0.32em"
                 className="chart-tick chart-tick-balance"
               >
-                {formatAxisShekel(tick)}
+                {formatAxisShekelDetailed(tick)}
               </text>
             </g>
           ))}
@@ -474,10 +473,10 @@ export function AmortizationChart({ rows, periodLabel, monthly = false }: Amorti
               // property from `transform`) lifts the callout above the hovered
               // point without fighting that clamp.
               left: `${svgRound((x(active!) / WIDTH) * 100)}%`,
-              // Percent of the plot box, which is exactly the SVG: the tooltip
-              // is positioned against `.amort-plot`, not the whole chart, so a
-              // viewBox y in [0, HEIGHT] maps straight onto it.
-              top: `${svgRound((activeAnchorY / HEIGHT) * 100)}%`,
+              // Percent of the plot box: the tooltip is positioned against
+              // `.amort-plot`, so this follows the cursor and the clamp hook
+              // keeps the callout inside the plot near an edge.
+              top: `${svgRound(pointerY)}%`,
               // Bottom edge just clear of the point, with a small gap.
               translate: '0 calc(-100% - 10px)',
             }}
