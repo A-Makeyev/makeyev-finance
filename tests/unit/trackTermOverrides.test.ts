@@ -51,6 +51,27 @@ describe('track terms and the longest-term slider', () => {
     expect(useCalculatorStore.getState().tracks.every((track) => track.yearsOverridden)).toBe(true)
   })
 
+  it('treats a legacy saved mix whose tracks share its term as not customized', () => {
+    const store = useCalculatorStore.getState()
+    // A mix saved before yearsOverridden existed carries no flag. Every track
+    // matching the mix's own term means nobody customized anything, so the
+    // slider must change them without asking for a confirmation.
+    const tracks = serializeSavableTracks(store.tracks.map((track) => ({ ...track, amountText: '100,000' })))
+      .map(({ yearsOverridden: _flag, ...track }) => ({ ...track, yearsText: '25' }))
+    store.loadSavedMix(tracks, 25)
+    const loaded = useCalculatorStore.getState()
+    expect(loaded.termYears).toBe(25)
+    expect(loaded.tracks.every((track) => track.yearsText === '25' && !track.yearsOverridden)).toBe(true)
+  })
+
+  it('keeps an explicit per-track override when a saved mix carries the flag', () => {
+    const store = useCalculatorStore.getState()
+    const tracks = serializeSavableTracks(store.tracks.map((track) => ({ ...track, amountText: '100,000' })))
+    tracks[0] = { ...tracks[0], yearsOverridden: true, yearsText: '25' }
+    store.loadSavedMix(tracks, 25)
+    expect(useCalculatorStore.getState().tracks[0].yearsOverridden).toBe(true)
+  })
+
   it('updates the displayed longest term after removing the longest track', () => {
     const store = useCalculatorStore.getState()
     store.setTermYears(10)

@@ -38,7 +38,7 @@ export function formatCurrency(value: number): string {
  * deliberately different from the he-IL currency formatter.
  */
 export function formatGroupedNumber(value: number): string {
-  return value.toLocaleString('en-US')
+  return (Number.isFinite(value) ? value : 0).toLocaleString('en-US')
 }
 
 /** Parses user-typed money text: strips ₪ signs, commas and whitespace. */

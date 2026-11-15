@@ -88,7 +88,7 @@ export function MessageModal({
           <div>
             <h2
               data-testid="modal-title"
-              className="text-[1.5em] font-bold"
+              className="text-[26px] font-bold"
               style={{ color: accent }}
             >
               {success ? t('contact.modal.successTitle') : t('contact.modal.failureTitle')}
@@ -96,7 +96,7 @@ export function MessageModal({
           </div>
           <button
             type="button"
-            className="flex items-center justify-center w-[34px] h-[34px] rounded-full text-[24px] font-semibold text-ink bg-transparent border-none cursor-pointer outline-none transition-[transform,color] duration-300 hover:rotate-90 hover:text-soft-red"
+            className="flex items-center justify-center w-[44px] h-[44px] rounded-full text-[28px] font-semibold text-ink bg-transparent border-none cursor-pointer outline-none transition-[transform,color] duration-300 hover:rotate-90 hover:text-soft-red"
             data-modal-close
             data-testid="message-modal-close"
             aria-label="close"
@@ -112,12 +112,12 @@ export function MessageModal({
             <p
               id="modal-user"
               data-testid="modal-user"
-              className="text-center text-[1.2em] font-semibold leading-relaxed break-words"
+              className="text-center text-[21px] font-semibold leading-relaxed break-words"
             >
               {t('contact.modal.successUser', { name: firstName })}
             </p>
           )}
-          <p data-testid="modal-body" className="text-center text-[19px] leading-relaxed">
+          <p data-testid="modal-body" className="text-center text-[21px] leading-relaxed">
             {success ? (
               t('contact.modal.successBody')
             ) : isHebrew ? (
@@ -125,7 +125,7 @@ export function MessageModal({
                 {t('contact.modal.failureBodyPrefix')}{' '}
                 <a
                   href={`tel:${SITE.phoneDisplay}`}
-                  className="text-[19px] font-semibold text-ink hover:text-soft-blue transition-colors"
+                  className="text-[21px] font-semibold text-ink hover:text-soft-blue transition-colors"
                 >
                   {SITE.phoneDisplay}
                 </a>{' '}
@@ -145,7 +145,7 @@ export function MessageModal({
             >
               <p
                 data-testid="modal-detail"
-                className="text-center text-[15px] font-medium mb-1.5"
+                className="text-center text-[17px] font-medium mb-1.5"
                 style={{ color: accent }}
               >
                 {state.detail}
@@ -176,7 +176,7 @@ export function MessageModal({
                   key={item.to}
                   to={item.to}
                   onClick={onClose}
-                  className="hero-btn btn-black remove-highlight !m-0 !px-5 !py-2.5 !text-[14px] !font-semibold !rounded-lg"
+                  className="hero-btn btn-black remove-highlight !m-0 !px-5 !py-2.5 !text-[15px] !font-semibold !rounded-lg"
                 >
                   {item.label}
                 </Link>

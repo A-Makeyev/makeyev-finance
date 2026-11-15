@@ -6,6 +6,10 @@ export class ComparePage {
   async goto() {
     await this.page.goto('/compare')
     await expect(this.page.getByTestId('compare-scenario-editor-1')).toBeVisible()
+    // The editor is server-rendered: wait for hydration so the forms are
+    // controlled before a spec types into them (an early fill is silently
+    // overwritten by React's first render).
+    await this.page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
   }
 
   async expectMixSwitcher() {

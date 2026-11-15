@@ -58,6 +58,13 @@ describe('number formatting parity with legacy', () => {
   })
   it('uses en-US grouping inside inputs (legacy convention)', () => {
     expect(formatGroupedNumber(1234567)).toBe('1,234,567')
+    expect(formatGroupedNumber(0)).toBe('0')
+  })
+
+  it('degrades non-finite grouped values to 0 instead of "NaN"', () => {
+    expect(formatGroupedNumber(NaN)).toBe('0')
+    expect(formatGroupedNumber(Infinity)).toBe('0')
+    expect(formatGroupedNumber(-Infinity)).toBe('0')
   })
 })
 

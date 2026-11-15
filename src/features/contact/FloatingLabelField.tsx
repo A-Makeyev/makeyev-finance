@@ -17,6 +17,15 @@ export interface FloatingLabelFieldProps {
   testId?: string
   textarea?: boolean
   inputDir?: 'rtl' | 'ltr'
+  /**
+   * Align the value to the page's start edge while the input keeps its own
+   * direction. The phone field is `dir="ltr"` so digits and a leading `+`
+   * stay in reading order; in Hebrew that alone would park the number at the
+   * left, so this flips only the alignment (same idea as the date field's
+   * `html[dir='rtl'] .date-field` rule in globals.css). In an LTR input
+   * `text-end` is the right edge, which is the Hebrew start edge.
+   */
+  alignToPageStart?: boolean
   formDir?: 'rtl' | 'ltr'
   maxLength?: number
   rows?: number
@@ -31,6 +40,7 @@ export function FloatingLabelField({
   testId,
   textarea = false,
   inputDir = 'ltr',
+  alignToPageStart = false,
   formDir = 'ltr',
   maxLength,
   rows = 5,
@@ -69,8 +79,10 @@ export function FloatingLabelField({
     // the border darkens toward the original soft-black.
     status === 'neutral' && 'border-line-soft shadow-black focus:border-line-strong',
     // Logical, not a physical left/right picked from the language: the field
-    // starts its text at the page's start edge either way.
-    'text-start',
+    // starts its text at the page's start edge either way. A field that keeps
+    // its own LTR direction (the phone) opts into `text-end` so its value
+    // still starts at the right in Hebrew.
+    alignToPageStart ? 'text-end' : 'text-start',
   )
 
   return (

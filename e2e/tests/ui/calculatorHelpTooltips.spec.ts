@@ -320,7 +320,7 @@ test('calculator help tooltip - the label never forwards hover/click to the "?" 
   // Behavioral check on the term tooltip (the reported one): sweep the whole
   // label text - the icon must never :hover or recolor from a distance, and
   // clicking the text must not open the panel.
-  const termText = page.locator('label.term-slider .label-help-row .label-help-text').first()
+  const termText = page.locator('.term-slider .label-help-row .label-help-text').first()
   await termText.scrollIntoViewIfNeeded()
   const box = await termText.boundingBox()
   expect(box, 'term label text is visible').not.toBeNull()

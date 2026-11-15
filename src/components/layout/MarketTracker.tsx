@@ -47,9 +47,10 @@ const TREND_ARROWS: Record<'up' | 'down' | 'flat', string> = {
 
 /**
  * Movement colors follow the international ticker convention (up green, down
- * red, flat lightblue as the neutral) - deliberately UNLIKE the CBS Indexes
- * strip above, which keeps the Israeli reading (up red, down green). The
- * class names stay semantic and the mapping lives in globals.css: names
+ * red, flat blue) using the shared --strip-* literal palette. The CBS Indexes
+ * strip above uses the same green/red/blue values but keeps the Israeli
+ * mapping (up red, down green), so only the colours match, not the meaning.
+ * The class names stay semantic and the mapping lives in globals.css: names
  * white, the price and the change share the row's movement color.
  */
 const TREND_CLASS: Record<'up' | 'down' | 'flat', string> = {

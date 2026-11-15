@@ -14,7 +14,6 @@ import {
 } from '@/stores/questionWishlistStore'
 import { useCalculatorStore, type TrackState } from '@/stores/calculatorStore'
 import { useLocalizedResultsTopics } from '@/lib/resultsTopics'
-import { useMediaQuery } from '@/hooks/useScrolled'
 import { cn } from '@/lib/cn'
 import { FloatingLabelField } from './FloatingLabelField'
 
@@ -95,10 +94,6 @@ const FIELD_DEFS: Array<{ name: FieldName; required: boolean }> = [
 export function ContactForm({ variant, onOutcome, registerReset }: ContactFormProps) {
   const { t, i18n } = useTranslation()
   const isHebrew = i18n.language.startsWith('he')
-  const isLarge = useMediaQuery('(min-width: 1101px)')
-  const isSmall500 = useMediaQuery('(max-width: 500px)')
-  void isLarge
-  void isSmall500
   const fields = FIELD_DEFS.filter((f) => variant === 'main' || f.name !== 'email')
 
   const [values, setValues] = useState<Record<FieldName, string>>({
@@ -115,10 +110,6 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
   // re-translated when the site switches Hebrew ⇄ English.
   const wishlistTopics = useLocalizedResultsTopics(wishlistItems)
   const [sending, setSending] = useState(false)
-  const [dots, setDots] = useState(0)
-  const [plane, setPlane] = useState(false)
-  void dots
-  void plane
   const timers = useRef<number[]>([])
 
   // A visitor arriving with topics saved under the current app sees them.
@@ -159,8 +150,6 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     setWebsite('')
     resetLabels()
     setSending(false)
-    setDots(0)
-    setPlane(false)
   }
 
   useEffect(() => {
@@ -168,23 +157,8 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only registration, exactly the legacy contract
   }, [])
 
-  const startSendingAnimation = () => {
-    if (isHebrew) {
-      setPlane(true)
-      return
-    }
-    ;[0, 1, 2].forEach((x) => {
-      later(() => {
-        setDots(x + 1)
-        if (x === 2) setPlane(true)
-      }, x * 250)
-    })
-  }
-
   const resetFormOnError = () => {
     setSending(false)
-    setDots(0)
-    setPlane(false)
   }
 
   const sendEmail = async () => {
@@ -255,8 +229,6 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     setSelectedTimes([])
     later(() => {
       setSending(false)
-      setDots(0)
-      setPlane(false)
     }, 1000)
   }
 
@@ -265,13 +237,11 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
     document.body.style.cursor = 'progress'
     setSending(true)
     if (!window.navigator.onLine) {
-      startSendingAnimation()
       onOutcome({ status: 'failure', detail: t('offlineBanner') })
       resetFormOnError()
       document.body.style.cursor = ''
       return
     }
-    startSendingAnimation()
     void sendEmail()
   }
 
@@ -303,6 +273,10 @@ export function ContactForm({ variant, onOutcome, registerReset }: ContactFormPr
               maxLength={name === 'message' ? 999 : 99}
               formDir={isHebrew ? 'rtl' : 'ltr'}
               inputDir={isLtrField ? 'ltr' : isHebrew ? 'rtl' : 'ltr'}
+              // The phone holds a number: it keeps LTR order so a leading
+              // `+` or spaces never reorder, but in Hebrew its value still
+              // starts at the right edge like every typed field around it.
+              alignToPageStart={isHebrew && name === 'phone'}
               registration={{
                 name,
                 value: values[name],

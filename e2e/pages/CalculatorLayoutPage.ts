@@ -7,6 +7,37 @@ export class CalculatorLayoutPage {
     await this.page.getByTestId('sample-quotes').locator('summary').click()
   }
 
+  /** Edits the mix, then opens the "replace unsaved mix" sample confirm. */
+  async openFirstSampleConfirm() {
+    await this.page.getByTestId('property-value').fill('2000000')
+    await this.openSamples()
+    await this.page.locator('.sample-quote-button').first().click()
+    await expect(this.page.getByTestId('sample-quote-confirm')).toBeVisible()
+  }
+
+  /**
+   * The confirm's cancel and load actions must read as one pair: same height,
+   * centred on the same baseline, and cancel styled as a secondary button
+   * rather than the calculator's underlined text link.
+   */
+  async expectSampleConfirmActionsAligned() {
+    const cancel = this.page.getByTestId('sample-quote-cancel')
+    const load = this.page.getByTestId('sample-quote-confirm-load')
+    const [cancelBox, loadBox] = await Promise.all([cancel.boundingBox(), load.boundingBox()])
+    expect(cancelBox).not.toBeNull()
+    expect(loadBox).not.toBeNull()
+    expect(Math.abs(cancelBox!.height - loadBox!.height)).toBeLessThan(1)
+    expect(
+      Math.abs(cancelBox!.y + cancelBox!.height / 2 - (loadBox!.y + loadBox!.height / 2)),
+    ).toBeLessThan(1)
+    const cancelStyle = await cancel.evaluate((element) => {
+      const style = getComputedStyle(element)
+      return { borderWidth: style.borderTopWidth, decoration: style.textDecorationLine }
+    })
+    expect(cancelStyle.borderWidth).toBe('1px')
+    expect(cancelStyle.decoration).toBe('none')
+  }
+
   async expectAlignedSamples() {
     const cards = this.page.locator('.sample-quote-button')
     await expect(cards).toHaveCount(6)

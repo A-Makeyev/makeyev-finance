@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatCurrency } from '@/lib/format'
-import { arcPath, donutSegments, midAngle, svgRound } from '@/lib/charts'
+import { arcPath, donutSegments, midAngle, radialLabelAngle, svgRound } from '@/lib/charts'
 import { useDonutTooltipClamp } from '@/hooks/useDonutTooltipClamp'
 import { useTooltipPresence } from '@/hooks/useTooltipPresence'
 
@@ -198,9 +198,11 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
                   d={arcPath(CENTER, CENTER, R_OUTER, R_INNER, insetStart, insetEnd)}
                   fill={slice.color}
                 />
-                {/* Small slices stay true to their size; omit labels that
-                    cannot fit clearly inside the ring. */}
-                {percent >= 8 && (
+                {/* Every slice carries its share: a wide slice prints it
+                    flat, while a thin one rotates the number along the
+                    radius so it still fits inside the narrow arc instead of
+                    spilling past the ring. */}
+                {percent > 0 && (
                   <text
                     // Rounded like every other chart coordinate: Math.cos/sin
                     // are not required to be correctly rounded, so Node and
@@ -210,6 +212,11 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
                     y={labelY}
                     className="donut-slice-label"
                     style={{ fill: slice.labelColor }}
+                    transform={
+                      percent < 8
+                        ? `rotate(${svgRound(radialLabelAngle(mid))} ${labelX} ${labelY})`
+                        : undefined
+                    }
                   >
                     {percent}%
                   </text>
@@ -239,7 +246,9 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
           >
             <strong>{activeSlice.label}</strong>
             <span>
-              {formatCurrency(activeSlice.value)} · {activeSlice.percent}%
+              {formatCurrency(activeSlice.value)}
+              <span className="tooltip-dot-separator">·</span>
+              {activeSlice.percent}%
             </span>
           </div>
         )}

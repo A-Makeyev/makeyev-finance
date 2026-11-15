@@ -1882,6 +1882,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
 
     loadSavedMix: (tracks, termYears, scenario, id, label) => {
       set((s) => {
+        const mixTermYears = Math.min(MAX_YEARS, Math.max(1, Math.round(termYears)))
         // Defensive cap only: the server schema already bounds both, but a
         // malformed payload must not be able to grow the editor past its
         // limits.
@@ -1890,7 +1891,12 @@ export const useCalculatorStore = create<CalculatorStore>()(
           type: track.type,
           amountText: track.amountText,
           yearsText: track.yearsText,
-          yearsOverridden: track.yearsOverridden ?? true,
+          // A mix saved before the flag existed has no per-track override
+          // unless its term actually differs from the mix's own: defaulting
+          // every legacy track to `true` made the term slider demand a
+          // confirmation for a mix nobody had customized.
+          yearsOverridden:
+            track.yearsOverridden ?? (Number(track.yearsText) !== mixTermYears),
           rateText: track.rateText,
           resetMonths: normalizeResetMonths(track.type, track.resetMonths ?? 0),
           graceMonths: normalizeGraceMonths(
@@ -1903,7 +1909,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
           isAutoRate: Boolean(track.rateText.trim()),
           loanShareMemory: null,
         }))
-        s.termYears = Math.min(MAX_YEARS, Math.max(1, Math.round(termYears)))
+        s.termYears = mixTermYears
         s.activePreset = null
         s.startingPointDirty = false
         s.loadedMixId = id ?? null

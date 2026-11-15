@@ -8,6 +8,19 @@ test('accepts a negative market-margin discount', async ({ calc }) => {
 })
 
 for (const language of ['hebrew', 'english'] as const) {
+  test(`sample quote confirm actions align and cancel is a button: ${language}`, async ({
+    calc,
+  }) => {
+    await seedLanguage(calc.page, language)
+    await calc.goto()
+    await calc.page.setViewportSize({ width: 400, height: 900 })
+    const layout = new CalculatorLayoutPage(calc.page)
+    await layout.openFirstSampleConfirm()
+    await layout.expectSampleConfirmActionsAligned()
+  })
+}
+
+for (const language of ['hebrew', 'english'] as const) {
   for (const theme of ['light', 'dark'] as const) {
     test(`sample cards and track layout: ${language}, ${theme}`, async ({ calc }, testInfo) => {
       await seedLanguage(calc.page, language)

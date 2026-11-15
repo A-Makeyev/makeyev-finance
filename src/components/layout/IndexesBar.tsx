@@ -15,13 +15,16 @@ import { MARQUEE_COPIES } from '@/lib/marquee'
  * arrows/colors per trend, Hebrew typographic percent-minus, Google-search
  * deep link, CPI payload pushed into the calculator for real inflation data.
  *
- * Color note: the legacy JS constants differed slightly from its CSS palette;
- * these tokens match the legacy RUNTIME (rendered) values.
+ * Color note: the values below are the SHARED top-strip palette defined in
+ * globals.css (--strip-*), the same literal green/red/blue the Markets ticker
+ * rows use. The MAPPING stays the Israeli reading: a rising index is RED
+ * (inflation up is bad news), a falling one is GREEN. The tickers keep the
+ * opposite mapping (up green, down red).
  */
 const TREND_COLORS: Record<TrendDirection, string> = {
-  up: 'rgb(210, 60, 60)',
-  down: 'rgb(35, 210, 65)',
-  flat: 'lightblue',
+  up: 'var(--strip-red)',
+  down: 'var(--strip-green)',
+  flat: 'var(--strip-blue)',
 }
 
 const TREND_ARROWS: Record<TrendDirection, string> = {

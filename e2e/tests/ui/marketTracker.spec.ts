@@ -68,11 +68,11 @@ async function recordFlashes(page: Page): Promise<void> {
 /**
  * The two movement tints, mirrored from the .markets-tick-* rules in
  * globals.css: an UP tick is GREEN and a DOWN tick is RED, the international
- * ticker convention (user-requested) - deliberately unlike the CBS Indexes
- * strip, whose own ticks keep the Israeli reading (up red, down green).
+ * ticker convention (user-requested). The CBS Indexes strip uses the same
+ * literal green/red palette but keeps the Israeli mapping (up red, down green).
  */
-const FLASH_UP = 'rgba(35, 210, 65, 0.14)'
-const FLASH_DOWN = 'rgba(210, 60, 60, 0.14)'
+const FLASH_UP = 'rgba(46, 230, 107, 0.16)'
+const FLASH_DOWN = 'rgba(255, 90, 90, 0.16)'
 
 interface RecordedFlash {
   tick: 'up' | 'down'
@@ -518,19 +518,18 @@ test.describe('Markets strip', () => {
     )
   })
 
-  test('movement colors follow the international ticker convention (up green, down red, flat lightblue)', async ({
+  test('movement colors follow the international ticker convention (up green, down red, flat blue)', async ({
     page,
   }) => {
     await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
     await page.goto('/')
     await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
 
-    // The tickers deliberately use the OPPOSITE mapping of the CBS Indexes
-    // strip above them (user-requested): a rise is GREEN and a fall is RED
-    // here - the international ticker convention - while the indexes keep
-    // the Israeli reading (up red, down green) of the very same palette.
-    // Asserted on the rendered colour of the whole value pair, which is
-    // what a visitor sees.
+    // The tickers use the international ticker mapping (up green, down red);
+    // the CBS Indexes strip above keeps the Israeli reading (up red, down
+    // green). Only the literal palette is shared (user-requested), not the
+    // meaning. Asserted on the rendered colour of the whole value pair, which
+    // is what a visitor sees.
     // Fixtures: bitcoin +1.24% (up), nasdaq -0.33% (down), sp500 0.00% (flat).
     const colours = (await page.evaluate(`(() => {
       const read = (id) => {
@@ -543,12 +542,55 @@ test.describe('Markets strip', () => {
       return { up: read('bitcoin'), down: read('nasdaq'), flat: read('sp500') }
     })()`)) as Record<'up' | 'down' | 'flat', string[]>
 
-    const TICKER_UP_GREEN = 'rgb(35, 185, 55)'
-    const TICKER_DOWN_RED = 'rgb(210, 60, 60)'
-    const NEUTRAL_FLAT = 'rgb(173, 216, 230)' // computed `lightblue`
+    const TICKER_UP_GREEN = 'rgb(46, 230, 107)'
+    const TICKER_DOWN_RED = 'rgb(255, 90, 90)'
+    const NEUTRAL_FLAT = 'rgb(127, 212, 255)'
     expect(colours.up).toEqual([TICKER_UP_GREEN, TICKER_UP_GREEN])
     expect(colours.down).toEqual([TICKER_DOWN_RED, TICKER_DOWN_RED])
     expect(colours.flat).toEqual([NEUTRAL_FLAT, NEUTRAL_FLAT])
+  })
+
+  test('index values use the same literal palette with the Israeli mapping', async ({ page }) => {
+    // User-requested: the Indexes numbers and the ticker numbers must use
+    // exactly the same colours, while each keeps its own meaning. The CPI
+    // fixture rises (106 after 105, +0.4% / +3.5% year), so a rising index is
+    // RED - the same literal red a FALLING ticker gets (nasdaq -0.33%).
+    await installExternalMocks(page)
+    await mockMarketQuotes(page, () => ({ status: 200, body: snapshotBody(MIXED_QUOTES) }))
+    await page.goto('/')
+    await expect(page.getByTestId('indexes-bar')).toHaveAttribute('data-state', 'ready')
+    await expect(page.getByTestId('market-tracker')).toHaveAttribute('data-state', 'ready')
+
+    const colours = (await page.evaluate(`(() => {
+      const anchor = document.querySelector(
+        '[data-testid="indexes-bar"] .indexes-group:not([data-marquee-clone]) a',
+      )
+      const indexValues = [...anchor.querySelectorAll('span')]
+        .filter((span) => (span.getAttribute('style') || '').includes('color'))
+        .map((span) => getComputedStyle(span).color)
+      const tickerUp = document.querySelector(
+        '[data-testid="market-row-bitcoin"] .markets-price',
+      )
+      const tickerDown = document.querySelector(
+        '[data-testid="market-row-nasdaq"] .markets-price',
+      )
+      return {
+        indexValues,
+        tickerUp: getComputedStyle(tickerUp).color,
+        tickerDown: getComputedStyle(tickerDown).color,
+      }
+    })()`)) as { indexValues: string[]; tickerUp: string; tickerDown: string }
+
+    // A rising index wears the tickers' down-red, not their up-green...
+    expect(colours.indexValues).toHaveLength(3)
+    expect(colours.indexValues).toEqual([
+      colours.tickerDown,
+      colours.tickerDown,
+      colours.tickerDown,
+    ])
+    // ...and the two literals really are distinct, so this cannot pass by
+    // both strips collapsing onto one colour.
+    expect(colours.tickerUp).not.toBe(colours.tickerDown)
   })
 
   test('shows skeleton bars while loading and never blocks the nav', async ({ page }) => {

@@ -49,6 +49,16 @@ export class ContactFormPage {
   async blurField(name: 'name' | 'phone' | 'email'): Promise<void> {
     await this.field(name).blur()
   }
+
+  /**
+   * Computed text-align of a field, read as a string expression because the
+   * e2e tsconfig has no DOM lib. Asserts which edge typed text starts from.
+   */
+  async textAlignOf(name: 'name' | 'phone' | 'email' | 'message'): Promise<string> {
+    return this.page.evaluate(
+      `(() => getComputedStyle(document.querySelector('#main-${name}')).textAlign)()`,
+    )
+  }
 }
 
 /** Page Object for the home-page action-form modal (short variant). */

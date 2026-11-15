@@ -131,6 +131,19 @@ strong {
   --soft-black-background: rgba(15, 15, 15, 0.5);
   --soft-blue-background: rgba(35, 170, 222, 0.4);
   --soft-white-background: rgba(255, 255, 255, 0.2);
+  /* Shared literal palette for the two top strips (Markets tickers and the
+     CBS Indexes): one green, one red, one blue, so both bars use EXACTLY the
+     same colours. Each strip keeps its own direction mapping (see below):
+     tickers read up green / down red, indexes read up red / down green (a
+     rising index is bad news). Brighter than the soft-* brand hues because
+     these digits are small and sit on the deliberately dark chrome in both
+     themes, so they are strip literals, not theme roles. The wash values are
+     the same hues at low alpha, painted behind a tick. */
+  --strip-green: rgb(46, 230, 107);
+  --strip-red: rgb(255, 90, 90);
+  --strip-blue: rgb(127, 212, 255);
+  --strip-green-wash: rgba(46, 230, 107, 0.16);
+  --strip-red-wash: rgba(255, 90, 90, 0.16);
   --red-shadow: 0.5px 1px 1px 0.5px var(--soft-red);
   --blue-shadow: 0.5px 1px 1px 0.5px var(--soft-blue);
   --grey-shadow: 0.5px 1px 1px 0.5px var(--soft-grey);
@@ -1433,31 +1446,27 @@ img {
 }
 
 [data-testid='action-form-modal'] [data-testid='action-callback-times'] button span:first-child {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 [data-testid='action-form-modal'] [data-testid='action-callback-times'] button span:last-child {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 [data-testid='action-form-modal'] #submit-form {
   height: 40px;
-  margin-top: 12px;
+  margin-top: 20px;
 }
 
-/* The shared close control is 36px with a 24px glyph; that reads oversized on
-   this short form, so the dialog gets a smaller box and glyph. It stays a
-   30px target, still comfortably clickable and keyboard-focusable. */
-[data-testid='action-form-modal'] > [data-testid='action-form-modal-close'] {
-  height: 30px;
-  width: 30px;
-  font-size: 20px;
-  inset-block-start: 4px;
-  inset-inline-end: 6px;
-}
+/* The close control inherits the shared 44px AppModal target (see
+   AppModal.tsx). It used to be shrunk to 30px here for this short form, which
+   left it under the comfortable touch size - keep the shared size instead. */
 
 .modal-actions {
   display: flex;
+  /* Keep mixed-height actions on one baseline (a text link next to a padded
+     button used to sit low and look detached). */
+  align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
 }
@@ -2036,9 +2045,9 @@ img {
 
    Layout: five rows (ticker / price / signed change), no heading, no
    links. Movement colors follow the international ticker convention
-   (user-requested): up green, down red, flat lightblue as the neutral -
-   deliberately UNLIKE the Indexes strip above, which keeps the Israeli
-   convention (up red, down green).
+   (user-requested): up green, down red, flat blue. The literal palette is
+   shared with the CBS Indexes strip above, which keeps the Israeli mapping
+   (up red, down green).
 =========================================================================== */
 .markets {
   display: flex;
@@ -2237,18 +2246,19 @@ img {
 
 /* A tick paints a faint tint behind the value cells: green when it moved
    up, red when it moved down, matching the movement colors above (the
-   international ticker convention, unlike the Indexes strip). Subtle enough
+   international ticker convention; the Indexes strip uses the same literal
+   palette with the opposite mapping). Subtle enough
    to read as a light wash rather than a solid block, and never drawn across
    the name. The tint uses the same hue as the row's static movement color,
    so every ticker shows the same green (and the same red) - the only reason
    a GOLD down row can look like it has its own green is the flash rectangle's
    alpha wash over red text; the hue itself is identical to the row text. */
 .markets-tick-up {
-  background-color: rgba(35, 185, 55, 0.14);
+  background-color: var(--strip-green-wash);
 }
 
 .markets-tick-down {
-  background-color: rgba(210, 60, 60, 0.14);
+  background-color: var(--strip-red-wash);
 }
 
 /* Opacity is the only animated property: compositor-friendly, and the end
@@ -2285,21 +2295,21 @@ img {
   font-variant-numeric: tabular-nums;
 }
 
-/* Use the Indexes palette with ticker semantics: rising green, falling
-   red, and flat light blue. */
+/* Ticker semantics on the shared strip palette: rising green, falling
+   red, flat blue. */
 .markets-row.market-change-up .markets-price,
 .markets-row.market-change-up .markets-change {
-  color: var(--soft-green);
+  color: var(--strip-green);
 }
 
 .markets-row.market-change-down .markets-price,
 .markets-row.market-change-down .markets-change {
-  color: var(--soft-red);
+  color: var(--strip-red);
 }
 
 .markets-row.market-change-flat .markets-price,
 .markets-row.market-change-flat .markets-change {
-  color: lightblue;
+  color: var(--strip-blue);
 }
 
 /* Stale rows dim the WHOLE row (values included) below indexes brightness:
@@ -6752,9 +6762,13 @@ input[type='number']::-webkit-outer-spin-button {
   background: var(--calc-field);
   border: 1px solid var(--calc-line);
   box-shadow: 0 6px 18px rgba(15, 15, 15, 0.12);
-  padding: 8px 12px;
-  font-size: 0.8rem;
-  font-weight: 700;
+  padding: 9px 12px;
+  /* Same typographic voice as the Indexes/Markets hover tooltip
+     (.hover-tooltip-panel: Heebo, weight 500, line-height 1.5), one step
+     larger: the old 0.8rem bold set read cramped over the plots. */
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.5;
   font-family: 'Heebo', sans-serif;
   color: var(--calc-ink);
   pointer-events: none;
@@ -6821,6 +6835,16 @@ input[type='number']::-webkit-outer-spin-button {
   height: 10px;
   flex: none;
   border-radius: 2px;
+}
+
+/* Middle-dot separator inside chart/donut callouts ("₪1,200 · 45%"): a
+   single word space on each side read cramped at tooltip size, so the dot
+   carries its own inline padding instead of relying on spaces. */
+.tooltip-dot-separator {
+  display: inline-block;
+  padding-inline: 5px;
+  color: var(--calc-muted);
+  font-weight: 500;
 }
 
 /* The plot (the SVG only, below the legend) is the hover tooltip's
@@ -12355,8 +12379,14 @@ html[dir='rtl'] .comment-text {
   background: var(--calc-paper);
   border: 1px solid var(--calc-line);
   border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 9px 12px;
+  /* Same typographic voice as the Indexes/Markets hover tooltip
+     (.hover-tooltip-panel: Heebo, weight 500, line-height 1.5), one step
+     larger than the old 13px: the callout read cramped over the plot. */
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: 'Heebo', sans-serif;
+  line-height: 1.5;
   color: var(--calc-ink);
   pointer-events: none;
   /* max-content keeps the callout the same width near either edge. With an

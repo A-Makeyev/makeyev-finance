@@ -38,6 +38,20 @@ test.describe('contact form - validation states', () => {
     await expect(contact.submitButton).toHaveClass(/border-soft-blue/)
   })
 
+  test('the phone starts at the right in Hebrew but keeps LTR digit order', async ({
+    contact,
+  }) => {
+    await contact.goto()
+    // A number keeps dir="ltr" so a leading + or spaces never reorder, which
+    // is what an RTL direction would do to "+972 50 1234567".
+    await expect(contact.field('phone')).toHaveAttribute('dir', 'ltr')
+    // Alignment follows the page: the value starts at the right edge like the
+    // Hebrew fields around it (computed from `text-end` on an LTR input).
+    expect(await contact.textAlignOf('phone')).toBe('end')
+    // Text fields keep their RTL direction, which already starts on the right.
+    await expect(contact.field('name')).toHaveAttribute('dir', 'rtl')
+  })
+
   test('valid submission opens the success modal with first-name greeting', async ({ contact }) => {
     await contact.goto()
     await contact.fill(VALID_CONTACT)

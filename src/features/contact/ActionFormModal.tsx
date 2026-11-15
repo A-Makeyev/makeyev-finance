@@ -70,10 +70,10 @@ export function ActionFormModal({ open, onOpenChange }: ActionFormModalProps) {
           <div
             className={`mb-2 ${isHebrew ? 'text-right' : 'text-left'}`}
           >
-            <h1 className="text-[18px] font-bold leading-tight text-ink sm:text-[19px]">
+            <h1 className="text-[20px] font-bold leading-tight text-ink sm:text-[21px]">
               {t('contact.actionModal.title')}
             </h1>
-            <p className="mt-1 text-[13px] font-medium text-soft-blue sm:text-[14px]">
+            <p className="mt-1 text-[14px] font-medium text-soft-blue sm:text-[15px]">
               {t('contact.actionModal.subtitle')}
             </p>
           </div>

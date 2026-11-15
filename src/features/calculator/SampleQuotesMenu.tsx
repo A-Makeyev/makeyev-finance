@@ -78,7 +78,7 @@ export function SampleQuotesMenu() {
           <div className="mt-6 modal-actions modal-actions-reversed">
             <button
               type="button"
-              className="reset-button"
+              className="rounded-[5px] border border-[var(--calc-line)] px-5 py-2 text-[15px] font-medium text-[var(--calc-muted)] transition-colors hover:text-[var(--calc-teal-dark)]"
               data-testid="sample-quote-cancel"
               onClick={() => setPending(null)}
             >
@@ -86,7 +86,7 @@ export function SampleQuotesMenu() {
             </button>
             <button
               type="button"
-              className="calculate-button"
+              className="rounded-[5px] border border-transparent bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
               data-testid="sample-quote-confirm-load"
               onClick={() => pending && load(pending)}
             >
