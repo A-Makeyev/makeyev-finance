@@ -414,6 +414,37 @@
     <div class="last-updated" id="lastUpdated"></div>
     <ul class="reports-list" id="reportsList">
         <li class="report-item">
+          <a href="Run-137/index.html" class="report-link" aria-label="Open report for Run 137"></a>
+            <div class="report-content">
+              <div class="run-header">
+                <span class="run-number">Run #137 <span class="badge badge-failed">✗ Failed</span></span>
+                <span class="test-type">Playwright Tests</span>
+                <span class="run-duration">⏱ 5m 46s</span>
+              </div>
+              <div class="run-date">15-11-2026 08:38PM</div>
+              <div class="run-source">
+                <span class="run-branch">⎇ main</span>
+                <span class="run-sha-label">commit</span>
+                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/328b3d65c0cd645639838f661ba6b2aa5b0c848b" target="_blank" rel="noopener" title="328b3d65c0cd645639838f661ba6b2aa5b0c848b">328b3d6</a>
+                <a class="report-chip" href="Run-137/index.html" target="_blank" rel="noopener">📊 HTML report<svg class="chip-ext-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
+              </div>
+              <div class="commit-subject" title="Polish chart and contact UI, and fix loaded-mix term handling.">
+                <span class="subject-text">Polish chart and contact UI, and fix loaded-mix term handling.</span>
+                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
+              </div>
+              <div class="test-stats">
+                <span class="stat-item">Passed: <span class="stat-value">405</span></span>
+                <span class="stat-item">Failed: <span class="stat-value">1</span></span>
+                <span class="stat-item">Skipped: <span class="stat-value">17</span></span>
+                <span class="stat-breakdown">
+                  <span class="stat-item">UI: <span class="stat-value">416</span></span> <a class="fail-chip" href="Run-137/index.html#?testId=23b7e76c67ab0dfb1f65-ea22da5f22d9a590e6a2" target="_blank" rel="noopener" title="ui/compare.spec.ts:1137 - scenario editors stay inside their cards at every width - english">1 failed</a>
+                  <span class="stat-item">API: <span class="stat-value">7</span></span>
+                </span>
+              </div>
+            </div>
+          </a>
+        </li>
+        <li class="report-item">
           <a href="Run-136/index.html" class="report-link" aria-label="Open report for Run 136"></a>
             <div class="report-content">
               <div class="run-header">
@@ -683,37 +714,6 @@
             </div>
           </a>
         </li>
-        <li class="report-item">
-          <a href="Run-127/index.html" class="report-link" aria-label="Open report for Run 127"></a>
-            <div class="report-content">
-              <div class="run-header">
-                <span class="run-number">Run #127 <span class="badge badge-success">✓ Passed</span></span>
-                <span class="test-type">Playwright Tests</span>
-                <span class="run-duration">⏱ 6m 24s</span>
-              </div>
-              <div class="run-date">03-11-2026 10:04AM</div>
-              <div class="run-source">
-                <span class="run-branch">⎇ main</span>
-                <span class="run-sha-label">commit</span>
-                <a class="run-sha" href="https://github.com/A-Makeyev/makeyev-finance/commit/3c5248fbf4222a98a4354f82150f3096a35d4b89" target="_blank" rel="noopener" title="3c5248fbf4222a98a4354f82150f3096a35d4b89">3c5248f</a>
-                <a class="report-chip" href="Run-127/index.html" target="_blank" rel="noopener">📊 HTML report<svg class="chip-ext-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
-              </div>
-              <div class="commit-subject" title="Tighten narrow calculator rows and date typing">
-                <span class="subject-text">Tighten narrow calculator rows and date typing</span>
-                <button type="button" class="subject-toggle" aria-expanded="false" aria-label="Toggle full commit message" hidden>▾</button>
-              </div>
-              <div class="test-stats">
-                <span class="stat-item">Passed: <span class="stat-value">367</span></span>
-                <span class="stat-item">Failed: <span class="stat-value">0</span></span>
-                <span class="stat-item">Skipped: <span class="stat-value">17</span></span>
-                <span class="stat-breakdown">
-                  <span class="stat-item">UI: <span class="stat-value">377</span></span>
-                  <span class="stat-item">API: <span class="stat-value">7</span></span>
-                </span>
-              </div>
-            </div>
-          </a>
-        </li>
     </ul>
   </div>
   <script>
@@ -851,7 +851,7 @@
     })();
 
     // Auto-refresh logic
-    const currentRun = "136";
+    const currentRun = "137";
     let checkCount = 0;
 
     async function checkForUpdates() {
