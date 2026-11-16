@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { test, expect } from '../../fixtures'
 import type { CalculatorPage } from '../../pages/CalculatorPage'
 import { ils } from '../../support/ils'
@@ -1016,6 +1017,12 @@ const LAYOUT_PROBLEMS = `(() => {
     probe.remove()
     return width
   }
+  // Glyph advances are fractional, so rounding a select's text and its room to
+  // whole pixels can flip this comparison by a hair even when nothing is cut
+  // off. The failure this guard exists for was an option losing about half its
+  // text (the type list at ~82px), so a couple of pixels of slack costs no
+  // coverage and keeps platform font rasterisation from failing the run.
+  const SLACK = 3
   const fits = (select, texts, where) => {
     const style = getComputedStyle(select)
     const room =
@@ -1024,9 +1031,9 @@ const LAYOUT_PROBLEMS = `(() => {
       parseFloat(style.paddingInlineEnd)
     texts.forEach((text) => {
       const needed = textWidth(select, text)
-      if (needed > room) {
+      if (needed > room + SLACK) {
         problems.push(
-          where + ' needs ' + Math.round(needed) + 'px for "' + text + '" but has ' + Math.round(room) + 'px',
+          where + ' needs ' + needed.toFixed(1) + 'px for "' + text + '" but has ' + room.toFixed(1) + 'px',
         )
       }
     })
@@ -1130,6 +1137,18 @@ const LAYOUT_PROBLEMS = `(() => {
   return problems
 })()`
 
+/**
+ * The page's fonts come from the Google Fonts CDN and swap in after first
+ * paint, so a measurement taken too early reads the fallback font's metrics.
+ * Those differ (the CI runner's Linux fallback is a pixel wider than a local
+ * Windows render), which turned the select-fit guard into a first-paint race.
+ * Wait for the swap to settle, exactly as the market-strip and chart checks do.
+ */
+async function measureLayout(page: Page): Promise<string[]> {
+  await page.evaluate('document.fonts.ready')
+  return (await page.evaluate(LAYOUT_PROBLEMS)) as string[]
+}
+
 /** Desktop widths, from the 768px results-grid switch up to the 1280px shell. */
 const EDITOR_WIDTHS = [768, 900, 1024, 1160, 1280, 1600]
 
@@ -1151,7 +1170,7 @@ for (const language of ['hebrew', 'english'] as const) {
         'dir',
         language === 'hebrew' ? 'rtl' : 'ltr',
       )
-      expect(await page.evaluate(LAYOUT_PROBLEMS), `compare layout at ${width}px`).toEqual([])
+      expect(await measureLayout(page), `compare layout at ${width}px`).toEqual([])
     }
 
     // A third scenario reflows the editor grid; re-check the invariants with the
@@ -1160,7 +1179,7 @@ for (const language of ['hebrew', 'english'] as const) {
     await page.setViewportSize({ width: 1024, height: 900 })
     await page.getByTestId('compare-duplicate-1').click()
     await expect(page.getByTestId('compare-scenario-editor-3')).toBeVisible()
-    expect(await page.evaluate(LAYOUT_PROBLEMS), 'compare layout with 3 scenarios').toEqual([])
+    expect(await measureLayout(page), 'compare layout with 3 scenarios').toEqual([])
   })
 }
 
@@ -1174,7 +1193,7 @@ test('phone and tablet widths hold the same invariants', async ({ page }) => {
       await page.goto('/compare')
       await expect(page.getByTestId('compare-shell')).toBeVisible()
       expect(
-        await page.evaluate(LAYOUT_PROBLEMS),
+        await measureLayout(page),
         `compare layout at ${width}px (${language})`,
       ).toEqual([])
     }

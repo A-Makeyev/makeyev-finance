@@ -18,6 +18,9 @@ test.describe('mortgage calculator - summary notes', () => {
     for (const width of widths) {
       await calc.page.setViewportSize({ width, height: 900 })
       await calc.page.locator('[data-testid="lawyer-amount"]').scrollIntoViewIfNeeded()
+      // The fields' font comes from the Google Fonts CDN and swaps in after
+      // first paint; measuring the text on the fallback font races that swap.
+      await calc.page.evaluate('document.fonts.ready')
       // String-form evaluate: the e2e tsconfig has no DOM lib.
       const metrics = (await calc.page.evaluate(`(() => {
         const ctx = document.createElement('canvas').getContext('2d')

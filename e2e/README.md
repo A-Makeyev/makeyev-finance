@@ -69,6 +69,23 @@ happens once. Single-suite values can stay local to their spec.
 intercepts plus the same-origin `/api/contact` responder; `marketMocks.ts` owns the `/api/market/quotes` responder. New
 mocked endpoints belong there, not inline in specs.
 
+## CI troubleshooting
+
+**Fallback-font metric failures.** The app loads Heebo/Lato from the Google
+Fonts CDN with `display=swap`, so text is first laid out in the platform's
+fallback font. The runner's Linux fallback is a pixel or two wider than a
+local render, which is enough to fail a strict text-fit assertion (the classic
+symptom: a width check that is a pixel short only on CI, and fails every retry
+rather than intermittently). Any check that measures rendered text or expects
+specific glyph widths must wait for the swap first:
+
+```ts
+await page.evaluate('document.fonts.ready')
+```
+
+Then compare with a small tolerance, because glyph advances are fractional and
+rounding differs between platforms (see `compare.spec.ts` `SLACK`).
+
 ## Evaluating in the page
 
 The e2e tsconfig has no DOM lib, so `page.evaluate` callbacks that touch the
