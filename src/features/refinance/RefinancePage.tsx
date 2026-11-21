@@ -950,16 +950,11 @@ export function RefinancePage() {
         {/* The forecast assumption applies to BOTH sides: applying a rate
             rise only to the existing mortgage would bias the comparison. */}
         <div className="mt-5 rounded-2xl border border-line-soft bg-surface-card p-4 sm:p-5">
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-            <div>
-              <h2 className="text-base font-semibold text-ink">
-                {t('refinance.resetHeading')}
-              </h2>
-              <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-                {t('refinance.resetHint')}
-              </p>
-            </div>
-            <label className="input-group sm:w-48">
+          <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+            <h2 className="text-base font-semibold text-ink">
+              {t('refinance.resetHeading')}
+            </h2>
+            <label className="input-group w-40">
               {t('refinance.resetStepLabel')}
               <TextField
                 testId="refinance-reset-step"
@@ -969,6 +964,9 @@ export function RefinancePage() {
               />
             </label>
           </div>
+          <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+            {t('refinance.resetHint')}
+          </p>
           {sharedMissing.includes('resetStep:invalid') && (
             <p role="alert" className="mt-2 text-xs text-danger">
               {t('refinance.resetStepInvalid')}
