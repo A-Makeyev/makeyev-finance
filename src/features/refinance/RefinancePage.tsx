@@ -11,6 +11,7 @@ import {
   type AmortizationMethod,
   type TrackType,
 } from '@/lib/amortization'
+import { DateField } from '@/components/ui/DateField'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { formatAmountWithCaret, formatCurrency, formatGroupedNumber } from '@/lib/format'
@@ -56,10 +57,19 @@ import { useSavedRefinances, type SavedRefinance } from '@/features/refinances/a
  * stores the whole page (existing tracks, proposed tracks, fee) in the caller's
  * own saved-refinance collection.
  *
- * Historical resets are preserved by the data model, but this projection
- * assumes no future rate change on the existing tracks. The page states that
- * assumption; a reset-aware replay is a later step.
+ * Rate resets are reset-aware on both sides: the existing tracks reset on
+ * their recorded next/last reset date and cadence (counted from today's
+ * as-of payment), and the proposed tracks on their own new cadence. The rate
+ * change at each reset is the user's stated assumption, defaulting to 0, which
+ * holds every current rate flat. The page states that assumption.
  */
+
+/** The local calendar day, as the date-only string the projection expects. */
+function todayDateOnly(): string {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
 
 function signedCurrency(value: number): string {
   return `${value > 0 ? '+' : value < 0 ? '-' : ''}${formatCurrency(Math.abs(value))}`
@@ -167,6 +177,10 @@ export function RefinancePage() {
   )
   const [feeText, setFeeText] = useState('')
   const [feeMode, setFeeMode] = useState<FeeMode>('cash')
+  const [resetStepText, setResetStepText] = useState('0')
+  // The projection starts at the as-of payment, so the date stays fixed for
+  // the session even if the user leaves the tab open past midnight.
+  const [asOfDate] = useState(todayDateOnly)
   const [loadedRefinance, setLoadedRefinance] = useState<LoadedRefinance | null>(null)
 
   const savedMixes = useSavedMixes(signedIn)
@@ -193,6 +207,8 @@ export function RefinancePage() {
     )
     setFeeText(saved.snapshot.feeAmount > 0 ? formatGroupedNumber(saved.snapshot.feeAmount) : '')
     setFeeMode(saved.snapshot.feeMode)
+    // Proposals saved before the assumption existed load flat.
+    setResetStepText(String(saved.snapshot.existingResetStepPercent ?? 0))
     setLoadedRefinance({ id: saved.id, label: saved.label })
   }
 
@@ -205,6 +221,9 @@ export function RefinancePage() {
   }, [deepLinkId, savedRefinances.data])
 
   const feeAmount = Math.max(0, parseNumericText(feeText) ?? 0)
+  // A blank assumption means "no change"; the field is an assumption, not a
+  // required loan figure, so it does not block the projection.
+  const resetStepPercent = parseNumericText(resetStepText) ?? 0
 
   const projection = useMemo<RefinanceProjection>(
     () =>
@@ -215,8 +234,10 @@ export function RefinancePage() {
         proposedTracks: toProposedTrackInputs(proposedTracks),
         feeAmount,
         feeMode,
+        asOfDate,
+        resetStepPercent,
       }),
-    [tracks, proposedTracks, feeAmount, feeMode, t],
+    [tracks, proposedTracks, feeAmount, feeMode, asOfDate, resetStepPercent, t],
   )
 
   function patchTrack(id: string, patch: Partial<ExistingMortgageTrack>) {
@@ -437,6 +458,31 @@ export function RefinancePage() {
                           </option>
                         </FlipSelect>
                       </label>
+                      {/* Only a track with a contractual reset has a next
+                          reset date to record. Fixed and prime tracks hide
+                          it instead of showing a field that cannot apply. */}
+                      {defaultResetMonthsFor(track.type ?? 'fixed') > 0 && (
+                        <label className="input-group sm:col-span-2">
+                          {t('refinance.nextResetLabel')}
+                          <span className="input-wrap">
+                            <DateField
+                              value={track.nextRateResetDate ?? ''}
+                              onChange={(value) =>
+                                patchTrack(track.id, { nextRateResetDate: value || null })
+                              }
+                              placeholder={t('calculator.approvalDateFormat')}
+                              describedBy={`refinance-next-reset-hint-${index + 1}`}
+                              testId={`refinance-next-reset-${index + 1}`}
+                            />
+                          </span>
+                          <span
+                            id={`refinance-next-reset-hint-${index + 1}`}
+                            className="visually-hidden"
+                          >
+                            {t('refinance.nextResetHint')}
+                          </span>
+                        </label>
+                      )}
                     </div>
                     {missing.length > 0 && (
                       <p className="mt-2 text-xs text-danger" role="status">
@@ -491,6 +537,7 @@ export function RefinancePage() {
                 proposedTracks={proposedTracks}
                 feeAmount={feeAmount}
                 feeMode={feeMode}
+                resetStepPercent={resetStepPercent}
                 loadedRefinance={loadedRefinance}
                 onSaved={handleSaved}
                 onDeletedLoaded={() => setLoadedRefinance(null)}
@@ -730,6 +777,35 @@ export function RefinancePage() {
           </section>
         </div>
 
+        {/* The forecast assumption applies to BOTH sides: applying a rate
+            rise only to the existing mortgage would bias the comparison. */}
+        <div className="mt-5 rounded-2xl border border-line-soft bg-surface-card p-4 sm:p-5">
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div>
+              <h2 className="text-base font-semibold text-ink">
+                {t('refinance.resetHeading')}
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+                {t('refinance.resetHint')}
+              </p>
+            </div>
+            <label className="input-group sm:w-48">
+              {t('refinance.resetStepLabel')}
+              <TextField
+                testId="refinance-reset-step"
+                value={resetStepText}
+                onChange={setResetStepText}
+                suffix={t('refinance.resetStepSuffix')}
+              />
+            </label>
+          </div>
+          {projection.missing.includes('resetStep:invalid') && (
+            <p role="alert" className="mt-2 text-xs text-danger">
+              {t('refinance.resetStepInvalid')}
+            </p>
+          )}
+        </div>
+
         {projection.ready && projection.existing && projection.proposed ? (
           <section className="mt-6" data-testid="refinance-results">
             <div className="grid gap-5 lg:grid-cols-2">
@@ -738,13 +814,13 @@ export function RefinancePage() {
                 <dl className="mt-3 space-y-2 text-sm">
                   <div className="flex justify-between gap-3">
                     <dt className="text-ink-muted">{t('refinance.existingPayment')}</dt>
-                    <dd className="font-semibold text-ink">
+                    <dd className="font-semibold text-ink" data-testid="refinance-existing-payment">
                       {formatCurrency(projection.existing.monthlyPayment)}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="text-ink-muted">{t('refinance.existingInterest')}</dt>
-                    <dd className="font-semibold text-ink">
+                    <dd className="font-semibold text-ink" data-testid="refinance-existing-interest">
                       {formatCurrency(projection.existing.totalInterest)}
                     </dd>
                   </div>

@@ -21,7 +21,7 @@ const input = { label: 'Proposal', snapshot: { version: 1 as const,
   existingTracks: [emptyExistingMortgageTrack('one')],
   proposedTracks: [{ type: 'fixed' as const, sharePercent: 100, annualRatePercent: 4,
     termYears: 20, method: 'spitzer' as const, resetMonths: 0 }],
-  feeAmount: 2000, feeMode: 'cash' as const } }
+  feeAmount: 2000, feeMode: 'cash' as const, existingResetStepPercent: 0 } }
 
 describe('saved refinance ownership and limits', () => {
   it('round-trips inputs and prevents another owner reading, updating or deleting them', async () => {

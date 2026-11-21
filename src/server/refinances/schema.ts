@@ -42,6 +42,9 @@ export const refinanceSnapshotSchema = z
     proposedTracks: z.array(refinanceProposedTrackSchema).min(1).max(MAX_TRACKS),
     feeAmount: z.number().finite().min(0).max(MAX_MONEY),
     feeMode: z.enum(FEE_MODES),
+    /** The reset-rate assumption that priced the projection. Optional with a
+     *  default so proposals saved before it existed still load at 0. */
+    existingResetStepPercent: z.number().finite().min(-100).max(100).default(0),
   })
   .strict()
 

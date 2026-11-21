@@ -11,7 +11,13 @@ import {
   type TrackType,
 } from '@/lib/amortization'
 import { compareCashFlows, type CashFlowComparison } from '@/features/compare/cashflow'
-import { existingMortgageTrackSchema, type ExistingMortgageTrack } from './existingMortgage'
+import { resetMonthsFor } from '@/lib/forecast'
+import { parseDateOnly } from '@/lib/rateValidity'
+import {
+  existingMortgageTrackSchema,
+  projectedResetMonths,
+  type ExistingMortgageTrack,
+} from './existingMortgage'
 
 /**
  * Keep-versus-refinance projection for the /refinance page.
@@ -54,6 +60,19 @@ export interface RefinanceInput {
   /** A verified payoff fee from the bank, not a model estimate. */
   feeAmount: number
   feeMode: FeeMode
+  /**
+   * The date the projection starts (month 1), normally today. The existing
+   * tracks' contractual resets are aligned to it, so a track whose next reset
+   * is in 14 months resets in projected month 14, not at some cadence counted
+   * from an arbitrary month zero.
+   */
+  asOfDate: string
+  /**
+   * Expected cumulative rate change in percentage points at EACH contractual
+   * reset, applied to both sides. 0 (the default) holds every current rate
+   * flat, which is the only defensible base case for an unknown future rate.
+   */
+  resetStepPercent?: number
 }
 
 export interface RefinanceSideSummary {
@@ -149,6 +168,13 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
   if (!Number.isFinite(input.feeAmount) || input.feeAmount < 0 || input.feeAmount > 1_000_000_000_000) {
     return { ...EMPTY, missing: ['fee:invalid'] }
   }
+  const resetStepPercent = input.resetStepPercent ?? 0
+  if (!Number.isFinite(resetStepPercent) || resetStepPercent < -100 || resetStepPercent > 100) {
+    return { ...EMPTY, missing: ['resetStep:invalid'] }
+  }
+  if (parseDateOnly(input.asOfDate) === null) {
+    return { ...EMPTY, missing: ['asOf:invalid'] }
+  }
   const missing: string[] = []
   const results: NonNullable<ReturnType<typeof computeTrackResult>>[] = []
   let totalBalance = 0
@@ -186,6 +212,10 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
       method: track.method,
       resetMonths: track.resetMonths ?? 0,
       annualInflation: FALLBACK_INFLATION,
+      // Reset-aware: the recorded calendar decides WHEN, the stated
+      // assumption decides BY HOW MUCH. A step of 0 keeps the rate flat.
+      rateResetMonths: projectedResetMonths(track, input.asOfDate, track.remainingMonths),
+      rateStepPercent: resetStepPercent,
     })
     if (!result) {
       missing.push(`${key}:invalid`)
@@ -260,6 +290,13 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
         method: track.method as AmortizationMethod,
         resetMonths: track.resetMonths ?? undefined,
         annualInflation: FALLBACK_INFLATION,
+        // The proposal's own new reset calendar starts at its first payment
+        // month, and the same market assumption applies to it.
+        rateResetMonths: resetMonthsFor(
+          track.resetMonths ?? 0,
+          track.termYears as number,
+        ),
+        rateStepPercent: resetStepPercent,
       })
       if (!result) {
         missing.push(`proposed:${index}:invalid`)

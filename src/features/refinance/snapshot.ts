@@ -27,6 +27,8 @@ export interface RefinanceSnapshot {
   proposedTracks: RefinanceProposedTrackSnapshot[]
   feeAmount: number
   feeMode: FeeMode
+  /** The cumulative rate change assumed at each reset when it was saved. */
+  existingResetStepPercent: number
 }
 
 /**
@@ -39,6 +41,8 @@ export function buildRefinanceSnapshot(input: {
   proposedTracks: ProposedTrackInput[]
   feeAmount: number
   feeMode: FeeMode
+  /** Defaults to 0 (flat rates) for callers that have no assumption to pass. */
+  existingResetStepPercent?: number
 }): RefinanceSnapshot | null {
   if (input.proposedTracks.length === 0) return null
   const proposedTracks: RefinanceProposedTrackSnapshot[] = []
@@ -69,6 +73,7 @@ export function buildRefinanceSnapshot(input: {
     proposedTracks,
     feeAmount: input.feeAmount,
     feeMode: input.feeMode,
+    existingResetStepPercent: input.existingResetStepPercent ?? 0,
   })
   return parsed.success ? parsed.data : null
 }

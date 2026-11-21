@@ -1043,7 +1043,7 @@ export const en: { translation: Translation } = {
       openLink: 'Refinance',
       backToCompare: 'Back to the comparison',
       intro:
-        'Compare the existing mortgage with a new proposal. The calculation uses the balance, remaining payments and rate you enter; future rate changes on the existing tracks are not estimated, and indexed tracks use the system CPI assumption.',
+        'Compare the existing mortgage with a new proposal. The calculation uses the balance, remaining payments and rate you enter; future rate changes use each track\'s recorded reset date and the change you enter (0 by default), and indexed tracks use the system CPI assumption.',
       existingLabel: 'Existing mortgage',
       proposedLabel: 'New proposal',
       existingHeading: 'The existing mortgage',
@@ -1070,7 +1070,18 @@ export const en: { translation: Translation } = {
         shares: 'track shares',
         term: 'term',
         tooMany: 'the number of tracks',
+        asOf: 'the calculation date',
+        resetStep: 'the rate-change assumption',
       },
+      nextResetLabel: 'Next rate reset date',
+      nextResetHint:
+        'The date stated on the payoff statement. Without it the projection assumes one full reset cycle from today.',
+      resetHeading: 'Rate-change assumption',
+      resetHint:
+        'Existing tracks reset on their recorded reset date and cadence, counted from today. The change you enter applies cumulatively at every reset on both sides; 0 keeps the current rates flat.',
+      resetStepLabel: 'Change per reset',
+      resetStepSuffix: 'pp',
+      resetStepInvalid: 'The change must be between -100 and 100 percentage points.',
       addTrack: 'Add track',
       removeTrack: 'Remove track',
       newTermLabel: 'New term',

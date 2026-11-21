@@ -53,6 +53,11 @@ export class RefinancePage {
   get saved() { return this.page.getByTestId('save-refinance-saved') }
   get loadMix() { return this.page.getByTestId('refinance-load-mix') }
   get addProposed() { return this.page.getByTestId('refinance-add-proposed-track') }
+  get existingPayment() { return this.page.getByTestId('refinance-existing-payment') }
+  get existingInterest() { return this.page.getByTestId('refinance-existing-interest') }
+  get resetStep() { return this.page.getByTestId('refinance-reset-step') }
+  get existingType() { return this.page.getByTestId('refinance-type-1') }
+  get nextReset() { return this.page.getByTestId('refinance-next-reset-1') }
   async addExisting() {
     await this.page.getByTestId('refinance-track-1').locator('xpath=ancestor::section').getByRole('button', { name: /^(הוסף מסלול|Add track)$/ }).click()
   }

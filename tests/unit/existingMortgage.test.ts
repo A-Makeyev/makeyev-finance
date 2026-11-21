@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  addMonthsToDateOnly,
   emptyExistingMortgageTrack,
   existingMortgageSchema,
   existingMortgageTrackSchema,
   linkageForTrackType,
+  monthsUntilDate,
   originalTermMonthsFromDates,
+  projectedResetMonths,
   totalKnownBalance,
   type ExistingMortgage,
   type ExistingMortgageTrack,
@@ -165,5 +168,102 @@ describe('existing mortgage model', () => {
     expect(linkageForTrackType('variableIndexed')).toBe('cpi')
     expect(linkageForTrackType('fixedIndexed')).toBe('cpi')
     expect(linkageForTrackType(null)).toBeNull()
+  })
+})
+
+describe('projected reset calendar', () => {
+  it('adds whole months without rolling a month-end date into the next month', () => {
+    expect(addMonthsToDateOnly('2026-01-31', 1)).toBe('2026-02-28')
+    expect(addMonthsToDateOnly('2024-01-31', 1)).toBe('2024-02-29')
+    expect(addMonthsToDateOnly('2030-01-15', 60)).toBe('2035-01-15')
+    expect(addMonthsToDateOnly('2026-02-30', 1)).toBeNull()
+  })
+
+  it('rounds a date up to the first payment on or after it', () => {
+    // 2026-11-21 to 2027-03-01: the March payment is the 4th payment.
+    expect(monthsUntilDate('2026-11-21', '2027-03-01')).toBe(4)
+    // A reset later in the as-of month already applies to month 1.
+    expect(monthsUntilDate('2026-11-21', '2026-11-30')).toBe(1)
+    expect(monthsUntilDate('2026-11-21', '2026-11-01')).toBe(1)
+    // A reset after the as-of day in the following month applies to month 2.
+    expect(monthsUntilDate('2026-11-21', '2026-12-31')).toBe(2)
+    expect(monthsUntilDate('not-a-date', '2027-03-01')).toBeNull()
+  })
+
+  it('starts the existing calendar at the recorded next reset, not month zero', () => {
+    const resets = projectedResetMonths(
+      track({
+        type: 'variable',
+        resetMonths: 60,
+        lastRateResetDate: '2025-01-15',
+        nextRateResetDate: '2030-01-15',
+      }),
+      '2026-11-20',
+      278,
+    )
+
+    // 2030-01-15 is 38 payments away; the next resets follow every 60 months.
+    expect(resets).toEqual([38, 98, 158, 218, 278])
+
+    const withoutStatedNext = projectedResetMonths(
+      track({
+        type: 'variable',
+        resetMonths: 60,
+        lastRateResetDate: '2025-01-15',
+        nextRateResetDate: null,
+      }),
+      '2026-11-20',
+      120,
+    )
+    expect(withoutStatedNext).toEqual([38, 98])
+  })
+
+  it('rolls a stale recorded reset forward by whole cadences', () => {
+    expect(
+      projectedResetMonths(
+        track({
+          type: 'variable',
+          resetMonths: 60,
+          nextRateResetDate: '2020-01-01',
+          lastRateResetDate: '2015-01-01',
+        }),
+        '2026-11-21',
+        120,
+      )[0],
+    ).toBe(38)
+  })
+
+  it('falls back to one full cadence only when no reset date was recorded', () => {
+    expect(
+      projectedResetMonths(
+        track({ type: 'variable', resetMonths: null, lastRateResetDate: null, nextRateResetDate: null }),
+        '2026-11-21',
+        120,
+      ),
+    ).toEqual([13, 25, 37, 49, 61, 73, 85, 97, 109])
+  })
+
+  it('projects no resets for a track that does not reset or after the term ends', () => {
+    expect(
+      projectedResetMonths(
+        track({ type: 'fixed', resetMonths: 0, nextRateResetDate: '2027-03-01' }),
+        '2026-11-21',
+        120,
+      ),
+    ).toEqual([])
+    expect(
+      projectedResetMonths(
+        track({ type: 'variable', resetMonths: 60, nextRateResetDate: '2027-03-01' }),
+        '2026-11-21',
+        3,
+      ),
+    ).toEqual([])
+    expect(
+      projectedResetMonths(
+        track({ type: 'variable', resetMonths: 60, nextRateResetDate: '2027-03-01' }),
+        'bad-date',
+        120,
+      ),
+    ).toEqual([])
   })
 })

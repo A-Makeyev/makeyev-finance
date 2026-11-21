@@ -4,9 +4,10 @@ import {
   MAX_TRACKS,
   MAX_YEARS,
   TRACK_TYPES,
+  defaultResetMonthsFor,
   type TrackType,
 } from '@/lib/amortization'
-import { parseDateOnly } from '@/lib/rateValidity'
+import { parseDateOnly, toDateOnly } from '@/lib/rateValidity'
 
 /**
  * The existing mortgage, modelled separately from a new mix.
@@ -211,6 +212,118 @@ export function originalTermMonthsFromDates(
     (maturity.getUTCFullYear() - start.getUTCFullYear()) * 12 +
     (maturity.getUTCMonth() - start.getUTCMonth())
   )
+}
+
+/**
+ * Adds whole calendar months to a date-only string. The day is kept when the
+ * target month has it, otherwise the last day of that month is used, so a
+ * 31st-of-the-month reset never rolls into the next month.
+ */
+export function addMonthsToDateOnly(dateOnly: string, months: number): string | null {
+  const ms = parseDateOnly(dateOnly)
+  if (ms === null || !Number.isInteger(months)) return null
+  const source = new Date(ms)
+  const year = source.getUTCFullYear()
+  const month = source.getUTCMonth() + months
+  const day = source.getUTCDate()
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  return toDateOnly(Date.UTC(year, month, Math.min(day, lastDay)))
+}
+
+/**
+ * Monthly payments between an as-of date and a later date, rounded up to the
+ * first payment that falls on or after it. A payment is assumed to fall on the
+ * as-of day each month: a reset on 2027-03-01 with an as-of date of 2026-11-21
+ * therefore first affects projected month 4 (the March payment), and a reset
+ * later in the as-of month first affects month 1.
+ */
+export function monthsUntilDate(asOfDate: string, targetDate: string): number | null {
+  const asOfMs = parseDateOnly(asOfDate)
+  const targetMs = parseDateOnly(targetDate)
+  if (asOfMs === null || targetMs === null) return null
+  const asOf = new Date(asOfMs)
+  const target = new Date(targetMs)
+  let months =
+    (target.getUTCFullYear() - asOf.getUTCFullYear()) * 12 +
+    (target.getUTCMonth() - asOf.getUTCMonth())
+  if (target.getUTCDate() > asOf.getUTCDate()) months += 1
+  return Math.max(1, months)
+}
+
+/** The reset cadence to project, or 0 when the track does not reset. */
+function projectedCadence(
+  track: Pick<ExistingMortgageTrack, 'type' | 'resetMonths'>,
+): number {
+  if (track.resetMonths !== null) {
+    return Number.isInteger(track.resetMonths) && track.resetMonths > 0
+      ? track.resetMonths
+      : 0
+  }
+  return track.type === null ? 0 : defaultResetMonthsFor(track.type)
+}
+
+/** A safety bound for rolling a stale recorded reset date forward. */
+const MAX_RESET_ROLLS = 1_200
+
+/**
+ * The projected contractual reset months for an existing track, counted from
+ * the as-of payment (month 1).
+ *
+ * The calendar comes from the record, never from month zero: the next reset is
+ * the stated `nextRateResetDate`, or the last recorded reset plus one cadence,
+ * rolled forward by whole cadences until it is in the future. Only when the
+ * record has no reset dates at all does it fall back to one full cadence from
+ * the as-of date, which is the neutral assumption and is stated in the UI.
+ * Resets after the remaining term are dropped.
+ */
+export function projectedResetMonths(
+  track: Pick<
+    ExistingMortgageTrack,
+    'type' | 'resetMonths' | 'lastRateResetDate' | 'nextRateResetDate'
+  >,
+  asOfDate: string,
+  remainingMonths: number,
+): number[] {
+  const asOfMs = parseDateOnly(asOfDate)
+  if (asOfMs === null || !Number.isInteger(remainingMonths) || remainingMonths <= 0) {
+    return []
+  }
+  const cadence = projectedCadence(track)
+  if (cadence <= 0) return []
+
+  const next =
+    track.nextRateResetDate ??
+    (track.lastRateResetDate === null
+      ? null
+      : addMonthsToDateOnly(track.lastRateResetDate, cadence))
+
+  let first: number
+  if (next === null) {
+    // No recorded calendar: assume the current rate was set at the as-of date,
+    // so the first reset follows one full cadence (its month index is cadence
+    // + 1, matching `resetMonthsFor`).
+    first = cadence + 1
+  } else {
+    let nextMs = parseDateOnly(next)
+    if (nextMs === null) return []
+    let rolls = 0
+    while (nextMs <= asOfMs && rolls < MAX_RESET_ROLLS) {
+      const rolled = addMonthsToDateOnly(toDateOnly(nextMs), cadence)
+      if (rolled === null) return []
+      nextMs = parseDateOnly(rolled) as number
+      rolls += 1
+    }
+    if (nextMs <= asOfMs) return []
+    const months = monthsUntilDate(asOfDate, toDateOnly(nextMs))
+    if (months === null) return []
+    first = months
+  }
+
+  const resets: number[] = []
+  for (let month = first; month <= remainingMonths; month += cadence) {
+    resets.push(month)
+  }
+  return resets
 }
 
 /** A new track: every contract field unknown until the user or a document fills it. */

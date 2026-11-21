@@ -52,6 +52,7 @@ export function SaveRefinanceButton({
   proposedTracks,
   feeAmount,
   feeMode,
+  resetStepPercent,
   loadedRefinance,
   onSaved,
   onDeletedLoaded,
@@ -60,6 +61,7 @@ export function SaveRefinanceButton({
   proposedTracks: ProposedTrackState[]
   feeAmount: number
   feeMode: FeeMode
+  resetStepPercent: number
   loadedRefinance: LoadedRefinance | null
   onSaved: (saved: LoadedRefinance) => void
   onDeletedLoaded: () => void
@@ -103,6 +105,7 @@ export function SaveRefinanceButton({
     proposedTracks: toProposedTrackInputs(proposedTracks),
     feeAmount,
     feeMode,
+    existingResetStepPercent: resetStepPercent,
   })
   const canSave = snapshot !== null
   const blockedByCap = atCap && !loadedRefinance

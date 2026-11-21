@@ -86,6 +86,28 @@ test.describe('mortgage refinance - /refinance', () => {
     expect(transform).not.toBe('none')
   })
 
+  test('only a resetting track asks for a reset date, and the assumption moves its payment', async ({ page }) => {
+    const refinance = new RefinancePage(page)
+    await refinance.goto()
+    await refinance.fillExisting('100,000', '5', '120')
+    await refinance.fillProposal('10', '5', '0')
+    await refinance.expectReady()
+
+    // A fixed track has no next reset date to record.
+    await expect(refinance.nextReset).toHaveCount(0)
+    const flatInterest = await refinance.existingInterest.textContent()
+
+    await refinance.existingType.selectOption('variable')
+    await expect(refinance.nextReset).toBeVisible()
+    // With the assumption still at 0 the variable track prices flat.
+    await expect(refinance.existingInterest).toHaveText(flatInterest ?? '')
+
+    // A resetting variable track over 10 years resets before maturity, so a
+    // +1pp assumption raises the remaining interest.
+    await refinance.resetStep.fill('1')
+    await expect(refinance.existingInterest).not.toHaveText(flatInterest ?? '')
+  })
+
   test('keeps a missing balance unknown and hides the projection', async ({ page }) => {
     const refinance = new RefinancePage(page)
     await refinance.goto()

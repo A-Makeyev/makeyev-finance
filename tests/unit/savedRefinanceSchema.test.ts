@@ -56,6 +56,25 @@ describe('savedRefinanceInputSchema', () => {
     expect(savedRefinanceInputSchema.safeParse(valid).success).toBe(true)
   })
 
+  it('defaults a proposal saved before the reset assumption existed to flat rates', () => {
+    // `valid.snapshot` is deliberately the pre-assumption shape.
+    const parsed = savedRefinanceInputSchema.parse(valid)
+    expect(parsed.snapshot.existingResetStepPercent).toBe(0)
+  })
+
+  it('bounds the reset-rate assumption to -100..100 percentage points', () => {
+    for (const existingResetStepPercent of [-100, 0, 100]) {
+      expect(
+        savedRefinanceInputSchema.safeParse(withSnapshot({ existingResetStepPercent })).success,
+      ).toBe(true)
+    }
+    for (const existingResetStepPercent of [-101, 101, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(
+        savedRefinanceInputSchema.safeParse(withSnapshot({ existingResetStepPercent })).success,
+      ).toBe(false)
+    }
+  })
+
   it('keeps the saved-proposal cap at 4', () => {
     expect(MAX_SAVED_REFINANCES).toBe(4)
   })

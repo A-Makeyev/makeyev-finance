@@ -53,6 +53,7 @@ const base = {
     },
   ],
   feeAmount: 2_000,
+  asOfDate: '2026-11-21',
 }
 
 describe('computeRefinance', () => {
@@ -252,6 +253,89 @@ describe('computeRefinance', () => {
     expect(result.proposedPrincipal).toBe(102_000)
     expect(result.proposedAllocations).toEqual([61_200, 40_800])
     expect(result.comparison!.feesDelta).toBe(0)
+  })
+
+  it('applies the reset assumption on the existing track at its recorded reset month', () => {
+    const variable = track({
+      type: 'variable',
+      linkage: 'unlinked',
+      currentBalance: 100_000,
+      contractedAnnualRate: 5,
+      remainingMonths: 12,
+      resetMonths: 60,
+      // The March payment is 3 projected months away, so the reset applies to
+      // month 3, not to a cadence counted from month zero.
+      nextRateResetDate: '2027-02-21',
+      lastRateResetDate: '2022-02-21',
+    })
+    const input = { ...base, tracks: [variable], feeAmount: 0, feeMode: 'cash' as const,
+      proposedTracks: [{ ...base.proposedTracks[0], annualRatePercent: 5 }] }
+
+    const flat = computeRefinance({ ...input, resetStepPercent: 0 })
+    const stepped = computeRefinance({ ...input, resetStepPercent: 1 })
+
+    expect(flat.ready).toBe(true)
+    expect(stepped.ready).toBe(true)
+    // 100,000 at 5% over 12 months is 8,560.75; the first two months are the
+    // same on both paths, then +1pp moves the payment to 8,599.63.
+    expect(flat.existing!.monthly[0].paid).toBeCloseTo(8_560.75, 2)
+    expect(stepped.existing!.monthly[0].paid).toBeCloseTo(flat.existing!.monthly[0].paid, 6)
+    expect(stepped.existing!.monthly[1].paid).toBeCloseTo(flat.existing!.monthly[1].paid, 6)
+    expect(stepped.existing!.monthly[2].paid).toBeCloseTo(8_599.63, 2)
+    // Standard-schedule sums: 2,728.98 flat versus 3,117.76 after the reset.
+    expect(flat.existing!.totalInterest).toBeCloseTo(2_728.98, 2)
+    expect(stepped.existing!.totalInterest).toBeCloseTo(3_117.76, 2)
+  })
+
+  it('holds flat tracks flat and applies the same assumption to a new variable track', () => {
+    const flatTracks = computeRefinance({ ...base, feeMode: 'cash', resetStepPercent: 0 })
+    const stepped = computeRefinance({ ...base, feeMode: 'cash', resetStepPercent: 1 })
+    // The fixed existing track has no reset, so its schedule cannot move.
+    expect(stepped.existing).toEqual(flatTracks.existing)
+
+    const proposed = (resetStepPercent: number) =>
+      computeRefinance({
+        ...base,
+        feeAmount: 0,
+        feeMode: 'cash' as const,
+        resetStepPercent,
+        proposedTracks: [
+          {
+            type: 'variable',
+            sharePercent: 100,
+            annualRatePercent: 5,
+            termYears: 10,
+            method: 'spitzer',
+            resetMonths: 60,
+          },
+        ],
+      })
+    const flatProposal = proposed(0)
+    const steppedProposal = proposed(1)
+
+    // The new track's own five-year calendar resets at month 61.
+    expect(flatProposal.proposed!.monthly[59].paid).toBeCloseTo(
+      steppedProposal.proposed!.monthly[59].paid,
+      6,
+    )
+    expect(steppedProposal.proposed!.monthly[60].paid).toBeGreaterThan(
+      flatProposal.proposed!.monthly[60].paid,
+    )
+    // 27,278.62 flat versus 28,835.16 after the month-61 reset.
+    expect(flatProposal.proposed!.totalInterest).toBeCloseTo(27_278.62, 1)
+    expect(steppedProposal.proposed!.totalInterest).toBeCloseTo(28_835.16, 1)
+  })
+
+  it('refuses an invalid as-of date or reset assumption instead of guessing', () => {
+    const badDate = computeRefinance({ ...base, feeMode: 'cash', asOfDate: '2026-02-30' })
+    expect(badDate.ready).toBe(false)
+    expect(badDate.missing).toContain('asOf:invalid')
+
+    for (const step of [NaN, Infinity, -101, 101]) {
+      const result = computeRefinance({ ...base, feeMode: 'cash', resetStepPercent: step })
+      expect(result.ready).toBe(false)
+      expect(result.missing).toContain('resetStep:invalid')
+    }
   })
 
   it('splits a multi-track existing mortgage into one combined monthly schedule', () => {
