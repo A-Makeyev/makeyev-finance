@@ -30,7 +30,7 @@ export function PendingContent({
     <>
       <span className={pending ? 'invisible' : undefined}>{children}</span>
       {pending && (
-        <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5">
           <FaSpinner
             aria-hidden="true"
             data-testid={spinnerTestId}

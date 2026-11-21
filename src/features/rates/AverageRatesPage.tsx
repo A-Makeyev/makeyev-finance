@@ -1,5 +1,6 @@
 'use client'
 
+import { LoadingIndicator } from '@/components/ui/LoadingIndicator'
 import { useTranslation } from 'react-i18next'
 import { ScrollCue } from '@/components/layout/ScrollCue'
 import { useAverageRates } from '@/services/rates'
@@ -53,7 +54,7 @@ export function AverageRatesPage() {
             data-testid="rates-loading"
             aria-busy="true"
           >
-            <p className="text-base text-ink-muted">{t('rates.loading')}</p>
+            <LoadingIndicator label={t('rates.loading')} className="min-h-24 w-full" />
           </div>
         )}
 

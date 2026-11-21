@@ -14,6 +14,7 @@
  * tracks are priced against derives from it.
  */
 import {
+  combineMonthlySchedules,
   combineSchedules,
   DEFAULT_LAWYER_PERCENT,
   DEFAULT_REALTOR_PERCENT,
@@ -36,6 +37,7 @@ import {
   averageInterestRate,
   averagePaybackRatio,
   type ClosingCostsEstimate,
+  type CombinedMonthlyRow,
   type PropertyPurpose,
   type TransactionCostsEstimate,
 } from '@/lib/amortization'
@@ -99,6 +101,11 @@ export interface ScenarioResult {
   cumulativePayments: Array<{ year: number; cumulativePayment: number }>
   /** Chart data: remaining principal (balance) at the end of each year (goes DOWN to 0) */
   balanceTrend: Array<{ year: number; balance: number }>
+  /**
+   * The combined month-by-month schedule. The cash-flow comparison sums these
+   * rows, so its totals reconcile to the same payments the page reports.
+   */
+  monthlySchedule: CombinedMonthlyRow[]
   /** The combined yearly schedule the chart and the payments table both read. */
   schedule: Array<{
     year: number
@@ -243,6 +250,7 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     paymentTrend: [],
     cumulativePayments: [],
     balanceTrend: [],
+    monthlySchedule: [],
     schedule: [],
     mixShares: [],
     prepaymentTracks: [],
@@ -320,6 +328,7 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     year: row.year,
     balance: row.closing,
   }))
+  const monthlySchedule = combineMonthlySchedules(validResults)
   // The yearly rows the payments table renders (opening balance is derivable
   // from the previous closing, so it is dropped here).
   const scheduleRows = schedule.map((row) => ({
@@ -383,6 +392,7 @@ export function computeScenario(tracks: TrackState[], inputs: SharedBuyerInputs)
     paymentTrend,
     cumulativePayments,
     balanceTrend,
+    monthlySchedule,
     schedule: scheduleRows,
     mixShares,
     prepaymentTracks: validResults.map((result, index) => ({

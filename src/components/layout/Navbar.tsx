@@ -22,6 +22,7 @@ import { Link, usePathname, useRouter } from '@/router'
 import { authClient } from '@/lib/auth-client'
 import { HOVER_CLOSE_DELAY_MS } from '@/lib/timings'
 import { navStartsSolid } from '@/lib/siteChrome'
+import { CalculatorNav } from './CalculatorNav'
 
 const NAV_ITEMS = [
   { to: '/', key: 'nav.home', id: 'home' },
@@ -547,6 +548,9 @@ export function Navbar({
   )
 
   function renderNavItem(item: (typeof NAV_ITEMS)[number]) {
+    if (item.id === 'calculators') {
+      return <CalculatorNav key={item.to} onNavigate={() => { if (menuOpen) closeMenu() }} />
+    }
     const isActive = pathname === item.to
     if (isActive) {
       return (

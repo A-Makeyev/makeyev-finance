@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { LoadingIndicator } from '@/components/ui/LoadingIndicator'
 import { useTranslation } from 'react-i18next'
-import { FaCalculator, FaRegTrashAlt, FaSpinner } from 'react-icons/fa'
+import { FaCalculator, FaRegTrashAlt } from 'react-icons/fa'
 import { AppModal } from '@/components/ui/AppModal'
+import { PendingContent } from '@/components/ui/PendingContent'
 import { useRouter } from '@/router'
 import { formatCurrency, parseAmountText } from '@/lib/format'
 import type { PropertyPurpose } from '@/lib/amortization'
@@ -62,9 +64,7 @@ export function SavedMixesSection() {
       <h2 className="mb-4 text-lg font-semibold text-ink">{t('savedMixes.profileTitle')}</h2>
 
       {isPending && (
-        <p className="text-sm text-ink-muted" data-testid="saved-mixes-loading">
-          {t('savedMixes.loading')}
-        </p>
+        <LoadingIndicator testId="saved-mixes-loading" label={t('savedMixes.loading')} className="w-full" />
       )}
 
       {isError && (
@@ -272,17 +272,13 @@ export function SavedMixesSection() {
               data-testid="delete-mix-confirm"
               disabled={deleteMix.isPending}
               aria-busy={deleteMix.isPending}
-              className="inline-flex items-center gap-2 rounded-[5px] bg-soft-red px-5 py-2 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+              aria-label={deleteMix.isPending ? t('savedMixes.delete') : undefined}
+              className="relative inline-flex items-center justify-center gap-2 rounded-[5px] bg-soft-red px-5 py-2 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
               onClick={confirmDelete}
             >
-              {deleteMix.isPending && (
-                <FaSpinner
-                  aria-hidden="true"
-                  data-testid="delete-mix-spinner"
-                  className="animate-spin"
-                />
-              )}
-              {t('savedMixes.delete')}
+              <PendingContent pending={deleteMix.isPending} spinnerTestId="delete-mix-spinner">
+                {t('savedMixes.delete')}
+              </PendingContent>
             </button>
           </div>
         </div>

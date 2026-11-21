@@ -10,9 +10,9 @@ import {
   FaRegEdit,
   FaRegTrashAlt,
   FaReply,
-  FaSpinner,
 } from 'react-icons/fa'
 import { AppModal } from '@/components/ui/AppModal'
+import { PendingContent } from '@/components/ui/PendingContent'
 import { authClient } from '@/lib/auth-client'
 import { useRouter } from '@/router'
 import { initialsFor } from '@/lib/avatar'
@@ -621,13 +621,13 @@ export function CommentsSection({ slug }: { slug: string }) {
               data-testid="comment-delete-confirm"
               disabled={deleteComment.isPending}
               aria-busy={deleteComment.isPending}
-              className="inline-flex items-center gap-2 rounded-[5px] bg-soft-red px-5 py-2 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+              aria-label={deleteComment.isPending ? t('comments.delete') : undefined}
+              className="relative inline-flex items-center justify-center gap-2 rounded-[5px] bg-soft-red px-5 py-2 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
               onClick={() => void confirmDelete()}
             >
-              {deleteComment.isPending && (
-                <FaSpinner aria-hidden="true" className="animate-spin" />
-              )}
-              {t('comments.delete')}
+              <PendingContent pending={deleteComment.isPending} spinnerTestId="comment-delete-spinner">
+                {t('comments.delete')}
+              </PendingContent>
             </button>
           </div>
         </div>

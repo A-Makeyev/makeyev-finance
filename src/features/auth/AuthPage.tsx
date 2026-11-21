@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FaGoogle, FaSpinner } from 'react-icons/fa'
+import { FaGoogle } from 'react-icons/fa'
 import { authClient } from '@/lib/auth-client'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { CodeInput } from '@/components/ui/CodeInput'
@@ -519,7 +519,9 @@ export function AuthPage() {
     // fold, exactly as it does after any other page's 100vh hero, instead of
     // floating in the middle of a short page.
     <main className="below-chrome auth-page flex min-h-screen items-center justify-center px-4 pb-16">
-      <div className="w-full max-w-md rounded-2xl border border-line-soft bg-surface-card p-6 shadow-[0_10px_30px_-15px_rgba(15,15,15,0.35)] sm:p-8">
+      {/* Light card edge in both themes (see --auth-card-border): --line-soft
+          is a heavy dark grey in light mode and too faint in dark mode. */}
+      <div className="auth-card w-full max-w-md rounded-2xl border bg-surface-card p-6 shadow-[0_10px_30px_-15px_rgba(15,15,15,0.35)] sm:p-8">
         <h1 className="mb-6 text-center text-2xl font-semibold text-ink">
           {t(flow === 'credentials' ? 'auth.pageTitle' : 'auth.resetTitle')}
         </h1>
@@ -568,12 +570,11 @@ export function AuthPage() {
               aria-busy={resend === 'sending'}
               aria-label={resend === 'sending' ? t('auth.submitting') : undefined}
               onClick={onResend}
-              className="inline-flex items-center gap-2 self-center text-sm text-ink-muted underline-offset-2 transition-colors hover:text-ink hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
+              className="relative inline-flex items-center justify-center gap-2 self-center text-sm text-ink-muted underline-offset-2 transition-colors hover:text-ink hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
             >
-              {resend === 'sending' && (
-                <FaSpinner aria-hidden="true" className="inline-block animate-spin" />
-              )}
-              {t('auth.resend')}
+              <PendingContent pending={resend === 'sending'} spinnerTestId="auth-resend-spinner">
+                {t('auth.resend')}
+              </PendingContent>
             </button>
             {/* After the control that caused it: this panel has no fields, so
                 "below the inputs" is "below the resend link". */}
@@ -732,14 +733,16 @@ export function AuthPage() {
                     // 8px gap in BOTH directions (an inline margin on the icon
                     // rides the bidi edge and can end up on the wrong side),
                     // and the pair stays centred while the spinner is up.
-                    className="inline-flex items-center gap-2 self-center text-sm text-ink-muted underline-offset-2 transition-colors hover:text-ink hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
+                    className="relative inline-flex items-center justify-center gap-2 self-center text-sm text-ink-muted underline-offset-2 transition-colors hover:text-ink hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
                   >
-                    {resetResend === 'sending' && (
-                      <FaSpinner aria-hidden="true" className="inline-block animate-spin" />
-                    )}
-                    {resendState === 'waiting'
-                      ? t('auth.resetResendIn', { seconds: resendSeconds })
-                      : t('auth.resetResend')}
+                    <PendingContent
+                      pending={resetResend === 'sending'}
+                      spinnerTestId="auth-reset-resend-spinner"
+                    >
+                      {resendState === 'waiting'
+                        ? t('auth.resetResendIn', { seconds: resendSeconds })
+                        : t('auth.resetResend')}
+                    </PendingContent>
                   </button>
                 )}
               </form>

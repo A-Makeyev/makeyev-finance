@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
+import { LoadingIndicator } from '@/components/ui/LoadingIndicator'
 import { useTranslation } from 'react-i18next'
 import { AppModal } from '@/components/ui/AppModal'
 import { Link } from '@/router'
@@ -157,17 +158,12 @@ export function SavedMixMenu({ mixes, count, max, isPending, isError }: SavedMix
                         style={menuPosition ? { top: menuPosition.top, left: menuPosition.left } : { visibility: 'hidden' }}
                     >
                         {isPending && (
-                            <p className="my-mixes-menu-message" role="status">
-                                {t('savedMixes.loading')}
-                            </p>
+                            <LoadingIndicator className="my-mixes-menu-message w-full" label={t('savedMixes.loading')} />
                         )}
                         {isError && (
                             <p className="my-mixes-menu-message" role="alert">
                                 {t('savedMixes.loadError')}
                             </p>
-                        )}
-                        {!isPending && !isError && mixes.length === 0 && (
-                            <p className="my-mixes-menu-message">{t('savedMixes.noSavedMixes')}</p>
                         )}
                         {mixes.length > 0 && (
                             <ul className="my-mixes-menu-list">

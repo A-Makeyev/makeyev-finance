@@ -206,6 +206,13 @@ describe('deleting an account, step by step', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     })
+    await db.collection('saved_comparisons').insertOne({
+      userId: session.userId,
+      label: 'mine',
+      snapshot: { version: 1 },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
 
     sentMails = []
     await auth.api.deleteUser({ body: { password: 'password123' }, headers: session.headers })
@@ -234,6 +241,7 @@ describe('deleting an account, step by step', () => {
         .countDocuments({ userId: { $in: [session.userId, new ObjectId(session.userId)] } }),
     ).toBe(0)
     expect(await db.collection('saved_mixes').countDocuments({ userId: session.userId })).toBe(0)
+    expect(await db.collection('saved_comparisons').countDocuments({ userId: session.userId })).toBe(0)
   })
 
   it('a re-sent code supersedes the last one, without touching another account', async () => {

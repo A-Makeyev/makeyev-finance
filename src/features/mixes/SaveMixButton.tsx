@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FaCheck, FaSpinner } from 'react-icons/fa'
 import { AppModal } from '@/components/ui/AppModal'
+import { PendingContent } from '@/components/ui/PendingContent'
 import { authClient } from '@/lib/auth-client'
 import { useRouter } from '@/router'
 import {
@@ -379,11 +380,13 @@ export function SaveMixButton() {
               data-testid="save-mix-confirm"
               disabled={saveMix.isPending || duplicateName}
               aria-busy={saveMix.isPending}
-              className="inline-flex items-center gap-2 rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)] disabled:cursor-not-allowed disabled:opacity-70"
+              aria-label={saveMix.isPending ? t('savedMixes.confirm') : undefined}
+              className="relative inline-flex items-center justify-center gap-2 rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)] disabled:cursor-not-allowed disabled:opacity-70"
               onClick={confirmSave}
             >
-              {saveMix.isPending && <FaSpinner aria-hidden="true" className="animate-spin" />}
-              {t('savedMixes.confirm')}
+              <PendingContent pending={saveMix.isPending} spinnerTestId="save-mix-confirm-spinner">
+                {t('savedMixes.confirm')}
+              </PendingContent>
             </button>
           </div>
         </div>

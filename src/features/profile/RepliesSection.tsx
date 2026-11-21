@@ -1,5 +1,6 @@
 'use client'
 
+import { LoadingIndicator } from '@/components/ui/LoadingIndicator'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@/router'
 import { formatRelativeTime } from '@/lib/relativeTime'
@@ -25,9 +26,7 @@ export function RepliesSection() {
       <h2 className="mb-4 text-lg font-semibold text-ink">{t('replies.title')}</h2>
 
       {isPending && (
-        <p className="text-sm text-ink-muted" data-testid="replies-loading">
-          {t('savedMixes.loading')}
-        </p>
+        <LoadingIndicator testId="replies-loading" label={t('savedMixes.loading')} className="w-full" />
       )}
       {isError && (
         <p role="alert" data-testid="replies-error" className="text-sm text-danger">

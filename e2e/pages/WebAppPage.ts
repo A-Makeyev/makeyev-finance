@@ -31,6 +31,9 @@ export class WebAppPage {
   readonly navAccountSignout: Locator
   /** The bar's link row (nav items + social icons), for layout reads. */
   readonly navLinkRow: Locator
+  readonly calculatorsLink: Locator
+  readonly calculatorsToggle: Locator
+  readonly calculatorsMenu: Locator
 
   constructor(page: Page) {
     this.page = page
@@ -52,6 +55,21 @@ export class WebAppPage {
     this.navAccountSignin = page.getByTestId('nav-account-signin')
     this.navAccountSignout = page.getByTestId('nav-account-signout')
     this.navLinkRow = page.locator('#nav-list')
+    this.calculatorsLink = page.getByTestId('nav-link-calculators')
+    this.calculatorsToggle = page.getByTestId('nav-calculators-toggle')
+    this.calculatorsMenu = page.getByTestId('nav-calculators-menu')
+  }
+
+  toolLink(tool: 'calculator' | 'compare' | 'refinance'): Locator {
+    return this.page.getByTestId(`nav-tool-${tool}`)
+  }
+
+  async openMobileNavigation() {
+    await this.page.getByTestId('hamburger').click()
+  }
+
+  async expectNoHorizontalOverflow() {
+    expect(await this.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   }
 
   /**

@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../fixtures'
 import type { CalculatorPage } from '../../pages/CalculatorPage'
+import { ComparePage } from '../../pages/ComparePage'
 import { ils } from '../../support/ils'
 
 /**
@@ -99,6 +100,29 @@ test.describe('mortgage comparison - /compare', () => {
     // while losing the total-interest metric (scenario 2's card wins).
     await expect(page.getByTestId('compare-metric-totalInterest-2')).toHaveClass(/best/)
     await expect(page.getByTestId('compare-metric-avgPayment-1')).toHaveClass(/best/)
+  })
+
+  test('compares cash flow against the baseline and keeps the remaining debt separate', async ({
+    page,
+  }) => {
+    await page.goto('/compare')
+    await expect(page.getByTestId('compare-shell')).toBeVisible()
+    // Baseline: the default 15-year mix. Candidate: the same mix over 30 years.
+    await page.getByTestId('compare-duplicate-1').click()
+    await expect(page.getByTestId('compare-scenario-editor-3')).toBeVisible()
+    await page.getByTestId('compare-term-2').fill('30')
+
+    const compare = new ComparePage(page)
+    await expect(compare.cashFlowSection).toBeVisible()
+    await expect(compare.cashFlowSection).toContainText('השוואת תזרים מול הבסיס')
+
+    // The 30-year mix pays less each month, so the cash-flow delta is positive.
+    await expect(compare.cashFlowFirstPayment).toContainText('+')
+    // ...but it still owes principal when the 15-year baseline is paid off, and
+    // that debt is reported separately instead of being counted as savings.
+    await expect(compare.cashFlowBalance).toContainText('-')
+    await expect(compare.cashFlowBreakEven).toContainText('החודש הראשון')
+    await expect(compare.cashFlowSection).toContainText('יתרת הקרן מוצגת בנפרד')
   })
 
   test('the cheapest compliant mix is marked as the best-value mix', async ({ page }) => {

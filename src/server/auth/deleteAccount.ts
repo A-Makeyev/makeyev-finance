@@ -10,6 +10,7 @@ import { getDb } from './mongo'
  *
  *  - `saved_mixes`: private data. Nobody else could have read it, but "delete
  *    my account" has to mean the mixes go too.
+ *  - `saved_comparisons`: the same private saved work, stored as snapshots.
  *
  * `article_comments` is deliberately NOT on the list. A comment is part of a
  * public thread other people replied to, so deleting the account keeps it under
@@ -19,7 +20,11 @@ import { getDb } from './mongo'
  * too, or blank the name) is a one-line change here plus the marker in the
  * thread.
  */
-export const ACCOUNT_OWNED_COLLECTIONS = ['saved_mixes'] as const
+export const ACCOUNT_OWNED_COLLECTIONS = [
+  'saved_mixes',
+  'saved_comparisons',
+  'saved_refinances',
+] as const
 
 /**
  * Removes every row owned by `userId` in the collections above and reports how

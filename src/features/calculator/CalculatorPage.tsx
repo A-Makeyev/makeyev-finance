@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { setNavigationBlockGuard, useNavigate } from '@/router'
+import { Link, setNavigationBlockGuard, useNavigate } from '@/router'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPrimeRatePercent } from '@/services/boi'
@@ -357,6 +357,14 @@ export function CalculatorPage() {
               >
                 {t('compare.openFromCalculator')}
               </button>
+              <Link
+                id="open-refinance"
+                data-testid="open-refinance"
+                className="reset-button"
+                to="/refinance"
+              >
+                {t('refinance.openLink')}
+              </Link>
               <button
                 id="reset-calculator"
                 data-testid="reset-calculator"

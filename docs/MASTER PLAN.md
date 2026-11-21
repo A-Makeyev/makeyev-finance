@@ -26,37 +26,38 @@
 - Keep this progress ledger in sync with the implementation. If the plan changes, update this same file before proceeding, preserve completed history, and explain any changed scope. Do not mark future steps complete in advance.
 - The checkboxes in this delivered copy start unchecked because the repository was not available for a fresh code audit. This does **not** mean every feature is unimplemented; verify the actual repository before choosing the first task.
 
-**Resume point:** Step 0, verify the repository and baseline first. Update this line after every completed or blocked step.
+**Resume point:** Step 21 (continue the refinance workflow). `/refinance` and `/en/refinance` now support a proposed mix with up to six tracks, saved calculator mix imports, and owner-scoped proposal save/update/load/delete. Verification on 2026-11-21: 1,234 unit tests, typecheck and lint pass; all 38 refinance/proposal/theme browser tests pass across mobile, tablet and desktop, Hebrew/English and light/dark. Fixed invalid existing-input/fee handling and share precision loss on reload; cash and capitalized fee snapshots reproduce identical allocations and schedules. Next action: implement reset-aware projection of existing tracks and comparison of multiple proposed mixes. These remain outstanding, so Step 21 is still partial. Prior work: Steps 0-20 and 5A/5B are complete.
 
 ### Persistent implementation checklist
 
-- [ ] **Step 0:** Establish baseline; inspect repository, tests, saved mixes, profile persistence and calculator unsaved-changes modal.
-- [ ] **Step 0A:** Audit existing URLs and design the one-domain, multi-experience information architecture, route/layout boundaries, navigation and data ownership before expanding account, CRM and shop areas. This design step must not delay isolated mortgage-engine work.
-- [ ] **Step 0B:** Inventory the approximately 10,000-line global stylesheet, CSS entry points, import order, existing modules, tokens, responsive rules and cascade dependencies. Produce a migration map without changing styles.
-- [ ] **Step 1:** Add shared payment-composition helper with reconciled CPI accounting.
-- [ ] **Step 2:** Update calculator amortization chart.
-- [ ] **Step 3:** Update compare payment-composition charts.
-- [ ] **Step 4:** Expose total indexation in calculator results.
-- [ ] **Step 5:** Separate compare scenario limit from track limit (`MAX_MIXES` vs `MAX_TRACKS`).
-- [ ] **Step 5A:** Add compare-page unsaved-changes modal with Save changes, Discard changes and Stay on page.
-- [ ] **Step 5B:** Save independent comparison snapshots in the user profile; support opening, renaming, duplicating and deleting them.
-- [ ] **Phase 0 exit check:** Verify accounting, capacity, persistence, old-data compatibility and responsive behavior.
-- [ ] **Step 6:** Add backward-compatible grace fields.
-- [ ] **Step 7:** Implement partial/full grace calculations.
-- [ ] **Step 8:** Separate first payment from representative payment and PTI behavior.
-- [ ] **Step 9:** Define and validate monthly CPI and rate-reset forecast inputs.
-- [ ] **Step 10:** Apply monthly assumptions in the calculation engine using the documented event order.
-- [ ] **Step 11:** Show forecast assumptions and the exact calculation path.
-- [ ] **Step 12:** Add full-mix and full-track payoff events, initially internal-only.
-- [ ] **Step 13:** Add partial prepayment modes: shorten term and reduce payment.
-- [ ] **Step 14:** Keep fee-dependent payoff prototypes gated until the statutory fee model is verified.
-- [ ] **Step 15:** Verify official early-repayment fee rules and worked examples.
-- [ ] **Step 16:** Implement and validate supported statutory fee calculations.
-- [ ] **Step 17:** Release the supported payoff flow with explicit fee components.
-- [ ] **Step 18:** Add baseline/candidate cash-flow comparison metrics.
-- [ ] **Step 19:** Add fee-aware cumulative savings and break-even analysis.
-- [ ] **Step 20:** Model the existing mortgage while preserving historical reset dates.
-- [ ] **Step 21:** Build and compare a proposed refinance without modifying the existing mortgage.
+- [x] **Step 0:** Establish baseline; inspect repository, tests, saved mixes, profile persistence and calculator unsaved-changes modal. Completed 2026-11-20: verified against the live repo; `npm test` 79 files / 1163 tests pass, `npm run typecheck` and `npm run lint` pass; see the Step 0 audit section below.
+- [x] **Step 0A:** Audit existing URLs and design the one-domain, multi-experience information architecture, route/layout boundaries, navigation and data ownership before expanding account, CRM and shop areas. This design step must not delay isolated mortgage-engine work. Completed 2026-11-20: current route inventory, role model and ownership boundaries recorded in the Step 0 audit; existing Hebrew-root and `/en` URLs are preserved as the baseline.
+- [x] **Step 0B:** Inventory the approximately 10,000-line global stylesheet, CSS entry points, import order, existing modules, tokens, responsive rules and cascade dependencies. Produce a migration map without changing styles. Completed 2026-11-20: `src/styles/globals.css` is 13,190 lines / 375,748 bytes, imported once by each root layout; section map recorded in the Step 0 audit.
+- [x] **Step 1:** Add shared payment-composition helper with reconciled CPI accounting. Completed before 2026-11-20 audit: `paymentComposition` in `src/lib/amortization.ts`; reconciliation identities covered by `tests/unit/amortization.test.ts`.
+- [x] **Step 2:** Update calculator amortization chart. Completed before audit: `AmortizationChart.tsx` consumes the shared helper.
+- [x] **Step 3:** Update compare payment-composition charts. Completed before audit: `src/features/compare/trend.ts` consumes the shared helper; covered by `tests/unit/compare.test.ts`.
+- [x] **Step 4:** Expose total indexation in calculator results. Completed before audit: `totalIndexation` flows through totals into `ResultsCards`/`ScheduleSection`.
+- [x] **Step 5:** Separate compare scenario limit from track limit (`MAX_MIXES` vs `MAX_TRACKS`). Completed before audit: separate constants (`MAX_TRACKS = 6`, `MAX_MIXES = 3`) enforced in stores/UI. Open decision: the plan text says 4 scenarios; the shipped compare layout is designed for 3, so the value was not changed silently.
+- [x] **Step 5A:** Add compare-page unsaved-changes modal with Save changes, Discard changes and Stay on page. Completed 2026-11-20: dirty tracking, beforeunload and router guard in `ComparePage.tsx`; modal offers Save changes, Discard changes (restores the baseline) and Stay on page. Signed out, it offers Sign in and save instead, and the guard allows `/login` (it previously blocked the sign-in route itself, stranding the edits). A per-tab pending flag reopens the save dialog after returning. Follow-up 2026-11-20: professional dialog copy (`יציאה מההשוואה`, `שמירת השינויים`, `יציאה בלי שמירה`, `חזרה להשוואה`) and a dedicated signed-out body; auth card border now uses the light `--auth-card-border` token in both themes. Tests: `e2e/tests/ui/savedComparison.spec.ts` 6/6 (guard, discard, signed-out sign-in from the header and the dialog, RTL dialog, English LTR, snapshot POST).
+- [x] **Step 5B:** Save independent comparison snapshots in the user profile; support opening, renaming, duplicating and deleting them. Completed 2026-11-20: versioned input snapshot (`src/server/comparisons/schema.ts`), owner-scoped `saved_comparisons` repo and `/api/comparisons` routes, save control on `/compare`, `SavedComparisonsSection` on the profile, `?comparison=` deep link, and account-deletion purge. Cap is 4, separate from `MAX_MIXES`. Follow-up: all loading buttons now use the fixed-width `PendingContent` rule (the idle label reserves the box), and the comparison card's rename/duplicate actions use a neutral outline instead of the reused red delete style. The cap refusal names the 4-comparison limit in both the compare header and the profile duplicate action, and the card's relative timestamp sits opposite the title. Tests: `savedComparisonSchema.test.ts`, `comparisonSnapshot.test.ts`, `savedComparison.spec.ts` 7/7 including the saved-state width check; full unit suite 81 files / 1185 tests.
+- [x] **Phase 0 exit check:** Verify accounting, capacity, persistence, old-data compatibility and responsive behavior. Completed 2026-11-20: full unit suite passes (1185 tests); compare and compare-layout e2e pass 36/36 including RTL, LTR, dark theme, 360px and tablet widths; saved-mix schema/backward-compatibility tests unchanged and passing.
+- [x] **Step 6:** Add backward-compatible grace fields. Completed before audit: optional `graceMonths`/`graceMode` in `src/server/mixes/schema.ts`; `tests/unit/savedMixSchema.test.ts`.
+- [x] **Step 7:** Implement partial/full grace calculations. Completed before audit: interest-only and full-deferral paths in `computeTrackResult`; grace tests in `tests/unit/amortization.test.ts`.
+- [x] **Step 8:** Separate first payment from representative payment and PTI behavior. Completed before audit: `firstAmortizingPayment` feeds affordability; compare uses the average payment for suggested income; covered by `tests/unit/compare.test.ts`.
+- [x] **Step 9:** Define and validate monthly CPI and rate-reset forecast inputs. Completed before audit: annual CPI is converted to a monthly geometric factor and reset cadence/step inputs are validated; `tests/unit/forecast.test.ts`. Note: CPI is a single annual assumption, not a per-month editable grid.
+- [x] **Step 10:** Apply monthly assumptions in the calculation engine using the documented event order. Completed before audit: reset first, then CPI drift, then interest and payment, documented in `computeTrackResult`; reset/grace/CPI tests pass.
+- [x] **Step 11:** Show forecast assumptions and the exact calculation path. Completed before audit: `ForecastSection` states the reset and CPI assumptions and renders charts plus tables.
+- [x] **Step 12:** Add full-mix and full-track payoff events, initially internal-only. Completed before audit: prepayment allocation/plan logic in `src/lib/prepayment.ts`; covered by allocation tests.
+- [x] **Step 13:** Add partial prepayment modes: shorten term and reduce payment. Completed before audit: `partialPrepaymentOutcomes` and both modes shown in `PrepaymentSection`.
+- [x] **Step 14:** Keep fee-dependent payoff prototypes gated until the statutory fee model is verified. Completed before audit: the gate is satisfied because the fee model was verified and released in Steps 15-17.
+- [x] **Step 15:** Verify official early-repayment fee rules and worked examples. Completed before audit: Banking Order (2002, 2014 amendment) and BOI circular 2103 documented in `prepayment.ts`; BOI worked example (NIS 23,805 gross, NIS 16,664 after reduction) reproduced in `tests/unit/prepayment.test.ts`.
+- [x] **Step 16:** Implement and validate supported statutory fee calculations. Completed before audit: היוון discounted fee, origination cap, age tiers, prime/annual-reset/exit-station exemptions, operational, no-notice and CPI-compensation extras. Unsupported: the extra משלימה/מוכוונת reduction tiers.
+- [x] **Step 17:** Release the supported payoff flow with explicit fee components. Completed before audit: `PrepaymentSection` shows gross fee, after-discount fee and each add-on component separately.
+- [x] **Step 18:** Add baseline/candidate cash-flow comparison metrics. Completed 2026-11-20: `src/features/compare/cashflow.ts` diffs the combined monthly schedules (payment, interest, CPI indexation, one-time costs, remaining balance, cumulative net cash flow) over the shorter term. The baseline is the first priced mix; every other priced mix is a candidate. `ScenarioResult.monthlySchedule` now exposes the shared monthly rows. Rendered as the `compare-cashflow` section, cash-flow-only with remaining debt as its own row. Tests: `tests/unit/cashflow.test.ts` (6), compare e2e 37/37.
+- [x] **Step 19:** Add fee-aware cumulative savings and break-even analysis. Completed 2026-11-20: cumulative savings start from the one-time-cost difference and add each month's payment difference; the first non-negative month is the break-even point, month 1 means immediate, and a curve that never reaches zero says so explicitly. Cash-flow-only by design, with the terminal balance reported separately so a longer term cannot read as savings. Unit tests cover positive, crossing, never, immediate-fee and shorter-horizon cases.
+- **Decision note (Step 19/21):** the baseline convention is temporary. When Step 20 adds the existing mortgage, the baseline should become that selected existing mortgage instead of the first priced mix; the saved-comparison schema already anticipates a selected baseline but does not persist one yet.
+- [x] **Step 20:** Model the existing mortgage while preserving historical reset dates. Completed 2026-11-20: `src/features/refinance/existingMortgage.ts` defines the separate `ExistingMortgage` / `ExistingMortgageTrack` schema with current and original balances, remaining payments, contracted rate data, reset cadence, next and last reset dates, historical resets (validated in ascending order), linkage tied to the track type, method, grace, maturity, and `dataStatus`. Missing values are required `null`s, never zeroes or guesses; a payoff total is produced only when every balance is known. Tests: `tests/unit/existingMortgage.test.ts` (6). Persistence and UI are intentionally not wired yet.
+- [ ] **Step 21:** Build and compare a proposed refinance without modifying the existing mortgage. **Partial 2026-11-20:** `/refinance` and `/en/refinance` support up to six proposed tracks with percentage shares, rates, terms and repayment methods. Principal comes from existing balances plus a capitalized verified fee, allocated with a rounding remainder. Saved calculator mixes can supply proposal proportions and terms. Completed proposals can be saved, updated, loaded and deleted through the owner-scoped `saved_refinances` collection/API and profile section (four saved proposals). Hebrew and English copy cover the flows. Existing tracks still project from current balances/rates; historical reset replay and comparison of multiple proposed mixes remain outstanding. Tests cover allocation, snapshot validation, saved-mix conversion, save/load, track limits and responsive light/dark RTL/LTR layouts.
 - [ ] **Step 22:** Add explicit full and partial balloon schedules.
 - [ ] **Step 23:** Add staged loan-disbursement events.
 - [ ] **Step 24:** Add verified cash-flow and advisor metrics.
@@ -87,6 +88,95 @@
 **Step completion note template:** `Completed YYYY-MM-DD: <files/features>; tests: <commands and results>; exceptions: <none or details>.`
 
 **Blocked/partial note template:** `Blocked at Step N: <what is incomplete>; reason: <blocker>; next action: <specific action>.`
+
+## Step 0 baseline audit (verified 2026-11-20)
+
+The supplied notes described an archived project; this audit was run against the live repository.
+
+### Baseline checks
+
+- `npm test`: 79 files, 1163 tests passed.
+- `npm run typecheck`: passed for both the app and e2e tsconfigs.
+- `npm run lint`: passed.
+- Focused e2e: `npx playwright test e2e/tests/ui/compare.spec.ts --project=ui-chromium` passed 32/32 against a production build. The full e2e suite and the calculator specs were not run in this pass.
+- Stack confirmed: Next.js 16.3 App Router, React 19, TypeScript, Zustand, Better Auth 1.7 with the MongoDB adapter, MongoDB driver 7, Zod, Vitest, Playwright, Tailwind 3 plus the handwritten global stylesheet.
+
+### Verified implementation state
+
+Already implemented and tested (Steps 1-17):
+
+- Shared `paymentComposition` helper with reconciled CPI accounting, plus `totalIndexation` on track results and totals.
+- Calculator and compare composition charts both consume the shared helper.
+- Separate limits: `MAX_TRACKS = 6` and `MAX_MIXES = 3` in `src/lib/amortization.ts`, enforced by the stores and UI.
+- Backward-compatible grace fields in the saved-mix schema, interest-only and full-deferral grace, and `firstAmortizingPayment` feeding affordability while compare uses the average payment for suggested income.
+- Monthly CPI factor and cumulative rate-reset steps in `computeTrackResult`, with the event order documented in code (reset, then CPI drift, then interest/payment). `ForecastSection` states the assumptions and renders charts plus tables.
+- Payoff and partial-prepayment logic, including shorten-term and reduce-payment modes, and the released fee panel.
+- Statutory early-repayment fee based on the Banking Order (2002, 2014 amendment) and BOI circular 2103, with the published worked example reproduced in unit tests, plus the origination cap, age tiers, exemptions and the operational, no-notice and CPI-compensation add-ons.
+
+Not implemented (confirmed absent):
+
+- Compare-page unsaved-changes guard and saved comparison snapshots (Steps 5A/5B). Compare state is in-memory Zustand only; there is no `saved_comparisons` collection or `/api/comparisons` route.
+- Cash-flow savings and break-even metrics (Steps 18-19).
+- Refinance, balloon schedules, staged disbursement (Steps 20-23).
+- OCR, combined-loan view, eligibility workflow, advisor CRM/reporting (Steps 24-30).
+- Consumer financial profile, dashboard, goal-based recommendations (Steps 32-35).
+- Commerce/`/shop` (Step 45).
+- The account route shells and CSS split (Steps 31A/31B); `/client` and `/advisor` already exist as gated pages.
+
+### Current URL map (baseline to preserve)
+
+| Current URL (Hebrew root) | English mirror | Access today |
+|---|---|---|
+| `/` | `/en` | Public |
+| `/calculators` | `/en/calculators` | Public |
+| `/compare` | `/en/compare` | Public |
+| `/rates` | `/en/rates` | Public |
+| `/articles` and four article routes | `/en/articles/...` | Public |
+| `/services` | `/en/services` | Public |
+| `/contact` | `/en/contact` | Public |
+| `/login` | `/en/login` | Public |
+| `/profile` | `/en/profile` | Signed-in user |
+| `/client` | `/en/client` | Signed-in client |
+| `/advisor` | `/en/advisor` | Advisor or admin |
+
+API: `/api/auth/[...all]`, `/api/mixes` and `/api/mixes/[id]`, `/api/comments` and `/api/comments/[id]`, `/api/replies`, `/api/articles` and `/api/articles/[slug]`, `/api/contact`, `/api/rates/average`, `/api/market/quotes`.
+
+There is no `/shop`, `/learn`, `/account`, `/pro` or `/admin`. The proposed URL map in the architecture section remains the target; the current Hebrew-root and `/en` paths are the compatibility contract, and any rename needs tested redirects.
+
+### Roles and data ownership
+
+- Better Auth is the identity source (`user`, `account`, `session` collections). `user.role` defaults to `client`; the hierarchy is `client < advisor < admin` via `roleSatisfies`. The role field is `input: false`, so a sign-up cannot inject a role.
+- `/advisor` and `/client` re-check the session and role on the server (`getServerSession` plus `roleSatisfies`), not only in the proxy.
+- Owned data today: `saved_mixes` (scoped by `userId`, max 4 per user), `article_comments` (public thread data), `rate_limit_counters`. `purgeUserData` deletes only `saved_mixes` on account deletion; comments are deliberately retained as deleted-account thread entries.
+- Saved mixes use a versioned input shape (`savedTrackSchema`) with optional grace fields for old data. Note: the current compare snapshot work should follow the same owner-scoped repository and Zod-validation pattern, then add its collection to `ACCOUNT_OWNED_COLLECTIONS`.
+
+### Step 0B stylesheet inventory
+
+- Entry point: `src/styles/globals.css`, 13,190 lines / 375,748 bytes, imported once by `src/app/(he)/layout.tsx` and `src/app/(en)/layout.tsx`. Tailwind directives are the first three lines; PostCSS runs Tailwind and autoprefixer. There are no CSS Modules and no other stylesheet files.
+- Top-level sections (line ranges):
+  - 1-36: Tailwind directives, legacy-port preamble, heading reset.
+  - 37-110: legacy `loader.css`.
+  - 111-291: design tokens in `:root`.
+  - 292-1919: legacy `main.css` base: chrome, page shells, home sections, forms, modals, animations.
+  - 1920-2038: legacy `navigation.css`: stacking bands and navbar.
+  - 2039-3427: Markets tracker subsystem.
+  - 3428-3904: compact strip marquee at <=1200px.
+  - 3905-4293: legacy `services.css`.
+  - 4294-6429: legacy `calculators.css`.
+  - 6430-7284: hand-rolled SVG charts.
+  - 7285-9401: schedule tables and calculator schedule UI.
+  - 9402-10242: responsive pass.
+  - 10243-10383: narrow-phone pass at <=400px.
+  - 10384-11205: dark theme token overrides.
+  - 11206-13190: compare page styles.
+- Cascade facts: 111 `@media` blocks, 70 `!important` declarations, 32 `@keyframes`, and 1,271 top-level selector lines. Media queries are interleaved with the rules they modify, so extraction must preserve source order.
+- Migration map for Step 31B: extract in this order, verifying the production build and the routes that use each slice: tokens plus dark theme, loader, navigation/chrome, services, calculators, charts and schedule, responsive and narrow-phone passes, then compare. Keep one global entry point with an explicit import order. Do not rename selectors or change specificity during the move.
+
+### Open decisions raised by this audit
+
+1. `MAX_MIXES`: the plan text says 4 compare scenarios, the shipped layout and tests are built for 3. Raising it is a layout product decision, so the constant was left at 3.
+2. CPI forecast input: the engine uses one annual CPI assumption converted to a monthly factor; there is no per-month editable CPI grid. Confirm whether Step 9's "monthly CPI input" means that derived factor or a new input surface.
+3. Compare persistence shape: saved comparisons need a versioned input snapshot (shared inputs plus scenario configs), recalculated from the shared engine on load, and independent of later edits to source mixes. That data model should be confirmed before Step 5B is built.
 
 ## Project review and recommended improvements
 

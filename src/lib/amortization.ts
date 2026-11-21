@@ -229,6 +229,12 @@ export function isIndexedType(type: TrackType): boolean {
 export interface TrackComputationInput {
   principal: number
   years: number
+  /**
+   * Exact term in months. Overrides `years * 12` for schedules that start from
+   * a remaining term that is not a whole number of years (a payoff statement's
+   * "remaining payments"). Must be a positive integer when supplied.
+   */
+  termMonths?: number
   annualRatePercent: number
   type: TrackType
   method: AmortizationMethod
@@ -380,7 +386,7 @@ export interface TrackResult {
  */
 export function computeTrackResult(input: TrackComputationInput): TrackResult | null {
   const { principal, years, annualRatePercent, type, method } = input
-  const months = years * 12
+  const months = input.termMonths ?? years * 12
   if (
     !Number.isFinite(principal) ||
     principal <= 0 ||

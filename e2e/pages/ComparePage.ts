@@ -1,7 +1,79 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 
 export class ComparePage {
-  constructor(readonly page: Page) {}
+  readonly page: Page
+  readonly saveComparisonSignIn: Locator
+  readonly saveComparison: Locator
+  readonly saveComparisonSpinner: Locator
+  readonly saveComparisonSavedState: Locator
+  readonly saveComparisonCap: Locator
+  readonly saveComparisonCapPanel: Locator
+  readonly saveComparisonModal: Locator
+  readonly saveComparisonLabel: Locator
+  readonly saveComparisonConfirm: Locator
+  readonly unsavedDialog: Locator
+  readonly unsavedSave: Locator
+  readonly unsavedSignIn: Locator
+  readonly unsavedDiscard: Locator
+  readonly unsavedStay: Locator
+  readonly cashFlowSection: Locator
+  readonly cashFlowFirstPayment: Locator
+  readonly cashFlowBalance: Locator
+  readonly cashFlowBreakEven: Locator
+
+  constructor(page: Page) {
+    this.page = page
+    this.saveComparisonSignIn = page.getByTestId('save-comparison-sign-in')
+    this.saveComparison = page.getByTestId('save-comparison')
+    this.saveComparisonSpinner = page.getByTestId('save-comparison-spinner')
+    this.saveComparisonSavedState = page.getByTestId('save-comparison-saved-state')
+    this.saveComparisonCap = page.getByTestId('save-comparison-cap')
+    this.saveComparisonCapPanel = page.getByTestId('save-comparison-cap-panel')
+    this.saveComparisonModal = page.getByTestId('save-comparison-modal')
+    this.saveComparisonLabel = page.getByTestId('save-comparison-label')
+    this.saveComparisonConfirm = page.getByTestId('save-comparison-confirm')
+    this.unsavedDialog = page.getByTestId('unsaved-comparison-confirm')
+    this.unsavedSave = page.getByTestId('unsaved-comparison-save')
+    this.unsavedSignIn = page.getByTestId('unsaved-comparison-sign-in')
+    this.unsavedDiscard = page.getByTestId('unsaved-comparison-discard')
+    this.unsavedStay = page.getByTestId('unsaved-comparison-stay')
+    this.cashFlowSection = page.getByTestId('compare-cashflow')
+    this.cashFlowFirstPayment = page.getByTestId('compare-cashflow-firstPayment-2')
+    this.cashFlowBalance = page.getByTestId('compare-cashflow-balance-2')
+    this.cashFlowBreakEven = page.getByTestId('compare-cashflow-break-even-2')
+  }
+
+  async removeSavedComparison(id: string) {
+    await this.page.getByTestId(`save-comparison-remove-${id}`).click()
+  }
+
+  async expectScenarioCapRecovery() {
+    const add = this.page.getByTestId('compare-add-scenario')
+    if (await add.count()) await add.click()
+    await expect(this.page.getByTestId('compare-add-scenario-cap')).toBeVisible()
+    await expect(add).toHaveCount(0)
+    await this.page.getByTestId('compare-scenario-remove-3').click()
+    await expect(add).toBeVisible()
+  }
+
+  async expectRefinanceActionHeight() {
+    await this.page.goto('/calculators')
+    await this.page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+    const heights = await Promise.all(['open-comparison', 'open-refinance', 'reset-calculator'].map(async id => {
+      const box = await this.page.getByTestId(id).boundingBox()
+      return box!.height
+    }))
+    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1)
+    const styles = await Promise.all(['open-comparison', 'open-refinance', 'reset-calculator'].map(id =>
+      this.page.getByTestId(id).evaluate(element => {
+        const style = getComputedStyle(element)
+        return ['backgroundColor', 'color', 'borderBottom', 'borderRadius', 'padding', 'fontSize', 'fontWeight']
+          .map(property => style[property as keyof CSSStyleDeclaration])
+      }),
+    ))
+    expect(styles[1]).toEqual(styles[0])
+    expect(styles[2]).toEqual(styles[0])
+  }
 
   async goto() {
     await this.page.goto('/compare')

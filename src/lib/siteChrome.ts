@@ -28,5 +28,5 @@ export function shouldHideFooter(pathname: string): boolean {
  * `pathname` is the locale-stripped path (see shouldHideFooter).
  */
 export function navStartsSolid(pathname: string): boolean {
-  return pathname === '/profile'
+  return pathname === '/profile' || pathname === '/refinance'
 }

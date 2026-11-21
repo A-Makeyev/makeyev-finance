@@ -21,6 +21,8 @@ import {
   sanitizeDeleteCodeInput,
 } from '@/lib/deleteCode'
 import { SavedMixesSection } from '@/features/mixes/SavedMixesSection'
+import { SavedComparisonsSection } from '@/features/comparisons/SavedComparisonsSection'
+import { SavedRefinancesSection } from '@/features/refinances/SavedRefinancesSection'
 import { Confetti } from './Confetti'
 import { RepliesSection } from './RepliesSection'
 import type { Role } from '@/server/auth/roles'
@@ -49,9 +51,7 @@ import type { Role } from '@/server/auth/roles'
  * and leave too instead of sitting on the identity of an account that no longer
  * exists.
  *
- * Layout: a theme-aware page backdrop (light surface in light mode; the
- * branded dark mixed-hue gradient in dark mode, the same family as the hero
- * and footer), the user's name as the page title, and the cards on top. The
+ * Layout: a theme-aware page backdrop (light surface in light mode; matching neutral surface in dark mode), the user's name as the page title, and the cards on top. The
  * identity and the account actions share ONE card so the page does not repeat
  * "the account" twice, and the password form lives behind a button and a modal
  * rather than sitting open on the page. All copy goes through i18n and the
@@ -88,7 +88,7 @@ const INPUT_CLASS =
 const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-soft-blue focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card'
 
-const CARD_CLASS = 'rounded-3xl border border-line-soft bg-surface-card p-6 sm:p-8'
+const CARD_CLASS = 'profile-panel rounded-2xl border border-line-soft bg-surface-card p-5 sm:p-6'
 
 // surface-raised, not surface-page: these buttons sit ON the profile's card,
 // and in the dark theme the page colour is darker than the card, so a
@@ -96,12 +96,8 @@ const CARD_CLASS = 'rounded-3xl border border-line-soft bg-surface-card p-6 sm:p
 // the text rather than dropping to a darker fill.
 const SECONDARY_BUTTON_CLASS = `inline-flex items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface-raised px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-ink/10 ${FOCUS_RING}`
 
-// The destructive action keeps the secondary button's shape but takes the brand
-// red on its border and text, so it reads as set apart from sign-out without
-// shouting from the row it shares with it. The brand red rather than the danger
-// role: --danger flips to a PALE red in dark mode, which put white text on a
-// pink wash (same reasoning as .saved-mix-delete-button).
-const DANGER_BUTTON_CLASS = `inline-flex items-center justify-center gap-2 rounded-lg border border-soft-red bg-surface-raised px-4 py-2.5 text-sm font-semibold text-soft-red transition-colors hover:bg-soft-red hover:text-white ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-70`
+// A quiet outline keeps account deletion distinct without dominating the page.
+const DANGER_BUTTON_CLASS = `inline-flex items-center justify-center gap-2 rounded-lg border border-line-soft bg-surface-card px-4 py-2.5 text-sm font-semibold text-danger transition-colors hover:border-danger hover:bg-surface-soft ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-70`
 
 // The one button in the modal that really does delete the account. Brand red
 // again, and at 90%: a full-strength fill on a 460px dialog read louder than the
@@ -112,7 +108,7 @@ const DANGER_BUTTON_CLASS = `inline-flex items-center justify-center gap-2 round
 const DELETE_BUTTON_CLASS =
   'relative inline-flex items-center justify-center gap-2 rounded-[5px] bg-soft-red/90 px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-soft-red disabled:cursor-not-allowed disabled:opacity-60'
 
-const PRIMARY_BUTTON_CLASS = `inline-flex items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-surface-page transition-colors hover:bg-ink/85 ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-70`
+const PRIMARY_BUTTON_CLASS = `inline-flex items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface-soft px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-70`
 
 /** The delete modal's two steps: prove it is you, then type the mailed code. */
 type DeleteStep = 'request' | 'code'
@@ -449,9 +445,8 @@ export function ProfilePage({
   }
 
   return (
-    // Theme-aware backdrop (profile-page): light surface in light mode, the
-    // branded dark gradient in dark mode (see .profile-page in globals.css).
-    <main className="below-chrome profile-page min-h-screen px-4 pb-20 pt-28">
+    // Neutral theme surfaces keep the saved work visually prominent.
+    <main className="below-chrome profile-page min-h-screen px-4 pb-20 pt-28" dir={i18n.dir()}>
       {justVerified && <Confetti />}
       <div className="mx-auto w-full max-w-6xl" data-testid="profile-page">
         {/* Identity + account actions share one card; no page title and no
@@ -514,7 +509,7 @@ export function ProfilePage({
             </p>
           )}
 
-          <div className="mt-6 flex flex-col gap-3 border-t border-line-soft pt-6 sm:flex-row sm:flex-wrap">
+          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-line-soft pt-6 sm:flex sm:flex-wrap">
             <button
               type="button"
               // The same modal, two flows: an account with a password changes it,
@@ -559,11 +554,19 @@ export function ProfilePage({
           </div>
         </section>
 
-        <section className={`mt-6 ${CARD_CLASS}`}>
+        <section className={`mt-5 profile-library-panel ${CARD_CLASS}`}>
           <SavedMixesSection />
         </section>
 
-        <section className={`mt-6 ${CARD_CLASS}`}>
+        <section className={`mt-5 profile-library-panel ${CARD_CLASS}`}>
+          <SavedComparisonsSection />
+        </section>
+
+        <section className={`mt-5 profile-library-panel ${CARD_CLASS}`}>
+          <SavedRefinancesSection />
+        </section>
+
+        <section className={`mt-5 profile-library-panel ${CARD_CLASS}`}>
           <RepliesSection />
         </section>
       </div>
@@ -662,14 +665,13 @@ export function ProfilePage({
               type="submit"
               disabled={pending}
               aria-busy={pending}
+              aria-label={t(hasPassword ? 'auth.profileChangePasswordAction' : 'auth.profileSetPasswordAction')}
               data-testid="profile-change-password"
-              className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)] disabled:cursor-not-allowed disabled:opacity-70"
+              className="relative rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {t(
-                hasPassword
-                  ? 'auth.profileChangePasswordAction'
-                  : 'auth.profileSetPasswordAction',
-              )}
+              <PendingContent pending={pending}>
+                {t(hasPassword ? 'auth.profileChangePasswordAction' : 'auth.profileSetPasswordAction')}
+              </PendingContent>
             </button>
           </div>
         </form>

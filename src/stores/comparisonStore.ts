@@ -124,6 +124,60 @@ export interface ComparisonSharedInputs {
 }
 
 /**
+ * One track as stored in a comparison snapshot. Only the user-entered fields
+ * are kept: ids and the live-only editing internals are re-created on load, so
+ * a saved comparison can never carry a stale editing session.
+ */
+export interface ComparisonSnapshotTrack {
+  type: TrackType
+  amountText: string
+  yearsText: string
+  yearsOverridden: boolean
+  rateText: string
+  resetMonths: number
+  graceMonths: number
+  graceMode: GraceMode
+  marginText: string
+  method: TrackState['method']
+}
+
+/** One mix inside a saved comparison, including its own label and date. */
+export interface ComparisonSnapshotScenario {
+  label: string
+  termYears: number
+  activePreset: PresetId | null
+  /** Optional so a snapshot stored before a date was entered is still valid. */
+  approvalDateText?: string
+  tracks: ComparisonSnapshotTrack[]
+}
+
+/**
+ * The versioned input snapshot stored for a saved comparison.
+ *
+ * Deliberately contains only inputs: no computed results, no derived fee
+ * mirrors, no ids. Opening a saved comparison recalculates every figure from
+ * the shared engine, so a snapshot can never disagree with the calculator's
+ * math. The version field lets a future migration detect an older shape.
+ */
+export interface ComparisonSnapshot {
+  version: 1
+  shared: {
+    propertyValueText: string
+    capitalText: string
+    incomeText: string
+    purpose: PropertyPurpose
+    mortgageSumText: string
+    realtorPercentText: string
+    lawyerPercentText: string
+    appraiserFeeText: string
+    renovationAmountText: string
+    otherExpenses: Array<{ monthlyText: string; oneTimeText: string }>
+    ptiThresholdPercent: number
+  }
+  scenarios: ComparisonSnapshotScenario[]
+}
+
+/**
  * Derived fee-field UX (calculator parity): the market-norm hints shown on a
  * cleared pair, whether the ₪ mirrors have a basis to render against, and the
  * lawyer-floor flag the note under the pair explains.
@@ -142,6 +196,13 @@ export interface ComparisonState {
   shared: ComparisonSharedInputs
   results: ScenarioResult[]
   fee: ComparisonFeeHints
+  /** Serialized snapshot at the last save/load/reset; drives dirty tracking. */
+  comparisonBaseline: string
+  /** The saved comparison currently open, or null for unsaved work. */
+  loadedComparisonId: string | null
+  loadedComparisonLabel: string | null
+  /** Set by the unsaved dialog's Save so the save control can open its dialog. */
+  saveComparisonRequested: boolean
 }
 
 export interface ComparisonActions {
@@ -217,6 +278,15 @@ export interface ComparisonActions {
    */
   fixScenario(scenarioId: string): void
   loadScenarioPreset(scenarioId: string, presetId: PresetId): void
+  /** Replaces the whole comparison with a saved snapshot and re-baselines it. */
+  loadSavedComparison(snapshot: ComparisonSnapshot, id?: string, label?: string): void
+  /** Records the current comparison as saved, clearing the unsaved state. */
+  markComparisonSaved(id?: string, label?: string): void
+  /** Asks the save control to open its naming dialog (the unsaved dialog's Save). */
+  requestSaveComparison(): void
+  clearSaveComparisonRequest(): void
+  /** Restores the last saved/loaded state, abandoning unsaved edits. */
+  discardComparisonChanges(): void
   reset(): void
 }
 
@@ -613,7 +683,129 @@ function syncMortgageSumFromProperty(s: ComparisonState): void {
 }
 
 /**
- * A shared loan-input edit (sum / property / capital): re-derive the sum's
+ * The persisted input snapshot of the current comparison. Ids, derived fee
+ * mirrors and results are deliberately excluded, so only real user input is
+ * compared or stored.
+ */
+export function serializeComparisonSnapshot(
+  state: Pick<ComparisonState, 'shared' | 'scenarios'>,
+): ComparisonSnapshot {
+  return {
+    version: 1,
+    shared: {
+      propertyValueText: state.shared.propertyValueText,
+      capitalText: state.shared.capitalText,
+      incomeText: state.shared.incomeText,
+      purpose: state.shared.purpose,
+      mortgageSumText: state.shared.mortgageSumText,
+      realtorPercentText: state.shared.realtorPercentText,
+      lawyerPercentText: state.shared.lawyerPercentText,
+      appraiserFeeText: state.shared.appraiserFeeText,
+      renovationAmountText: state.shared.renovationAmountText,
+      otherExpenses: state.shared.otherExpenses.map((expense) => ({
+        monthlyText: expense.monthlyText,
+        oneTimeText: expense.oneTimeText,
+      })),
+      ptiThresholdPercent: state.shared.ptiThresholdPercent,
+    },
+    scenarios: state.scenarios.map((scenario) => ({
+      label: scenario.label,
+      termYears: scenario.termYears,
+      activePreset: scenario.activePreset,
+      approvalDateText: scenario.approvalDateText,
+      tracks: scenario.tracks.map((track) => ({
+        type: track.type,
+        amountText: track.amountText,
+        yearsText: track.yearsText,
+        yearsOverridden: track.yearsOverridden ?? false,
+        rateText: track.rateText,
+        resetMonths: track.resetMonths,
+        graceMonths: track.graceMonths,
+        graceMode: track.graceMode,
+        marginText: track.marginText ?? '',
+        method: track.method,
+      })),
+    })),
+  }
+}
+
+/** Stable serialization used by the dirty check and the saved baseline. */
+function comparisonBaselineOf(state: Pick<ComparisonState, 'shared' | 'scenarios'>): string {
+  return JSON.stringify(serializeComparisonSnapshot(state))
+}
+
+/** True when the comparison differs from its last save/load/reset baseline. */
+export function isComparisonDirty(
+  state: Pick<ComparisonState, 'comparisonBaseline' | 'shared' | 'scenarios'>,
+): boolean {
+  return state.comparisonBaseline !== comparisonBaselineOf(state)
+}
+
+/**
+ * Replaces the live comparison with a stored snapshot. Every derived field is
+ * rebuilt by recompute(), so the loaded numbers always come from the current
+ * shared engine rather than anything cached in the saved document.
+ */
+function applyComparisonSnapshot(s: ComparisonState, snapshot: ComparisonSnapshot): void {
+  s.shared = {
+    propertyValueText: snapshot.shared.propertyValueText,
+    capitalText: snapshot.shared.capitalText,
+    incomeText: snapshot.shared.incomeText,
+    purpose: snapshot.shared.purpose,
+    mortgageSumText: snapshot.shared.mortgageSumText,
+    realtorPercentText: snapshot.shared.realtorPercentText,
+    lawyerPercentText: snapshot.shared.lawyerPercentText,
+    realtorAmountText: '',
+    lawyerAmountText: '',
+    appraiserFeeText: snapshot.shared.appraiserFeeText,
+    renovationAmountText: snapshot.shared.renovationAmountText,
+    otherExpenses: snapshot.shared.otherExpenses
+      .slice(0, MAX_OTHER_EXPENSES)
+      .map((expense) => ({
+        id: makeExpenseId(),
+        monthlyText: expense.monthlyText,
+        oneTimeText: expense.oneTimeText,
+      })),
+    ptiThresholdPercent: snapshot.shared.ptiThresholdPercent,
+    derivedLoanMemory: 0,
+  }
+  s.scenarios = snapshot.scenarios.slice(0, MAX_MIXES).map((scenario) => {
+    const termYears = Math.min(MAX_YEARS, Math.max(1, Math.round(scenario.termYears)))
+    return {
+      id: makeScenarioId(),
+      label: scenario.label,
+      termYears,
+      activePreset: scenario.activePreset,
+      approvalDateText:
+        parseDateOnly(scenario.approvalDateText ?? '') === null
+          ? ''
+          : (scenario.approvalDateText ?? '').trim(),
+      tracks: scenario.tracks.slice(0, MAX_TRACKS).map((track) => ({
+        id: makeTrackId(),
+        type: track.type,
+        amountText: track.amountText,
+        yearsText: track.yearsText,
+        yearsOverridden:
+          track.yearsOverridden ?? (Number(track.yearsText) !== termYears),
+        rateText: track.rateText,
+        resetMonths: normalizeResetMonths(track.type, track.resetMonths ?? 0),
+        graceMonths: normalizeGraceMonths(
+          track.graceMonths ?? 0,
+          (Number(track.yearsText) || 0) * 12,
+        ),
+        graceMode: normalizeGraceMode(track.graceMode),
+        marginText: track.marginText ?? '',
+        method: track.method,
+        isAutoRate: Boolean(track.rateText.trim()),
+        loanShareMemory: null,
+      })),
+    }
+  })
+  recompute(s)
+}
+
+/**
+ * A shared loan-input edit (the sum / property / capital): re-derive the sum's
  * mirror and re-fill every scenario's mix at the new loan.
  */
 function applySharedLoanInput(s: ComparisonState): void {
@@ -627,6 +819,10 @@ export const useComparisonStore = create<ComparisonStore>()(
     shared: defaultSharedInputs(),
     results: [],
     fee: defaultFeeHints(),
+    comparisonBaseline: '',
+    loadedComparisonId: null,
+    loadedComparisonLabel: null,
+    saveComparisonRequested: false,
 
     setLabel: (id, label) => {
       set((s) => {
@@ -1225,10 +1421,63 @@ export const useComparisonStore = create<ComparisonStore>()(
       })
     },
 
+    loadSavedComparison: (snapshot, id, label) => {
+      set((s) => {
+        applyComparisonSnapshot(s, snapshot)
+        s.comparisonBaseline = comparisonBaselineOf(s)
+        s.loadedComparisonId = id ?? null
+        s.loadedComparisonLabel = id ? (label ?? null) : null
+        s.saveComparisonRequested = false
+      })
+    },
+
+    markComparisonSaved: (id, label) => {
+      set((s) => {
+        s.comparisonBaseline = comparisonBaselineOf(s)
+        if (id) s.loadedComparisonId = id
+        if (label) s.loadedComparisonLabel = label
+      })
+    },
+
+    requestSaveComparison: () => {
+      set((s) => {
+        s.saveComparisonRequested = true
+      })
+    },
+
+    clearSaveComparisonRequest: () => {
+      set((s) => {
+        s.saveComparisonRequested = false
+      })
+    },
+
+    discardComparisonChanges: () => {
+      set((s) => {
+        if (!s.comparisonBaseline) return
+        let snapshot: ComparisonSnapshot
+        try {
+          snapshot = JSON.parse(s.comparisonBaseline) as ComparisonSnapshot
+        } catch {
+          return
+        }
+        const id = s.loadedComparisonId
+        const label = s.loadedComparisonLabel
+        applyComparisonSnapshot(s, snapshot)
+        s.comparisonBaseline = comparisonBaselineOf(s)
+        s.loadedComparisonId = id
+        s.loadedComparisonLabel = label
+        s.saveComparisonRequested = false
+      })
+    },
+
     reset: () => {
       set((s) => {
         s.scenarios = createInitialScenarios()
         s.shared = defaultSharedInputs()
+        s.loadedComparisonId = null
+        s.loadedComparisonLabel = null
+        s.saveComparisonRequested = false
+        s.comparisonBaseline = comparisonBaselineOf(s)
         recompute(s)
       })
     },
@@ -1238,6 +1487,7 @@ export const useComparisonStore = create<ComparisonStore>()(
 // Populate the initial results so the very first render has numbers.
 useComparisonStore.setState((s) => {
   recompute(s)
+  s.comparisonBaseline = comparisonBaselineOf(s)
 })
 
 /**
@@ -1318,6 +1568,7 @@ export function seedFromCalculator(calculator: {
       },
     ]
     recompute(state)
+    state.comparisonBaseline = comparisonBaselineOf(state)
   })
 }
 

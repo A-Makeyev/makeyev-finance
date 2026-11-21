@@ -481,6 +481,29 @@ test.describe('theme toggle', () => {
     for (const channel of channelsOf(panel.hintInk)) expect(channel).toBeGreaterThan(100)
   })
 
+  test('the auth card edge is a light line in both themes', async ({ page }) => {
+    const border = () =>
+      page.evaluate(`(() => {
+        const cs = getComputedStyle(document.querySelector('.auth-card'))
+        return cs.borderTopColor
+      })()`) as Promise<string>
+
+    const rgba = (value: string): number[] =>
+      value.replace(/[^0-9.,]/g, '').split(',').map(Number)
+
+    await page.goto('/login')
+    const light = rgba(await border())
+    // Light mode: a soft ink hairline, not the heavy --line-soft outline.
+    expect(light[3]).toBeLessThan(0.25)
+
+    await toggleTheme(page)
+    expect(await themeAttr(page)).toBe('dark')
+    const dark = rgba(await border())
+    // Dark mode: a visibly light edge on the dark card.
+    for (const channel of dark.slice(0, 3)) expect(channel).toBeGreaterThan(150)
+    expect(dark[3]).toBeGreaterThan(0.3)
+  })
+
   test('toggling from the account menu works with the mobile panel open', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/')

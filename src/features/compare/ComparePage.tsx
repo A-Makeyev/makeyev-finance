@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from '@/router'
+import { Link, setNavigationBlockGuard, useNavigate } from '@/router'
 import { ScrollCue } from '@/components/layout/ScrollCue'
+import { AppModal } from '@/components/ui/AppModal'
+import { authClient } from '@/lib/auth-client'
 import {
   FALLBACK_INFLATION,
   LAWYER_MINIMUM_FEE,
@@ -39,10 +41,17 @@ import { prepaymentFeeByYear } from '@/lib/prepaymentProjection'
 import { formatDateOnly, rateValidityStatus } from '@/lib/rateValidity'
 import { useAverageRates } from '@/services/rates'
 import { useMediaQuery } from '@/hooks/useScrolled'
-import { useComparisonStore } from '@/stores/comparisonStore'
+import { isComparisonDirty, useComparisonStore } from '@/stores/comparisonStore'
+import { SaveComparisonButton } from '@/features/comparisons/SaveComparisonButton'
+import { useSavedComparisons } from '@/features/comparisons/api'
+import {
+  markPendingComparisonSave,
+  takePendingComparisonSave,
+} from '@/features/comparisons/pendingSave'
 import { TrackMixDonut } from '@/features/calculator/TrackMixDonut'
 import { TrackGraceFields } from '@/features/calculator/TrackGraceFields'
 import { sharedInputSuggestions, type ScenarioResult } from './computeScenario'
+import { compareCashFlows } from './cashflow'
 import { CompareTrendChart, type RateScenarioGroup, type TrendSeries } from './CompareTrendChart'
 import { ScheduleTable } from './ScheduleTable'
 
@@ -89,6 +98,108 @@ export function ComparePage() {
   const isDesktop = useMediaQuery('(min-width: 1001px)')
   // Which scenario the mobile stacked view shows (index into scenarios).
   const [mobileIndex, setMobileIndex] = useState(0)
+  const navigate = useNavigate()
+  const { data: session } = authClient.useSession()
+  const signedIn = Boolean(session)
+
+  // Saved-comparison deep link (?comparison=<id>): opening a card navigates
+  // here rather than mutating the store, so a refresh or bookmark reloads the
+  // same snapshot. Read from window.location for the same static-route reason
+  // as the calculator's deep links, and load exactly once so a background
+  // refetch cannot overwrite later edits.
+  const [deepLinkComparisonId, setDeepLinkComparisonId] = useState<string | null>(null)
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('comparison')
+    if (id) setDeepLinkComparisonId(id)
+  }, [])
+  const savedComparisons = useSavedComparisons(Boolean(deepLinkComparisonId) && signedIn)
+  const deepLinkLoaded = useRef(false)
+  useEffect(() => {
+    if (deepLinkLoaded.current || !deepLinkComparisonId || !savedComparisons.data) return
+    const saved = savedComparisons.data.comparisons.find(
+      (item) => item.id === deepLinkComparisonId,
+    )
+    if (!saved) return
+    deepLinkLoaded.current = true
+    useComparisonStore.getState().loadSavedComparison(saved.snapshot, saved.id, saved.label)
+  }, [deepLinkComparisonId, savedComparisons.data])
+
+  // Leaving the page with unsaved comparison work warns first. beforeunload
+  // covers reload/close and browser back-forward; the router guard covers
+  // in-app links and navigations.
+  const comparisonDirty = useComparisonStore((s) => isComparisonDirty(s))
+  const [unsavedOpen, setUnsavedOpen] = useState(false)
+  const pendingNav = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!comparisonDirty) return
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [comparisonDirty])
+
+  useEffect(() => {
+    if (!comparisonDirty) {
+      setNavigationBlockGuard(null)
+      return
+    }
+    setNavigationBlockGuard((to) => {
+      // Signing in is how a signed-out visitor saves, so it must never be
+      // blocked by the unsaved guard. Staying on /compare is not leaving.
+      if (to.startsWith('/compare') || to.startsWith('/login')) return true
+      pendingNav.current = to
+      setUnsavedOpen(true)
+      return false
+    })
+    return () => setNavigationBlockGuard(null)
+  }, [comparisonDirty])
+
+  /** Discard the edits (back to the saved/initial baseline), then continue. */
+  const leaveWithoutSaving = () => {
+    const target = pendingNav.current
+    pendingNav.current = null
+    setUnsavedOpen(false)
+    setNavigationBlockGuard(null)
+    useComparisonStore.getState().discardComparisonChanges()
+    if (target) navigate(target)
+  }
+
+  const stayOnPage = () => {
+    pendingNav.current = null
+    setUnsavedOpen(false)
+  }
+
+  /** The dialog's Save hands off to the one save surface and stays here. */
+  const saveFromUnsaved = () => {
+    useComparisonStore.getState().requestSaveComparison()
+    stayOnPage()
+  }
+
+  /**
+   * Signed out, the dialog offers sign-in instead of a disabled Save. The
+   * pending flag makes the save dialog open on return, so signing in and
+   * saving is one uninterrupted action rather than a detour.
+   */
+  const signInToSave = () => {
+    markPendingComparisonSave()
+    pendingNav.current = null
+    setUnsavedOpen(false)
+    setNavigationBlockGuard(null)
+    navigate('/login?next=/compare')
+  }
+
+  // Back from login: if the edited comparison is still in memory, reopen the
+  // save dialog. A full reload (social sign-in) starts from the clean default
+  // comparison, and opening a save dialog for that would be noise.
+  useEffect(() => {
+    if (!signedIn) return
+    if (!takePendingComparisonSave()) return
+    if (!isComparisonDirty(useComparisonStore.getState())) return
+    useComparisonStore.getState().requestSaveComparison()
+  }, [signedIn])
 
   const scenarios = useComparisonStore((s) => s.scenarios)
   const shared = useComparisonStore((s) => s.shared)
@@ -196,6 +307,12 @@ export function ComparePage() {
       MoneyInput renders its own suffix). */
   const hintText = (value: number | null) =>
     value !== null ? formatGroupedNumber(value) : undefined
+
+  /** A delta is signed from the candidate's point of view: + is better. */
+  const signedCurrency = (value: number) =>
+    `${value > 0 ? '+' : value < 0 ? '-' : ''}${formatCurrency(Math.abs(value))}`
+  const deltaTone = (value: number) =>
+    value > 0 ? 'is-positive' : value < 0 ? 'is-negative' : 'is-even'
 
   /**
    * A blank scenario has no figures to report - it shows a dash rather than a
@@ -433,6 +550,39 @@ export function ComparePage() {
         .filter((mix) => (mix.result.forecast.scenarios[0]?.points.length ?? 0) > 0),
     [results, scenarios, t],
   )
+
+  /**
+   * Baseline-versus-candidate cash-flow comparisons. The baseline is the first
+   * PRICED mix (an empty or error-gated scenario has no schedule to compare),
+   * each other priced mix is a candidate, and the common horizon is the shorter
+   * of the two terms. This is a cash-flow comparison only; the remaining
+   * balance is reported separately so a longer term cannot read as free
+   * savings. Fewer than two priced mixes means there is nothing to compare.
+   */
+  const cashFlowComparisons = useMemo(() => {
+    const priced = results
+      .map((result, index) => ({ result, index }))
+      .filter(({ result }) => !result.isEmpty && !result.error && result.monthlySchedule.length > 0)
+    if (priced.length < 2) return []
+    const labelOf = (index: number) =>
+      scenarios[index]?.label.trim() || t('compare.scenarioUntitle', { index: index + 1 })
+    const feesOf = (result: ScenarioResult) =>
+      (result.closingCosts?.total ?? 0) + (result.transactionCosts?.total ?? 0)
+    const baseline = priced[0]
+    const baselineSide = {
+      label: labelOf(baseline.index),
+      months: baseline.result.monthlySchedule,
+      fees: feesOf(baseline.result),
+    }
+    return priced.slice(1).flatMap(({ result, index }) => {
+      const comparison = compareCashFlows(baselineSide, {
+        label: labelOf(index),
+        months: result.monthlySchedule,
+        fees: feesOf(result),
+      })
+      return comparison ? [{ ...comparison, scenarioIndex: index }] : []
+    })
+  }, [results, scenarios, t])
 
   const step = FORECAST_STEP_PERCENT
   const scenarioLabel = (id: 'base' | 'up' | 'down'): string =>
@@ -974,14 +1124,17 @@ export function ComparePage() {
         >
           <div className="compare-shared-head">
             <h2>{t('compare.sharedInputsHeading')}</h2>
-            <Link className="compare-back" to="/calculators" data-testid="compare-back">
-              {/* The arrow is mirrored by the stylesheet under RTL, so "back"
-                  points the way the layout reads (e2e measures its geometry). */}
-              {t('compare.backToCalculator')}
-              <span className="compare-back-icon" aria-hidden="true">
-                →
-              </span>
-            </Link>
+            <div className="compare-shared-actions">
+              <SaveComparisonButton />
+              <Link className="compare-back" to="/calculators" data-testid="compare-back">
+                {/* The arrow is mirrored by the stylesheet under RTL, so "back"
+                    points the way the layout reads (e2e measures its geometry). */}
+                {t('compare.backToCalculator')}
+                <span className="compare-back-icon" aria-hidden="true">
+                  →
+                </span>
+              </Link>
+            </div>
           </div>
           <div className="compare-shared-grid">
             <label className="input-group">
@@ -1225,7 +1378,7 @@ export function ComparePage() {
               {renderScenarioEditor(clampedMobileIndex)}
             </>
           )}
-          {scenarios.length < MAX_MIXES && (
+          {scenarios.length < MAX_MIXES ? (
             <button
               type="button"
               className="compare-add-scenario"
@@ -1237,6 +1390,10 @@ export function ComparePage() {
             >
               {t('compare.scenarioAdd')}
             </button>
+          ) : (
+            <p className="compare-add-scenario-cap" data-testid="compare-add-scenario-cap">
+              {t('compare.scenarioCapReached')}
+            </p>
           )}
         </section>
 
@@ -1257,6 +1414,99 @@ export function ComparePage() {
             <div className="compare-results-grid">
               {renderResultCard(clampedMobileIndex, 'compare-card')}
             </div>
+          </section>
+        )}
+
+        {/* Baseline versus each other priced mix: cumulative cash-flow deltas
+            over the shorter term, plus the remaining balance at that horizon.
+            Cash-flow-only by design; the note says so explicitly. */}
+        {cashFlowComparisons.length > 0 && (
+          <section
+            className="compare-cashflow"
+            data-testid="compare-cashflow"
+            aria-label={t('compare.cashFlowHeading')}
+          >
+            <h2>{t('compare.cashFlowHeading')}</h2>
+            <p className="compare-cashflow-lead">
+              {t('compare.cashFlowLead', {
+                baseline: cashFlowComparisons[0].baselineLabel,
+                years: cashFlowComparisons[0].horizonYears,
+                months: cashFlowComparisons[0].horizonMonths,
+              })}
+            </p>
+            <div className="compare-cashflow-grid">
+              {cashFlowComparisons.map((comparison) => {
+                const rows: Array<{ key: string; label: string; value: number }> = [
+                  {
+                    key: 'firstPayment',
+                    label: t('compare.cashFlowFirstPayment'),
+                    value: comparison.firstPaymentDelta,
+                  },
+                  {
+                    key: 'interest',
+                    label: t('compare.cashFlowInterest'),
+                    value: comparison.interestDelta,
+                  },
+                  {
+                    key: 'indexation',
+                    label: t('compare.cashFlowIndexation'),
+                    value: comparison.indexationDelta,
+                  },
+                  {
+                    key: 'fees',
+                    label: t('compare.cashFlowFees'),
+                    value: comparison.feesDelta,
+                  },
+                  {
+                    key: 'balance',
+                    label: t('compare.cashFlowBalance'),
+                    value: comparison.balanceDelta,
+                  },
+                  {
+                    key: 'net',
+                    label: t('compare.cashFlowNet'),
+                    value: comparison.netCashFlowDelta,
+                  },
+                ]
+                const breakEven = comparison.breaksEvenImmediately
+                  ? t('compare.cashFlowBreakEvenImmediate')
+                  : comparison.breakEvenMonth !== null
+                    ? t('compare.cashFlowBreakEvenMonth', {
+                        month: comparison.breakEvenMonth,
+                        year: Math.ceil(comparison.breakEvenMonth / 12),
+                      })
+                    : t('compare.cashFlowBreakEvenNever')
+                return (
+                  <article
+                    key={comparison.candidateLabel}
+                    className="compare-cashflow-card"
+                    data-testid={`compare-cashflow-${comparison.scenarioIndex + 1}`}
+                  >
+                    <h3>{comparison.candidateLabel}</h3>
+                    <dl className="compare-cashflow-metrics">
+                      {rows.map((row) => (
+                        <div key={row.key}>
+                          <dt>{row.label}</dt>
+                          <dd
+                            className={deltaTone(row.value)}
+                            data-testid={`compare-cashflow-${row.key}-${comparison.scenarioIndex + 1}`}
+                          >
+                            {signedCurrency(row.value)}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <p
+                      className="compare-cashflow-break-even"
+                      data-testid={`compare-cashflow-break-even-${comparison.scenarioIndex + 1}`}
+                    >
+                      {breakEven}
+                    </p>
+                  </article>
+                )
+              })}
+            </div>
+            <p className="compare-cashflow-note">{t('compare.cashFlowNote')}</p>
           </section>
         )}
 
@@ -1283,6 +1533,62 @@ export function ComparePage() {
 
         <p className="compare-disclaimer">{t('compare.disclaimer')}</p>
       </main>
+
+      <AppModal
+        open={unsavedOpen}
+        onOpenChange={(openState) => {
+          if (!openState) stayOnPage()
+        }}
+        testId="unsaved-comparison-confirm"
+        dir={i18n.dir()}
+        contentClassName="max-w-[440px] !border-0 !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
+      >
+        <div className="p-6">
+          <h3 className="mb-4 text-[20px] font-bold leading-tight text-ink">
+            {t('savedComparisons.unsavedTitle')}
+          </h3>
+          <p className="text-[15px] leading-relaxed text-ink">
+            {t(signedIn ? 'savedComparisons.unsavedBody' : 'savedComparisons.unsavedBodySignedOut')}
+          </p>
+          <div className="mt-6 modal-actions flex-wrap">
+            {signedIn ? (
+              <button
+                type="button"
+                data-testid="unsaved-comparison-save"
+                className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
+                onClick={saveFromUnsaved}
+              >
+                {t('savedComparisons.unsavedSave')}
+              </button>
+            ) : (
+              <button
+                type="button"
+                data-testid="unsaved-comparison-sign-in"
+                className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
+                onClick={signInToSave}
+              >
+                {t('savedComparisons.signInAndSave')}
+              </button>
+            )}
+            <button
+              type="button"
+              data-testid="unsaved-comparison-stay"
+              className="rounded-[5px] border border-[var(--calc-line)] px-5 py-2 text-[15px] font-medium text-[var(--calc-muted)] transition-colors hover:text-[var(--calc-teal-dark)]"
+              onClick={stayOnPage}
+            >
+              {t('savedComparisons.unsavedStay')}
+            </button>
+            <button
+              type="button"
+              data-testid="unsaved-comparison-discard"
+              className="rounded-[5px] border border-[var(--calc-line)] px-5 py-2 text-[15px] font-medium text-[var(--calc-muted)] transition-colors hover:text-[var(--calc-teal-dark)]"
+              onClick={leaveWithoutSaving}
+            >
+              {t('savedComparisons.unsavedDiscard')}
+            </button>
+          </div>
+        </div>
+      </AppModal>
     </>
   )
 }

@@ -196,6 +196,9 @@ strong {
   --line-strong: rgb(15, 15, 15);
   --line-soft: rgb(70, 70, 70);
   --hairline: rgba(15, 15, 15, 0.15);
+  /* Auth card edge: a soft light line on the white card, not the heavy
+     --line-soft outline. The dark theme raises it so the card stays visible. */
+  --auth-card-border: rgba(15, 15, 15, 0.16);
   /* Comment-thread rail: deliberately lighter than --line-soft, which is a
      heavy dark grey in this theme. */
   --comment-line: rgba(15, 15, 15, 0.18);
@@ -584,6 +587,10 @@ img {
    card keeps its contrast over the image (.below-chrome keeps the card itself
    clear of the fixed chrome). user-requested: mortgage-18.jpeg, renamed to
    login-cover.jpg. */
+.auth-card {
+  border-color: var(--auth-card-border);
+}
+
 .auth-page {
   background-color: var(--surface-page);
   background-size: cover;
@@ -593,22 +600,29 @@ img {
     url(/images/login-cover.jpg);
 }
 
-/* The profile page's backdrop. In LIGHT mode it is a normal page surface, so
-   the page follows the theme (user-requested; it used to be dark chrome in
-   both themes). DARK mode keeps the branded mixed-hue gradient (teal / blue /
-   green washes over a deep base), the same family as the hero and footer. The
-   cards on top keep their own theme surfaces for contrast in both modes. */
+/* Quiet theme surfaces keep the profile's saved work in focus. */
 .profile-page {
-  background-color: var(--surface-page);
+  background: var(--surface-page);
 }
 
-:root[data-theme='dark'] .profile-page {
-  background-color: #0b1220;
-  background-image:
-    radial-gradient(900px 520px at 12% -10%, rgba(8, 127, 120, 0.55), transparent 60%),
-    radial-gradient(760px 520px at 100% 0%, rgba(56, 102, 255, 0.42), transparent 55%),
-    radial-gradient(720px 620px at 50% 112%, rgba(26, 150, 90, 0.34), transparent 62%),
-    linear-gradient(160deg, #0b1220 0%, #101a2e 55%, #0c1524 100%);
+.profile-panel {
+  border-color: color-mix(in srgb, var(--line-soft) 45%, transparent);
+}
+
+.profile-library-panel {
+  min-block-size: 8rem;
+}
+
+.profile-library-panel > section > [role='status'],
+.profile-library-panel > section > p {
+  min-block-size: 2.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.profile-library-panel > section > ul > li {
+  background: var(--surface-soft);
+  border-color: var(--line-soft);
 }
 
 /* The one-shot confetti after an email address is verified (the profile page is
@@ -732,6 +746,19 @@ img {
 
 .saved-mix-delete-button:hover {
   opacity: 0.9;
+}
+
+/* Non-destructive card actions (rename, duplicate). Outline only: the saved
+   comparison card used the delete style for these by mistake, which painted
+   them red. Roles flip with the theme, so the outline stays visible in both. */
+.saved-mix-secondary-button {
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  background: transparent;
+}
+
+.saved-mix-secondary-button:hover {
+  opacity: 0.75;
 }
 
 /* The saved-mix card renders the SAME donut as the calculator
@@ -5794,6 +5821,9 @@ html[dir='ltr'] .date-field {
   z-index: 1200;
   display: block;
   width: max-content;
+  /* A two-line hint is authored with an explicit newline (e.g. the saved
+     comparison cap), not left to the panel width. */
+  white-space: pre-line;
   max-width: min(320px, calc(100vw - 24px));
   padding: 9px 12px;
   border: 1px solid var(--calc-line);
@@ -5873,7 +5903,8 @@ input[type='number']::-webkit-outer-spin-button {
    type). :where() keeps the compound at the calculator rule's own specificity,
    so control-specific rules - .compare-scenario-name, the range input in
    .term-slider-wrap - still win. */
-.compare-shell :where(input, select) {
+.compare-shell :where(input, select),
+.refinance-shell :where(input:not([type='radio']):not([type='checkbox']), select) {
   width: 100%;
   min-width: 0;
   border: 0;
@@ -5883,6 +5914,40 @@ input[type='number']::-webkit-outer-spin-button {
   font: inherit;
   font-size: 0.95rem;
   padding: 12px;
+}
+
+/* Shared desktop rows keep matching track legends level even when either
+   heading, validation message or saved-mix control takes more space. */
+@media (min-width: 1024px) {
+  .refinance-columns {
+    grid-template-rows: auto repeat(var(--refinance-track-count), auto) auto;
+  }
+
+  .refinance-column {
+    display: grid;
+    grid-template-rows: subgrid;
+    grid-row: 1 / span calc(var(--refinance-track-count) + 2);
+    min-width: 0;
+  }
+
+  .refinance-column-heading {
+    grid-row: 1;
+  }
+
+  .refinance-track-list {
+    display: grid;
+    grid-template-rows: subgrid;
+    grid-row: 2 / span var(--refinance-track-count);
+    margin-top: 0;
+  }
+
+  .refinance-track-list > fieldset {
+    min-width: 0;
+  }
+
+  .refinance-column-footer {
+    grid-row: calc(var(--refinance-track-count) + 2);
+  }
 }
 
 .calculator-panel input:disabled {
@@ -10419,6 +10484,7 @@ tbody tr:hover {
   --line-strong: rgba(233, 241, 239, 0.3);
   --line-soft: rgba(233, 241, 239, 0.24);
   --hairline: rgba(233, 241, 239, 0.15);
+  --auth-card-border: rgba(233, 241, 239, 0.4);
   /* Comment-thread rail: softer than --line-soft, so it reads as a guide and
      not a hard outline. */
   --comment-line: rgba(233, 241, 239, 0.18);
@@ -11229,6 +11295,7 @@ html[dir='rtl'] .comment-text {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 36px;
   color: var(--calc-teal-dark);
   font-weight: 700;
   white-space: nowrap;
@@ -11279,6 +11346,94 @@ html[dir='rtl'] .comment-text {
   :root[dir='rtl'] .compare-back:hover .compare-back-icon {
     translate: none;
   }
+}
+
+/* Save control beside the way back: same quiet weight as the back link, with
+   a clear saved state once the comparison matches its stored snapshot. */
+.compare-shared-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.compare-save-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--calc-line);
+  border-radius: 8px;
+  color: var(--calc-teal-dark);
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: transparent;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+/* The refinance entry beside the save control is an action, not a text link:
+   same box rhythm as the save button, but a filled teal face so the two read as
+   "save this" and "do something new" rather than one control and one caption. */
+.compare-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--calc-teal);
+  border-radius: 8px;
+  background: var(--calc-teal);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.compare-action-button:hover,
+.compare-action-button:focus-visible {
+  background: var(--calc-teal-deep);
+  border-color: var(--calc-teal-deep);
+  color: #fff;
+}
+
+.compare-action-button:focus-visible {
+  outline: 2px solid var(--calc-teal-dark);
+  outline-offset: 2px;
+}
+
+.compare-save-button:hover:not(:disabled),
+.compare-save-button:focus-visible {
+  color: var(--calc-accent);
+  border-color: var(--calc-accent);
+}
+
+.compare-save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.compare-save-button.is-saved {
+  border-color: transparent;
+  color: var(--calc-muted);
+}
+
+.compare-save-placeholder {
+  visibility: hidden;
+  display: inline-block;
+  min-width: 118px;
+}
+
+.compare-save-notice {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.compare-save-notice.is-error {
+  color: var(--danger);
 }
 
 .compare-shared {
@@ -11942,6 +12097,17 @@ html[dir='rtl'] .comment-text {
   background: var(--calc-soft);
 }
 
+/* At the scenario cap the add control is replaced by an explanation, so the
+   limit is visible instead of the button silently disappearing. */
+.compare-add-scenario-cap {
+  margin: 26px auto 0;
+  max-width: 44ch;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--calc-muted);
+}
+
 /* Results: one card per scenario, stacked full width. Each card is
    self-contained (metrics, composition donut, its own chart and payments
    table), so the mix reads top to bottom; the best-per-metric highlight is
@@ -12022,6 +12188,102 @@ html[dir='rtl'] .comment-text {
   border-radius: 999px;
   padding: 2px 9px;
   vertical-align: middle;
+}
+
+/* Baseline-versus-candidate cash flow: one card per compared mix, under the
+   result cards and above the trend charts. Deltas are signed from the
+   candidate's point of view (+ = better); the remaining balance is its own row
+   so a longer term cannot masquerade as savings. */
+.compare-cashflow {
+  margin-bottom: 26px;
+}
+
+.compare-cashflow h2 {
+  margin: 0 0 9px;
+  font-size: 1.25rem;
+  color: var(--calc-teal-dark);
+}
+
+.compare-cashflow-lead {
+  margin: 0 0 14px;
+  color: var(--calc-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.compare-cashflow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 18px;
+}
+
+.compare-cashflow-card {
+  min-width: 0;
+  padding: 18px 20px;
+  background: var(--calc-paper);
+  border: 1px solid rgba(8, 127, 120, 0.14);
+  box-shadow: 0 20px 55px rgba(22, 50, 53, 0.1);
+  color: var(--calc-ink);
+}
+
+.compare-cashflow-card h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  color: var(--calc-teal-dark);
+}
+
+.compare-cashflow-metrics {
+  margin: 0;
+}
+
+.compare-cashflow-metrics > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--calc-line);
+}
+
+.compare-cashflow-metrics dt {
+  color: var(--calc-muted);
+  font-size: 0.9rem;
+}
+
+.compare-cashflow-metrics dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.compare-cashflow-metrics dd.is-positive {
+  color: var(--calc-accent);
+}
+
+.compare-cashflow-metrics dd.is-negative {
+  color: var(--danger);
+}
+
+.compare-cashflow-metrics dd.is-even {
+  color: var(--calc-muted);
+  font-weight: 600;
+}
+
+.compare-cashflow-break-even {
+  margin: 12px 0 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--calc-ink);
+}
+
+.compare-cashflow-note {
+  margin: 12px 0 0;
+  color: var(--calc-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .compare-status-list {
@@ -12806,13 +13068,20 @@ html[dir='rtl'] .comment-text {
   }
 }
 
-/* Heading-actions row on the calculator panel: compare CTA + reset side by
-   side, both keeping the quiet reset-button styling. */
+/* Calculator heading actions share the same quiet underlined styling. */
 .panel-heading-actions {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 18px;
   margin-bottom: 50px;
+}
+
+/* Keep all three text actions aligned at the same height. */
+.panel-heading-actions .reset-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  margin-bottom: 0;
 }
 
 .starting-actions>.my-mixes-menu-wrap {
@@ -13188,3 +13457,53 @@ html[dir='rtl'] .comment-text {
     grid-row: 4;
   }
 }
+
+/* Calculator navigation shares the account popover's surface without moving
+   the surrounding links when the disclosure opens. */
+nav#navbar .nav-calculators { position: relative; }
+nav#navbar .nav-calculators-heading { display: flex; align-items: center; }
+/* The toggle is a small box around an 11px chevron, so its own width is most
+   of the gap beside the label. Trim both sides of that gap (the link's end
+   padding and the box) so the chevron sits with the word it opens. */
+nav#navbar .nav-calculators-heading a { padding-inline-end: 0; }
+nav#navbar .nav-calculators-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 18px;
+  block-size: 44px;
+  margin-block-start: 4px;
+  color: var(--soft-white);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+nav#navbar.links-dark .nav-calculators-toggle { color: var(--ink); }
+nav#navbar .nav-calculators-toggle svg { inline-size: 11px; transition: transform 150ms ease; }
+nav#navbar .nav-calculators-toggle[aria-expanded='true'] svg { transform: rotate(180deg); }
+nav#navbar .nav-calculators-toggle:focus-visible { outline: 2px solid var(--soft-blue); outline-offset: 2px; border-radius: 6px; }
+nav#navbar .nav-calculators-menu { inset-inline-start: 0; inset-inline-end: auto; min-inline-size: 220px; }
+nav#navbar #nav-list .nav-calculators-menu a {
+  display: flex;
+  margin: 0;
+  padding: 10px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: start;
+  transform: none;
+  transition: background-color 150ms ease;
+}
+nav#navbar #nav-list .nav-calculators-menu a::after { display: none; }
+nav#navbar #nav-list .nav-calculators-menu a[aria-current='page'] { background: var(--surface-soft); font-weight: 600; }
+@media (max-width: 1200px) {
+  nav#navbar .nav-calculators-toggle { color: var(--ink); inline-size: 44px; }
+  nav#navbar .nav-calculators-menu { inset-inline-start: 50%; transform: translateX(-50%); }
+  html[dir='rtl'] nav#navbar .nav-calculators-menu { transform: translateX(50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  nav#navbar .nav-calculators-toggle svg,
+  nav#navbar .nav-calculators-menu { transition: none; }
+}
+
+nav#navbar #nav-list .nav-calculators-heading a { transform: none; }

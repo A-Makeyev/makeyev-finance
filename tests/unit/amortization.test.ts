@@ -104,6 +104,39 @@ describe('computeTrackResult - Spitzer', () => {
     expect(round2(result!.highestPayment)).toBe(round2(result!.firstPayment))
   })
 
+  it('accepts an exact remaining-months term', () => {
+    const byYears = computeTrackResult({
+      principal: 100_000,
+      years: 15,
+      annualRatePercent: 5,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    const byMonths = computeTrackResult({
+      principal: 100_000,
+      years: 15,
+      termMonths: 180,
+      annualRatePercent: 5,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    expect(byMonths.monthlyRows).toHaveLength(180)
+    expect(byMonths.totalPaid).toBeCloseTo(byYears.totalPaid, 6)
+
+    // A term that is not a whole number of years is still valid in months
+    // (a payoff statement's remaining-payment count).
+    const odd = computeTrackResult({
+      principal: 100_000,
+      years: 137 / 12,
+      termMonths: 137,
+      annualRatePercent: 5,
+      type: 'fixed',
+      method: 'spitzer',
+    })!
+    expect(odd.monthlyRows).toHaveLength(137)
+    expect(odd.yearlyRows.at(-1)?.closing).toBeCloseTo(0, 6)
+  })
+
   it('uses the balance/remaining branch at a zero rate', () => {
     const result = computeTrackResult({
       principal: 120_000,
