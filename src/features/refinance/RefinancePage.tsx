@@ -950,20 +950,18 @@ export function RefinancePage() {
         {/* The forecast assumption applies to BOTH sides: applying a rate
             rise only to the existing mortgage would bias the comparison. */}
         <div className="mt-5 rounded-2xl border border-line-soft bg-surface-card p-4 sm:p-5">
-          <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-            <h2 className="text-base font-semibold text-ink">
-              {t('refinance.resetHeading')}
-            </h2>
-            <label className="input-group w-40">
-              {t('refinance.resetStepLabel')}
-              <TextField
-                testId="refinance-reset-step"
-                value={resetStepText}
-                onChange={setResetStepText}
-                suffix={t('refinance.resetStepSuffix')}
-              />
-            </label>
-          </div>
+          <h2 className="text-base font-semibold text-ink">
+            {t('refinance.resetHeading')}
+          </h2>
+          <label className="input-group mt-3 block w-40">
+            {t('refinance.resetStepLabel')}
+            <TextField
+              testId="refinance-reset-step"
+              value={resetStepText}
+              onChange={setResetStepText}
+              suffix={t('refinance.resetStepSuffix')}
+            />
+          </label>
           <p className="mt-2 text-xs leading-relaxed text-ink-muted">
             {t('refinance.resetHint')}
           </p>
