@@ -36,6 +36,26 @@ describe('saved refinance ownership and limits', () => {
     expect(await deleteSavedRefinance('bob', id)).toBe(false)
     expect(await deleteSavedRefinance('alice', id)).toBe(true)
   })
+  it('round-trips every proposal in a multi-proposal plan', async () => {
+    const second = {
+      label: 'Second',
+      proposedTracks: proposed.map((track) => ({ ...track, annualRatePercent: 3.5 })),
+      feeAmount: 0,
+      feeMode: 'cash' as const,
+    }
+    const twoProposals = {
+      ...input,
+      label: 'Two proposals',
+      snapshot: { ...input.snapshot, proposals: [...input.snapshot.proposals, second] },
+    }
+
+    expect((await createSavedRefinance('multi-owner', twoProposals)).ok).toBe(true)
+
+    const [stored] = await listSavedRefinances('multi-owner')
+    expect(stored.snapshot.proposals).toHaveLength(2)
+    expect(stored.snapshot.proposals[1]).toEqual(second)
+  })
+
   it('refuses a fifth save, allows updating at the cap, and frees a deleted slot', async () => {
     for (let i = 0; i < 4; i++) {
       expect((await createSavedRefinance('cap-owner', { ...input, label: `Proposal ${i}` })).ok).toBe(true)
