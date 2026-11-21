@@ -665,6 +665,29 @@ export function RefinancePage() {
                 {t('refinance.addTrack')}
               </button>
             )}
+
+            {/* The keep-side assumption sits in this column's footer, opposite
+                the payoff fee in the proposed column, so both fields share the
+                desktop footer row and read as a pair. */}
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <label className="input-group sm:col-span-2">
+                {t('refinance.resetHeading')}
+                <TextField
+                  testId="refinance-reset-step"
+                  value={resetStepText}
+                  onChange={setResetStepText}
+                  suffix={t('refinance.resetStepSuffix')}
+                />
+              </label>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-ink-muted">
+              {t('refinance.resetHint')}
+            </p>
+            {sharedMissing.includes('resetStep:invalid') && (
+              <p role="alert" className="mt-2 text-xs text-danger">
+                {t('refinance.resetStepInvalid')}
+              </p>
+            )}
             </div>
           </section>
 
@@ -877,7 +900,7 @@ export function RefinancePage() {
               </button>
             )}
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <label className="input-group sm:col-span-2">
                 {t('refinance.feeLabel')}
                 <MoneyInput
@@ -945,31 +968,6 @@ export function RefinancePage() {
             )}
             </div>
           </section>
-        </div>
-
-        {/* The forecast assumption applies to BOTH sides: applying a rate
-            rise only to the existing mortgage would bias the comparison. */}
-        <div className="mt-5 rounded-2xl border border-line-soft bg-surface-card p-4 sm:p-5">
-          <h2 className="text-base font-semibold text-ink">
-            {t('refinance.resetHeading')}
-          </h2>
-          <label className="input-group mt-3 block w-40">
-            {t('refinance.resetStepLabel')}
-            <TextField
-              testId="refinance-reset-step"
-              value={resetStepText}
-              onChange={setResetStepText}
-              suffix={t('refinance.resetStepSuffix')}
-            />
-          </label>
-          <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-            {t('refinance.resetHint')}
-          </p>
-          {sharedMissing.includes('resetStep:invalid') && (
-            <p role="alert" className="mt-2 text-xs text-danger">
-              {t('refinance.resetStepInvalid')}
-            </p>
-          )}
         </div>
 
         {showResults && existing ? (
