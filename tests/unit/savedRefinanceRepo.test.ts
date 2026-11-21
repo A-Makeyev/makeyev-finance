@@ -17,11 +17,12 @@ beforeAll(async () => {
 })
 afterAll(async () => { await client?.close(); await mongo?.stop() })
 
-const input = { label: 'Proposal', snapshot: { version: 1 as const,
+const proposed = [{ type: 'fixed' as const, sharePercent: 100, annualRatePercent: 4,
+  termYears: 20, method: 'spitzer' as const, resetMonths: 0 }]
+const input = { label: 'Proposal', snapshot: { version: 2 as const,
   existingTracks: [emptyExistingMortgageTrack('one')],
-  proposedTracks: [{ type: 'fixed' as const, sharePercent: 100, annualRatePercent: 4,
-    termYears: 20, method: 'spitzer' as const, resetMonths: 0 }],
-  feeAmount: 2000, feeMode: 'cash' as const, existingResetStepPercent: 0 } }
+  proposals: [{ label: '', proposedTracks: proposed, feeAmount: 2000, feeMode: 'cash' as const }],
+  existingResetStepPercent: 0 } }
 
 describe('saved refinance ownership and limits', () => {
   it('round-trips inputs and prevents another owner reading, updating or deleting them', async () => {
@@ -49,5 +50,28 @@ describe('saved refinance ownership and limits', () => {
     expect((await createSavedRefinance('names', input)).ok).toBe(true)
     expect(await createSavedRefinance('names', { ...input, label: ' proposal ' })).toEqual({ ok: false, reason: 'duplicate' })
     expect((await createSavedRefinance('other-names', input)).ok).toBe(true)
+  })
+
+  it('normalizes a version 1 saved plan to one proposal when reading it', async () => {
+    await database.db!.collection('saved_refinances').insertOne({
+      userId: 'legacy-owner',
+      label: 'Legacy plan',
+      snapshot: {
+        version: 1,
+        existingTracks: input.snapshot.existingTracks,
+        proposedTracks: proposed,
+        feeAmount: 2000,
+        feeMode: 'cash',
+        existingResetStepPercent: 0,
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    const [saved] = await listSavedRefinances('legacy-owner')
+    expect(saved.snapshot.version).toBe(2)
+    expect(saved.snapshot.proposals).toEqual([
+      { label: '', proposedTracks: proposed, feeAmount: 2000, feeMode: 'cash' },
+    ])
   })
 })

@@ -108,12 +108,12 @@ export function SavedRefinancesSection() {
                   </dd>
                 </div>
                 <div className="flex flex-col">
-                  <dt className="text-xs text-ink-muted">{t('savedRefinances.proposedTracks')}</dt>
+                  <dt className="text-xs text-ink-muted">{t('savedRefinances.proposals')}</dt>
                   <dd
                     className="text-base font-semibold text-ink"
                     data-testid="saved-refinance-proposed-count"
                   >
-                    {proposal.snapshot.proposedTracks.length}
+                    {proposal.snapshot.proposals.length}
                   </dd>
                 </div>
                 {totalBalance !== null && totalBalance > 0 && (

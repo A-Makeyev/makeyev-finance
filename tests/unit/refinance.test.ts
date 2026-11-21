@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { allocateByShares, computeRefinance, type ProposedTrackInput } from '@/features/refinance/computeRefinance'
+import {
+  allocateByShares,
+  computeRefinance,
+  computeRefinanceSet,
+  type ProposedTrackInput,
+} from '@/features/refinance/computeRefinance'
 import type { ExistingMortgageTrack } from '@/features/refinance/existingMortgage'
 import { MAX_TRACKS, MAX_YEARS } from '@/lib/amortization'
 import { buildRefinanceSnapshot } from '@/features/refinance/snapshot'
@@ -95,11 +100,22 @@ describe('computeRefinance', () => {
         { ...base.proposedTracks[0], sharePercent: 66.667, annualRatePercent: 5 },
       ] }
       const before = computeRefinance(input)
-      const snapshot = buildRefinanceSnapshot({ ...input, existingTracks: input.tracks })!
+      const snapshot = buildRefinanceSnapshot({
+        existingTracks: input.tracks,
+        proposals: [{
+          label: 'Proposal',
+          proposedTracks: input.proposedTracks,
+          feeAmount: input.feeAmount,
+          feeMode: input.feeMode,
+        }],
+        existingResetStepPercent: 0,
+      })!
       const stored = JSON.parse(JSON.stringify(snapshot)) as typeof snapshot
       const after = computeRefinance({ ...input, tracks: stored.existingTracks,
-        proposedTracks: toProposedTrackInputs(proposedTracksFromSnapshot(stored.proposedTracks)),
-        feeAmount: stored.feeAmount, feeMode: stored.feeMode })
+        proposedTracks: toProposedTrackInputs(
+          proposedTracksFromSnapshot(stored.proposals[0].proposedTracks),
+        ),
+        feeAmount: stored.proposals[0].feeAmount, feeMode: stored.proposals[0].feeMode })
       expect(before.ready).toBe(true)
       expect(after).toEqual(before)
       expect(after.proposedAllocations).toEqual(feeMode === 'cash' ? [33333, 66667] : [34000, 68000])
@@ -355,6 +371,89 @@ describe('computeRefinance', () => {
     // Both tracks contribute: 60k over 120 months (666.12) plus 40k over 60
     // months (773.31), for a combined first payment of 1,439.44.
     expect(result.existing!.monthly[0].paid).toBeCloseTo(1_439.44, 1)
+  })
+})
+
+describe('computeRefinanceSet', () => {
+  const proposed = base.proposedTracks[0]
+  const setInput = {
+    existingLabel: 'Existing',
+    tracks: [track()],
+    asOfDate: '2026-11-21',
+    resetStepPercent: 0,
+  }
+
+  it('prices each proposal against the same shared existing side', () => {
+    const set = computeRefinanceSet({
+      ...setInput,
+      proposals: [
+        { id: 'a', label: 'With fee', proposedTracks: [proposed], feeAmount: 2_000, feeMode: 'cash' },
+        {
+          id: 'b',
+          label: 'No fee',
+          proposedTracks: [{ ...proposed, annualRatePercent: 4.5 }],
+          feeAmount: 0,
+          feeMode: 'cash',
+        },
+      ],
+    })
+
+    expect(set.existing).not.toBeNull()
+    expect(set.totalBalance).toBe(100_000)
+    expect(set.proposals.map((item) => item.id)).toEqual(['a', 'b'])
+    expect(set.proposals.every((item) => item.ready)).toBe(true)
+    // 100k at 4% over 120 months is 1,012.45; 4.5% is higher.
+    expect(set.proposals[0].proposed!.monthlyPayment).toBeCloseTo(1_012.45, 1)
+    expect(set.proposals[1].proposed!.monthlyPayment).toBeGreaterThan(
+      set.proposals[0].proposed!.monthlyPayment,
+    )
+    // The fee makes proposal A break even at month 21; B is cheaper from month 1.
+    expect(set.proposals[0].comparison!.breakEvenMonth).toBe(21)
+    expect(set.proposals[1].comparison!.breaksEvenImmediately).toBe(true)
+    // Both comparisons use the same keep side, so its payment cannot drift.
+    expect(set.proposals[0].existing!.monthlyPayment).toBeCloseTo(
+      set.proposals[1].existing!.monthlyPayment,
+      6,
+    )
+  })
+
+  it('keeps the existing side and other proposals when one proposal is incomplete', () => {
+    const set = computeRefinanceSet({
+      ...setInput,
+      proposals: [
+        { id: 'valid', label: '', proposedTracks: [proposed], feeAmount: 0, feeMode: 'cash' },
+        {
+          id: 'invalid',
+          label: '',
+          proposedTracks: [{ ...proposed, annualRatePercent: null }],
+          feeAmount: 0,
+          feeMode: 'cash',
+        },
+      ],
+    })
+
+    expect(set.existing).not.toBeNull()
+    expect(set.proposals[0].ready).toBe(true)
+    expect(set.proposals[1].ready).toBe(false)
+    expect(set.proposals[1].missing).toContain('proposed:0:rate')
+    // The invalid proposal does not hide the keep side it is compared to.
+    expect(set.proposals[1].existing).not.toBeNull()
+    expect(set.proposals[1].proposed).toBeNull()
+  })
+
+  it('confines a bad fee to its own proposal', () => {
+    const set = computeRefinanceSet({
+      ...setInput,
+      proposals: [
+        { id: 'bad', label: '', proposedTracks: [proposed], feeAmount: NaN, feeMode: 'cash' },
+        { id: 'good', label: '', proposedTracks: [proposed], feeAmount: 0, feeMode: 'cash' },
+      ],
+    })
+
+    expect(set.existing).not.toBeNull()
+    expect(set.proposals[0].ready).toBe(false)
+    expect(set.proposals[0].missing).toContain('fee:invalid')
+    expect(set.proposals[1].ready).toBe(true)
   })
 })
 

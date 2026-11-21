@@ -3,8 +3,10 @@ import { getDb } from '../auth/mongo'
 import { normalizeMixLabel } from '../mixes/label'
 import {
   MAX_SAVED_REFINANCES,
+  normalizeRefinanceSnapshot,
   type RefinanceSnapshotInput,
   type SavedRefinanceInput,
+  type StoredRefinanceSnapshotInput,
 } from './schema'
 
 /**
@@ -21,7 +23,8 @@ const COLLECTION = 'saved_refinances'
 export interface SavedRefinanceDoc {
   userId: string
   label: string
-  snapshot: RefinanceSnapshotInput
+  /** Version 1 is still present in older documents and is normalized on read. */
+  snapshot: StoredRefinanceSnapshotInput
   createdAt: Date
   updatedAt: Date
 }
@@ -39,7 +42,7 @@ function toSavedRefinance(doc: WithId<SavedRefinanceDoc>): SavedRefinance {
   return {
     id: doc._id.toHexString(),
     label: doc.label,
-    snapshot: doc.snapshot,
+    snapshot: normalizeRefinanceSnapshot(doc.snapshot),
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   }

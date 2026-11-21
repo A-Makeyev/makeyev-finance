@@ -163,11 +163,9 @@ export function allocateByShares(total: number, shares: number[]): number[] {
  * with a default.
  */
 export function computeRefinance(input: RefinanceInput): RefinanceProjection {
-  // Apply the same bounds as saved records before invalid values reach totals
-  // or the schedule engine. A rejected fee must never look like a free payoff.
-  if (!Number.isFinite(input.feeAmount) || input.feeAmount < 0 || input.feeAmount > 1_000_000_000_000) {
-    return { ...EMPTY, missing: ['fee:invalid'] }
-  }
+  // Shared assumptions are validated once: if these are invalid, neither side
+  // can be priced. A proposal's own fee is validated with that proposal, so a
+  // bad fee never hides the existing side or another proposal.
   const resetStepPercent = input.resetStepPercent ?? 0
   if (!Number.isFinite(resetStepPercent) || resetStepPercent < -100 || resetStepPercent > 100) {
     return { ...EMPTY, missing: ['resetStep:invalid'] }
@@ -175,25 +173,26 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
   if (parseDateOnly(input.asOfDate) === null) {
     return { ...EMPTY, missing: ['asOf:invalid'] }
   }
-  const missing: string[] = []
+  const existingMissing: string[] = []
+  const proposedMissing: string[] = []
   const results: NonNullable<ReturnType<typeof computeTrackResult>>[] = []
   let totalBalance = 0
 
   for (const track of input.tracks) {
     const key = track.id
     if (!existingMortgageTrackSchema.safeParse(track).success) {
-      missing.push(`${key}:invalid`)
+      existingMissing.push(`${key}:invalid`)
       continue
     }
     if (track.currentBalance === null || track.currentBalance <= 0) {
-      missing.push(`${key}:balance`)
+      existingMissing.push(`${key}:balance`)
       continue
     }
     totalBalance += track.currentBalance
-    if (track.contractedAnnualRate === null) missing.push(`${key}:rate`)
-    if (track.type === null) missing.push(`${key}:type`)
-    if (track.method === null) missing.push(`${key}:method`)
-    if (track.remainingMonths === null) missing.push(`${key}:remainingMonths`)
+    if (track.contractedAnnualRate === null) existingMissing.push(`${key}:rate`)
+    if (track.type === null) existingMissing.push(`${key}:type`)
+    if (track.method === null) existingMissing.push(`${key}:method`)
+    if (track.remainingMonths === null) existingMissing.push(`${key}:remainingMonths`)
     if (
       track.contractedAnnualRate === null ||
       track.type === null ||
@@ -218,28 +217,41 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
       rateStepPercent: resetStepPercent,
     })
     if (!result) {
-      missing.push(`${key}:invalid`)
+      existingMissing.push(`${key}:invalid`)
       continue
     }
     results.push(result)
   }
 
-  if (input.tracks.length === 0) missing.push('existing:empty')
-  if (input.tracks.length > MAX_TRACKS) missing.push('existing:tooMany')
-  if (input.proposedTracks.length === 0) missing.push('proposed:empty')
-  if (input.proposedTracks.length > MAX_TRACKS) missing.push('proposed:tooMany')
+  if (input.tracks.length === 0) existingMissing.push('existing:empty')
+  if (input.tracks.length > MAX_TRACKS) existingMissing.push('existing:tooMany')
+
+  // The existing side is priced independently of the proposal. A half-entered
+  // proposal must not hide a complete keep-side projection, and in a set of
+  // proposals each one can be compared as soon as it is complete.
+  const existingComplete =
+    existingMissing.length === 0 && results.length === input.tracks.length
+  const existing = existingComplete ? summary(results) : null
+
+  if (input.proposedTracks.length === 0) proposedMissing.push('proposed:empty')
+  if (input.proposedTracks.length > MAX_TRACKS) proposedMissing.push('proposed:tooMany')
+  const feeValid =
+    Number.isFinite(input.feeAmount) &&
+    input.feeAmount >= 0 &&
+    input.feeAmount <= 1_000_000_000_000
+  if (!feeValid) proposedMissing.push('fee:invalid')
 
   // Validate every proposed track before pricing any of them, so one bad rate
   // does not hide the rest of the fields the user still has to fill.
   input.proposedTracks.forEach((track, index) => {
-    if (track.type === null) missing.push(`proposed:${index}:type`)
+    if (track.type === null) proposedMissing.push(`proposed:${index}:type`)
     if (
       track.sharePercent === null ||
       !Number.isFinite(track.sharePercent) ||
       track.sharePercent <= 0 ||
       track.sharePercent > 100
     ) {
-      missing.push(`proposed:${index}:share`)
+      proposedMissing.push(`proposed:${index}:share`)
     }
     if (
       track.annualRatePercent === null ||
@@ -247,7 +259,7 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
       track.annualRatePercent < 0 ||
       track.annualRatePercent > 100
     ) {
-      missing.push(`proposed:${index}:rate`)
+      proposedMissing.push(`proposed:${index}:rate`)
     }
     if (
       track.termYears === null ||
@@ -255,18 +267,22 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
       track.termYears < 1 ||
       track.termYears > MAX_YEARS
     ) {
-      missing.push(`proposed:${index}:term`)
+      proposedMissing.push(`proposed:${index}:term`)
     }
-    if (track.method === null) missing.push(`proposed:${index}:method`)
+    if (track.method === null) proposedMissing.push(`proposed:${index}:method`)
   })
 
   const shareSum = input.proposedTracks.reduce(
     (sum, track) => sum + (track.sharePercent !== null && track.sharePercent > 0 ? track.sharePercent : 0),
     0,
   )
-  if (input.proposedTracks.length > 0 && !(shareSum > 0)) missing.push('proposed:shares')
+  if (input.proposedTracks.length > 0 && !(shareSum > 0)) {
+    proposedMissing.push('proposed:shares')
+  }
 
-  const capitalized = input.feeMode === 'capitalized' ? input.feeAmount : 0
+  // A rejected fee must never look like a free payoff, so it is not
+  // capitalized and blocks the comparison until it is corrected.
+  const capitalized = feeValid && input.feeMode === 'capitalized' ? input.feeAmount : 0
   const proposedPrincipal = totalBalance + capitalized
   const allocations =
     proposedPrincipal > 0 && input.proposedTracks.length > 0
@@ -279,7 +295,7 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
       : input.proposedTracks.map(() => 0)
 
   const proposedResults: NonNullable<ReturnType<typeof computeTrackResult>>[] = []
-  if (missing.length === 0) {
+  if (existingComplete && proposedMissing.length === 0) {
     input.proposedTracks.forEach((track, index) => {
       const result = computeTrackResult({
         principal: allocations[index],
@@ -299,24 +315,30 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
         rateStepPercent: resetStepPercent,
       })
       if (!result) {
-        missing.push(`proposed:${index}:invalid`)
+        proposedMissing.push(`proposed:${index}:invalid`)
         return
       }
       proposedResults.push(result)
     })
   }
 
-  if (results.length === 0 || proposedResults.length !== input.proposedTracks.length || missing.length > 0) {
+  const missing = [...new Set([...existingMissing, ...proposedMissing])]
+  const ready =
+    existingComplete &&
+    proposedMissing.length === 0 &&
+    proposedResults.length === input.proposedTracks.length
+
+  if (!ready || existing === null) {
     return {
       ...EMPTY,
-      missing: [...new Set(missing)],
+      missing,
       totalBalance,
+      existing,
       proposedPrincipal,
       proposedAllocations: allocations,
     }
   }
 
-  const existing = summary(results)
   const proposed = summary(proposedResults)
   const comparison = compareCashFlows(
     {
@@ -343,5 +365,65 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
     proposedPrincipal,
     proposedAllocations: allocations,
     comparison,
+  }
+}
+
+/** One named proposed mix in a set of alternatives. */
+export interface RefinanceProposalInput {
+  id: string
+  label: string
+  proposedTracks: ProposedTrackInput[]
+  feeAmount: number
+  feeMode: FeeMode
+}
+
+export interface RefinanceProposalProjection extends RefinanceProjection {
+  id: string
+  label: string
+}
+
+export interface RefinanceSetProjection {
+  /** The shared keep side, once its tracks are complete. */
+  existing: RefinanceSideSummary | null
+  totalBalance: number
+  proposals: RefinanceProposalProjection[]
+}
+
+/**
+ * Prices several named proposals against the same existing mortgage.
+ *
+ * Each proposal is independent: one incomplete or invalid proposal returns its
+ * own blocking fields while the others, and the shared existing side, still
+ * price normally. The existing summary is taken from the first projection that
+ * could produce it; every copy is identical because it depends only on the
+ * shared tracks and assumptions.
+ */
+export function computeRefinanceSet(input: {
+  existingLabel: string
+  tracks: ExistingMortgageTrack[]
+  proposals: RefinanceProposalInput[]
+  asOfDate: string
+  resetStepPercent?: number
+}): RefinanceSetProjection {
+  const proposals = input.proposals.map((proposal) => ({
+    id: proposal.id,
+    label: proposal.label,
+    ...computeRefinance({
+      existingLabel: input.existingLabel,
+      proposedLabel: proposal.label,
+      tracks: input.tracks,
+      proposedTracks: proposal.proposedTracks,
+      feeAmount: proposal.feeAmount,
+      feeMode: proposal.feeMode,
+      asOfDate: input.asOfDate,
+      resetStepPercent: input.resetStepPercent,
+    }),
+  }))
+
+  const priced = proposals.find((proposal) => proposal.existing !== null)
+  return {
+    existing: priced?.existing ?? null,
+    totalBalance: priced?.totalBalance ?? 0,
+    proposals,
   }
 }

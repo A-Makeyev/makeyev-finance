@@ -5,12 +5,16 @@ import { emptyExistingMortgageTrack } from '../../../src/features/refinance/exis
 import { ils } from '../../support/ils'
 
 const snapshot = {
-  version: 1,
+  version: 2,
   existingTracks: [{ ...emptyExistingMortgageTrack('track-1'), type: 'fixed', linkage: 'unlinked',
     currentBalance: 100000, contractedAnnualRate: 6, remainingMonths: 120, method: 'spitzer' }],
-  proposedTracks: [{ type: 'fixed', sharePercent: 100, annualRatePercent: 4, termYears: 10,
-    method: 'spitzer', resetMonths: 0 }],
-  feeAmount: 2000, feeMode: 'cash',
+  proposals: [{
+    label: '',
+    proposedTracks: [{ type: 'fixed', sharePercent: 100, annualRatePercent: 4, termYears: 10,
+      method: 'spitzer', resetMonths: 0 }],
+    feeAmount: 2000, feeMode: 'cash',
+  }],
+  existingResetStepPercent: 0,
 }
 
 test('aligns corresponding tracks across the existing and proposed columns', async ({ mockedPage }) => {
@@ -63,6 +67,34 @@ test('multiple proposal tracks allocate the principal and enforce the six-track 
   await expect(refinance.addProposed).toHaveCount(0)
   await refinance.removeProposed(3)
   await expect(refinance.addProposed).toBeVisible()
+})
+
+test('compares two proposals against the same existing side and switches between them', async ({ mockedPage }) => {
+  const refinance = new RefinancePage(mockedPage)
+  await refinance.goto()
+  await refinance.fillExisting('100000', '6', '120')
+  await refinance.fillProposal('10', '4', '2000')
+  await refinance.expectReady()
+
+  await refinance.addProposalPlan.click()
+  await expect(refinance.proposalTab(2)).toBeVisible()
+  await refinance.newTerm.fill('10')
+  await refinance.newRate.fill('5')
+  await refinance.fee.fill('0')
+
+  // Both cards are priced against the same payoff statement.
+  await expect(refinance.proposalResult(1)).toContainText(ils(1012))
+  await expect(refinance.proposalResult(1)).toContainText('חודש 21')
+  await expect(refinance.proposalResult(2)).toContainText(ils(1061))
+
+  // Switching tabs shows each proposal's own values, and the third slot is
+  // still available until MAX_MIXES proposals exist.
+  await refinance.proposalTab(1).click()
+  await expect(refinance.newRate).toHaveValue('4')
+  await refinance.proposalTab(2).click()
+  await expect(refinance.newRate).toHaveValue('5')
+  await refinance.addProposalPlan.click()
+  await expect(refinance.addProposalPlan).toHaveCount(0)
 })
 
 test('loads a saved mix, saves its proposal, and reloads the saved values', async ({ mockedPage }) => {

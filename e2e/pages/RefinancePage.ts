@@ -53,6 +53,10 @@ export class RefinancePage {
   get saved() { return this.page.getByTestId('save-refinance-saved') }
   get loadMix() { return this.page.getByTestId('refinance-load-mix') }
   get addProposed() { return this.page.getByTestId('refinance-add-proposed-track') }
+  get addProposalPlan() { return this.page.getByTestId('refinance-add-proposal') }
+  get proposalName() { return this.page.getByTestId('refinance-proposal-label') }
+  proposalTab(index: number) { return this.page.getByTestId(`refinance-proposal-tab-${index}`) }
+  proposalResult(index: number) { return this.page.getByTestId(`refinance-proposal-result-${index}`) }
   get existingPayment() { return this.page.getByTestId('refinance-existing-payment') }
   get existingInterest() { return this.page.getByTestId('refinance-existing-interest') }
   get resetStep() { return this.page.getByTestId('refinance-reset-step') }

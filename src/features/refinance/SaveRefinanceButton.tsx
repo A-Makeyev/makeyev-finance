@@ -47,20 +47,25 @@ export interface LoadedRefinance {
  * proposals with a delete action: "remove one to add another" is a path, not a
  * dead end.
  */
+/** One proposal's editing state, as passed from the page. */
+export interface SaveProposalInput {
+  id: string
+  label: string
+  proposedTracks: ProposedTrackState[]
+  feeAmount: number
+  feeMode: FeeMode
+}
+
 export function SaveRefinanceButton({
   existingTracks,
-  proposedTracks,
-  feeAmount,
-  feeMode,
+  proposals,
   resetStepPercent,
   loadedRefinance,
   onSaved,
   onDeletedLoaded,
 }: {
   existingTracks: ExistingMortgageTrack[]
-  proposedTracks: ProposedTrackState[]
-  feeAmount: number
-  feeMode: FeeMode
+  proposals: SaveProposalInput[]
   resetStepPercent: number
   loadedRefinance: LoadedRefinance | null
   onSaved: (saved: LoadedRefinance) => void
@@ -96,21 +101,24 @@ export function SaveRefinanceButton({
     [],
   )
 
-  const proposals = list.data?.refinances ?? []
-  const count = proposals.length
+  const savedPlans = list.data?.refinances ?? []
+  const count = savedPlans.length
   const max = list.data?.max ?? 4
   const atCap = count >= max
   const snapshot = buildRefinanceSnapshot({
     existingTracks,
-    proposedTracks: toProposedTrackInputs(proposedTracks),
-    feeAmount,
-    feeMode,
+    proposals: proposals.map((proposal) => ({
+      label: proposal.label,
+      proposedTracks: toProposedTrackInputs(proposal.proposedTracks),
+      feeAmount: proposal.feeAmount,
+      feeMode: proposal.feeMode,
+    })),
     existingResetStepPercent: resetStepPercent,
   })
   const canSave = snapshot !== null
   const blockedByCap = atCap && !loadedRefinance
   const duplicateName =
-    isRefinanceLabelTaken(proposals, label, loadedRefinance?.id) ||
+    isRefinanceLabelTaken(savedPlans, label, loadedRefinance?.id) ||
     (open && notice === 'duplicate')
 
   function openDialog() {
@@ -284,7 +292,7 @@ export function SaveRefinanceButton({
                 {t('savedRefinances.capRemoveHint')}
               </p>
               <ul className="mt-3 space-y-2">
-                {proposals.map((proposal) => (
+                {savedPlans.map((proposal) => (
                   <li key={proposal.id} className="flex items-center justify-between gap-3">
                     <span className="min-w-0 truncate text-sm text-ink">{proposal.label}</span>
                     <button
