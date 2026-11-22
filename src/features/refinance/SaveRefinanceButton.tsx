@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FaCheck, FaRegTrashAlt, FaSpinner } from 'react-icons/fa'
+import { FaCheck, FaClone, FaRegTrashAlt, FaSave, FaSpinner } from 'react-icons/fa'
 import { AppModal } from '@/components/ui/AppModal'
 import { PendingContent } from '@/components/ui/PendingContent'
 import { authClient } from '@/lib/auth-client'
@@ -20,6 +20,7 @@ import {
 } from '@/features/refinances/api'
 
 const TOAST_MS = 1800
+const LABEL_MAX_LENGTH = 60
 
 type Notice = 'saved' | 'cap' | 'duplicate' | 'error' | null
 
@@ -40,8 +41,10 @@ export interface LoadedRefinance {
  *
  * A proposal is savable only once its proposed side is completely entered
  * (every share, rate and term is a real number). A loaded proposal saves in
- * place; a new one is named first. Signed out, the control is the sign-in
- * prompt itself, like the calculator's and compare page's save controls.
+ * place; a new one is named first. A loaded plan also offers "save as new
+ * plan", so a second plan can exist without losing the open one. Signed out,
+ * the control is the sign-in prompt itself, like the calculator's and compare
+ * page's save controls.
  *
  * At the cap the control still opens the dialog, which lists the saved
  * proposals with a delete action: "remove one to add another" is a path, not a
@@ -63,6 +66,8 @@ export function SaveRefinanceButton({
   loadedRefinance,
   onSaved,
   onDeletedLoaded,
+  iconOnly = false,
+  suggestedLabel,
 }: {
   existingTracks: ExistingMortgageTrack[]
   proposals: SaveProposalInput[]
@@ -70,6 +75,10 @@ export function SaveRefinanceButton({
   loadedRefinance: LoadedRefinance | null
   onSaved: (saved: LoadedRefinance) => void
   onDeletedLoaded: () => void
+  /** Square, label-less control for the proposal row's side action. */
+  iconOnly?: boolean
+  /** Prefills the naming dialog with an offer name or a plan-level default. */
+  suggestedLabel?: string
 }) {
   const { t, i18n } = useTranslation()
   const router = useRouter()
@@ -81,6 +90,8 @@ export function SaveRefinanceButton({
   const deleteRefinance = useDeleteRefinance()
 
   const [open, setOpen] = useState(false)
+  /** The dialog is creating a second plan from an already loaded one. */
+  const [newPlan, setNewPlan] = useState(false)
   const [label, setLabel] = useState('')
   const [notice, setNotice] = useState<Notice>(null)
   const [toastVisible, setToastVisible] = useState(false)
@@ -102,6 +113,7 @@ export function SaveRefinanceButton({
   )
 
   const savedPlans = list.data?.refinances ?? []
+  const manyOffers = proposals.length > 1
   const count = savedPlans.length
   const max = list.data?.max ?? 4
   const atCap = count >= max
@@ -116,13 +128,33 @@ export function SaveRefinanceButton({
     existingResetStepPercent: resetStepPercent,
   })
   const canSave = snapshot !== null
-  const blockedByCap = atCap && !loadedRefinance
+  const blockedByCap = atCap && (newPlan || !loadedRefinance)
   const duplicateName =
-    isRefinanceLabelTaken(savedPlans, label, loadedRefinance?.id) ||
+    isRefinanceLabelTaken(savedPlans, label, newPlan ? undefined : loadedRefinance?.id) ||
     (open && notice === 'duplicate')
 
   function openDialog() {
-    setLabel(loadedRefinance?.label ?? '')
+    setNewPlan(false)
+    setLabel(loadedRefinance?.label ?? suggestedLabel?.trim() ?? '')
+    setNotice(null)
+    setOpen(true)
+  }
+
+  /**
+   * Saves the current state as another plan. The default name is the loaded
+   * plan plus a copy suffix, shortened to the label limit before the server
+   * gets a chance to reject it.
+   */
+  function openNewDialog() {
+    const suffix = t('savedRefinances.copySuffix')
+    const base = loadedRefinance?.label ?? ''
+    const room = Math.max(0, LABEL_MAX_LENGTH - suffix.length - 1)
+    setNewPlan(true)
+    setLabel(
+      base
+        ? `${base.slice(0, room).trimEnd()} ${suffix}`
+        : suggestedLabel?.trim() ?? '',
+    )
     setNotice(null)
     setOpen(true)
   }
@@ -153,14 +185,19 @@ export function SaveRefinanceButton({
     setNotice(null)
     try {
       const saved = await saveRefinance.mutateAsync({
-        id: loadedRefinance?.id,
+        id: newPlan ? undefined : loadedRefinance?.id,
         label:
           label.trim() ||
           loadedRefinance?.label ||
-          `${t('savedRefinances.defaultLabel')} ${count + 1}`,
+          `${t(
+            manyOffers
+              ? 'savedRefinances.defaultPlanLabel'
+              : 'savedRefinances.defaultLabel',
+          )} ${count + 1}`,
         snapshot,
       })
       onSaved({ id: saved.id, label: saved.label })
+      setNewPlan(false)
       setOpen(false)
       setNotice('saved')
     } catch (error) {
@@ -184,7 +221,9 @@ export function SaveRefinanceButton({
   }
 
   if (sessionPending) {
-    return (
+    return iconOnly ? (
+      <span aria-hidden="true" className="compare-icon-button invisible" />
+    ) : (
       <span aria-hidden="true" className="compare-save-placeholder">
         {t('savedRefinances.signIn')}
       </span>
@@ -193,21 +232,53 @@ export function SaveRefinanceButton({
 
   return (
     <>
+      {signedIn && loadedRefinance && (
+        <button
+          type="button"
+          data-testid="save-refinance-new"
+          disabled={!canSave || saveRefinance.isPending}
+          aria-label={t('savedRefinances.saveAsNew')}
+          title={t('savedRefinances.saveAsNew')}
+          onClick={openNewDialog}
+          className="compare-icon-button"
+        >
+          <FaClone aria-hidden="true" />
+        </button>
+      )}
       {signedIn ? (
         <button
           type="button"
           data-testid="save-refinance"
           disabled={!canSave || saveRefinance.isPending}
           aria-busy={saveRefinance.isPending}
-          aria-label={saveRefinance.isPending ? t('savedRefinances.saving') : undefined}
+          aria-label={
+            saveRefinance.isPending
+              ? t('savedRefinances.saving')
+              : iconOnly
+                ? t(manyOffers ? 'savedRefinances.savePlanAction' : 'savedRefinances.saveAction')
+                : undefined
+          }
+          title={
+            iconOnly
+              ? t(manyOffers ? 'savedRefinances.savePlanAction' : 'savedRefinances.saveAction')
+              : undefined
+          }
           onClick={handleSaveClick}
-          className="compare-save-button relative"
+          className={
+            iconOnly
+              ? 'compare-icon-button relative'
+              : 'compare-save-button relative justify-center'
+          }
         >
           <PendingContent
             pending={saveRefinance.isPending}
             spinnerTestId="save-refinance-spinner"
           >
-            {t('savedRefinances.saveAction')}
+            {iconOnly ? (
+              <FaSave aria-hidden="true" />
+            ) : (
+              t(manyOffers ? 'savedRefinances.savePlanAction' : 'savedRefinances.saveAction')
+            )}
           </PendingContent>
         </button>
       ) : (
@@ -215,9 +286,11 @@ export function SaveRefinanceButton({
           type="button"
           data-testid="save-refinance-sign-in"
           onClick={() => router.push('/login?next=/refinance')}
-          className="compare-save-button"
+          aria-label={iconOnly ? t('savedRefinances.signIn') : undefined}
+          title={iconOnly ? t('savedRefinances.signIn') : undefined}
+          className={iconOnly ? 'compare-icon-button' : 'compare-save-button justify-center'}
         >
-          {t('savedRefinances.signIn')}
+          {iconOnly ? <FaSave aria-hidden="true" /> : t('savedRefinances.signIn')}
         </button>
       )}
 
@@ -231,7 +304,9 @@ export function SaveRefinanceButton({
         >
           <div className="flex max-w-[min(92vw,26rem)] items-center gap-2.5 whitespace-nowrap rounded-full bg-ink/90 px-5 py-2.5 text-[14px] font-semibold text-surface-card shadow-[0_4px_14px_0_rgba(15,15,15,0.35)] backdrop-blur-sm">
             <FaCheck aria-hidden="true" className="text-[13px] text-soft-blue" />
-            <span className="min-w-0 truncate">{t('savedRefinances.saved')}</span>
+            <span className="min-w-0 truncate">
+              {t(manyOffers ? 'savedRefinances.savedPlan' : 'savedRefinances.saved')}
+            </span>
           </div>
         </div>
       )}
@@ -248,7 +323,10 @@ export function SaveRefinanceButton({
 
       <AppModal
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(openState) => {
+          setOpen(openState)
+          if (!openState) setNewPlan(false)
+        }}
         testId="save-refinance-modal"
         dir={i18n.dir()}
         tone="teal"
@@ -256,14 +334,34 @@ export function SaveRefinanceButton({
       >
         <div className="p-6">
           <h3 className="mb-4 text-[20px] font-bold leading-tight text-ink">
-            {t('savedRefinances.saveTitle')}
+            {t(
+              newPlan
+                ? 'savedRefinances.saveNewTitle'
+                : manyOffers
+                  ? 'savedRefinances.savePlanTitle'
+                  : 'savedRefinances.saveTitle',
+            )}
           </h3>
+          {proposals.length > 1 && (
+            <p
+              data-testid="save-refinance-plan-hint"
+              className="-mt-2 mb-4 text-sm text-ink-muted"
+            >
+              {t('savedRefinances.planHint', { count: proposals.length })}
+            </p>
+          )}
 
           <label className="flex flex-col gap-1 text-start">
-            <span className="text-sm text-ink-muted">{t('savedRefinances.labelLabel')}</span>
+            <span className="text-sm text-ink-muted">
+              {t(
+                newPlan || manyOffers
+                  ? 'savedRefinances.planLabelLabel'
+                  : 'savedRefinances.labelLabel',
+              )}
+            </span>
             <input
               type="text"
-              maxLength={60}
+              maxLength={LABEL_MAX_LENGTH}
               autoFocus
               name="refinance-label"
               data-testid="save-refinance-label"
@@ -278,11 +376,15 @@ export function SaveRefinanceButton({
           </label>
           {duplicateName && (
             <p role="alert" data-testid="save-refinance-duplicate" className="mt-3 text-sm text-danger">
-              {t('savedRefinances.duplicateName')}
+              {t(
+                newPlan || manyOffers
+                  ? 'savedRefinances.planDuplicateName'
+                  : 'savedRefinances.duplicateName',
+              )}
             </p>
           )}
 
-          {atCap && !loadedRefinance && (
+          {atCap && (newPlan || !loadedRefinance) && (
             <div
               className="mt-4 rounded-lg border border-danger/40 bg-surface-soft p-3"
               data-testid="save-refinance-cap-panel"

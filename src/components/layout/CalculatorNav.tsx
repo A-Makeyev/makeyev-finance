@@ -75,10 +75,10 @@ export function CalculatorNav({ onNavigate }: { onNavigate: () => void }) {
       <div className="nav-calculators-heading">
         <Link to="/calculators" id="calculators" data-testid="nav-link-calculators"
           className="nav-link remove-highlight" onClick={onNavigate}>
-          {t('nav.calculators')}
+          {t('nav.tools')}
         </Link>
         <button ref={trigger} type="button" className="nav-calculators-toggle"
-          data-testid="nav-calculators-toggle" aria-label={t('nav.calculators')}
+          data-testid="nav-calculators-toggle" aria-label={t('nav.tools')}
           aria-expanded={open} aria-controls="nav-calculators-menu"
           onClick={() => { cancelClose(); setOpen(value => !value) }}
           onKeyDown={event => {

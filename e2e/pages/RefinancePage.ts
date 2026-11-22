@@ -27,6 +27,12 @@ export class RefinancePage {
     this.comparison = page.getByTestId('refinance-comparison')
     this.breakEven = page.getByTestId('refinance-break-even')
     this.incomplete = page.getByTestId('refinance-incomplete')
+    this.unsavedDialog = page.getByTestId('unsaved-refinance-confirm')
+    this.unsavedStay = page.getByTestId('unsaved-refinance-stay')
+    this.unsavedLeave = page.getByTestId('unsaved-refinance-leave')
+    this.removeOfferDialog = page.getByTestId('remove-refinance-offer-confirm')
+    this.removeOfferCancel = page.getByTestId('remove-refinance-offer-cancel')
+    this.removeOfferConfirm = page.getByTestId('remove-refinance-offer-delete')
   }
 
   async goto(path = '/refinance') {
@@ -46,22 +52,75 @@ export class RefinancePage {
     await this.fee.fill(fee)
   }
 
+  get loading() { return this.page.getByTestId('refinance-loading') }
   get save() { return this.page.getByTestId('save-refinance') }
+  get saveNew() { return this.page.getByTestId('save-refinance-new') }
+  get saveModal() { return this.page.getByTestId('save-refinance-modal') }
+  get saveSignIn() { return this.page.getByTestId('save-refinance-sign-in') }
+  readonly unsavedDialog: Locator
+  readonly unsavedStay: Locator
+  readonly unsavedLeave: Locator
+  readonly removeOfferDialog: Locator
+  readonly removeOfferCancel: Locator
+  readonly removeOfferConfirm: Locator
+  /** The save control's document position, unaffected by page scroll. */
+  async saveDocumentBox() {
+    return this.saveSignIn.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return { x: rect.x + window.scrollX, y: rect.y + window.scrollY }
+    })
+  }
   get saveLabel() { return this.page.getByTestId('save-refinance-label') }
+  get savePlanHint() { return this.page.getByTestId('save-refinance-plan-hint') }
   get saveConfirm() { return this.page.getByTestId('save-refinance-confirm') }
   get saveConfirmSpinner() { return this.page.getByTestId('save-refinance-confirm-spinner') }
   get saved() { return this.page.getByTestId('save-refinance-saved') }
   get loadMix() { return this.page.getByTestId('refinance-load-mix') }
+  get addExistingTrack() { return this.page.getByTestId('refinance-add-track') }
   get addProposed() { return this.page.getByTestId('refinance-add-proposed-track') }
   get addProposalPlan() { return this.page.getByTestId('refinance-add-proposal') }
-  get proposalName() { return this.page.getByTestId('refinance-proposal-label') }
+  proposalTabName(index: number) { return this.page.getByTestId(`refinance-proposal-name-${index}`) }
+  proposalTabDate(index: number) { return this.page.getByTestId(`refinance-proposal-date-${index}`) }
+  get proposalTabs() { return this.page.getByTestId('refinance-proposal-tabs') }
+  get feeLabel() { return this.page.getByTestId('refinance-fee-label') }
+  get feeModeLabel() { return this.page.getByTestId('refinance-fee-mode-label') }
+  /**
+   * The proposal row's boxes in one synchronous read. Reading them with
+   * separate boundingBox calls let a page scroll land between measurements and
+   * made controls on one line look misaligned.
+   */
+  async proposalRowBoxes(index: number) {
+    return this.page.evaluate((tabIndex) => {
+      const rect = (testId: string) => {
+        const box = document.querySelector(`[data-testid="${testId}"]`)!.getBoundingClientRect()
+        return { x: box.x, y: box.y, width: box.width, height: box.height }
+      }
+      return {
+        remove: rect(`refinance-remove-proposal-${tabIndex}`),
+        tab: rect(`refinance-proposal-tab-${tabIndex}`),
+        name: rect(`refinance-proposal-name-${tabIndex}`),
+        date: rect(`refinance-proposal-date-${tabIndex}`),
+      }
+    }, index)
+  }
   proposalTab(index: number) { return this.page.getByTestId(`refinance-proposal-tab-${index}`) }
   proposalResult(index: number) { return this.page.getByTestId(`refinance-proposal-result-${index}`) }
+  removeProposal(index: number) { return this.page.getByTestId(`refinance-remove-proposal-${index}`) }
   get existingPayment() { return this.page.getByTestId('refinance-existing-payment') }
   get existingInterest() { return this.page.getByTestId('refinance-existing-interest') }
   get resetStep() { return this.page.getByTestId('refinance-reset-step') }
+  get resetHint() { return this.page.getByTestId('refinance-reset-hint') }
+  get feeModeOptions() { return this.page.getByTestId('refinance-fee-mode-options') }
   get existingType() { return this.page.getByTestId('refinance-type-1') }
   get nextReset() { return this.page.getByTestId('refinance-next-reset-1') }
+  /** Document-relative box of the existing add-track control, so a click that
+   *  scrolls the page does not read as movement in a before/after comparison. */
+  async addExistingTrackDocumentBox() {
+    return this.addExistingTrack.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return { y: rect.y + window.scrollY }
+    })
+  }
   async addExisting() {
     await this.page.getByTestId('refinance-track-1').locator('xpath=ancestor::section').getByRole('button', { name: /^(הוסף מסלול|Add track)$/ }).click()
   }
@@ -76,6 +135,56 @@ export class RefinancePage {
       expect(Math.abs(existing!.y - proposed!.y)).toBeLessThanOrEqual(1)
     }
     await expect(this.page.getByTestId('refinance-load-mix-empty')).toHaveCount(0)
+  }
+  /** Each add-track control follows its own column's last track, not the
+   *  other column's count. */
+  async expectAddControlsUnderLists(existingCount: number, proposedCount: number) {
+    const lastExisting = await this.page.getByTestId(`refinance-track-${existingCount}`).boundingBox()
+    const lastProposed = await this.page
+      .getByTestId(`refinance-proposed-track-${proposedCount}`)
+      .boundingBox()
+    const existing = await this.addExistingTrack.boundingBox()
+    const proposed = await this.addProposed.boundingBox()
+
+    expect(existing!.y).toBeGreaterThan(lastExisting!.y + lastExisting!.height - 1)
+    // "Just below": one row gap, not a stack of empty shared rows.
+    expect(existing!.y - (lastExisting!.y + lastExisting!.height)).toBeLessThanOrEqual(40)
+    expect(proposed!.y).toBeGreaterThan(lastProposed!.y + lastProposed!.height - 1)
+    // The longer column's button is the lower one; the shorter one does not move.
+    expect(existing!.y).toBeLessThan(proposed!.y - 1)
+  }
+  /** The reset assumption and the payoff fee start on the same desktop line. */
+  async expectFooterFieldsAligned() {
+    const reset = await this.resetStep.boundingBox()
+    const fee = await this.fee.boundingBox()
+    expect(Math.abs(reset!.y - fee!.y)).toBeLessThanOrEqual(1)
+  }
+  /** Each offer card is a two-line block: name above, creation date below. */
+  async expectOfferCard(index = 1) {
+    const name = await this.proposalTabName(index).boundingBox()
+    const date = await this.proposalTabDate(index).boundingBox()
+    expect(date!.y).toBeGreaterThan(name!.y + name!.height - 1)
+    await expect(this.proposalTabName(index)).not.toHaveText('')
+    await expect(this.proposalTabDate(index)).not.toHaveText('')
+    const card = await this.proposalTab(index).boundingBox()
+    expect(card!.height).toBeGreaterThanOrEqual(60)
+  }
+  /** The reset hint fits on one line at the wide desktop breakpoint. */
+  async expectResetHintSingleLine() {
+    const hint = await this.resetHint.boundingBox()
+    expect(hint!.height).toBeLessThanOrEqual(24)
+  }
+  /** The fee-mode question shares the fee label's line and type size. */
+  async expectFeeModeLabelOnFeeLine() {
+    const feeLabel = await this.feeLabel.boundingBox()
+    const modeLabel = await this.feeModeLabel.boundingBox()
+    expect(Math.abs(feeLabel!.y - modeLabel!.y)).toBeLessThanOrEqual(1)
+    const sizes = await this.page.evaluate(() => {
+      const fee = document.querySelector('[data-testid="refinance-fee-label"]')!
+      const mode = document.querySelector('[data-testid="refinance-fee-mode-label"]')!
+      return [getComputedStyle(fee).fontSize, getComputedStyle(mode).fontSize]
+    })
+    expect(sizes[0]).toBe(sizes[1])
   }
   proposedShare(index: number) { return this.page.getByTestId(`refinance-proposed-share-${index}`) }
   proposedAmount(index: number) { return this.page.getByTestId(`refinance-proposed-amount-${index}`) }

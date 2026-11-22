@@ -11,6 +11,9 @@ export const MAX_TRACKS = 6
 /** Scenarios on the compare page are capped separately from a mix's tracks:
  * compare up to three mixes at a time. */
 export const MAX_MIXES = 3
+/** Offers compared inside one saved refinance plan. This is its own limit:
+ * four offers fit the offer strip, while compare keeps its separate cap. */
+export const MAX_REFINANCE_OFFERS = 4
 /** Cap on repeatable other-expense rows (feedback request). */
 export const MAX_OTHER_EXPENSES = 3
 export const MAX_YEARS = 30

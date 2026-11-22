@@ -74,9 +74,9 @@ describe('savedRefinanceInputSchema', () => {
     expect(savedRefinanceInputSchema.safeParse(two).success).toBe(true)
   })
 
-  it('keeps the saved-plan cap at 4 and the proposal cap at MAX_MIXES', () => {
+  it('keeps the saved-plan cap at 4 and the offer cap at 4', () => {
     expect(MAX_SAVED_REFINANCES).toBe(4)
-    expect(MAX_REFINANCE_PROPOSALS).toBe(3)
+    expect(MAX_REFINANCE_PROPOSALS).toBe(4)
   })
 
   it('trims the plan and proposal labels and accepts an unnamed proposal', () => {

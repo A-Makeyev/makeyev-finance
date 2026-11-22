@@ -202,6 +202,17 @@ test.describe('article comments', () => {
       await expect(action).toHaveCount(1)
       await expect(action.locator('svg')).toHaveCount(1)
     }
+
+    // The action row is pulled back over its button padding, so the Reply label
+    // begins on the comment text's own column. Checked in both directions
+    // because the offset is a logical property.
+    const english = await comments.replyAndBodyStarts()
+    expect(Math.abs(english.body - english.reply)).toBeLessThanOrEqual(1)
+
+    await comments.goto('/articles/mortgage-decisions')
+    await expect(comments.comments).toHaveCount(1)
+    const hebrew = await comments.replyAndBodyStarts()
+    expect(Math.abs(hebrew.body - hebrew.reply)).toBeLessThanOrEqual(1)
   })
 
   test('comment text follows the PAGE direction, not the language it was typed in', async ({

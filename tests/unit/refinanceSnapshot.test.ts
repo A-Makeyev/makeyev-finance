@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildRefinanceSnapshot } from '@/features/refinance/snapshot'
 import { emptyExistingMortgageTrack } from '@/features/refinance/existingMortgage'
-import { MAX_MIXES, MAX_TRACKS, MAX_YEARS } from '@/lib/amortization'
+import { MAX_REFINANCE_OFFERS, MAX_TRACKS, MAX_YEARS } from '@/lib/amortization'
 
 const proposed = { type: 'fixed' as const, sharePercent: 100, annualRatePercent: 4,
   termYears: 20, method: 'spitzer' as const, resetMonths: 0 }
@@ -62,7 +62,13 @@ describe('refinance save eligibility', () => {
     expect(
       buildRefinanceSnapshot({
         ...input,
-        proposals: Array.from({ length: MAX_MIXES + 1 }, () => proposal),
+        proposals: Array.from({ length: MAX_REFINANCE_OFFERS }, () => proposal),
+      }),
+    ).not.toBeNull()
+    expect(
+      buildRefinanceSnapshot({
+        ...input,
+        proposals: Array.from({ length: MAX_REFINANCE_OFFERS + 1 }, () => proposal),
       }),
     ).toBeNull()
     expect(buildRefinanceSnapshot({ ...input, proposals: [{ ...proposal, feeAmount: Infinity }] })).toBeNull()

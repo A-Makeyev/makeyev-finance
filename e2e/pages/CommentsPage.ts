@@ -103,6 +103,27 @@ export class CommentsPage {
     })()`)
   }
 
+  /**
+   * The inline start of the comment text and of the Reply label inside its
+   * button. The button carries its own inline padding, so the visual label
+   * should begin on the text column, not one padding-step inward.
+   */
+  async replyAndBodyStarts(): Promise<{ body: number; reply: number }> {
+    return this.page.evaluate(() => {
+      const body = document.querySelector('[data-testid="comment-body"]')
+      const reply = document.querySelector('[data-testid="comment-reply"]')
+      if (!body || !reply) throw new Error('comment body or reply button missing')
+      const bodyRect = body.getBoundingClientRect()
+      const replyRect = reply.getBoundingClientRect()
+      const padding = parseFloat(getComputedStyle(reply).paddingInlineStart)
+      const rtl = getComputedStyle(document.documentElement).direction === 'rtl'
+      return {
+        body: rtl ? bodyRect.right : bodyRect.left,
+        reply: rtl ? replyRect.right - padding : replyRect.left + padding,
+      }
+    })
+  }
+
   async goto(path: string): Promise<void> {
     await this.page.goto(path)
   }

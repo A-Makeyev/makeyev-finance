@@ -5,19 +5,21 @@ import { LoadingIndicator } from '@/components/ui/LoadingIndicator'
 import { useTranslation } from 'react-i18next'
 import { FaPlus, FaRegTrashAlt } from 'react-icons/fa'
 import {
-  MAX_MIXES,
+  MAX_REFINANCE_OFFERS,
   MAX_TRACKS,
   TRACK_TYPES,
   defaultResetMonthsFor,
   type AmortizationMethod,
   type TrackType,
 } from '@/lib/amortization'
+import { AppModal } from '@/components/ui/AppModal'
 import { DateField } from '@/components/ui/DateField'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { formatAmountWithCaret, formatCurrency, formatGroupedNumber } from '@/lib/format'
+import { formatDateOnly } from '@/lib/rateValidity'
 import { authClient } from '@/lib/auth-client'
-import { Link } from '@/router'
+import { Link, setNavigationBlockGuard, useNavigate } from '@/router'
 import {
   emptyExistingMortgageTrack,
   linkageForTrackType,
@@ -39,6 +41,7 @@ import {
   type ProposedTrackState,
 } from './proposedTrack'
 import { SaveRefinanceButton, type LoadedRefinance } from './SaveRefinanceButton'
+import { TrackMixDonut } from '@/features/calculator/TrackMixDonut'
 import { useSavedMixes } from '@/features/mixes/api'
 import { useSavedRefinances, type SavedRefinance } from '@/features/refinances/api'
 
@@ -54,11 +57,11 @@ import { useSavedRefinances, type SavedRefinance } from '@/features/refinances/a
  * cash or capitalized once into the principal.
  *
  * A saved mix can be loaded into a proposal's shape: its proportions become
- * the shares, and its rates, terms and methods are kept. Up to MAX_MIXES named
- * proposals are edited one at a time (tabs) and compared against the same
- * existing side in one results table. Saving stores the whole plan (existing
- * tracks, every proposal, the shared assumption) in the caller's own
- * saved-refinance collection.
+ * the shares, and its rates, terms and methods are kept. Up to
+ * MAX_REFINANCE_OFFERS proposals are edited one at a time (tabs) and compared
+ * against the same existing side in one results table. One save keeps every
+ * proposal with the shared existing side and the shared assumption, and the
+ * plan's name is chosen in the save dialog.
  *
  * Rate resets are reset-aware on both sides: the existing tracks reset on
  * their recorded next/last reset date and cadence (counted from today's
@@ -74,22 +77,32 @@ interface ProposalState {
   tracks: ProposedTrackState[]
   feeText: string
   feeMode: FeeMode
+  /** Local calendar day the offer was created; shown under its name. */
+  createdOn: string
 }
 
-let proposalSequence = 0
+/**
+ * The first draft offer's id is fixed: it is rendered into the fee-mode radio
+ * names, so a server render and the client hydration must agree on it. Later
+ * ids are generated only on the client (add, load), where no hydration
+ * comparison happens.
+ */
+const INITIAL_PROPOSAL_ID = 'proposal-1'
+let proposalSequence = 1
 
 function createProposalId(): string {
   proposalSequence += 1
   return `proposal-${proposalSequence}`
 }
 
-function createProposalState(): ProposalState {
+function createProposalState(id: string = createProposalId()): ProposalState {
   return {
-    id: createProposalId(),
+    id,
     label: '',
     tracks: initialProposedTracks(1),
     feeText: '',
     feeMode: 'cash',
+    createdOn: todayDateOnly(),
   }
 }
 
@@ -98,14 +111,49 @@ function proposalFee(proposal: ProposalState): number {
 }
 
 /** The local calendar day, as the date-only string the projection expects. */
-function todayDateOnly(): string {
-  const now = new Date()
+function localDateOnly(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function todayDateOnly(): string {
+  return localDateOnly(new Date())
+}
+
+/** A saved record's creation timestamp on the viewer's own calendar day. */
+function dateOnlyFromTimestamp(value: string): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? todayDateOnly() : localDateOnly(date)
 }
 
 function signedCurrency(value: number): string {
   return `${value > 0 ? '+' : value < 0 ? '-' : ''}${formatCurrency(Math.abs(value))}`
+}
+
+/** A proposal metric against the existing mortgage: lower is better. */
+function lowerIsBetterTone(value: number, baseline: number): string {
+  if (!Number.isFinite(value) || !Number.isFinite(baseline)) return 'is-even'
+  const difference = value - baseline
+  if (Math.abs(difference) < 0.5) return 'is-even'
+  return difference < 0 ? 'is-positive' : 'is-negative'
+}
+
+/** The editable state that decides whether leaving needs a warning. Tab
+ *  switches, offer names and saved-record bindings are not edits. */
+function offerStateSignature(
+  tracks: ExistingMortgageTrack[],
+  resetStepText: string,
+  proposal: ProposalState,
+): string {
+  return JSON.stringify({
+    tracks,
+    resetStepText,
+    proposal: {
+      tracks: proposal.tracks,
+      feeText: proposal.feeText,
+      feeMode: proposal.feeMode,
+    },
+  })
 }
 
 /** Text stays text while the user types, so a decimal point is never eaten.
@@ -192,9 +240,14 @@ function TextField({
   )
 }
 
-export function RefinancePage() {
-  const { t } = useTranslation()
-  const { data: session } = authClient.useSession()
+export function RefinancePage({
+  initialRefinanceId,
+}: {
+  /** The saved plan in the URL, resolved on the server so the first paint waits. */
+  initialRefinanceId?: string
+} = {}) {
+  const { t, i18n } = useTranslation()
+  const { data: session, isPending: sessionPending } = authClient.useSession()
   const signedIn = Boolean(session)
 
   const [tracks, setTracks] = useState<ExistingMortgageTrack[]>(() => [
@@ -205,26 +258,44 @@ export function RefinancePage() {
       method: 'spitzer',
     },
   ])
-  const [proposals, setProposals] = useState<ProposalState[]>(() => [createProposalState()])
+  const [proposals, setProposals] = useState<ProposalState[]>(() => [
+    createProposalState(INITIAL_PROPOSAL_ID),
+  ])
   const [activeProposalId, setActiveProposalId] = useState(() => proposals[0].id)
   const [resetStepText, setResetStepText] = useState('0')
   // The projection starts at the as-of payment, so the date stays fixed for
   // the session even if the user leaves the tab open past midnight.
   const [asOfDate] = useState(todayDateOnly)
   const [loadedRefinance, setLoadedRefinance] = useState<LoadedRefinance | null>(null)
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null)
+  const [unsavedOpen, setUnsavedOpen] = useState(false)
+  const pendingNav = useRef<string | null>(null)
+  const navigate = useNavigate()
+
+  // Each offer's last saved/created shape. Comparing the live signature to
+  // these entries drives the leave warning without flagging tab switches.
+  const baselineRef = useRef<Map<string, string> | null>(null)
+  if (baselineRef.current === null) {
+    baselineRef.current = new Map(
+      proposals.map((proposal) => [
+        proposal.id,
+        offerStateSignature(tracks, resetStepText, proposal),
+      ]),
+    )
+  }
 
   const savedMixes = useSavedMixes(signedIn)
   const mixes = savedMixes.data?.mixes ?? []
 
   // Saved-proposal deep link (?refinance=<id>): opening a card navigates here
-  // rather than pushing state around, so a refresh or bookmark reloads it.
-  const [deepLinkId, setDeepLinkId] = useState<string | null>(null)
-  useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('refinance')
-    if (id) setDeepLinkId(id)
-  }, [])
+  // rather than pushing state around, so a refresh or bookmark reloads it. The
+  // server page reads the id, so a reload shows the loader on the very first
+  // paint instead of drawing a draft form and replacing it.
+  const deepLinkId = initialRefinanceId ?? null
   const savedRefinances = useSavedRefinances(Boolean(deepLinkId) && signedIn)
-  const deepLinkLoaded = useRef(false)
+  const appliedDeepLink = useRef<string | null>(null)
+  const [missingDeepLinkId, setMissingDeepLinkId] = useState<string | null>(null)
+  const deepLinkMissing = Boolean(deepLinkId) && missingDeepLinkId === deepLinkId
 
   useEffect(() => {
     document.title = t('refinance.metaTitle')
@@ -232,27 +303,90 @@ export function RefinancePage() {
 
   function applySavedRefinance(saved: SavedRefinance) {
     setTracks(saved.snapshot.existingTracks.map((track) => ({ ...track })))
+    const createdOn = dateOnlyFromTimestamp(saved.createdAt)
     const next = saved.snapshot.proposals.map((proposal) => ({
       id: createProposalId(),
       label: proposal.label,
       tracks: proposedTracksFromSnapshot(proposal.proposedTracks),
       feeText: proposal.feeAmount > 0 ? formatGroupedNumber(proposal.feeAmount) : '',
       feeMode: proposal.feeMode,
+      createdOn,
     }))
+    // Plans saved before the assumption existed load flat.
+    const loadedResetStepText = String(saved.snapshot.existingResetStepPercent ?? 0)
+    const nextBaselines = new Map<string, string>()
+    for (const proposal of next) {
+      nextBaselines.set(
+        proposal.id,
+        offerStateSignature(saved.snapshot.existingTracks, loadedResetStepText, proposal),
+      )
+    }
+    baselineRef.current = nextBaselines
     setProposals(next)
     setActiveProposalId(next[0].id)
-    // Plans saved before the assumption existed load flat.
-    setResetStepText(String(saved.snapshot.existingResetStepPercent ?? 0))
+    setResetStepText(loadedResetStepText)
     setLoadedRefinance({ id: saved.id, label: saved.label })
   }
 
   useEffect(() => {
-    if (deepLinkLoaded.current || !deepLinkId || !savedRefinances.data) return
+    if (!deepLinkId || appliedDeepLink.current === deepLinkId || deepLinkMissing) return
+    if (savedRefinances.isError) {
+      setMissingDeepLinkId(deepLinkId)
+      return
+    }
+    if (!savedRefinances.data) {
+      // A signed-out visitor can never fetch the plan; do not hold the loader
+      // forever when there is no session to load it with.
+      if (!sessionPending && !signedIn) setMissingDeepLinkId(deepLinkId)
+      return
+    }
     const saved = savedRefinances.data.refinances.find((item) => item.id === deepLinkId)
-    if (!saved) return
-    deepLinkLoaded.current = true
+    if (!saved) {
+      setMissingDeepLinkId(deepLinkId)
+      return
+    }
+    appliedDeepLink.current = deepLinkId
     applySavedRefinance(saved)
-  }, [deepLinkId, savedRefinances.data])
+  }, [
+    deepLinkId,
+    deepLinkMissing,
+    savedRefinances.data,
+    savedRefinances.isError,
+    sessionPending,
+    signedIn,
+  ])
+
+  const hasUnsavedChanges = proposals.some(
+    (proposal) =>
+      baselineRef.current?.get(proposal.id) !==
+      offerStateSignature(tracks, resetStepText, proposal),
+  )
+
+  // Reload/close and browser back-forward cannot be intercepted by the router,
+  // so they get the native warning; in-app links use the dialog below.
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      setNavigationBlockGuard(null)
+      return
+    }
+    setNavigationBlockGuard((to) => {
+      if (to.startsWith('/refinance') || to.startsWith('/login')) return true
+      pendingNav.current = to
+      setUnsavedOpen(true)
+      return false
+    })
+    return () => setNavigationBlockGuard(null)
+  }, [hasUnsavedChanges])
 
   // A blank assumption means "no change"; the field is an assumption, not a
   // required loan figure, so it does not block the projection.
@@ -286,6 +420,36 @@ export function RefinancePage() {
   const existing = projectionSet.existing
   const readyProposals = projectionSet.proposals.filter((proposal) => proposal.ready)
   const showResults = existing !== null && readyProposals.length > 0
+
+  // The best-value proposal is the one with the strongest net cash flow against
+  // the existing mortgage. With one priced proposal there is nothing to beat,
+  // so nothing is highlighted; ties all carry the badge.
+  const pricedProposals = readyProposals.filter((proposal) => proposal.comparison)
+  const bestProposalIds = new Set<string>()
+  if (pricedProposals.length >= 2) {
+    const bestNet = Math.max(
+      ...pricedProposals.map((proposal) => proposal.comparison!.netCashFlowDelta),
+    )
+    if (Number.isFinite(bestNet)) {
+      for (const proposal of pricedProposals) {
+        if (Math.abs(proposal.comparison!.netCashFlowDelta - bestNet) < 0.005) {
+          bestProposalIds.add(proposal.id)
+        }
+      }
+    }
+  }
+
+  // Donut shares for the two top result cards: the existing tracks by current
+  // balance, and the active proposal by its allocated principal.
+  const existingMixShares = tracks.flatMap((track) =>
+    track.type && (track.currentBalance ?? 0) > 0
+      ? [{ trackId: track.id, type: track.type, amount: track.currentBalance ?? 0 }]
+      : [],
+  )
+  const activeMixShares = active.tracks.flatMap((track, index) => {
+    const amount = activeProjection?.proposedAllocations[index] ?? 0
+    return amount > 0 ? [{ trackId: track.id, type: track.type, amount }] : []
+  })
 
   function patchTrack(id: string, patch: Partial<ExistingMortgageTrack>) {
     setTracks((current) =>
@@ -331,8 +495,9 @@ export function RefinancePage() {
   }
 
   function addProposal() {
-    if (proposals.length >= MAX_MIXES) return
+    if (proposals.length >= MAX_REFINANCE_OFFERS) return
     const next = createProposalState()
+    baselineRef.current?.set(next.id, offerStateSignature(tracks, resetStepText, next))
     setProposals([...proposals, next])
     setActiveProposalId(next.id)
   }
@@ -340,8 +505,28 @@ export function RefinancePage() {
   function removeProposal(id: string) {
     if (proposals.length <= 1) return
     const next = proposals.filter((proposal) => proposal.id !== id)
+    baselineRef.current?.delete(id)
     setProposals(next)
     if (activeProposalId === id) setActiveProposalId(next[0].id)
+  }
+
+  /** The delete icon opens a warning; nothing is removed until it is confirmed. */
+  function confirmRemoveProposal() {
+    if (pendingRemoveId) removeProposal(pendingRemoveId)
+    setPendingRemoveId(null)
+  }
+
+  function leaveWithoutSaving() {
+    const target = pendingNav.current
+    pendingNav.current = null
+    setUnsavedOpen(false)
+    setNavigationBlockGuard(null)
+    if (target) navigate(target)
+  }
+
+  function stayOnPage() {
+    pendingNav.current = null
+    setUnsavedOpen(false)
   }
 
   function loadSavedMix(id: string) {
@@ -351,12 +536,21 @@ export function RefinancePage() {
     if (next.length > 0) patchProposal(active.id, { tracks: next })
   }
 
-  /** Hand a saved proposal back to the page (and drop a stale deep link). */
+  /** Bind the saved plan to the page and drop a stale deep link. */
   function handleSaved(saved: LoadedRefinance) {
+    // A whole-plan save makes every offer's current shape the new baseline.
+    for (const proposal of proposals) {
+      baselineRef.current?.set(
+        proposal.id,
+        offerStateSignature(tracks, resetStepText, proposal),
+      )
+    }
     setLoadedRefinance(saved)
+    // Keep the URL on the saved plan (a new one after "save as new"): a reload
+    // then reopens it instead of dropping back to an empty draft.
     const url = new URL(window.location.href)
-    if (url.searchParams.get('refinance') !== saved.id) return
-    url.searchParams.delete('refinance')
+    if (url.searchParams.get('refinance') === saved.id) return
+    url.searchParams.set('refinance', saved.id)
     window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
   }
 
@@ -427,90 +621,204 @@ export function RefinancePage() {
     (key) => key.startsWith('proposed:') && !/^proposed:\d+:/.test(key),
   )
 
+  // A deep link resolves after mount. Until the saved plan is applied (or is
+  // known to be unavailable), hold the page with a skeleton so the draft form
+  // never paints and then changes shape under the reader.
+  const loadingSavedPlan =
+    Boolean(deepLinkId) && appliedDeepLink.current !== deepLinkId && !deepLinkMissing
+
+  const pageHeader = (
+    <div className="mb-6">
+      <Link to="/compare" className="compare-back mb-4 inline-flex">
+        {t('refinance.backToCompare')}
+      </Link>
+      <h1 className="text-3xl font-bold text-ink">{t('refinance.heading')}</h1>
+      <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-muted">
+        {t('refinance.intro')}
+      </p>
+    </div>
+  )
+
+  if (loadingSavedPlan) {
+    return (
+      <main className="below-chrome min-h-screen bg-surface-page px-4 pb-20">
+        <div className="refinance-shell mx-auto w-full max-w-[1160px]">
+          {pageHeader}
+          <div
+            data-testid="refinance-loading"
+            aria-busy="true"
+            className="min-h-[60vh]"
+          >
+            <div className="mb-4 flex items-center gap-2 text-sm text-ink-muted">
+              <LoadingIndicator label={t('refinance.loadingSavedPlan')} />
+              <span>{t('refinance.loadingSavedPlan')}</span>
+            </div>
+            <div
+              aria-hidden="true"
+              className="mb-4 rounded-2xl border border-line-soft bg-surface-card p-4 sm:p-5"
+            >
+              <div className="flex flex-wrap gap-2">
+                <div className="h-[70px] w-52 animate-pulse rounded-xl refinance-skeleton motion-reduce:animate-none" />
+                <div className="h-[70px] w-52 animate-pulse rounded-xl refinance-skeleton motion-reduce:animate-none" />
+                <div className="h-[70px] w-36 animate-pulse rounded-xl refinance-skeleton motion-reduce:animate-none" />
+              </div>
+            </div>
+            <div className="grid gap-5 lg:grid-cols-2" aria-hidden="true">
+              {[0, 1].map((column) => (
+                <div
+                  key={column}
+                  className="rounded-2xl border border-line-soft bg-surface-card p-5"
+                >
+                  <div className="h-5 w-40 animate-pulse rounded refinance-skeleton motion-reduce:animate-none" />
+                  <div className="mt-2 h-4 w-64 max-w-full animate-pulse rounded refinance-skeleton motion-reduce:animate-none" />
+                  <div className="mt-6 space-y-4">
+                    {[0, 1, 2].map((row) => (
+                      <div
+                        key={row}
+                        className="h-[88px] animate-pulse rounded-xl refinance-skeleton motion-reduce:animate-none"
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
   return (
+    <>
     <main className="below-chrome min-h-screen bg-surface-page px-4 pb-20">
       <div className="refinance-shell mx-auto w-full max-w-[1160px]">
-        <div className="mb-6">
-          <Link to="/compare" className="compare-back mb-4 inline-flex">
-            {t('refinance.backToCompare')}
-          </Link>
-          <h1 className="text-3xl font-bold text-ink">{t('refinance.heading')}</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-muted">
-            {t('refinance.intro')}
-          </p>
-        </div>
+        {pageHeader}
 
         {/* The switcher sits above BOTH columns: the existing and proposed
             track rows must keep starting at the same y position. */}
-        <div className="mb-4 rounded-2xl border border-line-soft bg-surface-card p-3 sm:p-4">
-          <div
-            className="flex flex-wrap items-center gap-2"
-            role="tablist"
-            aria-label={t('refinance.proposalsAria')}
-          >
+        <div className="mb-4 rounded-2xl border border-line-soft bg-surface-card p-4 sm:p-5">
+          {/* The offers start the row, where the name field used to sit. Each
+              is a two-line card (name and creation date) with a remove icon,
+              and one save for the whole plan sits at the row's side. */}
+          <div className="flex flex-wrap items-stretch gap-3">
+            <div
+              className="flex flex-wrap items-stretch gap-2"
+              role="tablist"
+              aria-label={t('refinance.proposalsAria')}
+              data-testid="refinance-proposal-tabs"
+            >
             {proposals.map((proposal, index) => {
               const selected = proposal.id === active.id
+              // The card owns the border and background, so the tab and its
+              // actions read as one button. The actions stay siblings of the
+              // tab: a button cannot legally contain other buttons.
               return (
-                <button
+                <div
                   key={proposal.id}
-                  type="button"                    role="tab"
-                    id={`refinance-proposal-tab-button-${index + 1}`}
-                    aria-selected={selected}
-                    aria-controls="refinance-proposal-panel"
-                    data-testid={`refinance-proposal-tab-${index + 1}`}
-                    onClick={() => setActiveProposalId(proposal.id)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  role="presentation"
+                  className={`relative flex w-52 flex-col rounded-xl border transition-colors ${
                     selected
                       ? 'border-ink bg-surface-soft text-ink'
                       : 'border-line-soft text-ink-muted hover:text-ink'
                   }`}
                 >
-                  {proposalLabel(proposal)}
-                </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    id={`refinance-proposal-tab-button-${index + 1}`}
+                    aria-selected={selected}
+                    aria-controls="refinance-proposal-panel"
+                    data-testid={`refinance-proposal-tab-${index + 1}`}
+                    title={proposalLabel(proposal)}
+                    onClick={() => setActiveProposalId(proposal.id)}
+                    className="flex w-full flex-col justify-center rounded-xl px-3 py-2.5 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  >
+                    <span
+                      data-testid={`refinance-proposal-name-${index + 1}`}
+                      className="block truncate text-base font-semibold"
+                    >
+                      {proposalLabel(proposal)}
+                    </span>
+                    <span
+                      data-testid={`refinance-proposal-date-${index + 1}`}
+                      className={`mt-1 block truncate text-sm font-normal text-ink-muted ${
+                        proposals.length > 1 ? 'pe-8' : ''
+                      }`}
+                    >
+                      {formatDateOnly(proposal.createdOn, i18n.language)}
+                    </span>
+                  </button>
+
+                  {/* Removing an offer asks first. The trash sits on the
+                      date's line so the card stays a single visual unit. */}
+                  {proposals.length > 1 && (
+                    <div className="absolute bottom-2 end-3 flex items-center">
+                      <button
+                        type="button"
+                        data-testid={`refinance-remove-proposal-${index + 1}`}
+                        onClick={() => setPendingRemoveId(proposal.id)}
+                        aria-label={t('refinance.removeProposal')}
+                        title={t('refinance.removeProposal')}
+                        className="compare-icon-link is-danger"
+                      >
+                        <FaRegTrashAlt aria-hidden="true" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               )
             })}
-            {proposals.length < MAX_MIXES && (
+            {proposals.length < MAX_REFINANCE_OFFERS && (
               <button
                 type="button"
                 data-testid="refinance-add-proposal"
                 onClick={addProposal}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-line-strong px-3 py-1.5 text-sm font-medium text-ink-muted hover:text-ink"
+                className="inline-flex min-h-[68px] items-center gap-1.5 rounded-xl border border-dashed border-line-strong px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink"
               >
                 <FaPlus aria-hidden="true" />
                 {t('refinance.addProposal')}
               </button>
             )}
-            {proposals.length > 1 && (
-              <button
-                type="button"
-                data-testid={`refinance-remove-proposal-${activeIndex + 1}`}
-                onClick={() => removeProposal(active.id)}
-                className="ms-auto inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink"
-              >
-                <FaRegTrashAlt aria-hidden="true" />
-                {t('refinance.removeProposal')}
-              </button>
-            )}
+            </div>
+
+            {/* One save for the whole plan, at the row's side. */}
+            <div className="ms-auto flex items-center gap-2">
+              <SaveRefinanceButton
+                existingTracks={tracks}
+                proposals={proposals.map((proposal) => ({
+                  id: proposal.id,
+                  label: proposal.label,
+                  proposedTracks: proposal.tracks,
+                  feeAmount: proposalFee(proposal),
+                  feeMode: proposal.feeMode,
+                }))}
+                resetStepPercent={resetStepPercent}
+                loadedRefinance={loadedRefinance}
+                onSaved={handleSaved}
+                onDeletedLoaded={() => setLoadedRefinance(null)}
+                iconOnly
+                suggestedLabel={
+                  proposals.length > 1
+                    ? t('savedRefinances.defaultPlanLabel')
+                    : proposalLabel(active)
+                }
+              />
+            </div>
           </div>
-          <label className="input-group mt-3 sm:max-w-xs">
-            {t('refinance.proposalNameLabel')}
-            <input
-              type="text"
-              maxLength={60}
-              data-testid="refinance-proposal-label"
-              value={active.label}
-              placeholder={t('refinance.proposalDefault', { index: activeIndex + 1 })}
-              onChange={(event) => patchProposal(active.id, { label: event.target.value })}
-              className="w-full rounded-lg border border-line-strong bg-surface-page px-3 py-2 text-ink outline-none transition-colors hover:border-ink focus:border-ink"
-            />
-          </label>
         </div>
 
         <div
           className="refinance-columns grid gap-5 lg:grid-cols-2"
-          style={{ '--refinance-track-count': Math.max(tracks.length, active.tracks.length) } as CSSProperties}
+          style={
+            {
+              '--refinance-track-count': Math.max(tracks.length, active.tracks.length),
+            } as CSSProperties
+          }
         >
-          <section className="refinance-column rounded-2xl border border-line-soft bg-surface-card p-5">
+          <section
+            className="refinance-column rounded-2xl border border-line-soft bg-surface-card p-5"
+            style={{ '--refinance-column-count': tracks.length } as CSSProperties}
+          >
             <div className="refinance-column-heading">
             <h2 className="text-lg font-semibold text-ink">{t('refinance.existingHeading')}</h2>
             <p className="mt-1 text-sm text-ink-muted">{t('refinance.existingLead')}</p>
@@ -654,23 +962,28 @@ export function RefinancePage() {
               })}
             </div>
 
-            <div className="refinance-column-footer">
-            {tracks.length < MAX_TRACKS && (
-              <button
-                type="button"
-                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink"
-                onClick={addTrack}
-              >
-                <FaPlus aria-hidden="true" />
-                {t('refinance.addTrack')}
-              </button>
-            )}
+            {/* This control follows this column's own track count, so the other
+                column growing never pushes it down. */}
+            <div className="refinance-column-add">
+              {tracks.length < MAX_TRACKS && (
+                <button
+                  type="button"
+                  data-testid="refinance-add-track"
+                  className="mt-2 inline-flex w-fit items-center gap-2 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink lg:mt-0"
+                  onClick={addTrack}
+                >
+                  <FaPlus aria-hidden="true" />
+                  {t('refinance.addTrack')}
+                </button>
+              )}
+            </div>
 
+            <div className="refinance-column-footer">
             {/* The keep-side assumption sits in this column's footer, opposite
                 the payoff fee in the proposed column, so both fields share the
                 desktop footer row and read as a pair. */}
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <label className="input-group sm:col-span-2">
+              <label className="input-group">
                 {t('refinance.resetHeading')}
                 <TextField
                   testId="refinance-reset-step"
@@ -680,7 +993,10 @@ export function RefinancePage() {
                 />
               </label>
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-ink-muted">
+            <p
+              className="mt-3 text-xs leading-relaxed text-ink-muted xl:whitespace-nowrap"
+              data-testid="refinance-reset-hint"
+            >
               {t('refinance.resetHint')}
             </p>
             {sharedMissing.includes('resetStep:invalid') && (
@@ -696,6 +1012,7 @@ export function RefinancePage() {
             role="tabpanel"
             aria-labelledby={`refinance-proposal-tab-button-${activeIndex + 1}`}
             className="refinance-column rounded-2xl border border-line-soft bg-surface-card p-5"
+            style={{ '--refinance-column-count': active.tracks.length } as CSSProperties}
           >
             <div className="refinance-column-heading">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -708,20 +1025,6 @@ export function RefinancePage() {
                   </p>
                 )}
               </div>
-              <SaveRefinanceButton
-                existingTracks={tracks}
-                proposals={proposals.map((proposal) => ({
-                  id: proposal.id,
-                  label: proposal.label,
-                  proposedTracks: proposal.tracks,
-                  feeAmount: proposalFee(proposal),
-                  feeMode: proposal.feeMode,
-                }))}
-                resetStepPercent={resetStepPercent}
-                loadedRefinance={loadedRefinance}
-                onSaved={handleSaved}
-                onDeletedLoaded={() => setLoadedRefinance(null)}
-              />
             </div>
 
             {/* Load the proposal's shape from a saved mix. Only the proportions,
@@ -885,24 +1188,27 @@ export function RefinancePage() {
               })}
             </div>
 
-            <div className="refinance-column-footer">
-            {active.tracks.length < MAX_TRACKS && (
-              <button
-                type="button"
-                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink"
-                onClick={() =>
-                  patchProposal(active.id, { tracks: addProposedTrack(active.tracks) })
-                }
-                data-testid="refinance-add-proposed-track"
-              >
-                <FaPlus aria-hidden="true" />
-                {t('refinance.addTrack')}
-              </button>
-            )}
+            {/* Same rule on the proposed side; only the footer row is shared. */}
+            <div className="refinance-column-add">
+              {active.tracks.length < MAX_TRACKS && (
+                <button
+                  type="button"
+                  className="mt-2 inline-flex w-fit items-center gap-2 rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-ink lg:mt-0"
+                  onClick={() =>
+                    patchProposal(active.id, { tracks: addProposedTrack(active.tracks) })
+                  }
+                  data-testid="refinance-add-proposed-track"
+                >
+                  <FaPlus aria-hidden="true" />
+                  {t('refinance.addTrack')}
+                </button>
+              )}
+            </div>
 
+            <div className="refinance-column-footer">
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <label className="input-group sm:col-span-2">
-                {t('refinance.feeLabel')}
+              <label className="input-group">
+                <span data-testid="refinance-fee-label">{t('refinance.feeLabel')}</span>
                 <MoneyInput
                   testId="refinance-fee"
                   value={active.feeText}
@@ -914,11 +1220,18 @@ export function RefinancePage() {
                   }}
                 />
               </label>
-              <fieldset className="sm:col-span-2">
-                <legend className="text-sm text-ink-muted">{t('refinance.feeModeLabel')}</legend>
-                <div className="mt-2 flex flex-wrap gap-4">
+              {/* Same type size as the fee label and same top line, shifted a
+                  little farther from the amount field. */}
+              <fieldset className="input-group min-w-0 self-start sm:ps-4">
+                <legend data-testid="refinance-fee-mode-label">
+                  {t('refinance.feeModeLabel')}
+                </legend>
+                <div className="mt-2 flex flex-wrap gap-4" data-testid="refinance-fee-mode-options">
                   {(['cash', 'capitalized'] as const).map((mode) => (
-                    <label key={mode} className="inline-flex items-center gap-2 text-sm text-ink">
+                    <label
+                      key={mode}
+                      className="inline-flex items-center gap-2 text-sm font-normal text-ink"
+                    >
                       <input
                         type="radio"
                         name={`fee-mode-${active.id}`}
@@ -973,7 +1286,7 @@ export function RefinancePage() {
         {showResults && existing ? (
           <section className="mt-6" data-testid="refinance-results">
             <div className="grid gap-5 lg:grid-cols-2">
-              <article className="rounded-2xl border border-line-soft bg-surface-card p-5">
+              <article className="refinance-result-card rounded-2xl border border-line-soft bg-surface-card p-5">
                 <h2 className="text-base font-semibold text-ink">{t('refinance.existingLabel')}</h2>
                 <dl className="mt-3 space-y-2 text-sm">
                   <div className="flex justify-between gap-3">
@@ -995,23 +1308,52 @@ export function RefinancePage() {
                     </dd>
                   </div>
                 </dl>
+                {existingMixShares.length > 0 && (
+                  <div className="refinance-mix-block" data-testid="refinance-existing-mix">
+                    <TrackMixDonut
+                      shares={existingMixShares}
+                      size={180}
+                      className="refinance-mix-donut-chart"
+                    />
+                  </div>
+                )}
               </article>
               {activeProjection?.ready && activeProjection.proposed ? (
                 <article
-                  className="rounded-2xl border border-line-soft bg-surface-card p-5"
+                  className={`refinance-result-card rounded-2xl border border-line-soft bg-surface-card p-5${
+                    bestProposalIds.has(active.id) ? ' is-best' : ''
+                  }`}
                   data-testid="refinance-active-proposal-result"
+                  data-best-proposal={bestProposalIds.has(active.id) ? 'true' : undefined}
                 >
-                  <h2 className="text-base font-semibold text-ink">{proposalLabel(active)}</h2>
+                  <h2 className="flex flex-wrap items-center gap-2 text-base font-semibold text-ink">
+                    <span>{proposalLabel(active)}</span>
+                    {bestProposalIds.has(active.id) && (
+                      <span className="compare-best-mix-badge">
+                        {t('refinance.bestProposalBadge')}
+                      </span>
+                    )}
+                  </h2>
                   <dl className="mt-3 space-y-2 text-sm">
                     <div className="flex justify-between gap-3">
                       <dt className="text-ink-muted">{t('refinance.proposedPayment')}</dt>
-                      <dd className="font-semibold text-ink">
+                      <dd
+                        className={`refinance-metric font-semibold text-ink ${lowerIsBetterTone(
+                          activeProjection.proposed.monthlyPayment,
+                          existing.monthlyPayment,
+                        )}`}
+                      >
                         {formatCurrency(activeProjection.proposed.monthlyPayment)}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-3">
                       <dt className="text-ink-muted">{t('refinance.proposedInterest')}</dt>
-                      <dd className="font-semibold text-ink">
+                      <dd
+                        className={`refinance-metric font-semibold text-ink ${lowerIsBetterTone(
+                          activeProjection.proposed.totalInterest,
+                          existing.totalInterest,
+                        )}`}
+                      >
                         {formatCurrency(activeProjection.proposed.totalInterest)}
                       </dd>
                     </div>
@@ -1024,9 +1366,18 @@ export function RefinancePage() {
                       </dd>
                     </div>
                   </dl>
+                  {activeMixShares.length > 0 && (
+                    <div className="refinance-mix-block" data-testid="refinance-active-mix">
+                      <TrackMixDonut
+                        shares={activeMixShares}
+                        size={180}
+                        className="refinance-mix-donut-chart"
+                      />
+                    </div>
+                  )}
                 </article>
               ) : (
-                <article className="rounded-2xl border border-line-soft bg-surface-card p-5">
+                <article className="refinance-result-card rounded-2xl border border-line-soft bg-surface-card p-5">
                   <h2 className="text-base font-semibold text-ink">{proposalLabel(active)}</h2>
                   <p className="mt-3 text-sm text-ink-muted">
                     {t('refinance.activeProposalIncomplete')}
@@ -1050,38 +1401,57 @@ export function RefinancePage() {
                   const proposalState = proposals[index]
                   const comparison = proposal.comparison
                   if (!comparison) return null
+                  const isBest = bestProposalIds.has(proposal.id)
                   return (
                     <article
                       key={proposal.id}
-                      className="rounded-2xl border border-line-soft bg-surface-card p-5"
+                      className={`refinance-result-card rounded-2xl border border-line-soft bg-surface-card p-5${
+                        isBest ? ' is-best' : ''
+                      }`}
                       data-testid={`refinance-proposal-result-${index + 1}`}
+                      data-best-proposal={isBest ? 'true' : undefined}
                     >
-                      <h3 className="text-base font-semibold text-ink">
-                        {proposalLabel(proposal)}
+                      <h3 className="flex flex-wrap items-center gap-2 text-base font-semibold text-ink">
+                        <span>{proposalLabel(proposal)}</span>
+                        {isBest && (
+                          <span className="compare-best-mix-badge">
+                            {t('refinance.bestProposalBadge')}
+                          </span>
+                        )}
                       </h3>
                       <dl className="mt-3 space-y-2 text-sm">
                         <div className="flex justify-between gap-3">
                           <dt className="text-ink-muted">{t('refinance.proposedPayment')}</dt>
-                          <dd className="font-semibold text-ink">
+                          <dd
+                            className={`refinance-metric font-semibold text-ink ${lowerIsBetterTone(
+                              proposal.proposed?.monthlyPayment ?? 0,
+                              existing.monthlyPayment,
+                            )}`}
+                          >
                             {formatCurrency(proposal.proposed?.monthlyPayment ?? 0)}
                           </dd>
                         </div>
                         <div className="flex justify-between gap-3">
                           <dt className="text-ink-muted">{t('refinance.proposedInterest')}</dt>
-                          <dd className="font-semibold text-ink">
+                          <dd
+                            className={`refinance-metric font-semibold text-ink ${lowerIsBetterTone(
+                              proposal.proposed?.totalInterest ?? 0,
+                              existing.totalInterest,
+                            )}`}
+                          >
                             {formatCurrency(proposal.proposed?.totalInterest ?? 0)}
                           </dd>
                         </div>
                         <div className="flex justify-between gap-3">
                           <dt className="text-ink-muted">{t('compare.cashFlowFees')}</dt>
                           <dd
-                            className={
+                            className={`refinance-metric ${
                               comparison.feesDelta > 0
                                 ? 'is-positive'
                                 : comparison.feesDelta < 0
                                   ? 'is-negative'
                                   : 'is-even'
-                            }
+                            }`}
                           >
                             {signedCurrency(comparison.feesDelta)}
                           </dd>
@@ -1089,13 +1459,13 @@ export function RefinancePage() {
                         <div className="flex justify-between gap-3">
                           <dt className="text-ink-muted">{t('compare.cashFlowNet')}</dt>
                           <dd
-                            className={
+                            className={`refinance-metric ${
                               comparison.netCashFlowDelta > 0
                                 ? 'is-positive'
                                 : comparison.netCashFlowDelta < 0
                                   ? 'is-negative'
                                   : 'is-even'
-                            }
+                            }`}
                           >
                             {signedCurrency(comparison.netCashFlowDelta)}
                           </dd>
@@ -1148,5 +1518,79 @@ export function RefinancePage() {
         <p className="mt-6 text-xs leading-relaxed text-ink-muted">{t('refinance.disclaimer')}</p>
       </div>
     </main>
+
+    <AppModal
+      open={unsavedOpen}
+      onOpenChange={(openState) => {
+        if (!openState) stayOnPage()
+      }}
+      testId="unsaved-refinance-confirm"
+      dir={i18n.dir()}
+      contentClassName="max-w-[440px] !border-0 !shadow-[0_12px_32px_rgba(15,15,15,0.30)]"
+    >
+      <div className="p-6">
+        <h3 className="mb-4 text-[20px] font-bold leading-tight text-ink">
+          {t('refinance.unsavedTitle')}
+        </h3>
+        <p className="text-[15px] leading-relaxed text-ink">{t('refinance.unsavedBody')}</p>
+        <div className="mt-6 modal-actions">
+          <button
+            type="button"
+            data-testid="unsaved-refinance-stay"
+            className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
+            onClick={stayOnPage}
+          >
+            {t('refinance.unsavedStay')}
+          </button>
+          <button
+            type="button"
+            data-testid="unsaved-refinance-leave"
+            className="rounded-[5px] border border-[var(--calc-line)] px-5 py-2 text-[15px] font-medium text-[var(--calc-muted)] transition-colors hover:text-[var(--calc-teal-dark)]"
+            onClick={leaveWithoutSaving}
+          >
+            {t('refinance.unsavedLeave')}
+          </button>
+        </div>
+      </div>
+    </AppModal>
+
+    <AppModal
+      open={pendingRemoveId !== null}
+      onOpenChange={(openState) => {
+        if (!openState) setPendingRemoveId(null)
+      }}
+      testId="remove-refinance-offer-confirm"
+      dir={i18n.dir()}
+      tone="red"
+      contentClassName="max-w-[440px]"
+    >
+      <div className="p-6">
+        <h3 className="mb-4 text-[20px] font-bold leading-tight text-ink">
+          {t('refinance.removeProposalTitle')}
+        </h3>
+        <p className="text-[15px] leading-relaxed text-ink">
+          {t('refinance.removeProposalBody')}
+        </p>
+        <div className="mt-6 modal-actions">
+          <button
+            type="button"
+            data-testid="remove-refinance-offer-cancel"
+            className="rounded-[5px] border border-line-strong px-5 py-2 text-[15px] font-medium text-ink-muted transition-colors hover:text-ink"
+            onClick={() => setPendingRemoveId(null)}
+          >
+            {t('refinance.cancel')}
+          </button>
+          <button
+            type="button"
+            data-testid="remove-refinance-offer-delete"
+            className="rounded-[5px] bg-[var(--danger)] px-5 py-2 text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
+            onClick={confirmRemoveProposal}
+          >
+            {t('refinance.removeProposalConfirm')}
+          </button>
+        </div>
+      </div>
+    </AppModal>
+    </>
   )
 }

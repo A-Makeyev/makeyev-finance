@@ -27,7 +27,7 @@ import { CalculatorNav } from './CalculatorNav'
 const NAV_ITEMS = [
   { to: '/', key: 'nav.home', id: 'home' },
   { to: '/services', key: 'nav.services', id: 'services' },
-  { to: '/calculators', key: 'nav.calculators', id: 'calculators' },
+  { to: '/calculators', key: 'nav.tools', id: 'calculators' },
   { to: '/articles', key: 'nav.articles', id: 'articles' },
   { to: '/contact', key: 'nav.contact', id: 'contact' },
 ] as const

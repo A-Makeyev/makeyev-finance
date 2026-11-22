@@ -12,9 +12,9 @@ import { formatRelativeTime } from '@/lib/relativeTime'
 import { useDeleteRefinance, useSavedRefinances, type SavedRefinance } from './api'
 
 /**
- * The profile page's saved refinance proposals. Each card is an independent
- * snapshot of both sides; opening it navigates to `/refinance?refinance=<id>`
- * so a refresh or bookmark reloads the same proposal.
+ * The profile page's saved refinance plans. Each card is one plan holding one
+ * or more offers; opening it navigates to `/refinance?refinance=<id>` so a
+ * refresh or bookmark reloads the same plan.
  */
 export function SavedRefinancesSection() {
   const { t, i18n } = useTranslation()

@@ -385,7 +385,7 @@ export function CommentsSection({ slug }: { slug: string }) {
             )}
 
             {!comment.deleted && !isEditing && (
-              <div className="mt-1 flex flex-wrap items-center gap-1">
+              <div className="comment-actions mt-1 flex flex-wrap items-center gap-1">
                 {signedIn && (
                   <button
                     type="button"

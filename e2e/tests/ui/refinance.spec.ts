@@ -38,6 +38,21 @@ test.describe('mortgage refinance - /refinance', () => {
     await expect(page.getByTestId('refinance-cashflow-fees')).toHaveText(ils(0))
   })
 
+  test('hydrates without a server/client mismatch', async ({ page }) => {
+    const messages: string[] = []
+    page.on('console', (message) => {
+      if (message.type() === 'error' || message.type() === 'warning') {
+        messages.push(message.text())
+      }
+    })
+    await page.goto('/refinance')
+    await expect(new RefinancePage(page).heading).toBeVisible()
+    await page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+    const mismatches = messages.filter((text) => /hydrat|did not match|server rendered/i.test(text))
+    expect(mismatches, `console:\n${messages.join('\n')}`).toEqual([])
+  })
+
   test('renders in English LTR at 360px without overflowing', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 800 })
     await page.goto('/en/refinance')

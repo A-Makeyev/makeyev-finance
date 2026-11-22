@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_MIXES, MAX_TRACKS, MAX_YEARS, TRACK_TYPES } from '@/lib/amortization'
+import { MAX_REFINANCE_OFFERS, MAX_TRACKS, MAX_YEARS, TRACK_TYPES } from '@/lib/amortization'
 import { existingMortgageTrackSchema } from '@/features/refinance/existingMortgage'
 
 /**
@@ -18,7 +18,7 @@ import { existingMortgageTrackSchema } from '@/features/refinance/existingMortga
  */
 
 export const MAX_SAVED_REFINANCES = 4
-export const MAX_REFINANCE_PROPOSALS = MAX_MIXES
+export const MAX_REFINANCE_PROPOSALS = MAX_REFINANCE_OFFERS
 
 export const MAX_REFINANCE_LABEL_LENGTH = 60
 

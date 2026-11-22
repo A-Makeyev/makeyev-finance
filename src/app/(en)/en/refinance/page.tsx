@@ -8,10 +8,16 @@ export const metadata: Metadata = {
   description: en.translation.refinance.intro,
 }
 
-export default function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ refinance?: string | string[] }>
+}) {
+  const query = await searchParams
+  const refinanceId = typeof query.refinance === 'string' ? query.refinance : undefined
   return (
     <LocaleShell>
-      <RefinancePage />
+      <RefinancePage initialRefinanceId={refinanceId} />
     </LocaleShell>
   )
 }

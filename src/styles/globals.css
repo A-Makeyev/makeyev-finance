@@ -5920,13 +5920,13 @@ input[type='number']::-webkit-outer-spin-button {
    heading, validation message or saved-mix control takes more space. */
 @media (min-width: 1024px) {
   .refinance-columns {
-    grid-template-rows: auto repeat(var(--refinance-track-count), auto) auto;
+    grid-template-rows: auto repeat(var(--refinance-track-count), auto) auto auto;
   }
 
   .refinance-column {
     display: grid;
     grid-template-rows: subgrid;
-    grid-row: 1 / span calc(var(--refinance-track-count) + 2);
+    grid-row: 1 / span calc(var(--refinance-track-count) + 3);
     min-width: 0;
   }
 
@@ -5945,9 +5945,91 @@ input[type='number']::-webkit-outer-spin-button {
     min-width: 0;
   }
 
-  .refinance-column-footer {
-    grid-row: calc(var(--refinance-track-count) + 2);
+  /* Each add-track control follows its own column's last track, so adding a
+     track on one side never drags the other side's button down. The footer
+     still shares the final row. */
+  .refinance-column-add {
+    grid-row: calc(var(--refinance-column-count) + 2);
   }
+
+  .refinance-column-footer {
+    grid-row: calc(var(--refinance-track-count) + 3);
+  }
+}
+
+/* The best-value proposal gets the same deep-teal ring as the compare page's
+   recommended mix. A ring (not a thicker border) keeps the card's box, so a
+   neighbouring card never shifts by a pixel. */
+.refinance-result-card.is-best {
+  border-color: var(--calc-teal-dark);
+  box-shadow: 0 0 0 2px var(--calc-teal-dark);
+}
+
+/* Proposal metrics are signed from the refinance page's point of view: lower
+   payments and less interest than the existing mortgage are the good case.
+   The tokens flip with the theme, like every other result colour. */
+.refinance-metric.is-positive {
+  color: var(--calc-accent);
+}
+
+.refinance-metric.is-negative {
+  color: var(--danger);
+}
+
+.refinance-metric.is-even {
+  color: var(--ink-muted);
+}
+
+/* Saved-plan loader bars. --surface-soft is darker than --surface-card in dark
+   mode, so those bars nearly vanished into the card; a low-alpha ink wash is a
+   light bar on the dark card and a soft grey bar on the white one. */
+.refinance-skeleton {
+  background-color: color-mix(in srgb, var(--ink-muted) 18%, transparent);
+}
+
+/* The small track-mix ring under the two headline result cards. It reuses the
+   compare card's centred stacking (ring above a compact legend) at a smaller
+   size, so both cards keep the same rhythm on desktop and mobile. */
+.refinance-mix-block {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+}
+
+.mix-donut.refinance-mix-donut-chart {
+  justify-items: center;
+  width: 100%;
+  gap: 10px;
+}
+
+.mix-donut.refinance-mix-donut-chart svg {
+  width: 180px;
+  max-width: 100%;
+}
+
+.refinance-mix-block .mix-legend,
+:root[dir='ltr'] .refinance-mix-block .mix-legend {
+  direction: inherit;
+  transform: none;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.refinance-mix-block .mix-legend-item {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  text-align: start;
+}
+
+.refinance-mix-block .mix-legend-text {
+  text-align: start;
 }
 
 .calculator-panel input:disabled {
@@ -10888,6 +10970,13 @@ html[dir='rtl'] .comment-text {
   text-align: right;
 }
 
+/* The action row's buttons carry their own 10px inline padding. Pulling the
+   row back by that amount lines the Reply icon up with the comment text above
+   it, instead of sitting one padding-step inward. Logical, so it flips too. */
+.comment-actions {
+  margin-inline-start: -0.625rem;
+}
+
 /* The Reply glyph points the way the thread reads, so it mirrors under RTL. */
 :root[dir='rtl'] .comment-reply-icon {
   transform: scaleX(-1);
@@ -11418,6 +11507,67 @@ html[dir='rtl'] .comment-text {
 .compare-save-button.is-saved {
   border-color: transparent;
   color: var(--calc-muted);
+}
+
+/* The page-level save control at the side of the offer row: a square icon
+   button, since the plan name is chosen in its dialog. */
+.compare-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 34px;
+  block-size: 34px;
+  border: 1px solid var(--calc-line);
+  border-radius: 8px;
+  color: var(--calc-teal-dark);
+  background: transparent;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.compare-icon-button:hover:not(:disabled),
+.compare-icon-button:focus-visible {
+  color: var(--calc-accent);
+  border-color: var(--calc-accent);
+}
+
+.compare-icon-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* The offer card's remove action sits on the date line, so its
+   glyphs stay in step with the date's text size. Save stays teal; remove
+   stays muted until hovered. */
+.compare-icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 4px;
+  color: var(--calc-teal-dark);
+  font-size: 0.9375rem;
+  background: transparent;
+  transition: color 160ms ease;
+}
+
+.compare-icon-link:hover:not(:disabled),
+.compare-icon-link:focus-visible {
+  color: var(--calc-accent);
+}
+
+.compare-icon-link.is-danger {
+  color: var(--calc-muted);
+}
+
+.compare-icon-link.is-danger:hover:not(:disabled),
+.compare-icon-link.is-danger:focus-visible {
+  color: var(--danger);
+}
+
+.compare-icon-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .compare-save-placeholder {
