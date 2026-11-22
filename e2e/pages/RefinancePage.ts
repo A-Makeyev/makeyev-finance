@@ -13,6 +13,12 @@ export class RefinancePage {
   readonly comparison: Locator
   readonly breakEven: Locator
   readonly incomplete: Locator
+  readonly myRefinancesMenuTrigger: Locator
+  readonly savedRefinancesMenu: Locator
+  readonly myRefinancesProfileLink: Locator
+  readonly loadRefinanceDialog: Locator
+  readonly loadRefinanceConfirm: Locator
+  readonly loadRefinanceCancel: Locator
 
   constructor(page: Page) {
     this.page = page
@@ -27,6 +33,12 @@ export class RefinancePage {
     this.comparison = page.getByTestId('refinance-comparison')
     this.breakEven = page.getByTestId('refinance-break-even')
     this.incomplete = page.getByTestId('refinance-incomplete')
+    this.myRefinancesMenuTrigger = page.getByTestId('my-refinances-menu-trigger')
+    this.savedRefinancesMenu = page.getByTestId('saved-refinances-menu')
+    this.myRefinancesProfileLink = page.getByTestId('my-refinances-link')
+    this.loadRefinanceDialog = page.getByTestId('load-refinance-confirm')
+    this.loadRefinanceConfirm = page.getByTestId('load-refinance-confirm-yes')
+    this.loadRefinanceCancel = page.getByTestId('load-refinance-confirm-cancel')
     this.unsavedDialog = page.getByTestId('unsaved-refinance-confirm')
     this.unsavedStay = page.getByTestId('unsaved-refinance-stay')
     this.unsavedLeave = page.getByTestId('unsaved-refinance-leave')
@@ -52,8 +64,22 @@ export class RefinancePage {
     await this.fee.fill(fee)
   }
 
+  savedRefinanceMenuItem(id: string): Locator {
+    return this.page.getByTestId(`saved-refinance-menu-item-${id}`)
+  }
+
+  /** Click-open works on touch and keeps focus while a narrow page scrolls. */
+  async openSavedRefinancesMenu() {
+    await this.page.mouse.move(0, 0)
+    await this.myRefinancesMenuTrigger.click()
+    await expect(this.savedRefinancesMenu).toBeVisible()
+  }
+
   get loading() { return this.page.getByTestId('refinance-loading') }
   get save() { return this.page.getByTestId('save-refinance') }
+  get loadRefinanceSave() { return this.page.getByTestId('load-refinance-confirm-save') }
+  get saveError() { return this.page.getByTestId('save-refinance-error') }
+  get saveCancel() { return this.page.getByTestId('save-refinance-cancel') }
   get saveNew() { return this.page.getByTestId('save-refinance-new') }
   get saveModal() { return this.page.getByTestId('save-refinance-modal') }
   get saveSignIn() { return this.page.getByTestId('save-refinance-sign-in') }

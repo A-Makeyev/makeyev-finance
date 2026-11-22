@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { LoadingIndicator } from '@/components/ui/LoadingIndicator'
+import { SavedItemsMenu } from '@/components/ui/SavedItemsMenu'
 import { useTranslation } from 'react-i18next'
 import { FaPlus, FaRegTrashAlt } from 'react-icons/fa'
 import {
@@ -292,7 +293,7 @@ export function RefinancePage({
   // server page reads the id, so a reload shows the loader on the very first
   // paint instead of drawing a draft form and replacing it.
   const deepLinkId = initialRefinanceId ?? null
-  const savedRefinances = useSavedRefinances(Boolean(deepLinkId) && signedIn)
+  const savedRefinances = useSavedRefinances(signedIn)
   const appliedDeepLink = useRef<string | null>(null)
   const [missingDeepLinkId, setMissingDeepLinkId] = useState<string | null>(null)
   const deepLinkMissing = Boolean(deepLinkId) && missingDeepLinkId === deepLinkId
@@ -326,6 +327,18 @@ export function RefinancePage({
     setActiveProposalId(next[0].id)
     setResetStepText(loadedResetStepText)
     setLoadedRefinance({ id: saved.id, label: saved.label })
+  }
+
+  /**
+   * Choosing a saved plan from the offers row loads it in place, like the
+   * profile's "open" link does through the deep link. The URL is rewritten too,
+   * so a refresh (or a bookmark) still opens this plan.
+   */
+  function loadSavedRefinance(saved: SavedRefinance) {
+    applySavedRefinance(saved)
+    const url = new URL(window.location.href)
+    url.searchParams.set('refinance', saved.id)
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
   }
 
   useEffect(() => {
@@ -688,6 +701,23 @@ export function RefinancePage({
     )
   }
 
+  const saveProps = {
+    existingTracks: tracks,
+    proposals: proposals.map((proposal) => ({
+      id: proposal.id,
+      label: proposal.label,
+      proposedTracks: proposal.tracks,
+      feeAmount: proposalFee(proposal),
+      feeMode: proposal.feeMode,
+    })),
+    resetStepPercent,
+    loadedRefinance,
+    onDeletedLoaded: () => setLoadedRefinance(null),
+    suggestedLabel: proposals.length > 1
+      ? t('savedRefinances.defaultPlanLabel')
+      : proposalLabel(active),
+  }
+
   return (
     <>
     <main className="below-chrome min-h-screen bg-surface-page px-4 pb-20">
@@ -782,26 +812,49 @@ export function RefinancePage({
             </div>
 
             {/* One save for the whole plan, at the row's side. */}
-            <div className="ms-auto flex items-center gap-2">
+            <div className="ms-auto flex flex-wrap items-center gap-2">
+              {signedIn && (
+                <SavedItemsMenu
+                  items={savedRefinances.data?.refinances ?? []}
+                  count={savedRefinances.data?.refinances.length ?? 0}
+                  max={savedRefinances.data?.max ?? 4}
+                  isPending={savedRefinances.isPending}
+                  isError={savedRefinances.isError}
+                  triggerLabel={t('savedRefinances.myPlansLink')}
+                  triggerClassName="compare-save-button"
+                  triggerTestId="my-refinances-menu-trigger"
+                  menuTestId="saved-refinances-menu"
+                  itemTestId={(id) => `saved-refinance-menu-item-${id}`}
+                  manageHref="/profile#saved-refinances"
+                  manageLabel={t('savedRefinances.profileTitle')}
+                  manageTestId="my-refinances-link"
+                  loadingLabel={t('savedRefinances.loading')}
+                  errorLabel={t('savedRefinances.loadError')}
+                  emptyLabel={t('savedRefinances.empty')}
+                  onSelect={loadSavedRefinance}
+                  shouldConfirm={() => hasUnsavedChanges}
+                  confirmTitle={t('savedRefinances.loadOtherTitle')}
+                  confirmBody={t('savedRefinances.loadOtherBody')}
+                  confirmAction={t('savedRefinances.loadOtherAction')}
+                  confirmTestId="load-refinance-confirm"
+                  renderSaveAction={(onSaved, onPendingChange) => (
+                    <SaveRefinanceButton
+                      {...saveProps}
+                      actionLabel={t('savedRefinances.saveAndLoad')}
+                      actionTestId="load-refinance-confirm-save"
+                      onPendingChange={onPendingChange}
+                      onSaved={(saved) => {
+                        handleSaved(saved)
+                        onSaved()
+                      }}
+                    />
+                  )}
+                />
+              )}
               <SaveRefinanceButton
-                existingTracks={tracks}
-                proposals={proposals.map((proposal) => ({
-                  id: proposal.id,
-                  label: proposal.label,
-                  proposedTracks: proposal.tracks,
-                  feeAmount: proposalFee(proposal),
-                  feeMode: proposal.feeMode,
-                }))}
-                resetStepPercent={resetStepPercent}
-                loadedRefinance={loadedRefinance}
+                {...saveProps}
                 onSaved={handleSaved}
-                onDeletedLoaded={() => setLoadedRefinance(null)}
                 iconOnly
-                suggestedLabel={
-                  proposals.length > 1
-                    ? t('savedRefinances.defaultPlanLabel')
-                    : proposalLabel(active)
-                }
               />
             </div>
           </div>

@@ -68,6 +68,9 @@ export function SaveRefinanceButton({
   onDeletedLoaded,
   iconOnly = false,
   suggestedLabel,
+  actionLabel,
+  actionTestId = 'save-refinance',
+  onPendingChange,
 }: {
   existingTracks: ExistingMortgageTrack[]
   proposals: SaveProposalInput[]
@@ -79,6 +82,10 @@ export function SaveRefinanceButton({
   iconOnly?: boolean
   /** Prefills the naming dialog with an offer name or a plan-level default. */
   suggestedLabel?: string
+  /** Reuse the save flow as a confirmation action before loading another plan. */
+  actionLabel?: string
+  actionTestId?: string
+  onPendingChange?: (pending: boolean) => void
 }) {
   const { t, i18n } = useTranslation()
   const router = useRouter()
@@ -88,6 +95,10 @@ export function SaveRefinanceButton({
   const list = useSavedRefinances(signedIn)
   const saveRefinance = useSaveRefinance()
   const deleteRefinance = useDeleteRefinance()
+
+  useEffect(() => {
+    onPendingChange?.(saveRefinance.isPending)
+  }, [onPendingChange, saveRefinance.isPending])
 
   const [open, setOpen] = useState(false)
   /** The dialog is creating a second plan from an already loaded one. */
@@ -232,7 +243,7 @@ export function SaveRefinanceButton({
 
   return (
     <>
-      {signedIn && loadedRefinance && (
+      {signedIn && loadedRefinance && !actionLabel && (
         <button
           type="button"
           data-testid="save-refinance-new"
@@ -248,7 +259,7 @@ export function SaveRefinanceButton({
       {signedIn ? (
         <button
           type="button"
-          data-testid="save-refinance"
+          data-testid={actionTestId}
           disabled={!canSave || saveRefinance.isPending}
           aria-busy={saveRefinance.isPending}
           aria-label={
@@ -265,9 +276,11 @@ export function SaveRefinanceButton({
           }
           onClick={handleSaveClick}
           className={
-            iconOnly
-              ? 'compare-icon-button relative'
-              : 'compare-save-button relative justify-center'
+            actionLabel
+              ? 'saved-item-load-action relative'
+              : iconOnly
+                ? 'compare-icon-button relative'
+                : 'compare-save-button relative justify-center'
           }
         >
           <PendingContent
@@ -277,7 +290,7 @@ export function SaveRefinanceButton({
             {iconOnly ? (
               <FaSave aria-hidden="true" />
             ) : (
-              t(manyOffers ? 'savedRefinances.savePlanAction' : 'savedRefinances.saveAction')
+              actionLabel ?? t(manyOffers ? 'savedRefinances.savePlanAction' : 'savedRefinances.saveAction')
             )}
           </PendingContent>
         </button>

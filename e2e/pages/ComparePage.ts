@@ -11,6 +11,12 @@ export class ComparePage {
   readonly saveComparisonModal: Locator
   readonly saveComparisonLabel: Locator
   readonly saveComparisonConfirm: Locator
+  readonly myComparisonsMenuTrigger: Locator
+  readonly savedComparisonsMenu: Locator
+  readonly myComparisonsProfileLink: Locator
+  readonly loadComparisonDialog: Locator
+  readonly loadComparisonConfirm: Locator
+  readonly loadComparisonCancel: Locator
   readonly unsavedDialog: Locator
   readonly unsavedSave: Locator
   readonly unsavedSignIn: Locator
@@ -32,6 +38,12 @@ export class ComparePage {
     this.saveComparisonModal = page.getByTestId('save-comparison-modal')
     this.saveComparisonLabel = page.getByTestId('save-comparison-label')
     this.saveComparisonConfirm = page.getByTestId('save-comparison-confirm')
+    this.myComparisonsMenuTrigger = page.getByTestId('my-comparisons-menu-trigger')
+    this.savedComparisonsMenu = page.getByTestId('saved-comparisons-menu')
+    this.myComparisonsProfileLink = page.getByTestId('my-comparisons-link')
+    this.loadComparisonDialog = page.getByTestId('load-comparison-confirm')
+    this.loadComparisonConfirm = page.getByTestId('load-comparison-confirm-yes')
+    this.loadComparisonCancel = page.getByTestId('load-comparison-confirm-cancel')
     this.unsavedDialog = page.getByTestId('unsaved-comparison-confirm')
     this.unsavedSave = page.getByTestId('unsaved-comparison-save')
     this.unsavedSignIn = page.getByTestId('unsaved-comparison-sign-in')
@@ -45,6 +57,21 @@ export class ComparePage {
 
   async removeSavedComparison(id: string) {
     await this.page.getByTestId(`save-comparison-remove-${id}`).click()
+  }
+
+  savedComparisonMenuItem(id: string): Locator {
+    return this.page.getByTestId(`saved-comparison-menu-item-${id}`)
+  }
+
+  /**
+   * Opens the saved-comparison menu the way a visitor does - hover - after
+   * parking the pointer, so the mouseenter is a real crossing even when a
+   * previous edit shifted the trigger under a stationary pointer.
+   */
+  async openSavedComparisonsMenu() {
+    await this.page.mouse.move(0, 0)
+    await this.myComparisonsMenuTrigger.hover()
+    await expect(this.savedComparisonsMenu).toBeVisible()
   }
 
   async expectScenarioCapRecovery() {

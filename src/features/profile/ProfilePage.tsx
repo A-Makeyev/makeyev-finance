@@ -577,7 +577,7 @@ export function ProfilePage({
         testId="change-password-modal"
         dir={i18n.dir()}
         tone="teal"
-        contentClassName="max-w-[460px]"
+        contentClassName="profile-modal max-w-[460px]"
       >
         <form
           onSubmit={hasPassword ? onChangePassword : onSetPassword}
@@ -685,7 +685,7 @@ export function ProfilePage({
         testId="delete-account-modal"
         dir={i18n.dir()}
         tone="red"
-        contentClassName="max-w-[460px]"
+        contentClassName="profile-modal max-w-[460px]"
       >
         {deleteStep === 'code' ? (
           /* The mail is out: the short code it carries is the last thing between

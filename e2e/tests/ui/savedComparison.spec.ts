@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { test, expect } from '../../fixtures'
 import { ComparePage } from '../../pages/ComparePage'
 import { mockGetSessionUser } from '../../support/authMocks'
@@ -245,4 +246,111 @@ test.describe('saved comparisons', () => {
     expect(captured.body?.snapshot?.scenarios).toHaveLength(2)
     expect(captured.body?.snapshot?.shared).not.toHaveProperty('realtorAmountText')
   })
+
+  test('the saved-comparison menu lists saves, loads them in place, and guards dirty work', async ({
+    mockedPage,
+  }) => {
+    // Signed-out visitors cannot list private comparisons.
+    const compare = new ComparePage(mockedPage)
+    await compare.goto()
+    await expect(compare.myComparisonsMenuTrigger).toHaveCount(0)
+
+    const firstId = '507f1f77bcf86cd799439011'
+    const secondId = '507f1f77bcf86cd799439012'
+    await mockSignedInWithComparisons(mockedPage, [
+      savedComparisonFixture(firstId, 'First home', '22,000'),
+      savedComparisonFixture(secondId, 'Second home', '25,000'),
+    ])
+    await compare.goto()
+
+    await expect(compare.myComparisonsMenuTrigger).toBeVisible()
+    await compare.openSavedComparisonsMenu()
+    await expect(compare.savedComparisonMenuItem(firstId)).toContainText('First home')
+    await expect(compare.myComparisonsProfileLink).toHaveAttribute(
+      'href',
+      '/profile#saved-comparisons',
+    )
+
+    // A clean comparison loads immediately, and the URL remembers the snapshot.
+    await compare.savedComparisonMenuItem(firstId).click()
+    await expect(mockedPage.getByTestId('compare-income')).toHaveValue('22,000')
+    await expect(mockedPage).toHaveURL(new RegExp(`/compare\\?comparison=${firstId}$`))
+
+    // Edited work is protected before another saved comparison replaces it.
+    await mockedPage.getByTestId('compare-income').fill('30,000')
+    await compare.openSavedComparisonsMenu()
+    await compare.savedComparisonMenuItem(secondId).click()
+    await expect(compare.loadComparisonDialog).toBeVisible()
+    await compare.loadComparisonCancel.click()
+    await expect(compare.loadComparisonDialog).toBeHidden()
+    await expect(mockedPage.getByTestId('compare-income')).toHaveValue('30,000')
+
+    await compare.openSavedComparisonsMenu()
+    await compare.savedComparisonMenuItem(secondId).click()
+    await compare.loadComparisonConfirm.click()
+    await expect(mockedPage.getByTestId('compare-income')).toHaveValue('25,000')
+    await expect(mockedPage).toHaveURL(new RegExp(`/compare\\?comparison=${secondId}$`))
+  })
+
+  /**
+   * A signed-in compare page whose saved comparisons are `comparisons` (GET),
+   * leaving the write routes alone. Shared so each test states only its subject.
+   */
+  async function mockSignedInWithComparisons(
+    mockedPage: Page,
+    comparisons: unknown[],
+  ): Promise<void> {
+    await mockGetSessionUser(mockedPage)
+    await mockedPage.route('**/api/comparisons', (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ comparisons, max: 4 }),
+          })
+        : route.continue(),
+    )
+  }
+
+  /** A valid version-1 snapshot whose only distinguishing input is the income. */
+  function savedComparisonFixture(id: string, label: string, incomeText: string) {
+    const track = {
+      type: 'fixed',
+      amountText: '1,000,000',
+      yearsText: '30',
+      yearsOverridden: false,
+      rateText: '4.5',
+      resetMonths: 0,
+      graceMonths: 0,
+      graceMode: 'interestOnly',
+      marginText: '',
+      method: 'spitzer',
+    }
+    return {
+      id,
+      label,
+      snapshot: {
+        version: 1,
+        shared: {
+          propertyValueText: '1,500,000',
+          capitalText: '400,000',
+          incomeText,
+          purpose: 'first',
+          mortgageSumText: '1,000,000',
+          realtorPercentText: '',
+          lawyerPercentText: '',
+          appraiserFeeText: '',
+          renovationAmountText: '',
+          otherExpenses: [],
+          ptiThresholdPercent: 33,
+        },
+        scenarios: [
+          { label: '', termYears: 30, activePreset: null, approvalDateText: '', tracks: [track] },
+          { label: '', termYears: 30, activePreset: null, approvalDateText: '', tracks: [track] },
+        ],
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+  }
 })

@@ -601,6 +601,12 @@ img {
 }
 
 /* Quiet theme surfaces keep the profile's saved work in focus. */
+:root:not([data-theme='dark']) .profile-page,
+:root:not([data-theme='dark']) .profile-modal {
+  --surface-page: #f2f4f4;
+  --surface-soft: #eef1f1;
+}
+
 .profile-page {
   background: var(--surface-page);
 }
@@ -1488,6 +1494,33 @@ img {
 /* The close control inherits the shared 44px AppModal target (see
    AppModal.tsx). It used to be shrunk to 30px here for this short form, which
    left it under the comfortable touch size - keep the shared size instead. */
+
+.saved-item-load-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 9.5rem;
+  min-block-size: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--calc-teal);
+  border-radius: 5px;
+  background: var(--calc-teal);
+  color: var(--surface-card);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.saved-item-load-action:hover:not(:disabled) {
+  background: var(--calc-teal-dark);
+  border-color: var(--calc-teal-dark);
+}
+
+.saved-item-load-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
 
 .modal-actions {
   display: flex;

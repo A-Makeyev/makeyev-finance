@@ -42,8 +42,9 @@ import { formatDateOnly, rateValidityStatus } from '@/lib/rateValidity'
 import { useAverageRates } from '@/services/rates'
 import { useMediaQuery } from '@/hooks/useScrolled'
 import { isComparisonDirty, useComparisonStore } from '@/stores/comparisonStore'
+import { SavedItemsMenu } from '@/components/ui/SavedItemsMenu'
 import { SaveComparisonButton } from '@/features/comparisons/SaveComparisonButton'
-import { useSavedComparisons } from '@/features/comparisons/api'
+import { useSavedComparisons, type SavedComparison } from '@/features/comparisons/api'
 import {
   markPendingComparisonSave,
   takePendingComparisonSave,
@@ -112,7 +113,7 @@ export function ComparePage() {
     const id = new URLSearchParams(window.location.search).get('comparison')
     if (id) setDeepLinkComparisonId(id)
   }, [])
-  const savedComparisons = useSavedComparisons(Boolean(deepLinkComparisonId) && signedIn)
+  const savedComparisons = useSavedComparisons(signedIn)
   const deepLinkLoaded = useRef(false)
   useEffect(() => {
     if (deepLinkLoaded.current || !deepLinkComparisonId || !savedComparisons.data) return
@@ -123,6 +124,18 @@ export function ComparePage() {
     deepLinkLoaded.current = true
     useComparisonStore.getState().loadSavedComparison(saved.snapshot, saved.id, saved.label)
   }, [deepLinkComparisonId, savedComparisons.data])
+
+  /**
+   * Choosing a saved comparison from the header menu loads it in place, the
+   * same way the profile's "open" link does through the deep link. The URL is
+   * rewritten too, so a refresh (or a bookmark) still opens this snapshot.
+   */
+  function loadSavedComparison(saved: SavedComparison) {
+    useComparisonStore.getState().loadSavedComparison(saved.snapshot, saved.id, saved.label)
+    const url = new URL(window.location.href)
+    url.searchParams.set('comparison', saved.id)
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+  }
 
   // Leaving the page with unsaved comparison work warns first. beforeunload
   // covers reload/close and browser back-forward; the router guard covers
@@ -1125,6 +1138,32 @@ export function ComparePage() {
           <div className="compare-shared-head">
             <h2>{t('compare.sharedInputsHeading')}</h2>
             <div className="compare-shared-actions">
+              {signedIn && (
+                <SavedItemsMenu
+                  items={savedComparisons.data?.comparisons ?? []}
+                  count={savedComparisons.data?.comparisons.length ?? 0}
+                  max={savedComparisons.data?.max ?? 4}
+                  isPending={savedComparisons.isPending}
+                  isError={savedComparisons.isError}
+                  triggerLabel={t('savedComparisons.myComparisonsLink')}
+                  triggerClassName="compare-save-button"
+                  triggerTestId="my-comparisons-menu-trigger"
+                  menuTestId="saved-comparisons-menu"
+                  itemTestId={(id) => `saved-comparison-menu-item-${id}`}
+                  manageHref="/profile#saved-comparisons"
+                  manageLabel={t('savedComparisons.profileTitle')}
+                  manageTestId="my-comparisons-link"
+                  loadingLabel={t('savedComparisons.loading')}
+                  errorLabel={t('savedComparisons.loadError')}
+                  emptyLabel={t('savedComparisons.empty')}
+                  onSelect={loadSavedComparison}
+                  shouldConfirm={() => isComparisonDirty(useComparisonStore.getState())}
+                  confirmTitle={t('savedComparisons.loadOtherTitle')}
+                  confirmBody={t('savedComparisons.loadOtherBody')}
+                  confirmAction={t('savedComparisons.loadOtherAction')}
+                  confirmTestId="load-comparison-confirm"
+                />
+              )}
               <SaveComparisonButton />
               <Link className="compare-back" to="/calculators" data-testid="compare-back">
                 {/* The arrow is mirrored by the stylesheet under RTL, so "back"

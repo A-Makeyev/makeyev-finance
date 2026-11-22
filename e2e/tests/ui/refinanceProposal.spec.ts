@@ -17,6 +17,20 @@ const snapshot = {
   existingResetStepPercent: 0,
 }
 
+/** A saved plan whose only distinguishing input is the existing balance. */
+function savedPlanFixture(id: string, label: string, currentBalance: number) {
+  return {
+    id,
+    label,
+    snapshot: {
+      ...snapshot,
+      existingTracks: [{ ...snapshot.existingTracks[0], currentBalance }],
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+}
+
 test('aligns corresponding tracks across the existing and proposed columns', async ({ mockedPage }) => {
   await mockGetSessionUser(mockedPage)
   await mockedPage.route('**/api/mixes', route => route.fulfill({ json: { mixes: [], max: 4 } }))
@@ -343,6 +357,140 @@ test('saves every offer as one named plan, prefilled with the plan name', async 
   await expect.poll(() => posted.length).toBe(2)
   expect(posted[1].id).toBeUndefined()
   expect(posted[1].label).toBe('Two offers (העתק)')
+})
+
+test('the saved-plan menu lists plans, loads them in place, and guards dirty work', async ({ mockedPage }) => {
+  // Signed-out visitors cannot list private plans.
+  const refinance = new RefinancePage(mockedPage)
+  await refinance.goto()
+  await expect(refinance.myRefinancesMenuTrigger).toHaveCount(0)
+
+  const firstId = 'saved-a'
+  const secondId = 'saved-b'
+  await mockGetSessionUser(mockedPage)
+  await mockedPage.route('**/api/refinances', route => route.fulfill({ json: {
+    refinances: [
+      savedPlanFixture(firstId, 'First plan', 100000),
+      savedPlanFixture(secondId, 'Second plan', 250000),
+    ],
+    max: 4,
+  } }))
+  await refinance.goto()
+
+  await expect(refinance.myRefinancesMenuTrigger).toBeVisible()
+  await refinance.openSavedRefinancesMenu()
+  await expect(refinance.savedRefinanceMenuItem(firstId)).toContainText('First plan')
+  await expect(refinance.myRefinancesProfileLink).toHaveAttribute(
+    'href',
+    '/profile#saved-refinances',
+  )
+
+  // A clean plan loads immediately, and the URL remembers the snapshot.
+  await refinance.savedRefinanceMenuItem(firstId).click()
+  await expect(refinance.balance).toHaveValue('100,000')
+  await expect(mockedPage).toHaveURL(new RegExp(`/refinance\\?refinance=${firstId}$`))
+
+  // Edited work is protected before another saved plan replaces it.
+  await refinance.balance.fill('120000')
+  await refinance.openSavedRefinancesMenu()
+  await refinance.savedRefinanceMenuItem(secondId).click()
+  await expect(refinance.loadRefinanceDialog).toBeVisible()
+  await refinance.loadRefinanceCancel.click()
+  await expect(refinance.loadRefinanceDialog).toBeHidden()
+  await expect(refinance.balance).toHaveValue('120,000')
+
+  await refinance.openSavedRefinancesMenu()
+  await refinance.savedRefinanceMenuItem(secondId).click()
+  await refinance.loadRefinanceConfirm.click()
+  await expect(refinance.balance).toHaveValue('250,000')
+  await expect(mockedPage).toHaveURL(new RegExp(`/refinance\\?refinance=${secondId}$`))
+})
+
+test.describe('saving before loading another plan', () => {
+  test.beforeEach(async ({ mockedPage }) => {
+    await mockGetSessionUser(mockedPage)
+    await mockedPage.route('**/api/mixes', route => route.fulfill({ json: { mixes: [], max: 4 } }))
+    await mockedPage.route('**/api/refinances', route => route.fulfill({ json: {
+      refinances: [savedPlanFixture('saved-a', 'First plan', 100000), savedPlanFixture('saved-b', 'Second plan', 250000)],
+      max: 4,
+    } }))
+  })
+
+  test('keeps edits on failure and loads only after a successful save', async ({ mockedPage }) => {
+    const refinance = new RefinancePage(mockedPage)
+    let fail = true
+    let release: (() => void) | undefined
+    await mockedPage.route('**/api/refinances/saved-a', async route => {
+      expect(route.request().method()).toBe('PATCH')
+      const body = route.request().postDataJSON()
+      expect(body.snapshot.existingTracks[0].currentBalance).toBe(120000)
+      if (fail) return route.fulfill({ status: 500, json: { error: 'unknown' } })
+      await new Promise<void>(resolve => { release = resolve })
+      return route.fulfill({ json: { refinance: { ...savedPlanFixture('saved-a', body.label, 120000), snapshot: body.snapshot } } })
+    })
+    await refinance.goto('/refinance?refinance=saved-a')
+    await expect(refinance.balance).toHaveValue('100,000')
+    await refinance.balance.fill('120000')
+    await refinance.openSavedRefinancesMenu()
+    await refinance.savedRefinanceMenuItem('saved-b').click()
+    await refinance.loadRefinanceSave.click()
+    await expect(refinance.saveError).toBeVisible()
+    await expect(refinance.balance).toHaveValue('120,000')
+    await expect(refinance.loadRefinanceDialog).toBeVisible()
+    await expect(mockedPage).toHaveURL(/refinance=saved-a$/)
+    fail = false
+    await refinance.loadRefinanceSave.click()
+    await expect.poll(() => Boolean(release)).toBe(true)
+    await expect(refinance.loadRefinanceConfirm).toBeDisabled()
+    await expect(refinance.loadRefinanceCancel).toBeDisabled()
+    await expect(refinance.balance).toHaveValue('120,000')
+    release!()
+    await expect(refinance.loadRefinanceDialog).toBeHidden()
+    await expect(refinance.balance).toHaveValue('250,000')
+    await expect(mockedPage).toHaveURL(/refinance=saved-b$/)
+  })
+
+  for (const { width, locale, theme } of [
+    { width: 360, locale: 'he', theme: 'light' },
+    { width: 360, locale: 'he', theme: 'dark' },
+    { width: 768, locale: 'en', theme: 'light' },
+    { width: 768, locale: 'en', theme: 'dark' },
+    { width: 1440, locale: 'he', theme: 'light' },
+    { width: 1440, locale: 'en', theme: 'dark' },
+  ]) {
+    test(`names a new plan first and preserves cancelled naming ${width} ${locale} ${theme}`, async ({ mockedPage }, testInfo) => {
+      await mockedPage.setViewportSize({ width, height: 900 })
+      await mockedPage.addInitScript(value => localStorage.setItem('site_theme', value), theme)
+      const refinance = new RefinancePage(mockedPage)
+      await mockedPage.route('**/api/refinances', route => {
+        if (route.request().method() !== 'POST') return route.fallback()
+        const body = route.request().postDataJSON()
+        expect(body.label).toBe('Current draft')
+        expect(body.snapshot.existingTracks[0].currentBalance).toBe(100000)
+        return route.fulfill({ status: 201, json: { refinance: { ...savedPlanFixture('new', body.label, 100000), snapshot: body.snapshot } } })
+      })
+      await refinance.goto(locale === 'en' ? '/en/refinance' : '/refinance')
+      await refinance.fillExisting('100000', '6', '120')
+      await refinance.fillProposal('10', '4', '2000')
+      await refinance.openSavedRefinancesMenu()
+      await refinance.savedRefinanceMenuItem('saved-b').click()
+      await expect(refinance.loadRefinanceSave).toHaveText(locale === 'en' ? 'Save and load' : 'לשמור ולטעון')
+      await expect(refinance.loadRefinanceDialog).toHaveAttribute('dir', locale === 'en' ? 'ltr' : 'rtl')
+      await expect.poll(() => refinance.loadRefinanceDialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+      await mockedPage.screenshot({ path: testInfo.outputPath('save-and-load.png') })
+      await refinance.loadRefinanceSave.click()
+      await expect(refinance.saveModal).toBeVisible()
+      await refinance.saveCancel.click()
+      await expect(refinance.balance).toHaveValue('100,000')
+      await expect(refinance.loadRefinanceDialog).toBeVisible()
+      await refinance.loadRefinanceSave.click()
+      await refinance.saveLabel.fill('Current draft')
+      await refinance.saveConfirm.click()
+      await expect(refinance.loadRefinanceDialog).toBeHidden()
+      await expect(refinance.balance).toHaveValue('250,000')
+      await expect(mockedPage).toHaveURL(/refinance=saved-b$/)
+    })
+  }
 })
 
 for (const width of [360, 768, 1024, 1440]) {
