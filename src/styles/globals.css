@@ -725,33 +725,52 @@ img {
   text-align: start;
 }
 
-/* The saved-mix card's two actions carry deliberately different weights, and
-   both use roles that flip with the theme rather than brand or danger hues.
-   "Load into calculator" is the card's primary: an ink fill, which is a dark
-   button in the light theme and a light one in the dark theme (a fixed dark
-   fill would vanish into the dark card - that is what --surface-action was
-   doing, and it read as soft). "Delete" is the brand red, not --danger-strong:
-   the danger role flips to a PALE red in dark mode, which put white text on a
-   pink wash. --soft-red is a brand hue and does not flip, matching the other
-   destructive confirm buttons. */
+/* The saved-card actions use the app's accent for the primary and a quiet
+   danger outline for the destructive one, instead of an ink fill that turned
+   into a glaring white slab in dark mode and a saturated red block. The teal
+   is the same accent as the modal confirm buttons, so a card action reads as
+   part of the same system. The text stays light in both themes; dark mode
+   darkens the teal fill so the white label keeps its contrast. */
 .saved-mix-load-button {
-  border: 1px solid var(--ink);
-  color: var(--surface-page);
-  background: var(--ink);
+  border: 1px solid var(--calc-teal);
+  color: #ffffff;
+  background: var(--calc-teal);
+  font-weight: 600;
 }
 
 .saved-mix-load-button:hover {
-  opacity: 0.88;
+  border-color: var(--calc-teal-dark);
+  background: var(--calc-teal-dark);
 }
 
+:root[data-theme='dark'] .saved-mix-load-button {
+  border-color: color-mix(in srgb, var(--calc-teal) 75%, #000000);
+  background: color-mix(in srgb, var(--calc-teal) 75%, #000000);
+}
+
+:root[data-theme='dark'] .saved-mix-load-button:hover {
+  border-color: color-mix(in srgb, var(--calc-teal) 65%, #000000);
+  background: color-mix(in srgb, var(--calc-teal) 65%, #000000);
+}
+
+/* Destructive, but not loud: the red stays in the text and border, and only a
+   faint tint appears on hover. Works in both themes because --danger is the
+   theme's own red. */
 .saved-mix-delete-button {
-  border: 1px solid var(--soft-red);
-  color: #ffffff;
-  background: var(--soft-red);
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  color: var(--danger);
+  background: transparent;
+  font-weight: 500;
 }
 
 .saved-mix-delete-button:hover {
-  opacity: 0.9;
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.saved-mix-delete-button:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
 }
 
 /* Non-destructive card actions (rename, duplicate). Outline only: the saved
@@ -5967,10 +5986,15 @@ input[type='number']::-webkit-outer-spin-button {
     grid-row: 1;
   }
 
+  /* The list spans only its own tracks. Spanning the full track count made the
+     shorter column's add control (grid-row below) land inside the list's span,
+     so grid auto-placement pushed it into an implicit second column: the tracks
+     shrank, the button moved to the far edge and the two columns stopped
+     matching. */
   .refinance-track-list {
     display: grid;
     grid-template-rows: subgrid;
-    grid-row: 2 / span var(--refinance-track-count);
+    grid-row: 2 / span var(--refinance-column-count);
     margin-top: 0;
   }
 

@@ -1,5 +1,6 @@
 import { ObjectId, type WithId } from 'mongodb'
 import { getDb } from '../auth/mongo'
+import { commentEmailHash } from './identity'
 
 /**
  * Mongo access for article comments.
@@ -21,7 +22,9 @@ import { getDb } from '../auth/mongo'
  * A deleted author's comment stays, with the name it was posted under and a
  * muted "(deleted account)" beside it (product decision, user-requested):
  * deleting the person should not silently rewrite a thread other people were
- * part of.
+ * part of. If the same address later registers again and verifies, the
+ * comments move to the new account (see `linkCommentsToAccount`), which is how
+ * the marker comes off and their replies-to-you feed comes back.
  */
 
 const COLLECTION = 'article_comments'
@@ -32,6 +35,12 @@ const USER_COLLECTION = 'user'
 export interface CommentDoc {
   articleSlug: string
   userId: string
+  /**
+   * HMAC of the author's address at post time, used only to re-attach the
+   * comment if the account is deleted and registers again with that address.
+   * Missing on comments written before this field existed (they cannot link).
+   */
+  emailHash?: string | null
   userName: string
   userImage: string | null
   parentId: ObjectId | null
@@ -65,7 +74,7 @@ export function missingAuthorIds(userIds: string[], existingIds: Iterable<unknow
  * matches the user's `_id` shape, and this must never report a live account as
  * deleted.
  */
-async function existingAuthorIds(userIds: string[]): Promise<Set<string>> {
+export async function existingAuthorIds(userIds: string[]): Promise<Set<string>> {
   const unique = [...new Set(userIds.filter(Boolean))]
   if (unique.length === 0) return new Set()
   const db = await getDb()
@@ -145,6 +154,7 @@ function ensureIndexes(): Promise<void> {
           { key: { articleSlug: 1, createdAt: 1 } },
           { key: { parentId: 1 } },
           { key: { userId: 1 } },
+          { key: { emailHash: 1 } },
           { key: { parentUserId: 1, createdAt: -1 } },
         ]),
       )
@@ -180,7 +190,7 @@ export type CreateCommentResult =
 export async function createComment(
   articleSlug: string,
   viewer: CommentViewer,
-  author: { name: string; image: string | null },
+  author: { name: string; image: string | null; email: string | null },
   input: { body: string; parentId?: string | null },
 ): Promise<CreateCommentResult> {
   await ensureIndexes()
@@ -204,6 +214,7 @@ export async function createComment(
   const doc: CommentDoc = {
     articleSlug,
     userId: viewer.userId,
+    emailHash: commentEmailHash(author.email),
     userName: author.name,
     userImage: author.image,
     parentId: parent ? parent._id : null,
@@ -252,6 +263,56 @@ export async function softDeleteComment(id: string, viewer: CommentViewer): Prom
     { $set: { body: '', deletedAt: new Date() } },
   )
   return result.modifiedCount === 1
+}
+
+/**
+ * Re-attaches the comments and replies a deleted account left behind to the
+ * account that has just proven it owns the same address.
+ *
+ * This runs after the address is verified, never before: an unverified
+ * registration can claim any address, so linking then would hand a stranger
+ * the public history of whoever really owns it (the same reason a password
+ * reset goes to the inbox).
+ *
+ * Only comments whose author account is GONE are moved. A live account that
+ * changed its address away still owns comments hashed under the old one, and a
+ * new registrant of that address must not take them.
+ *
+ * Rewriting `parentUserId` as well is what makes the re-registered account's
+ * "replies to you" feed find replies other people wrote under the old id.
+ */
+export async function linkCommentsToAccount(
+  userId: string,
+  email: string | null | undefined,
+): Promise<number> {
+  const hash = commentEmailHash(email)
+  if (!hash || !userId) return 0
+
+  await ensureIndexes()
+  const db = await getDb()
+  const collection = db.collection<CommentDoc>(COLLECTION)
+
+  const candidates = (await collection.distinct('userId', {
+    emailHash: hash,
+    userId: { $ne: userId },
+  })) as string[]
+  if (candidates.length === 0) return 0
+
+  const stillHere = new Set(
+    [...(await existingAuthorIds(candidates))].map((id) => id.toLowerCase()),
+  )
+  const orphaned = candidates.filter((id) => !stillHere.has(String(id).toLowerCase()))
+  if (orphaned.length === 0) return 0
+
+  const relinked = await collection.updateMany(
+    { userId: { $in: orphaned }, emailHash: hash },
+    { $set: { userId } },
+  )
+  const replies = await collection.updateMany(
+    { parentUserId: { $in: orphaned } },
+    { $set: { parentUserId: userId } },
+  )
+  return relinked.modifiedCount + replies.modifiedCount
 }
 
 /**

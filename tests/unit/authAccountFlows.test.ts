@@ -297,10 +297,13 @@ describe('deleting an account, step by step', () => {
 })
 
 describe('what a deleted account leaves in the comment threads', () => {
-  it('keeps the old comments marked as deleted, and hands a re-signed-up address none of them', async () => {
+  it('keeps the old comments marked when verification is bypassed, and links them when the address is verified through the endpoint', async () => {
     const { auth, db } = await harness()
     const email = 'came-back@example.test'
     const first = await signUp(auth, db, email)
+    const { commentEmailHash } = await import('@/server/comments/identity')
+    const emailHash = commentEmailHash(email)
+    expect(emailHash).not.toBeNull()
 
     // One comment by that account, and one reply TO it, so both the thread's
     // "deleted account" marker and the profile's reply list have something to
@@ -313,6 +316,7 @@ describe('what a deleted account leaves in the comment threads', () => {
       parentId: null,
       parentUserId: null,
       body: 'first',
+      emailHash,
       createdAt: new Date(),
       editedAt: null,
       deletedAt: null,
@@ -338,25 +342,41 @@ describe('what a deleted account leaves in the comment threads', () => {
     })
     expect(await db.collection('user').countDocuments({ email })).toBe(0)
 
-    // The same address can sign up again, and gets a NEW user row with a new id.
-    const again = await signUp(auth, db, email)
-    expect(again.userId).not.toBe(first.userId)
-
-    // The thread's marker is resolved by user id, so the old comment stays
-    // marked: the person who wrote it no longer has an account, even though
-    // somebody with that address does.
-    const { missingAuthorIds } = await import('@/server/comments/repo')
-    const ids = (await db.collection('user').find({}).toArray()).map((row) => row._id)
-    expect([...missingAuthorIds([first.userId], ids)]).toEqual([first.userId])
-    expect([...missingAuthorIds([again.userId], ids)]).toEqual([])
-
-    // "Replies to you" is scoped by user id too, so the new account inherits
-    // none of the old replies: it only ever sees replies to what IT posted.
+    // The same address can sign up again, and gets a NEW user row with a new
+    // id. This signup goes through the real endpoint, so the address starts
+    // unverified and nothing is claimed yet.
+    sentMails = []
+    const created = (await auth.api.signUpEmail({
+      body: { name: 'Flow User', email, password: 'password123' },
+    })) as unknown as { user: { id: string } }
+    const againId = created.user.id
+    expect(againId).not.toBe(first.userId)
     expect(
-      await db.collection('article_comments').countDocuments({ parentUserId: again.userId }),
+      await db.collection('article_comments').countDocuments({ userId: againId }),
     ).toBe(0)
+
+    // Verifying the address through the endpoint is what re-attaches the old
+    // comment and the replies to it. Parsing the mailed token keeps the whole
+    // path real: mail, endpoint context, database hook, repo rewrite.
+    const token = /[?&]token=([^&\s]+)/.exec(sentMails.at(-1)?.text ?? '')?.[1]
+    expect(token).toBeTruthy()
+    await auth.api.verifyEmail({ query: { token: decodeURIComponent(token!) } })
+
+    const moved = await db.collection('article_comments').findOne({ body: 'first' })
+    expect(String(moved!.userId)).toBe(againId)
+    expect(
+      await db.collection('article_comments').countDocuments({ parentUserId: againId }),
+    ).toBe(1)
     expect(
       await db.collection('article_comments').countDocuments({ parentUserId: first.userId }),
-    ).toBe(1)
+    ).toBe(0)
+
+    // Nothing in the threads still points at the old id, which is what let the
+    // "deleted account" marker show for a person who is back.
+    expect(
+      await db.collection('article_comments').countDocuments({
+        $or: [{ userId: first.userId }, { parentUserId: first.userId }],
+      }),
+    ).toBe(0)
   })
 })

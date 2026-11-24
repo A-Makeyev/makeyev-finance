@@ -98,9 +98,13 @@ export function SavedItemsMenu<T extends SavedItem>({
       const triggerBox = trigger.getBoundingClientRect()
       const panelBox = panel.getBoundingClientRect()
       const edge = 12
+      // Centred on the trigger so the panel opens under the middle of the
+      // button in both directions, not flush with its inline start. Clamped to
+      // the viewport, which is what pulls it off-centre near an edge.
+      const centred = triggerBox.left + triggerBox.width / 2 - panelBox.width / 2
       const left = Math.max(
         edge,
-        Math.min(triggerBox.left, window.innerWidth - panelBox.width - edge),
+        Math.min(centred, window.innerWidth - panelBox.width - edge),
       )
       const below = triggerBox.bottom + 8
       const top =
@@ -189,7 +193,15 @@ export function SavedItemsMenu<T extends SavedItem>({
           onClick={openMenu}
         >
           {triggerLabel}
-          <span> ({count}/{max})</span>
+          {isPending ? (
+            <LoadingIndicator
+              testId={`${triggerTestId}-loading`}
+              label={loadingLabel}
+              className="ms-1"
+            />
+          ) : (
+            <span> ({count}/{max})</span>
+          )}
         </button>
 
         {menuOpen && (

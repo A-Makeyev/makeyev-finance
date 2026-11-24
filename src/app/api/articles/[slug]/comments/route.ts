@@ -80,7 +80,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const result = await createComment(
     slug,
     viewer,
-    { name: session.user.name ?? '', image: session.user.image ?? null },
+    {
+      name: session.user.name ?? '',
+      image: session.user.image ?? null,
+      email: session.user.email ?? null,
+    },
     { body: parsed.data.body, parentId: parsed.data.parentId ?? null },
   )
   if (!result.ok) return json({ error: 'parent_not_found' }, 409)

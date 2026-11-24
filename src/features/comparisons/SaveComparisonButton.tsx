@@ -302,7 +302,7 @@ export function SaveComparisonButton() {
                       disabled={deletingId === comparison.id}
                       aria-busy={deletingId === comparison.id}
                       onClick={() => void removeSavedComparison(comparison)}
-                      className="saved-mix-delete-button inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity disabled:opacity-60"
+                      className="saved-mix-delete-button inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60"
                     >
                       {deletingId === comparison.id ? (
                         <FaSpinner aria-hidden="true" className="animate-spin" />

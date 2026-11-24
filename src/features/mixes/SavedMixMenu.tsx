@@ -40,9 +40,13 @@ export function SavedMixMenu({ mixes, count, max, isPending, isError }: SavedMix
             const triggerBox = trigger.getBoundingClientRect()
             const panelBox = panel.getBoundingClientRect()
             const edge = 12
+            // Centred on the trigger so the panel opens under the middle of
+            // the button in both directions, not flush with its inline start.
+            // Clamped to the viewport, which pulls it off-centre near an edge.
+            const centred = triggerBox.left + triggerBox.width / 2 - panelBox.width / 2
             const left = Math.max(
                 edge,
-                Math.min(triggerBox.left, window.innerWidth - panelBox.width - edge),
+                Math.min(centred, window.innerWidth - panelBox.width - edge),
             )
             const below = triggerBox.bottom + 8
             const top =
@@ -143,7 +147,15 @@ export function SavedMixMenu({ mixes, count, max, isPending, isError }: SavedMix
                     onClick={openMenu}
                 >
                     {t('savedMixes.myMixesLink')}
-                    <span data-testid="save-mix-count"> ({count}/{max})</span>
+                    {isPending ? (
+                        <LoadingIndicator
+                            testId="save-mix-count-loading"
+                            label={t('savedMixes.loading')}
+                            className="ms-1"
+                        />
+                    ) : (
+                        <span data-testid="save-mix-count"> ({count}/{max})</span>
+                    )}
                 </button>
 
                 {menuOpen && (

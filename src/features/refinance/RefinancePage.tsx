@@ -803,7 +803,7 @@ export function RefinancePage({
                 type="button"
                 data-testid="refinance-add-proposal"
                 onClick={addProposal}
-                className="inline-flex min-h-[68px] items-center gap-1.5 rounded-xl border border-dashed border-line-strong px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink"
+                className="inline-flex min-h-[68px] w-52 items-center gap-1.5 rounded-xl border border-dashed border-line-strong px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink"
               >
                 <FaPlus aria-hidden="true" />
                 {t('refinance.addProposal')}
@@ -873,8 +873,56 @@ export function RefinancePage({
             style={{ '--refinance-column-count': tracks.length } as CSSProperties}
           >
             <div className="refinance-column-heading">
-            <h2 className="text-lg font-semibold text-ink">{t('refinance.existingHeading')}</h2>
-            <p className="mt-1 text-sm text-ink-muted">{t('refinance.existingLead')}</p>
+              <h2 className="text-lg font-semibold text-ink">{t('refinance.existingHeading')}</h2>
+              <p className="mt-1 text-sm text-ink-muted">{t('refinance.existingLead')}</p>
+
+              {/* Load a saved mix into the proposal. The control sits with the
+                  existing mortgage it reframes, and the mix only supplies the
+                  proposal's proportions, rates, terms and methods; the
+                  principal still comes from these balances. Buttons keep every
+                  mix name visible, and nothing renders until a mix exists (or
+                  loading really failed). While the list loads, signed-in users
+                  get chip-shaped placeholders so the column does not jump when
+                  the real chips arrive. */}
+              {/* `sessionPending` is in here because the saved-mixes query only
+                  enables once the session is known: without it the area stays
+                  empty for the length of the session request, then the skeleton
+                  pops in, which reads as a second load. */}
+              {(sessionPending || (signedIn && savedMixes.isPending)) && (
+                <div
+                  className="mt-3 flex flex-wrap items-center gap-2"
+                  role="status"
+                  data-testid="refinance-mix-skeleton"
+                >
+                  <span aria-hidden="true" className="h-[30px] w-20 animate-pulse rounded-full bg-surface-soft motion-reduce:animate-none" />
+                  <span aria-hidden="true" className="h-[30px] w-28 animate-pulse rounded-full bg-surface-soft motion-reduce:animate-none" />
+                  <span aria-hidden="true" className="h-[30px] w-24 animate-pulse rounded-full bg-surface-soft motion-reduce:animate-none" />
+                  <span className="sr-only">{t('savedMixes.loading')}</span>
+                </div>
+              )}
+              {signedIn && !savedMixes.isPending && (savedMixes.isError || mixes.length > 0) && (
+                <div className="mt-3">
+                  {savedMixes.isError ? (
+                    <p role="alert" className="text-xs text-danger">
+                      {t('refinance.loadMixError')}
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {mixes.map((mix) => (
+                        <button
+                          key={mix.id}
+                          type="button"
+                          data-testid={`refinance-load-mix-${mix.id}`}
+                          onClick={() => loadSavedMix(mix.id)}
+                          className="rounded-full border border-line-strong bg-surface-soft px-3 py-1 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-surface-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                        >
+                          {mix.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="refinance-track-list mt-4 flex flex-col gap-4">
@@ -1072,45 +1120,8 @@ export function RefinancePage({
               <div>
                 <h2 className="text-lg font-semibold text-ink">{t('refinance.proposedHeading')}</h2>
                 <p className="mt-1 text-sm text-ink-muted">{t('refinance.proposedLead')}</p>
-                {loadedRefinance && (
-                  <p className="mt-2 text-xs text-ink-muted" data-testid="refinance-editing-proposal">
-                    {t('refinance.editingProposal')}: <strong>{loadedRefinance.label}</strong>
-                  </p>
-                )}
               </div>
             </div>
-
-            {/* Load the proposal's shape from a saved mix. Only the proportions,
-                rates, terms and methods are used; the principal still comes
-                from the existing balances. Hidden when there is nothing to
-                load, so no empty box sits in the form. */}
-            {signedIn && (savedMixes.isPending || savedMixes.isError || mixes.length > 0) && (
-              <div className="mt-4 flex min-h-24 flex-col justify-center rounded-xl border border-line-soft p-3">
-                {savedMixes.isPending ? (
-                  <LoadingIndicator label={t('refinance.loadMixLoading')} className="w-full" />
-                ) : savedMixes.isError ? (
-                  <p role="alert" className="text-xs text-danger">
-                    {t('refinance.loadMixError')}
-                  </p>
-                ) : (
-                  <label className="input-group">
-                    {t('refinance.loadMixLabel')}
-                    <FlipSelect
-                      value=""
-                      onChange={loadSavedMix}
-                      testId="refinance-load-mix"
-                    >
-                      <option value="">{t('refinance.loadMixPlaceholder')}</option>
-                      {mixes.map((mix) => (
-                        <option key={mix.id} value={mix.id}>
-                          {mix.label}
-                        </option>
-                      ))}
-                    </FlipSelect>
-                  </label>
-                )}
-              </div>
-            )}
             </div>
 
             <div className="refinance-track-list mt-4 flex flex-col gap-4">
@@ -1273,13 +1284,13 @@ export function RefinancePage({
                   }}
                 />
               </label>
-              {/* Same type size as the fee label and same top line, shifted a
-                  little farther from the amount field. */}
+              {/* Same type size and top line as the fee label; only the radio
+                  row drops so its centre meets the money field's centre. */}
               <fieldset className="input-group min-w-0 self-start sm:ps-4">
                 <legend data-testid="refinance-fee-mode-label">
                   {t('refinance.feeModeLabel')}
                 </legend>
-                <div className="mt-2 flex flex-wrap gap-4" data-testid="refinance-fee-mode-options">
+                <div className="mt-2 flex flex-wrap gap-4 sm:mt-[19px]" data-testid="refinance-fee-mode-options">
                   {(['cash', 'capitalized'] as const).map((mode) => (
                     <label
                       key={mode}

@@ -101,7 +101,8 @@ export class RefinancePage {
   get saveConfirm() { return this.page.getByTestId('save-refinance-confirm') }
   get saveConfirmSpinner() { return this.page.getByTestId('save-refinance-confirm-spinner') }
   get saved() { return this.page.getByTestId('save-refinance-saved') }
-  get loadMix() { return this.page.getByTestId('refinance-load-mix') }
+  /** Saved mixes render as one button each, labelled with the mix name. */
+  loadMixButton(id: string) { return this.page.getByTestId(`refinance-load-mix-${id}`) }
   get addExistingTrack() { return this.page.getByTestId('refinance-add-track') }
   get addProposed() { return this.page.getByTestId('refinance-add-proposed-track') }
   get addProposalPlan() { return this.page.getByTestId('refinance-add-proposal') }
@@ -162,6 +163,14 @@ export class RefinancePage {
     }
     await expect(this.page.getByTestId('refinance-load-mix-empty')).toHaveCount(0)
   }
+  /** Both sides' track cards keep the column's full width even when one list is
+   *  longer. A shorter list used to spawn an implicit second grid column, which
+   *  narrowed its tracks and pushed its add control to the far edge. */
+  async expectTrackCardWidthsMatch() {
+    const existing = await this.page.getByTestId('refinance-track-1').boundingBox()
+    const proposed = await this.page.getByTestId('refinance-proposed-track-1').boundingBox()
+    expect(Math.abs(existing!.width - proposed!.width)).toBeLessThanOrEqual(1)
+  }
   /** Each add-track control follows its own column's last track, not the
    *  other column's count. */
   async expectAddControlsUnderLists(existingCount: number, proposedCount: number) {
@@ -200,11 +209,23 @@ export class RefinancePage {
     const hint = await this.resetHint.boundingBox()
     expect(hint!.height).toBeLessThanOrEqual(24)
   }
-  /** The fee-mode question shares the fee label's line and type size. */
-  async expectFeeModeLabelOnFeeLine() {
+  /** The fee-mode question shares the fee label's line and type size, while
+   *  the radio row is vertically centred on the fee amount field. */
+  async expectFeeModeOptionsCenteredOnFeeInput() {
     const feeLabel = await this.feeLabel.boundingBox()
     const modeLabel = await this.feeModeLabel.boundingBox()
     expect(Math.abs(feeLabel!.y - modeLabel!.y)).toBeLessThanOrEqual(1)
+    const centers = await this.page.evaluate(() => {
+      const box = (selector: string) =>
+        document.querySelector(selector)!.getBoundingClientRect()
+      const input = box('[data-testid="refinance-fee"]')
+      const options = box('[data-testid="refinance-fee-mode-options"]')
+      return {
+        input: input.y + input.height / 2,
+        options: options.y + options.height / 2,
+      }
+    })
+    expect(Math.abs(centers.input - centers.options)).toBeLessThanOrEqual(1)
     const sizes = await this.page.evaluate(() => {
       const fee = document.querySelector('[data-testid="refinance-fee-label"]')!
       const mode = document.querySelector('[data-testid="refinance-fee-mode-label"]')!

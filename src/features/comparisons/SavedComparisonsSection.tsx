@@ -218,7 +218,7 @@ export function SavedComparisonsSection() {
                   type="button"
                   data-testid="saved-comparison-open"
                   onClick={() => open(comparison)}
-                  className="saved-mix-load-button inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-opacity"
+                  className="saved-mix-load-button inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
                 >
                   {t('savedComparisons.open')}
                 </button>
@@ -253,7 +253,7 @@ export function SavedComparisonsSection() {
                     setDeleteFailed(false)
                     setPendingDelete(comparison)
                   }}
-                  className="saved-mix-delete-button inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-opacity"
+                  className="saved-mix-delete-button inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
                 >
                   <FaRegTrashAlt aria-hidden="true" />
                   {t('savedComparisons.delete')}

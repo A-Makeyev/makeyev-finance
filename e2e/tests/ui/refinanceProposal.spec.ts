@@ -54,11 +54,12 @@ test('keeps the existing add-track control under its own list as the proposed mi
   // no longer drops by a whole proposed track.
   expect(Math.abs(after!.y - before!.y)).toBeLessThanOrEqual(8)
   await refinance.expectAddControlsUnderLists(1, 3)
+  await refinance.expectTrackCardWidthsMatch()
   // The shared footer row still lines the two assumption fields up.
   await refinance.expectFooterFieldsAligned()
   await refinance.expectOfferCard(1)
   await refinance.expectResetHintSingleLine()
-  await refinance.expectFeeModeLabelOnFeeLine()
+  await refinance.expectFeeModeOptionsCenteredOnFeeInput()
 })
 
 test('removing and re-adding an existing track keeps balances independent', async ({ mockedPage }) => {
@@ -216,7 +217,7 @@ test('loads a saved mix, saves its proposal, and reloads the saved values', asyn
   const refinance = new RefinancePage(mockedPage)
   await refinance.goto()
   await refinance.fillExisting('100000', '6', '120')
-  await refinance.loadMix.selectOption('mix')
+  await refinance.loadMixButton('mix').click()
   await expect(refinance.proposedShare(1)).toHaveValue('60')
   await expect(refinance.proposedAmount(2)).toContainText(ils(40000))
   await refinance.newRate.fill('101')

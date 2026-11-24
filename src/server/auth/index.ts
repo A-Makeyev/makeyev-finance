@@ -25,6 +25,7 @@ import {
 import { duplicateSignUpError, signUpCollision } from './duplicateSignUp'
 import { isSocialSignIn, releaseOrphanedAccounts } from './orphanedAccounts'
 import { purgeUserData } from './deleteAccount'
+import { linkCommentsToAccount } from '../comments/repo'
 
 /**
  * The endpoint a mail sent before the code switch links to (see
@@ -197,6 +198,30 @@ async function createAuth() {
         await sendVerificationEmailFn(ctx, collision.user)
       }),
     },
+    databaseHooks: {
+      user: {
+        // A deleted account's comments stay in their threads, and an address
+        // is unique among live accounts, so a NEW user with that address is
+        // the person who used it before. Attaching their old comments here is
+        // what removes the "(deleted account)" marker and fills their
+        // "replies to you" feed again.
+        create: {
+          after: async (user) => {
+            await linkVerifiedComments(user, true)
+          },
+        },
+        update: {
+          after: async (user, ctx) => {
+            // Only verification may link. A profile update that changes the
+            // address must not inherit the history of an old holder of the new
+            // address; the same applies to a change-email confirmation, which
+            // reaches this hook through a different path. When the endpoint is
+            // unknown this fails closed rather than guessing.
+            await linkVerifiedComments(user, ctx?.path === '/verify-email')
+          },
+        },
+      },
+    },
     user: {
       // Deletion is offered on the profile page behind a warning modal, and it
       // takes three presses to get there: confirm on the profile (with the
@@ -348,6 +373,33 @@ async function createAndSendDeleteCode(args: {
   } catch (error) {
     console.error(
       '[auth] could not send the account-deletion code',
+      error instanceof Error ? error.name : 'unknown',
+    )
+  }
+}
+
+/**
+ * Gives a re-registered account the comments a deleted one left behind, once
+ * its address is verified. `canLink` scopes an update to the verification
+ * endpoint, so a plain profile or email change cannot claim an address's
+ * history; a `create` allows it because the provider already vouched for the
+ * address (Google) or the row is simply unverified and skipped. Never throws
+ * into the auth flow: a missed link is a lost convenience, while a failed
+ * sign-up after the user row already exists is a broken account.
+ */
+async function linkVerifiedComments(
+  user: { id: string; email?: string | null; emailVerified?: boolean | null },
+  canLink: boolean,
+): Promise<void> {
+  if (!canLink || !user.emailVerified || !user.email) return
+  try {
+    const linked = await linkCommentsToAccount(user.id, user.email)
+    if (linked > 0) {
+      console.log(`[comments] linked ${linked} comment row(s) to a re-registered account`)
+    }
+  } catch (error) {
+    console.error(
+      '[comments] could not link comments to the account',
       error instanceof Error ? error.name : 'unknown',
     )
   }

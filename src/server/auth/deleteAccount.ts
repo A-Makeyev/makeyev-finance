@@ -15,10 +15,12 @@ import { getDb } from './mongo'
  * `article_comments` is deliberately NOT on the list. A comment is part of a
  * public thread other people replied to, so deleting the account keeps it under
  * the name it was posted with, and the thread shows it as coming from a deleted
- * account (see src/server/comments/repo.ts). That is a product decision rather
- * than a technical one: say the word and the alternative (delete the comments
- * too, or blank the name) is a one-line change here plus the marker in the
- * thread.
+ * account (see src/server/comments/repo.ts). The comment carries a keyed hash
+ * of the author's address, so registering again with that verified address
+ * re-attaches those comments and replies to the new account. That is a product
+ * decision rather than a technical one: say the word and the alternative
+ * (delete the comments too, or blank the name) is a one-line change here plus
+ * the marker in the thread.
  */
 export const ACCOUNT_OWNED_COLLECTIONS = [
   'saved_mixes',
