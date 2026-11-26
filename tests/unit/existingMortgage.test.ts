@@ -41,6 +41,7 @@ function track(overrides: Partial<ExistingMortgageTrack> = {}): ExistingMortgage
     historicalResets: [],
     graceMonths: 0,
     graceMode: 'interestOnly',
+    balloonPercent: null,
     maturityDate: '2050-01-15',
     dataStatus: 'verified',
     ...overrides,
@@ -160,6 +161,17 @@ describe('existing mortgage model', () => {
       expect(() => existingMortgageTrackSchema.parse(bad)).toThrow()
     }
     expect(() => existingMortgageSchema.parse(mortgage({ tracks: [] }))).toThrow()
+  })
+
+  it('stores a balloon percentage but never together with grace, and defaults it to null', () => {
+    expect(existingMortgageTrackSchema.parse(track()).balloonPercent).toBeNull()
+    expect(existingMortgageTrackSchema.parse(track({ balloonPercent: 40 })).balloonPercent).toBe(40)
+    for (const balloonPercent of [0, -1, 100.5, Number.NaN]) {
+      expect(() => existingMortgageTrackSchema.parse(track({ balloonPercent }))).toThrow()
+    }
+    expect(() =>
+      existingMortgageTrackSchema.parse(track({ balloonPercent: 40, graceMonths: 6 })),
+    ).toThrow(/balloon cannot be combined with grace/)
   })
 
   it('derives linkage only from a known type', () => {

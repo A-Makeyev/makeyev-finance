@@ -37,6 +37,7 @@ function track(overrides: Partial<ExistingMortgageTrack> = {}): ExistingMortgage
     historicalResets: [],
     graceMonths: 0,
     graceMode: 'interestOnly',
+    balloonPercent: null,
     maturityDate: '2027-01-01',
     dataStatus: 'userReviewed',
     ...overrides,
@@ -371,6 +372,64 @@ describe('computeRefinance', () => {
     // Both tracks contribute: 60k over 120 months (666.12) plus 40k over 60
     // months (773.31), for a combined first payment of 1,439.44.
     expect(result.existing!.monthly[0].paid).toBeCloseTo(1_439.44, 1)
+  })
+
+  it('prices an existing balloon as interest only until its maturity payment', () => {
+    const result = computeRefinance({
+      ...base,
+      tracks: [track({ balloonPercent: 100 })],
+      feeAmount: 0,
+      feeMode: 'cash',
+    })
+
+    expect(result.ready).toBe(true)
+    // 100,000 at 6% with no scheduled principal: 500 a month, and the whole
+    // balance is the balloon due at month 120.
+    expect(result.existing!.monthlyPayment).toBeCloseTo(500, 2)
+    expect(result.existing!.balloonDue).toBeCloseTo(100_000, 6)
+    expect(result.existing!.monthly[119].closing).toBe(0)
+    expect(result.hasBalloon).toBe(true)
+  })
+
+  it('prices a proposed partial balloon and reports it on the proposed side', () => {
+    const result = computeRefinance({
+      ...base,
+      feeAmount: 0,
+      feeMode: 'cash',
+      proposedTracks: [{ ...base.proposedTracks[0], balloonPercent: 40 }],
+    })
+
+    expect(result.ready).toBe(true)
+    expect(result.proposed!.balloonDue).toBeCloseTo(40_000, 6)
+    // Amortizing only 60,000 must cost less each month than the full 100,000.
+    expect(result.proposed!.monthlyPayment).toBeLessThan(1_012.45)
+    expect(result.hasBalloon).toBe(true)
+  })
+
+  it('names an unsupported grace-plus-balloon combination instead of pricing it', () => {
+    const result = computeRefinance({
+      ...base,
+      tracks: [track({ balloonPercent: 50, graceMonths: 6 })],
+      feeAmount: 0,
+      feeMode: 'cash',
+    })
+
+    expect(result.ready).toBe(false)
+    expect(result.missing).toContain('t1:balloonGrace')
+    expect(result.existing).toBeNull()
+  })
+
+  it('blocks a proposed balloon percentage outside 0-100', () => {
+    for (const balloonPercent of [-1, 101, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const result = computeRefinance({
+        ...base,
+        feeAmount: 0,
+        feeMode: 'cash',
+        proposedTracks: [{ ...base.proposedTracks[0], balloonPercent }],
+      })
+      expect(result.ready, String(balloonPercent)).toBe(false)
+      expect(result.missing).toContain('proposed:0:balloon')
+    }
   })
 })
 

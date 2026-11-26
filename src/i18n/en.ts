@@ -1071,6 +1071,7 @@ export const en: { translation: Translation } = {
       balanceLabel: 'Current principal balance',
       rateLabel: 'Current annual rate',
       remainingLabel: 'Remaining payments',
+      balloonLabel: 'Balloon at maturity',
       methodLabel: 'Repayment schedule',
       unknownOption: 'Unknown',
       missingLine: 'Missing: {{fields}}',
@@ -1088,6 +1089,8 @@ export const en: { translation: Translation } = {
         tooMany: 'the number of tracks',
         asOf: 'the calculation date',
         resetStep: 'the rate-change assumption',
+        balloon: 'the balloon percentage',
+        balloonGrace: 'a balloon combined with grace',
       },
       nextResetLabel: 'Next rate reset date',
       nextResetHint:
@@ -1095,6 +1098,8 @@ export const en: { translation: Translation } = {
       resetHeading: 'Rate-change assumption',
       resetHint:
         'Updates use the recorded date and cadence; each reset compounds both sides, 0 = flat.',
+      balloonHint:
+        'Percent of the principal deferred to one payment at maturity. Blank or 0 means no balloon; a balloon cannot be combined with a grace period.',
       resetStepLabel: 'Change per reset',
       resetStepSuffix: 'pp',
       resetStepInvalid: 'The change must be between -100 and 100 percentage points.',
@@ -1118,6 +1123,9 @@ export const en: { translation: Translation } = {
       monthsSuffix: 'months',
       termLabel: 'Term',
       monthsValue: '{{months}} months',
+      balloonDue: 'Balloon due at maturity',
+      balloonComparisonNote:
+        'At least one side includes a balloon. The balloon payment is not part of the monthly cash flow the break-even is based on, so it is not a full-payoff figure.',
       existingPayment: 'Current monthly payment',
       existingInterest: 'Remaining interest',
       proposedPayment: 'New monthly payment',

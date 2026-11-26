@@ -32,6 +32,8 @@ export interface ProposedTrackState {
   method: AmortizationMethod
   /** Contractual reset cadence; the type's default is used when loaded. */
   resetMonths: number
+  /** Balloon percentage of the track principal; blank means none. */
+  balloonText: string
 }
 
 export const MAX_PROPOSED_TRACKS = MAX_TRACKS
@@ -75,6 +77,7 @@ export function emptyProposedTrack(share = 100): ProposedTrackState {
     yearsText: '20',
     method: 'spitzer',
     resetMonths: 0,
+    balloonText: '',
   }
 }
 
@@ -107,6 +110,19 @@ export function removeProposedTrack(
 }
 
 /** Parsed input for the price model, in the same order as the state. */
+/**
+ * A blank balloon field, and an explicit 0, both mean a fully amortizing
+ * track. Any other text must be a real number: a malformed entry stays NaN so
+ * it blocks the projection instead of being silently read as "no balloon".
+ */
+function parseBalloonText(value: string): number | null {
+  const trimmed = value.trim()
+  if (trimmed === '') return null
+  const parsed = Number(trimmed.replace(/,/g, ''))
+  if (!Number.isFinite(parsed)) return Number.NaN
+  return parsed === 0 ? null : parsed
+}
+
 export function toProposedTrackInputs(tracks: ProposedTrackState[]): ProposedTrackInput[] {
   return tracks.map((track) => ({
     type: track.type,
@@ -115,6 +131,7 @@ export function toProposedTrackInputs(tracks: ProposedTrackState[]): ProposedTra
     termYears: parseNumericText(track.yearsText),
     method: track.method,
     resetMonths: track.resetMonths,
+    balloonPercent: parseBalloonText(track.balloonText),
   }))
 }
 
@@ -139,6 +156,7 @@ export function proposedTracksFromSavedMix(tracks: SavedTrackInput[]): ProposedT
       yearsText: track.yearsText,
       method: track.method,
       resetMonths: track.resetMonths ?? defaultResetMonthsFor(type),
+      balloonText: '',
     }
   })
 }
@@ -155,5 +173,9 @@ export function proposedTracksFromSnapshot(
     yearsText: String(track.termYears),
     method: track.method,
     resetMonths: track.resetMonths,
+    balloonText:
+      track.balloonPercent === null || track.balloonPercent === undefined
+        ? ''
+        : String(track.balloonPercent),
   }))
 }

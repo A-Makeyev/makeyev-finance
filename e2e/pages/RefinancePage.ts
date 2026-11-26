@@ -140,6 +140,11 @@ export class RefinancePage {
   get feeModeOptions() { return this.page.getByTestId('refinance-fee-mode-options') }
   get existingType() { return this.page.getByTestId('refinance-type-1') }
   get nextReset() { return this.page.getByTestId('refinance-next-reset-1') }
+  get existingBalloon() { return this.page.getByTestId('refinance-balloon-1') }
+  get proposedBalloon() { return this.page.getByTestId('refinance-proposed-balloon-1') }
+  get existingBalloonDue() { return this.page.getByTestId('refinance-existing-balloon') }
+  get proposedBalloonDue() { return this.page.getByTestId('refinance-proposed-balloon-due') }
+  get balloonNote() { return this.page.getByTestId('refinance-balloon-note') }
   /** Document-relative box of the existing add-track control, so a click that
    *  scrolls the page does not read as movement in a before/after comparison. */
   async addExistingTrackDocumentBox() {
@@ -156,6 +161,10 @@ export class RefinancePage {
   }
   existingBalance(index: number) { return this.page.getByTestId(`refinance-balance-${index}`) }
   async expectAlignedTracks() {
+    // The existing column reserves a row for the saved-mixes chips while they
+    // load; measuring before it settles compared a loading column against a
+    // loaded one and read as track misalignment.
+    await expect(this.page.getByTestId('refinance-mix-skeleton')).toHaveCount(0)
     for (const index of [1, 2]) {
       const existing = await this.page.getByTestId(`refinance-track-${index}`).boundingBox()
       const proposed = await this.page.getByTestId(`refinance-proposed-track-${index}`).boundingBox()

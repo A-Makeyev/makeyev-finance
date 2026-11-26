@@ -50,6 +50,8 @@ export interface ProposedTrackInput {
   method: AmortizationMethod | null
   /** Contractual reset cadence in months; null falls back to the type default. */
   resetMonths: number | null
+  /** Percent left for one payment at maturity; null/absent means none. */
+  balloonPercent?: number | null
 }
 
 export interface RefinanceInput {
@@ -80,6 +82,8 @@ export interface RefinanceSideSummary {
   totalPaid: number
   totalInterest: number
   termMonths: number
+  /** Principal due as one payment at maturity across the side's tracks. */
+  balloonDue: number
   monthly: CombinedMonthlyRow[]
   schedule: CombinedScheduleRow[]
 }
@@ -96,6 +100,12 @@ export interface RefinanceProjection {
   /** Each proposed track's principal, in the same order as the input. */
   proposedAllocations: number[]
   comparison: CashFlowComparison | null
+  /**
+   * True when either side leaves a balloon. The cash-flow comparison only
+   * covers the monthly payments, so its break-even is not a full-payoff
+   * figure in that case and the page must say so.
+   */
+  hasBalloon: boolean
 }
 
 const EMPTY: RefinanceProjection = {
@@ -107,6 +117,7 @@ const EMPTY: RefinanceProjection = {
   proposedPrincipal: 0,
   proposedAllocations: [],
   comparison: null,
+  hasBalloon: false,
 }
 
 function summary(
@@ -120,6 +131,7 @@ function summary(
     totalPaid: monthly.reduce((sum, row) => sum + row.paid, 0),
     totalInterest: schedule.reduce((sum, row) => sum + row.interest, 0),
     termMonths: monthly.length,
+    balloonDue: results.reduce((sum, result) => sum + result.balloonAmount, 0),
     monthly,
     schedule,
   }
@@ -180,6 +192,12 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
 
   for (const track of input.tracks) {
     const key = track.id
+    // A clear blocking key for the one unsupported combination, instead of
+    // lumping it into the generic schema error.
+    if ((track.balloonPercent ?? null) !== null && (track.graceMonths ?? 0) > 0) {
+      existingMissing.push(`${key}:balloonGrace`)
+      continue
+    }
     if (!existingMortgageTrackSchema.safeParse(track).success) {
       existingMissing.push(`${key}:invalid`)
       continue
@@ -188,6 +206,8 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
       existingMissing.push(`${key}:balance`)
       continue
     }
+    // The current balance already contains any balloon remainder, so it is
+    // the payoff base the fee is computed from; nothing extra is added here.
     totalBalance += track.currentBalance
     if (track.contractedAnnualRate === null) existingMissing.push(`${key}:rate`)
     if (track.type === null) existingMissing.push(`${key}:type`)
@@ -215,6 +235,7 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
       // assumption decides BY HOW MUCH. A step of 0 keeps the rate flat.
       rateResetMonths: projectedResetMonths(track, input.asOfDate, track.remainingMonths),
       rateStepPercent: resetStepPercent,
+      balloonPercent: track.balloonPercent ?? null,
     })
     if (!result) {
       existingMissing.push(`${key}:invalid`)
@@ -270,6 +291,13 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
       proposedMissing.push(`proposed:${index}:term`)
     }
     if (track.method === null) proposedMissing.push(`proposed:${index}:method`)
+    const balloonPercent = track.balloonPercent ?? null
+    if (
+      balloonPercent !== null &&
+      (!Number.isFinite(balloonPercent) || balloonPercent <= 0 || balloonPercent > 100)
+    ) {
+      proposedMissing.push(`proposed:${index}:balloon`)
+    }
   })
 
   const shareSum = input.proposedTracks.reduce(
@@ -313,6 +341,7 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
           track.termYears as number,
         ),
         rateStepPercent: resetStepPercent,
+        balloonPercent: track.balloonPercent ?? null,
       })
       if (!result) {
         proposedMissing.push(`proposed:${index}:invalid`)
@@ -365,6 +394,7 @@ export function computeRefinance(input: RefinanceInput): RefinanceProjection {
     proposedPrincipal,
     proposedAllocations: allocations,
     comparison,
+    hasBalloon: existing.balloonDue > 0 || proposed.balloonDue > 0,
   }
 }
 

@@ -25,6 +25,24 @@ test.describe('mortgage refinance - /refinance', () => {
     await expect(refinance.breakEven).toContainText('חודש 21')
   })
 
+  test('prices a balloon on both sides and shows what is due at maturity', async ({ page }) => {
+    const refinance = new RefinancePage(page)
+    await refinance.goto()
+    await refinance.fillExisting('100,000', '6', '120')
+    await refinance.fillProposal('10', '4', '0')
+    await refinance.expectReady()
+
+    // A full balloon leaves the existing side interest-only: 100,000 at 6%.
+    await refinance.existingBalloon.fill('100')
+    await refinance.proposedBalloon.fill('40')
+    await refinance.expectReady()
+
+    await expect(refinance.existingPayment).toHaveText(ils(500))
+    await expect(refinance.existingBalloonDue).toHaveText(ils(100_000))
+    await expect(refinance.proposedBalloonDue).toHaveText(ils(40_000))
+    await expect(refinance.balloonNote).toBeVisible()
+  })
+
   test('capitalizes the fee into the principal instead of charging cash', async ({ page }) => {
     const refinance = new RefinancePage(page)
     await refinance.goto()

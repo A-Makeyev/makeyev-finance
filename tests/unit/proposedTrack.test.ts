@@ -8,6 +8,7 @@ describe('proposal editing and saved mixes', () => {
     const tracks = [33.333, 66.667].map(sharePercent => ({
       type: 'fixed' as const, sharePercent, annualRatePercent: 4,
       termYears: 10, method: 'spitzer' as const, resetMonths: 0,
+      balloonPercent: null,
     }))
     expect(toProposedTrackInputs(proposedTracksFromSnapshot(tracks))).toEqual(tracks)
   })
@@ -27,6 +28,15 @@ describe('proposal editing and saved mixes', () => {
     const single = initialProposedTracks()
     expect(removeProposedTrack(single, single[0].id)).toEqual(single)
   })
+  it('treats blank and zero balloon text as none but blocks malformed text', () => {
+    const [track] = initialProposedTracks()
+    const balloon = (balloonText: string) =>
+      toProposedTrackInputs([{ ...track, balloonText }])[0].balloonPercent
+    expect(balloon('')).toBeNull()
+    expect(balloon('0')).toBeNull()
+    expect(balloon('40')).toBe(40)
+    expect(Number.isNaN(balloon('abc'))).toBe(true)
+  })
   it('loads saved proportions, rate, term, method and cadence without old amounts', () => {
     const mix = [
       { type: 'fixed' as const, amountText: '600,000', rateText: '4.25', yearsText: '15', method: 'spitzer' as const, resetMonths: 0 },
@@ -34,8 +44,8 @@ describe('proposal editing and saved mixes', () => {
     ]
     const tracks = proposedTracksFromSavedMix(mix)
     expect(toProposedTrackInputs(tracks)).toEqual([
-      { type: 'fixed', sharePercent: 60, annualRatePercent: 4.25, termYears: 15, method: 'spitzer', resetMonths: 0 },
-      { type: 'prime', sharePercent: 40, annualRatePercent: 5.5, termYears: 25, method: 'equalPrincipal', resetMonths: 12 },
+      { type: 'fixed', sharePercent: 60, annualRatePercent: 4.25, termYears: 15, method: 'spitzer', resetMonths: 0, balloonPercent: null },
+      { type: 'prime', sharePercent: 40, annualRatePercent: 5.5, termYears: 25, method: 'equalPrincipal', resetMonths: 12, balloonPercent: null },
     ])
   })
 })

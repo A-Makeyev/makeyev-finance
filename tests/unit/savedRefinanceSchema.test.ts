@@ -48,7 +48,7 @@ const proposal = {
 const valid = {
   label: 'First home refinance',
   snapshot: {
-    version: 2 as const,
+    version: 3 as const,
     existingTracks: [existingTrack],
     proposals: [proposal],
     existingResetStepPercent: 0,
@@ -98,8 +98,8 @@ describe('savedRefinanceInputSchema', () => {
     ).toBe(false)
   })
 
-  it('requires version 2 for new saves but still reads version 1', () => {
-    for (const version of [0, 1, 3, '2']) {
+  it('requires version 3 for new saves but still reads versions 1 and 2', () => {
+    for (const version of [0, 1, 2, '3']) {
       expect(savedRefinanceInputSchema.safeParse(withSnapshot({ version })).success).toBe(false)
     }
     const legacy = {
@@ -110,6 +110,13 @@ describe('savedRefinanceInputSchema', () => {
       feeMode: proposal.feeMode,
     }
     expect(storedRefinanceSnapshotSchema.safeParse(legacy).success).toBe(true)
+    const version2 = {
+      version: 2,
+      existingTracks: [existingTrack],
+      proposals: [proposal],
+      existingResetStepPercent: 0,
+    }
+    expect(storedRefinanceSnapshotSchema.safeParse(version2).success).toBe(true)
   })
 
   it('normalizes a version 1 record to one unnamed version 2 proposal', () => {
@@ -122,16 +129,58 @@ describe('savedRefinanceInputSchema', () => {
       existingResetStepPercent: 1,
     })
 
-    expect(normalized.version).toBe(2)
+    expect(normalized.version).toBe(3)
     expect(normalized.proposals).toEqual([
       {
         label: '',
-        proposedTracks: proposal.proposedTracks,
+        proposedTracks: proposal.proposedTracks.map((track) => ({
+          ...track,
+          balloonPercent: null,
+        })),
         feeAmount: 5_000,
         feeMode: 'cash',
       },
     ])
     expect(normalized.existingResetStepPercent).toBe(1)
+  })
+
+  it('normalizes a version 2 record to version 3 with no balloon on any track', () => {
+    const normalized = normalizeRefinanceSnapshot({
+      version: 2,
+      existingTracks: [existingTrack],
+      proposals: [proposal],
+      existingResetStepPercent: 0,
+    })
+
+    expect(normalized.version).toBe(3)
+    expect(normalized.existingTracks[0].balloonPercent).toBeNull()
+    expect(normalized.proposals[0].proposedTracks[0].balloonPercent).toBeNull()
+  })
+
+  it('stores and validates a balloon percentage on both sides, and rejects grace with a balloon', () => {
+    const withBalloon = withProposal({
+      proposedTracks: [{ ...proposedTrack, balloonPercent: 40 }],
+    })
+    expect(savedRefinanceInputSchema.safeParse(withBalloon).success).toBe(true)
+    expect(
+      savedRefinanceInputSchema.parse(withBalloon).snapshot.proposals[0].proposedTracks[0]
+        .balloonPercent,
+    ).toBe(40)
+
+    for (const balloonPercent of [0, -1, 100.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(
+        savedRefinanceInputSchema.safeParse(
+          withProposal({ proposedTracks: [{ ...proposedTrack, balloonPercent }] }),
+        ).success,
+      ).toBe(false)
+    }
+    expect(
+      savedRefinanceInputSchema.safeParse(
+        withSnapshot({
+          existingTracks: [{ ...existingTrack, graceMonths: 6, balloonPercent: 40 }],
+        }),
+      ).success,
+    ).toBe(false)
   })
 
   it('bounds both sides and requires at least one proposal', () => {

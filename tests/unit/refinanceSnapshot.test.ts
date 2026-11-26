@@ -17,7 +17,7 @@ describe('refinance save eligibility', () => {
   it('preserves unknown existing fields and accepts a completed proposal', () => {
     expect(buildRefinanceSnapshot(input)?.existingTracks[0].currentBalance).toBeNull()
     expect(buildRefinanceSnapshot(input)?.proposals[0].proposedTracks[0].annualRatePercent).toBe(4)
-    expect(buildRefinanceSnapshot(input)?.version).toBe(2)
+    expect(buildRefinanceSnapshot(input)?.version).toBe(3)
   })
 
   it('stores several named proposals and trims their names', () => {
@@ -73,6 +73,26 @@ describe('refinance save eligibility', () => {
     ).toBeNull()
     expect(buildRefinanceSnapshot({ ...input, proposals: [{ ...proposal, feeAmount: Infinity }] })).toBeNull()
     expect(buildRefinanceSnapshot({ ...input, proposals: [{ ...proposal, feeAmount: -1 }] })).toBeNull()
+  })
+
+  it('round-trips the balloon percentage and refuses an out-of-range one', () => {
+    const snapshot = buildRefinanceSnapshot({
+      ...input,
+      proposals: [{ ...proposal, proposedTracks: [{ ...proposed, balloonPercent: 35 }] }],
+    })!
+    expect(snapshot.proposals[0].proposedTracks[0].balloonPercent).toBe(35)
+    expect(
+      buildRefinanceSnapshot({
+        ...input,
+        proposals: [{ ...proposal, proposedTracks: [{ ...proposed, balloonPercent: 101 }] }],
+      }),
+    ).toBeNull()
+    expect(
+      buildRefinanceSnapshot({
+        ...input,
+        proposals: [{ ...proposal, proposedTracks: [{ ...proposed, balloonPercent: 0 }] }],
+      }),
+    ).toBeNull()
   })
 
   it('is all or nothing: one incomplete proposal blocks the save', () => {

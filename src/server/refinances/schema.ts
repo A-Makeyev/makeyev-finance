@@ -11,10 +11,12 @@ import { existingMortgageTrackSchema } from '@/features/refinance/existingMortga
  * existing tracks reuse the existing-mortgage schema, so their explicit
  * unknown-value convention (`null`, never a guess) survives a round trip.
  *
- * Version 2 stores several independently named proposals against one shared
- * existing mortgage and one shared reset assumption. Version 1 stored a single
- * proposal at the top level; it is still accepted on read and normalized to a
- * one-proposal version 2 record, so saved work keeps loading.
+ * Version 3 adds the per-track balloon percentage to both sides. Version 2
+ * stored several named proposals against one shared existing mortgage and one
+ * shared reset assumption; it is still accepted on read and normalized to a
+ * version 3 record with no balloon on any track. Version 1 stored a single
+ * proposal at the top level and normalizes to one unnamed proposal, so saved
+ * work keeps loading.
  */
 
 export const MAX_SAVED_REFINANCES = 4
@@ -38,6 +40,11 @@ export const refinanceProposedTrackSchema = z
     termYears: z.number().int().min(1).max(MAX_YEARS),
     method: z.enum(AMORTIZATION_METHODS),
     resetMonths: z.number().int().min(0).max(120),
+    /**
+     * Share of the track principal left for one payment at maturity, in
+     * percent. Null (or absent in an older plan) means fully amortizing.
+     */
+    balloonPercent: z.number().finite().gt(0).max(100).nullable().default(null),
   })
   .strict()
 
@@ -57,6 +64,19 @@ const resetStepPercent = z.number().finite().min(-100).max(100).default(0)
 
 /** The current stored shape. */
 export const refinanceSnapshotSchema = z
+  .object({
+    version: z.literal(3),
+    existingTracks,
+    proposals: z
+      .array(refinanceProposalSnapshotSchema)
+      .min(1)
+      .max(MAX_REFINANCE_PROPOSALS),
+    existingResetStepPercent: resetStepPercent,
+  })
+  .strict()
+
+/** Version 2: several proposals, no balloon percentage on any track. */
+export const refinanceSnapshotV2Schema = z
   .object({
     version: z.literal(2),
     existingTracks,
@@ -82,6 +102,7 @@ export const refinanceSnapshotV1Schema = z
 
 export const storedRefinanceSnapshotSchema = z.union([
   refinanceSnapshotV1Schema,
+  refinanceSnapshotV2Schema,
   refinanceSnapshotSchema,
 ])
 
@@ -93,17 +114,19 @@ export const savedRefinanceInputSchema = z
   .strict()
 
 /**
- * Reads either stored version and returns the current shape. A version 1
- * proposal had no name, so it becomes one unnamed proposal; the UI shows its
- * localized default name while editing and the saved plan's own label in the
- * profile.
+ * Reads any stored version and returns the current shape. A version 2 plan has
+ * no balloon percentage on its tracks, and the schema's null default fills
+ * that in on parse; a version 1 proposal had no name, so it becomes one
+ * unnamed proposal. The UI shows the localized default name while editing and
+ * the saved plan's own label in the profile.
  */
 export function normalizeRefinanceSnapshot(snapshot: unknown): RefinanceSnapshotInput {
   const parsed = storedRefinanceSnapshotSchema.parse(snapshot)
-  if (parsed.version === 2) return parsed
+  if (parsed.version === 3) return parsed
+  if (parsed.version === 2) return { ...parsed, version: 3 }
 
   return {
-    version: 2,
+    version: 3,
     existingTracks: parsed.existingTracks,
     proposals: [
       {

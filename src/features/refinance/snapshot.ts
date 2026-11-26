@@ -19,6 +19,8 @@ export interface RefinanceProposedTrackSnapshot {
   termYears: number
   method: AmortizationMethod
   resetMonths: number
+  /** Percent left for one payment at maturity; null means fully amortizing. */
+  balloonPercent: number | null
 }
 
 export interface RefinanceProposalSnapshot {
@@ -30,7 +32,7 @@ export interface RefinanceProposalSnapshot {
 }
 
 export interface RefinanceSnapshot {
-  version: 2
+  version: 3
   existingTracks: ExistingMortgageTrack[]
   proposals: RefinanceProposalSnapshot[]
   /** The cumulative rate change assumed at each reset when it was saved. */
@@ -68,6 +70,7 @@ export function buildRefinanceSnapshot(input: {
     if (proposal.proposedTracks.length === 0) return null
     const proposedTracks: RefinanceProposedTrackSnapshot[] = []
     for (const track of proposal.proposedTracks) {
+      const balloonPercent = track.balloonPercent ?? null
       if (
         track.type === null ||
         track.sharePercent === null ||
@@ -75,7 +78,9 @@ export function buildRefinanceSnapshot(input: {
         track.annualRatePercent === null ||
         track.termYears === null ||
         !Number.isInteger(track.termYears) ||
-        track.method === null
+        track.method === null ||
+        (balloonPercent !== null &&
+          (!Number.isFinite(balloonPercent) || balloonPercent <= 0 || balloonPercent > 100))
       ) {
         return null
       }
@@ -86,6 +91,7 @@ export function buildRefinanceSnapshot(input: {
         termYears: track.termYears,
         method: track.method,
         resetMonths: track.resetMonths ?? 0,
+        balloonPercent,
       })
     }
     proposals.push({
@@ -97,7 +103,7 @@ export function buildRefinanceSnapshot(input: {
   }
 
   const parsed = refinanceSnapshotSchema.safeParse({
-    version: 2,
+    version: 3,
     existingTracks: input.existingTracks,
     proposals,
     existingResetStepPercent: input.existingResetStepPercent ?? 0,

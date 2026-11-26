@@ -261,6 +261,14 @@ export interface TrackComputationInput {
    * third two points above it, and so on. The stepped rate is floored at 0.
    */
   rateStepPercent?: number
+  /**
+   * Share of the opening principal left for one payment at maturity, in
+   * percent. Omitted or 0 means a fully amortizing schedule; 100 is a full
+   * balloon (interest only until maturity) and 0 < percent < 100 is a partial
+   * balloon. A balloon is never inferred from grace, and grace plus a balloon
+   * is unsupported, so that combination is refused instead of guessed.
+   */
+  balloonPercent?: number | null
 }
 
 export interface YearlyRow {
@@ -381,6 +389,10 @@ export interface TrackResult {
   firstAmortizingPayment: number
   /** Interest capitalized into the balance during full-deferral grace. */
   totalCapitalizedInterest: number
+  /** The balloon share applied (0-100; 0 means a fully amortizing schedule). */
+  balloonPercent: number
+  /** Principal still due as one payment at maturity (0 without a balloon). */
+  balloonAmount: number
 }
 
 /**
@@ -408,6 +420,20 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
   const monthlyInflation = Math.pow(1 + inflationRate, 1 / 12)
   const graceMonths = normalizeGraceMonths(input.graceMonths ?? 0, months)
   const graceMode = normalizeGraceMode(input.graceMode)
+  // A balloon is a repayment structure for an ordinary term. Combining it
+  // with grace has no defined interaction yet, and quietly picking one would
+  // move real money, so the track is refused as invalid until it is resolved.
+  const rawBalloonPercent = input.balloonPercent ?? 0
+  if (
+    !Number.isFinite(rawBalloonPercent) ||
+    rawBalloonPercent < 0 ||
+    rawBalloonPercent > 100 ||
+    (rawBalloonPercent > 0 && graceMonths > 0)
+  ) {
+    return null
+  }
+  const balloonPercent = rawBalloonPercent
+  const balloonNominal = (principal * balloonPercent) / 100
   const resetCadence = normalizeResetMonths(type, input.resetMonths ?? defaultResetMonthsFor(type))
   // Reset steps: `nextResetIndex` walks the sorted reset months once, so the
   // monthly loop stays O(months) even on a 30-year schedule.
@@ -478,6 +504,33 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
       if (month === months) {
         principalPart = balance
         payment = graceMode === 'interestOnly' ? principalPart + interest : principalPart
+      }
+    } else if (balloonPercent > 0) {
+      // The balloon share is carried, not amortized: the rest of the balance
+      // is repaid over the term by the chosen method, while the balloon share
+      // keeps paying interest and (on an indexed track) drifts with the CPI.
+      // Computing the scheduled principal from the amortizing share alone
+      // makes that share land on zero at maturity by construction, and the
+      // final period settles whatever is left, with the balloon reported on
+      // its own instead of as amortized principal.
+      const amortizingBalance = Math.max(0, balance - balloonNominal * indexFactor)
+      const remaining = months - month + 1
+      if (month === months) {
+        // The last period pays the balloon remainder and absorbs rounding.
+        principalPart = balance
+        payment = principalPart + interest
+      } else if (method === 'equalPrincipal') {
+        principalPart = amortizingBalance / remaining
+        payment = principalPart + interest
+      } else if (monthlyRate === 0) {
+        principalPart = amortizingBalance / remaining
+        payment = principalPart + interest
+      } else {
+        const amortizingInterest = amortizingBalance * monthlyRate
+        const amortizingPayment =
+          (amortizingBalance * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -remaining))
+        principalPart = amortizingPayment - amortizingInterest
+        payment = principalPart + interest
       }
     } else {
       const remaining = months - month + 1
@@ -575,6 +628,8 @@ export function computeTrackResult(input: TrackComputationInput): TrackResult | 
     graceMode,
     firstAmortizingPayment,
     totalCapitalizedInterest,
+    balloonPercent,
+    balloonAmount: balloonPercent > 0 ? balloonNominal * indexFactor : 0,
   }
 }
 
@@ -657,6 +712,7 @@ export function firstPaymentWithRateBump(
       resetMonths: result.resetMonths,
       graceMonths: result.graceMonths,
       graceMode: result.graceMode,
+      balloonPercent: result.balloonPercent,
     })
     return sum + (stressed?.firstPayment ?? 0)
   }, 0)

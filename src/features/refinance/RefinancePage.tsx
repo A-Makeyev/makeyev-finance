@@ -972,6 +972,17 @@ export function RefinancePage({
                         />
                       </label>
                       <label className="input-group">
+                        {t('refinance.balloonLabel')}
+                        <NumberField
+                          testId={`refinance-balloon-${index + 1}`}
+                          value={track.balloonPercent ?? null}
+                          onChange={(value) =>
+                            patchTrack(track.id, { balloonPercent: value })
+                          }
+                          suffix="%"
+                        />
+                      </label>
+                      <label className="input-group">
                         {t('refinance.rateLabel')}
                         <NumberField
                           testId={`refinance-rate-${index + 1}`}
@@ -1100,6 +1111,9 @@ export function RefinancePage({
             >
               {t('refinance.resetHint')}
             </p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+              {t('refinance.balloonHint')}
+            </p>
             {sharedMissing.includes('resetStep:invalid') && (
               <p role="alert" className="mt-2 text-xs text-danger">
                 {t('refinance.resetStepInvalid')}
@@ -1179,6 +1193,17 @@ export function RefinancePage({
                           }
                           value={track.rateText}
                           onChange={(value) => patchProposedTrack(track.id, { rateText: value })}
+                          suffix="%"
+                        />
+                      </label>
+                      <label className="input-group">
+                        {t('refinance.balloonLabel')}
+                        <TextField
+                          testId={`refinance-proposed-balloon-${index + 1}`}
+                          value={track.balloonText}
+                          onChange={(value) =>
+                            patchProposedTrack(track.id, { balloonText: value })
+                          }
                           suffix="%"
                         />
                       </label>
@@ -1311,6 +1336,9 @@ export function RefinancePage({
             </div>
 
             <p className="mt-3 text-xs leading-relaxed text-ink-muted">{t('refinance.feeHint')}</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+              {t('refinance.balloonHint')}
+            </p>
             {activeProjection?.missing.includes('fee:invalid') && (
               <p role="alert" className="mt-2 text-xs text-danger">
                 {t('refinance.feeInvalid')}
@@ -1371,6 +1399,17 @@ export function RefinancePage({
                       {t('refinance.monthsValue', { months: existing.termMonths })}
                     </dd>
                   </div>
+                  {existing.balloonDue > 0 && (
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-ink-muted">{t('refinance.balloonDue')}</dt>
+                      <dd
+                        className="font-semibold text-ink"
+                        data-testid="refinance-existing-balloon"
+                      >
+                        {formatCurrency(existing.balloonDue)}
+                      </dd>
+                    </div>
+                  )}
                 </dl>
                 {existingMixShares.length > 0 && (
                   <div className="refinance-mix-block" data-testid="refinance-existing-mix">
@@ -1429,6 +1468,17 @@ export function RefinancePage({
                         })}
                       </dd>
                     </div>
+                    {activeProjection.proposed.balloonDue > 0 && (
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-ink-muted">{t('refinance.balloonDue')}</dt>
+                        <dd
+                          className="font-semibold text-ink"
+                          data-testid="refinance-proposed-balloon-due"
+                        >
+                          {formatCurrency(activeProjection.proposed.balloonDue)}
+                        </dd>
+                      </div>
+                    )}
                   </dl>
                   {activeMixShares.length > 0 && (
                     <div className="refinance-mix-block" data-testid="refinance-active-mix">
@@ -1538,6 +1588,11 @@ export function RefinancePage({
                       <p className="mt-3 text-sm font-medium text-ink">
                         {breakEvenText(comparison)}
                       </p>
+                      {proposal.hasBalloon && (
+                        <p className="mt-1 text-xs text-ink-muted">
+                          {t('refinance.balloonComparisonNote')}
+                        </p>
+                      )}
                       {proposalState && proposalFee(proposalState) === 0 && (
                         <p className="mt-1 text-xs text-ink-muted">
                           {t('refinance.noFeeNote')}
@@ -1574,6 +1629,14 @@ export function RefinancePage({
                 </p>
               </article>
                 <p className="compare-cashflow-note">{t('refinance.comparisonNote')}</p>
+                {activeProjection.hasBalloon && (
+                  <p
+                    className="compare-cashflow-note"
+                    data-testid="refinance-balloon-note"
+                  >
+                    {t('refinance.balloonComparisonNote')}
+                  </p>
+                )}
               </section>
             ) : null}
           </section>

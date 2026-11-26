@@ -1056,6 +1056,7 @@ export const he = {
       balanceLabel: 'יתרת קרן נוכחית',
       rateLabel: 'ריבית שנתית נוכחית',
       remainingLabel: 'תשלומים שנותרו',
+      balloonLabel: 'בלון בסיום התקופה',
       methodLabel: 'לוח סילוקין',
       unknownOption: 'לא ידוע',
       missingLine: 'חסר מידע: {{fields}}',
@@ -1073,6 +1074,8 @@ export const he = {
         tooMany: 'מספר המסלולים',
         asOf: 'תאריך החישוב',
         resetStep: 'הנחת שינוי הריבית',
+        balloon: 'אחוז הבלון',
+        balloonGrace: 'שילוב בלון עם תקופת חסד',
       },
       nextResetLabel: 'מועד עדכון הריבית הבא',
       nextResetHint:
@@ -1080,6 +1083,8 @@ export const he = {
       resetHeading: 'הנחת שינוי ריבית',
       resetHint:
         'עדכון לפי מועד ומחזור רשומים; השינוי מצטבר בכל עדכון בשני הצדדים, 0 = ללא שינוי.',
+      balloonHint:
+        'אחוז מהקרן שנדחה לתשלום אחד בסיום התקופה. ריק או 0 = ללא בלון; שילוב בלון עם תקופת חסד אינו נתמך.',
       resetStepLabel: 'שינוי בכל עדכון',
       resetStepSuffix: 'נק׳',
       resetStepInvalid: 'השינוי חייב להיות בין 100- ל-100 נקודות אחוז.',
@@ -1103,6 +1108,9 @@ export const he = {
       monthsSuffix: 'חודשים',
       termLabel: 'תקופה',
       monthsValue: '{{months}} חודשים',
+      balloonDue: 'בלון לתשלום בסיום',
+      balloonComparisonNote:
+        'לפחות אחד הצדדים כולל בלון. תשלום הבלון אינו נכלל בתזרים החודשי שעליו מבוססת נקודת האיזון, ולכן היא אינה מחיר פירעון מלא.',
       existingPayment: 'החזר חודשי נוכחי',
       existingInterest: 'ריבית שנותרה',
       proposedPayment: 'החזר חודשי חדש',

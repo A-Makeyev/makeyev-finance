@@ -115,6 +115,13 @@ export const existingMortgageTrackSchema = z
 
     graceMonths: z.number().int().min(0).max(MAX_YEARS * 12).nullable(),
     graceMode: z.enum(GRACE_MODES).nullable(),
+    /**
+     * Share of the opening principal left for one payment at maturity, in
+     * percent (0 < percent <= 100). Null means the contract amortizes fully.
+     * Optional on input with a null default, so a plan saved before balloon
+     * support still loads with no balloon instead of being rejected.
+     */
+    balloonPercent: z.number().finite().gt(0).max(100).nullable().default(null),
 
     /** Contractual end date. The date the loan is paid off if held to term. */
     maturityDate: dateOnly.nullable(),
@@ -161,6 +168,16 @@ export const existingMortgageTrackSchema = z
           message: 'grace cannot exceed the original term',
         })
       }
+    }
+
+    // The engine refuses this combination, and the schema must not store a
+    // contract the projection cannot price.
+    if (track.balloonPercent !== null && (track.graceMonths ?? 0) > 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['balloonPercent'],
+        message: 'a balloon cannot be combined with grace',
+      })
     }
   })
 
@@ -348,6 +365,7 @@ export function emptyExistingMortgageTrack(id: string): ExistingMortgageTrack {
     historicalResets: [],
     graceMonths: null,
     graceMode: null,
+    balloonPercent: null,
     maturityDate: null,
     dataStatus: 'unknown',
   }
