@@ -24,6 +24,15 @@ const R_INNER = (92 / 320) * SIZE
 const GAP = 0.03
 /** Distance between the hovered slice and its callout, in viewBox units. */
 const TOOLTIP_MARGIN = 14
+/**
+ * Smallest rounded share (%) whose label actually fits inside its slice.
+ * A rotated label is roughly one em tall across the ring, and the thinnest
+ * placement (the 210px asides ring, 10.9-unit type) gives a 5% slice just
+ * enough arc. Below that the white digits spill onto the page and the slice
+ * reads as half a number, so the label is left out - the legend, the hover
+ * callout and the screen-reader summary still carry the share.
+ */
+const MIN_SLICE_LABEL_PERCENT = 5
 
 /**
  * Slice fills in draw order (principal, indexation, interest). The middle
@@ -198,11 +207,11 @@ export function TotalCostDonut({ principal, indexation, totalInterest }: TotalCo
                   d={arcPath(CENTER, CENTER, R_OUTER, R_INNER, insetStart, insetEnd)}
                   fill={slice.color}
                 />
-                {/* Every slice carries its share: a wide slice prints it
-                    flat, while a thin one rotates the number along the
-                    radius so it still fits inside the narrow arc instead of
-                    spilling past the ring. */}
-                {percent > 0 && (
+                {/* A wide slice prints its share flat, a thin one rotates the
+                    number along the radius so it fits the narrow arc. A slice
+                    thinner than that arc gets no label at all rather than a
+                    clipped one. */}
+                {percent >= MIN_SLICE_LABEL_PERCENT && (
                   <text
                     // Rounded like every other chart coordinate: Math.cos/sin
                     // are not required to be correctly rounded, so Node and

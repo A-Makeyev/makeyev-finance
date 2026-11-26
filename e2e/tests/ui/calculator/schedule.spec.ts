@@ -169,15 +169,22 @@ test.describe('mortgage calculator - amortization schedule', () => {
     await expect(calc.page.locator('[data-testid^="schedule-year-"]')).toHaveCount(15)
   })
 
-  test('the cost donut prints each slice share inside the slice, readable in both themes', async ({
+  test('the cost donut prints each slice share inside the slice when it fits, readable in both themes', async ({
     calc,
   }) => {
     // The share used to live only in the hover callout. It now sits inside
-    // every slice - flat on wide slices, rotated along the radius on thin ones
-    // - and the ink is picked PER SLICE: white reads on the teal and purple
-    // fills but only 2.2:1 on the gold interest slice, so that one takes
-    // near-black. This probe reads the rendered colors and measures contrast,
-    // so a palette or token change that kills legibility fails here.
+    // every slice wide enough to hold it - flat on wide slices, rotated along
+    // the radius on thin ones - and the ink is picked PER SLICE: white reads
+    // on the teal and purple fills but only 2.2:1 on the gold interest slice,
+    // so that one takes near-black. This probe reads the rendered colors and
+    // measures contrast, so a palette or token change that kills legibility
+    // fails here.
+    //
+    // A slice thinner than its label gets no label at all: the rotated white
+    // digits used to spill onto the white page and the slice read as half a
+    // number (the default 2% indexation slice was the live example). The
+    // legend and the screen-reader summary still carry every share.
+    const MIN_SLICE_LABEL_PERCENT = 5
     const probe = `(() => {
       const donut = document.querySelector('[data-testid="total-cost-donut"]')
       if (!donut) return null
@@ -221,15 +228,26 @@ test.describe('mortgage calculator - amortization schedule', () => {
     const expectSharesInSlices = (donut: DonutShares, theme: string) => {
       expect(donut, `cost donut rendered (${theme})`).not.toBeNull()
       expect(donut!.slices.length).toBeGreaterThanOrEqual(2)
+      let unlabeled = 0
       for (const slice of donut!.slices) {
-        // Every slice carries its share now: wide slices print it flat, thin
-        // ones rotate it along the radius instead of hiding it.
+        if (slice.label === null) {
+          // Only a slice too thin for its label may omit it - never a wide
+          // one, and never a clipped half number.
+          unlabeled += 1
+          expect(slice.share, `${theme}: unlabeled slice is thin`).toBeLessThan(
+            MIN_SLICE_LABEL_PERCENT,
+          )
+          continue
+        }
         expect(slice.label, `${theme}: ${slice.share}% slice label`).toBe(`${slice.share}%`)
         // AA for normal text: the number has to be readable on its own fill.
         expect(slice.contrast, `${theme}: ${slice.share}% label contrast`).toBeGreaterThanOrEqual(
           4.5,
         )
       }
+      // The default mix carries a 2% indexation slice: the regression that
+      // printed it half-clipped must fail here.
+      expect(unlabeled, `${theme}: the thin indexation slice omits its label`).toBe(1)
     }
 
     expectSharesInSlices((await calc.page.evaluate(probe)) as DonutShares, 'light')
