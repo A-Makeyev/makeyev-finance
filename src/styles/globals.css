@@ -13668,27 +13668,26 @@ html[dir='rtl'] .comment-text {
 /* Calculator navigation shares the account popover's surface without moving
    the surrounding links when the disclosure opens. */
 nav#navbar .nav-calculators { position: relative; }
-nav#navbar .nav-calculators-heading { display: flex; align-items: center; }
-/* The toggle is a small box around an 11px chevron, so its own width is most
-   of the gap beside the label. Trim both sides of that gap (the link's end
-   padding and the box) so the chevron sits with the word it opens. */
-nav#navbar .nav-calculators-heading a { padding-inline-end: 0; }
-nav#navbar .nav-calculators-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: 18px;
-  block-size: 44px;
-  margin-block-start: 4px;
-  color: var(--soft-white);
-  border: 0;
-  background: transparent;
-  cursor: pointer;
+/* The label is the disclosure trigger, so it keeps the shared nav-link box
+   (padding, margin and font come from `#nav-list a`) and the chevron simply
+   rides its text line - no separate control beside it to skew the row. */
+nav#navbar #nav-list a.nav-calculators-trigger { cursor: pointer; }
+nav#navbar #nav-list a.nav-calculators-trigger:focus-visible {
+  outline: 2px solid var(--soft-blue);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
-nav#navbar.links-dark .nav-calculators-toggle { color: var(--ink); }
-nav#navbar .nav-calculators-toggle svg { inline-size: 11px; transition: transform 150ms ease; }
-nav#navbar .nav-calculators-toggle[aria-expanded='true'] svg { transform: rotate(180deg); }
-nav#navbar .nav-calculators-toggle:focus-visible { outline: 2px solid var(--soft-blue); outline-offset: 2px; border-radius: 6px; }
+nav#navbar #nav-list .nav-calculators-chevron {
+  display: inline-block;
+  inline-size: 11px;
+  block-size: 11px;
+  margin-inline-start: 6px;
+  vertical-align: -1px;
+  transition: transform 150ms ease;
+}
+nav#navbar #nav-list a.nav-calculators-trigger[aria-expanded='true'] .nav-calculators-chevron {
+  transform: rotate(180deg);
+}
 nav#navbar .nav-calculators-menu { inset-inline-start: 0; inset-inline-end: auto; min-inline-size: 220px; }
 nav#navbar #nav-list .nav-calculators-menu a {
   display: flex;
@@ -13704,13 +13703,10 @@ nav#navbar #nav-list .nav-calculators-menu a {
 nav#navbar #nav-list .nav-calculators-menu a::after { display: none; }
 nav#navbar #nav-list .nav-calculators-menu a[aria-current='page'] { background: var(--surface-soft); font-weight: 600; }
 @media (max-width: 1200px) {
-  nav#navbar .nav-calculators-toggle { color: var(--ink); inline-size: 44px; }
   nav#navbar .nav-calculators-menu { inset-inline-start: 50%; transform: translateX(-50%); }
   html[dir='rtl'] nav#navbar .nav-calculators-menu { transform: translateX(50%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  nav#navbar .nav-calculators-toggle svg,
+  nav#navbar .nav-calculators-chevron,
   nav#navbar .nav-calculators-menu { transition: none; }
 }
-
-nav#navbar #nav-list .nav-calculators-heading a { transform: none; }

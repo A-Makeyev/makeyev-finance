@@ -56,7 +56,9 @@ export class WebAppPage {
     this.navAccountSignout = page.getByTestId('nav-account-signout')
     this.navLinkRow = page.locator('#nav-list')
     this.calculatorsLink = page.getByTestId('nav-link-calculators')
-    this.calculatorsToggle = page.getByTestId('nav-calculators-toggle')
+    // The label and the chevron are one disclosure control (the label opens
+    // the menu), so the "toggle" is the same element as the calculator link.
+    this.calculatorsToggle = this.calculatorsLink
     this.calculatorsMenu = page.getByTestId('nav-calculators-menu')
   }
 
