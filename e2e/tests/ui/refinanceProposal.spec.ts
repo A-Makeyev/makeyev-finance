@@ -171,10 +171,12 @@ test('compares two proposals against the same existing side and switches between
   await expect(refinance.removeProposal(2)).toHaveAttribute('aria-label', 'הסרת ההצעה')
   expect(row.name.y).toBeLessThan(row.date.y)
 
-  // Both cards are priced against the same payoff statement.
+  // Both cards are priced against the same payoff statement. The break-even
+  // itself stays in the detailed comparison below, not repeated in every card.
   await expect(refinance.proposalResult(1)).toContainText(ils(1012))
-  await expect(refinance.proposalResult(1)).toContainText('חודש 21')
+  await expect(refinance.proposalResult(1)).not.toContainText('נקודת איזון')
   await expect(refinance.proposalResult(2)).toContainText(ils(1061))
+  await expect(refinance.breakEven).toBeVisible()
 
   // The cheaper proposal is marked once there are two to compare, and the
   // marker is the same teal ring + badge as the compare page.
@@ -275,6 +277,7 @@ test('leaving with edits warns, and Stay keeps the page', async ({ mockedPage })
   await mockedPage.getByTestId('nav-link-services').click()
   await expect(refinance.unsavedDialog).toBeVisible()
   await expect(refinance.unsavedDialog).toHaveAttribute('dir', 'rtl')
+  await expect(refinance.unsavedStay).toHaveText('השאר')
   await refinance.unsavedStay.click()
   await expect(refinance.unsavedDialog).toBeHidden()
   await expect(mockedPage).toHaveURL(/\/refinance$/)
@@ -284,6 +287,31 @@ test('leaving with edits warns, and Stay keeps the page', async ({ mockedPage })
   await expect(refinance.unsavedDialog).toBeVisible()
   await refinance.unsavedLeave.click()
   await expect(mockedPage).toHaveURL(/\/services$/)
+})
+
+test('the leave dialog saves through the page save control, like the other pages', async ({ mockedPage }) => {
+  await mockGetSessionUser(mockedPage)
+  await mockedPage.route('**/api/mixes', route => route.fulfill({ json: { mixes: [], max: 4 } }))
+  await mockedPage.route('**/api/refinances', route =>
+    route.fulfill({ json: { refinances: [], max: 4 } }),
+  )
+  const refinance = new RefinancePage(mockedPage)
+  await refinance.goto()
+  await refinance.fillExisting('100000', '6', '120')
+  await refinance.fillProposal('10', '4', '2000')
+  await refinance.expectReady()
+
+  await mockedPage.getByTestId('nav-link-services').click()
+  await expect(refinance.unsavedDialog).toBeVisible()
+  await expect(refinance.unsavedSave).toBeEnabled()
+  await refinance.unsavedSave.click()
+
+  // Saving stays on the page and hands off to the one save surface, exactly
+  // like the calculator and compare leave dialogs.
+  await expect(refinance.unsavedDialog).toBeHidden()
+  await expect(refinance.saveModal).toBeVisible()
+  await expect(mockedPage).toHaveURL(/\/refinance$/)
+  await refinance.saveCancel.click()
 })
 
 test('saves every offer as one named plan, prefilled with the plan name', async ({ mockedPage }) => {

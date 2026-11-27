@@ -47,12 +47,35 @@ export interface CumulativeSavingsPoint {
   savings: number
 }
 
+/**
+ * The baseline's own cumulative figures over the common horizon - the "current
+ * mix" numbers the deltas are measured against. Absolute values, so the page
+ * can show where the baseline stands instead of only how far each candidate
+ * is from it.
+ */
+export interface CashFlowTotals {
+  /** First monthly payment. */
+  firstPayment: number
+  /** Interest paid through the horizon. */
+  interest: number
+  /** CPI drift through the horizon. */
+  indexation: number
+  /** One-time costs paid at closing. */
+  fees: number
+  /** Outstanding principal at the horizon. */
+  balance: number
+  /** Fees plus every monthly payment through the horizon. */
+  totalOutlay: number
+}
+
 export interface CashFlowComparison {
   /** The shorter of the two schedules, in months (at least 1 for a real comparison). */
   horizonMonths: number
   horizonYears: number
   baselineLabel: string
   candidateLabel: string
+  /** The baseline's own figures over the common horizon. */
+  baselineTotals: CashFlowTotals
   /** First monthly payment: baseline minus candidate. */
   firstPaymentDelta: number
   /** Interest paid through the horizon: baseline minus candidate. */
@@ -135,22 +158,31 @@ export function compareCashFlows(
   const breaksEvenImmediately = (cumulativeSavings[0]?.savings ?? -1) >= 0
   if (breaksEvenImmediately) breakEvenMonth = 1
 
+  const baselineInterest = sumThrough(baseline.months, horizonMonths, 'interest')
+  const baselineIndexation = sumThrough(baseline.months, horizonMonths, 'indexation')
+  const baselineBalance = balanceAt(baseline.months, horizonMonths)
+
   return {
     horizonMonths,
     horizonYears: Math.ceil(horizonMonths / 12),
     baselineLabel: baseline.label,
     candidateLabel: candidate.label,
+    baselineTotals: {
+      firstPayment: baseline.months[0]?.paid ?? 0,
+      interest: baselineInterest,
+      indexation: baselineIndexation,
+      fees: baseline.fees,
+      balance: baselineBalance,
+      totalOutlay: baseline.fees + sumThrough(baseline.months, horizonMonths, 'paid'),
+    },
     firstPaymentDelta:
       (baseline.months[0]?.paid ?? 0) - (candidate.months[0]?.paid ?? 0),
     interestDelta:
-      sumThrough(baseline.months, horizonMonths, 'interest') -
-      sumThrough(candidate.months, horizonMonths, 'interest'),
+      baselineInterest - sumThrough(candidate.months, horizonMonths, 'interest'),
     indexationDelta:
-      sumThrough(baseline.months, horizonMonths, 'indexation') -
-      sumThrough(candidate.months, horizonMonths, 'indexation'),
+      baselineIndexation - sumThrough(candidate.months, horizonMonths, 'indexation'),
     feesDelta: baseline.fees - candidate.fees,
-    balanceDelta:
-      balanceAt(baseline.months, horizonMonths) - balanceAt(candidate.months, horizonMonths),
+    balanceDelta: baselineBalance - balanceAt(candidate.months, horizonMonths),
     netCashFlowDelta: running,
     cumulativeSavings,
     breakEvenMonth,

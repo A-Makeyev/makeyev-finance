@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, setNavigationBlockGuard, useNavigate } from '@/router'
+import { setNavigationBlockGuard, useNavigate } from '@/router'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPrimeRatePercent } from '@/services/boi'
@@ -11,6 +11,7 @@ import { SaveMixButton } from '@/features/mixes/SaveMixButton'
 import { NewMixButton } from '@/features/mixes/NewMixButton'
 import { useSavedMixes } from '@/features/mixes/api'
 import { seedFromCalculator } from '@/stores/comparisonStore'
+import { requestRefinanceSeed } from '@/features/refinance/pendingSeed'
 import { MAX_OTHER_EXPENSES, MAX_TRACKS, MAX_YEARS, PRESET_IDS, type PresetId, type PropertyPurpose } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { DateField } from '@/components/ui/DateField'
@@ -164,6 +165,12 @@ export function CalculatorPage() {
       approvalDateText: useCalculatorStore.getState().approvalDateText,
     })
     navigate('/compare')
+  }
+
+  /** Carry the current mix into /refinance as the existing mortgage. */
+  const openRefinance = () => {
+    requestRefinanceSeed()
+    navigate('/refinance')
   }
 
   // The mix has unsaved changes relative to its last save/load/reset.
@@ -357,14 +364,18 @@ export function CalculatorPage() {
               >
                 {t('compare.openFromCalculator')}
               </button>
-              <Link
+              {/* A button, not a link: the seed must be requested before the
+                  unsaved-changes guard evaluates the navigation, exactly like
+                  the comparison action beside it. */}
+              <button
                 id="open-refinance"
                 data-testid="open-refinance"
                 className="reset-button"
-                to="/refinance"
+                type="button"
+                onClick={openRefinance}
               >
                 {t('refinance.openLink')}
-              </Link>
+              </button>
               <button
                 id="reset-calculator"
                 data-testid="reset-calculator"

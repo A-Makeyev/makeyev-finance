@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures'
 import { RefinancePage } from '../../pages/RefinancePage'
+import { WebAppPage } from '../../pages/WebAppPage'
 import { ils } from '../../support/ils'
 
 /**
@@ -56,6 +57,46 @@ test.describe('mortgage refinance - /refinance', () => {
     await expect(page.getByTestId('refinance-cashflow-fees')).toHaveText(ils(0))
   })
 
+  test('four identical offers share one row without a best-value badge', async ({ page }) => {
+    const refinance = new RefinancePage(page)
+    await refinance.goto()
+    await refinance.fillExisting('100,000', '6', '120')
+    await refinance.fillProposal('10', '4', '')
+    for (let count = 0; count < 3; count++) {
+      await refinance.addProposalPlan.click()
+      await refinance.fillProposal('10', '4', '')
+    }
+
+    await expect(refinance.proposalResults).toHaveCount(4)
+    await refinance.waitForResultMotion()
+    const boxes = await refinance.proposalResultBoxes()
+    // Four across one desktop row, all the same width.
+    expect(new Set(boxes.map((box) => box.y)).size).toBe(1)
+    expect(new Set(boxes.map((box) => box.x)).size).toBe(4)
+    expect(new Set(boxes.map((box) => box.width)).size).toBe(1)
+
+    // Every offer is identical, so none is recommended: no badge, no ring.
+    await expect(refinance.proposalBestBadges).toHaveCount(0)
+    await expect(refinance.proposalResults.first()).not.toContainText(
+      'ההצעה המשתלמת ביותר',
+    )
+
+    // The payoff total and the new principal are results, not editor fields.
+    await expect(refinance.proposedPanel).not.toContainText('סך היתרות')
+    await expect(refinance.proposedPanel).not.toContainText('קרן ההלוואה החדשה')
+    await expect(refinance.existingTotalBalance).toBeVisible()
+    await expect(refinance.activeProposalResult).toContainText('קרן ההלוואה החדשה')
+
+    // One clearly cheaper offer wins alone and earns the badge.
+    await refinance.proposalTab(2).click()
+    await refinance.newRate.fill('3.5')
+    await expect(refinance.proposalBestBadges).toHaveCount(1)
+    await expect(refinance.proposalBestBadges).toHaveAttribute(
+      'data-testid',
+      'refinance-proposal-result-2',
+    )
+  })
+
   test('hydrates without a server/client mismatch', async ({ page }) => {
     const messages: string[] = []
     page.on('console', (message) => {
@@ -90,6 +131,70 @@ test.describe('mortgage refinance - /refinance', () => {
     await expect(link).toBeVisible()
     await link.click()
     await expect(calc.page).toHaveURL(/\/refinance$/)
+  })
+
+  test('the way back leads with an arrow that points back', async ({ page }) => {
+    for (const [path, direction] of [
+      ['/refinance', 'rtl'],
+      ['/en/refinance', 'ltr'],
+    ] as const) {
+      await page.goto(path)
+      await page.waitForFunction("document.documentElement.dataset.hydrated === 'true'")
+
+      const geometry = (await page.evaluate(`(() => {
+        const link = document.querySelector('[data-testid="refinance-back"]')
+        const icon = link.querySelector('.compare-back-icon')
+        const label = link.getBoundingClientRect()
+        const arrow = icon.getBoundingClientRect()
+        return {
+          leads: link.firstElementChild === icon,
+          mirrored: getComputedStyle(icon).transform !== 'none',
+          onRight: arrow.x + arrow.width / 2 > label.x + label.width / 2,
+        }
+      })()`)) as { leads: boolean; mirrored: boolean; onRight: boolean }
+
+      // The arrow precedes the label in reading order; in RTL that puts it on
+      // the right and mirrors it to point back (right), unlike the trailing
+      // arrow of the compare page's own way back.
+      expect(geometry.leads).toBe(true)
+      expect(geometry.mirrored).toBe(direction === 'rtl')
+      expect(geometry.onRight).toBe(direction === 'rtl')
+    }
+  })
+
+  test('the calculator action seeds the existing mortgage with the current mix', async ({
+    calc,
+  }) => {
+    await calc.goto()
+    const amount = await calc.track(1).amount().inputValue()
+    const years = await calc.track(1).years().inputValue()
+    const rate = await calc.track(1).rate().inputValue()
+
+    await calc.page.getByTestId('open-refinance').click()
+    // A live prime arriving makes the mix unsaved; leaving from the dialog must
+    // still land on the seeded page.
+    if (await calc.unsavedDialog.isVisible()) await calc.unsavedLeave.click()
+    await expect(calc.page).toHaveURL(/\/refinance$/)
+
+    const refinance = new RefinancePage(calc.page)
+    await expect(refinance.balance).toHaveValue(amount)
+    await expect(refinance.rate).toHaveValue(rate)
+    await expect(refinance.remaining).toHaveValue(String(Number(years) * 12))
+  })
+
+  test('the calculator nav item seeds the same existing mortgage', async ({ calc }) => {
+    await calc.page.setViewportSize({ width: 1440, height: 900 })
+    await calc.goto()
+    const amount = await calc.track(1).amount().inputValue()
+
+    const app = new WebAppPage(calc.page)
+    await app.calculatorsToggle.hover()
+    await app.toolLink('refinance').click()
+    if (await calc.unsavedDialog.isVisible()) await calc.unsavedLeave.click()
+    await expect(calc.page).toHaveURL(/\/refinance$/)
+
+    const refinance = new RefinancePage(calc.page)
+    await expect(refinance.balance).toHaveValue(amount)
   })
 
   test('starts below the fixed chrome and keeps the footer below the page', async ({ page }) => {

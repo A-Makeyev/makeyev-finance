@@ -26,13 +26,14 @@ import {
   formatGroupedNumber,
   formatRatePercent,
   formatRatio,
+  formatSignedCurrency,
   parseAmountText,
 } from '@/lib/format'
 import { PRESET_IDS } from '@/lib/amortization'
 import { MoneyInput } from '@/components/ui/MoneyInput'
 import { DateField } from '@/components/ui/DateField'
 import { FlipSelect } from '@/components/ui/FlipSelect'
-import { ConfirmedTermSlider } from '@/components/ui/ConfirmedTermSlider'
+import { TermSlider } from '@/components/ui/TermSlider'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import { RateValidityChip } from '@/components/ui/RateValidityChip'
 import { averageRateForTerm, FALLBACK_MARKET_RATE_PERCENT, type AverageRateKind } from '@/lib/averageRates'
@@ -322,8 +323,6 @@ export function ComparePage() {
     value !== null ? formatGroupedNumber(value) : undefined
 
   /** A delta is signed from the candidate's point of view: + is better. */
-  const signedCurrency = (value: number) =>
-    `${value > 0 ? '+' : value < 0 ? '-' : ''}${formatCurrency(Math.abs(value))}`
   const deltaTone = (value: number) =>
     value > 0 ? 'is-positive' : value < 0 ? 'is-negative' : 'is-even'
 
@@ -597,6 +596,43 @@ export function ComparePage() {
     })
   }, [results, scenarios, t])
 
+  /** The baseline's own figures, shown beside the deltas as the current mix. */
+  const baselineTotals = cashFlowComparisons[0]?.baselineTotals
+  const baselineRows = baselineTotals
+    ? [
+        {
+          key: 'firstPayment',
+          label: t('compare.cashFlowBaselineFirstPayment'),
+          value: baselineTotals.firstPayment,
+        },
+        {
+          key: 'interest',
+          label: t('compare.cashFlowBaselineInterest'),
+          value: baselineTotals.interest,
+        },
+        {
+          key: 'indexation',
+          label: t('compare.cashFlowBaselineIndexation'),
+          value: baselineTotals.indexation,
+        },
+        {
+          key: 'fees',
+          label: t('compare.cashFlowBaselineFees'),
+          value: baselineTotals.fees,
+        },
+        {
+          key: 'balance',
+          label: t('compare.cashFlowBaselineBalance'),
+          value: baselineTotals.balance,
+        },
+        {
+          key: 'outlay',
+          label: t('compare.cashFlowBaselineOutlay'),
+          value: baselineTotals.totalOutlay,
+        },
+      ]
+    : []
+
   const step = FORECAST_STEP_PERCENT
   const scenarioLabel = (id: 'base' | 'up' | 'down'): string =>
     t(`calculator.forecast.scenarios.${id}`, { step })
@@ -758,11 +794,13 @@ export function ComparePage() {
               )}
             </div>
           </div>
-          {/* Customized terms require confirmation before changing the whole scenario. */}
+          {/* A scenario slider is the whole mix's term, so moving it applies to
+              every track in that mix at once. The calculator keeps its
+              confirmation (there a per-track term is the exception); here the
+              extra dialog only made a normal scenario edit feel stuck. */}
           <div className="compare-term-row">
             <label htmlFor={`compare-term-${scenarioIndex + 1}`}>{t('compare.scenarioTermLabel')}</label>
-            <ConfirmedTermSlider
-              requiresConfirmation={scenario.tracks.some((track) => track.yearsOverridden || Number(track.yearsText) !== scenario.termYears)}
+            <TermSlider
               min={1}
               max={MAX_YEARS}
               value={scenario.termYears}
@@ -1474,6 +1512,28 @@ export function ComparePage() {
               })}
             </p>
             <div className="compare-cashflow-grid">
+              {baselineRows.length > 0 && (
+                <article
+                  className="compare-cashflow-card compare-cashflow-card-baseline"
+                  data-testid="compare-cashflow-baseline"
+                >
+                  <h3>
+                    {t('compare.cashFlowBaselineTitle', {
+                      baseline: cashFlowComparisons[0].baselineLabel,
+                    })}
+                  </h3>
+                  <dl className="compare-cashflow-metrics">
+                    {baselineRows.map((row) => (
+                      <div key={row.key}>
+                        <dt>{row.label}</dt>
+                        <dd data-testid={`compare-cashflow-baseline-${row.key}`}>
+                          {formatCurrency(row.value)}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </article>
+              )}
               {cashFlowComparisons.map((comparison) => {
                 const rows: Array<{ key: string; label: string; value: number }> = [
                   {
@@ -1530,7 +1590,7 @@ export function ComparePage() {
                             className={deltaTone(row.value)}
                             data-testid={`compare-cashflow-${row.key}-${comparison.scenarioIndex + 1}`}
                           >
-                            {signedCurrency(row.value)}
+                            {formatSignedCurrency(row.value)}
                           </dd>
                         </div>
                       ))}

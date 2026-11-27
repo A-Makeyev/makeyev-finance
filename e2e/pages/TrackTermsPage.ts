@@ -55,6 +55,24 @@ export class TrackTermsPage {
     await expect(this.page.locator('.term-action')).toHaveCount(0)
   }
 
+  /**
+   * The compare page's scenario slider is the mix's term, so it updates every
+   * track directly - no confirmation dialog (the calculator keeps one for the
+   * exception of per-track terms).
+   */
+  async verifySharedTerm() {
+    await this.slider().fill('20')
+    await this.years(1).fill('30')
+    await this.years(1).blur()
+    await expect(this.slider()).toHaveValue('30')
+    await expect(this.page.getByTestId(`compare-term-${this.scenario}-confirm`)).toHaveCount(0)
+
+    await this.slider().fill('25')
+    await expect(this.years(1)).toHaveValue('25')
+    await expect(this.years(2)).toHaveValue('25')
+    await expect(this.slider()).toHaveValue('25')
+  }
+
   async expectNoOverflow() {
     expect(await this.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }

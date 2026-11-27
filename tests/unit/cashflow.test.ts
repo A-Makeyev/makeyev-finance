@@ -59,6 +59,28 @@ describe('compareCashFlows', () => {
     expect(comparison.cumulativeSavings.at(-1)?.savings).toBe(1_200)
   })
 
+  it('reports the baseline own totals, not just the deltas', () => {
+    const baseline = side('Baseline', months(12, 1_000), 5_000)
+    const candidate = side('Candidate', months(12, 900))
+
+    const comparison = compareCashFlows(baseline, candidate)!
+
+    expect(comparison.baselineTotals).toEqual({
+      firstPayment: 1_000,
+      // 12 x 400
+      interest: 4_800,
+      indexation: 0,
+      fees: 5_000,
+      // 100,000 less 12 payments of 1,000
+      balance: 88_000,
+      // 5,000 fees + 12 x 1,000 payments
+      totalOutlay: 17_000,
+    })
+    // The candidate's deltas still reconcile against those figures: the
+    // cheaper upfront fee (5,000) plus 12 months of 100 less payment.
+    expect(comparison.netCashFlowDelta).toBe(6_200)
+  })
+
   it('finds the first month where cumulative savings cross zero', () => {
     const baseline = side('Baseline', months(12, 1_000))
     const candidate = side('Candidate', [

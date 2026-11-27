@@ -17,7 +17,12 @@ import { AppModal } from '@/components/ui/AppModal'
 import { DateField } from '@/components/ui/DateField'
 import { FlipSelect } from '@/components/ui/FlipSelect'
 import { MoneyInput } from '@/components/ui/MoneyInput'
-import { formatAmountWithCaret, formatCurrency, formatGroupedNumber } from '@/lib/format'
+import {
+  formatAmountWithCaret,
+  formatCurrency,
+  formatGroupedNumber,
+  formatSignedCurrency,
+} from '@/lib/format'
 import { formatDateOnly } from '@/lib/rateValidity'
 import { authClient } from '@/lib/auth-client'
 import { Link, setNavigationBlockGuard, useNavigate } from '@/router'
@@ -42,6 +47,14 @@ import {
   type ProposedTrackState,
 } from './proposedTrack'
 import { SaveRefinanceButton, type LoadedRefinance } from './SaveRefinanceButton'
+import { buildRefinanceSnapshot } from './snapshot'
+import { selectBestProposals } from './bestProposal'
+import {
+  clearRefinanceSeedRequest,
+  existingTracksFromCalculatorTracks,
+  isRefinanceSeedRequested,
+} from './pendingSeed'
+import { useCalculatorStore } from '@/stores/calculatorStore'
 import { TrackMixDonut } from '@/features/calculator/TrackMixDonut'
 import { useSavedMixes } from '@/features/mixes/api'
 import { useSavedRefinances, type SavedRefinance } from '@/features/refinances/api'
@@ -125,10 +138,6 @@ function todayDateOnly(): string {
 function dateOnlyFromTimestamp(value: string): string {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? todayDateOnly() : localDateOnly(date)
-}
-
-function signedCurrency(value: number): string {
-  return `${value > 0 ? '+' : value < 0 ? '-' : ''}${formatCurrency(Math.abs(value))}`
 }
 
 /** A proposal metric against the existing mortgage: lower is better. */
@@ -251,14 +260,22 @@ export function RefinancePage({
   const { data: session, isPending: sessionPending } = authClient.useSession()
   const signedIn = Boolean(session)
 
-  const [tracks, setTracks] = useState<ExistingMortgageTrack[]>(() => [
-    {
-      ...emptyExistingMortgageTrack('track-1'),
-      type: 'fixed',
-      linkage: 'unlinked',
-      method: 'spitzer',
-    },
-  ])
+  const [tracks, setTracks] = useState<ExistingMortgageTrack[]>(() => {
+    // Arriving from the calculator: its own mix is the mortgage being kept, so
+    // the existing side opens with those balances, rates and remaining terms.
+    const seeded = isRefinanceSeedRequested()
+      ? existingTracksFromCalculatorTracks(useCalculatorStore.getState().tracks)
+      : []
+    if (seeded.length > 0) return seeded
+    return [
+      {
+        ...emptyExistingMortgageTrack('track-1'),
+        type: 'fixed',
+        linkage: 'unlinked',
+        method: 'spitzer',
+      },
+    ]
+  })
   const [proposals, setProposals] = useState<ProposalState[]>(() => [
     createProposalState(INITIAL_PROPOSAL_ID),
   ])
@@ -270,6 +287,9 @@ export function RefinancePage({
   const [loadedRefinance, setLoadedRefinance] = useState<LoadedRefinance | null>(null)
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null)
   const [unsavedOpen, setUnsavedOpen] = useState(false)
+  // Bumped when the leave dialog's Save asks the page's one save control to
+  // open, exactly how the calculator and compare dialogs hand off.
+  const [saveRequest, setSaveRequest] = useState(0)
   const pendingNav = useRef<string | null>(null)
   const navigate = useNavigate()
 
@@ -301,6 +321,12 @@ export function RefinancePage({
   useEffect(() => {
     document.title = t('refinance.metaTitle')
   }, [t])
+
+  // The seed is a one-visit hand-off: clearing it after mount keeps a later,
+  // unrelated visit to /refinance from silently refilling the form.
+  useEffect(() => {
+    clearRefinanceSeedRequest()
+  }, [])
 
   function applySavedRefinance(saved: SavedRefinance) {
     setTracks(saved.snapshot.existingTracks.map((track) => ({ ...track })))
@@ -423,6 +449,24 @@ export function RefinancePage({
     [tracks, proposals, asOfDate, resetStepPercent, t],
   )
 
+  // Same readiness test the save control applies, so the leave dialog never
+  // offers a Save that cannot complete. Derived, not stored: the form is the
+  // source of truth.
+  const canSavePlan = useMemo(
+    () =>
+      buildRefinanceSnapshot({
+        existingTracks: tracks,
+        proposals: proposals.map((proposal) => ({
+          label: proposal.label,
+          proposedTracks: toProposedTrackInputs(proposal.tracks),
+          feeAmount: proposalFee(proposal),
+          feeMode: proposal.feeMode,
+        })),
+        existingResetStepPercent: resetStepPercent,
+      }) !== null,
+    [tracks, proposals, resetStepPercent],
+  )
+
   const activeIndex = Math.max(
     0,
     proposals.findIndex((proposal) => proposal.id === activeProposalId),
@@ -436,21 +480,9 @@ export function RefinancePage({
 
   // The best-value proposal is the one with the strongest net cash flow against
   // the existing mortgage. With one priced proposal there is nothing to beat,
-  // so nothing is highlighted; ties all carry the badge.
-  const pricedProposals = readyProposals.filter((proposal) => proposal.comparison)
-  const bestProposalIds = new Set<string>()
-  if (pricedProposals.length >= 2) {
-    const bestNet = Math.max(
-      ...pricedProposals.map((proposal) => proposal.comparison!.netCashFlowDelta),
-    )
-    if (Number.isFinite(bestNet)) {
-      for (const proposal of pricedProposals) {
-        if (Math.abs(proposal.comparison!.netCashFlowDelta - bestNet) < 0.005) {
-          bestProposalIds.add(proposal.id)
-        }
-      }
-    }
-  }
+  // and a full tie has no winner: neither case highlights anything.
+  const best = selectBestProposals(readyProposals)
+  const bestProposalIds = best.ids
 
   // Donut shares for the two top result cards: the existing tracks by current
   // balance, and the active proposal by its allocated principal.
@@ -540,6 +572,21 @@ export function RefinancePage({
   function stayOnPage() {
     pendingNav.current = null
     setUnsavedOpen(false)
+  }
+
+  /** The leave dialog's Save hands off to the page's own save control. */
+  function saveFromUnsaved() {
+    setSaveRequest((request) => request + 1)
+    stayOnPage()
+  }
+
+  /**
+   * Signed out, saving is signing in: the leave dialog opens the sign-in page
+   * with no unsaved-work warning (the router guard lets /login through).
+   */
+  function signInToSave() {
+    stayOnPage()
+    navigate('/login?next=/refinance')
   }
 
   function loadSavedMix(id: string) {
@@ -642,7 +689,12 @@ export function RefinancePage({
 
   const pageHeader = (
     <div className="mb-6">
-      <Link to="/compare" className="compare-back mb-4 inline-flex">
+      <Link to="/compare" className="compare-back mb-4 inline-flex" data-testid="refinance-back">
+        {/* The arrow LEADS the label and points back: left in LTR, and mirrored
+            to the right under RTL where back is the other way. */}
+        <span className="compare-back-icon compare-back-icon-leading" aria-hidden="true">
+          ←
+        </span>
         {t('refinance.backToCompare')}
       </Link>
       <h1 className="text-3xl font-bold text-ink">{t('refinance.heading')}</h1>
@@ -803,7 +855,7 @@ export function RefinancePage({
                 type="button"
                 data-testid="refinance-add-proposal"
                 onClick={addProposal}
-                className="inline-flex min-h-[68px] w-52 items-center gap-1.5 rounded-xl border border-dashed border-line-strong px-4 py-2 text-sm font-medium text-ink-muted hover:text-ink"
+                className="inline-flex min-h-[68px] w-52 items-center justify-center gap-1.5 rounded-xl border border-dashed border-line-strong px-4 py-2 text-center text-sm font-medium text-ink-muted hover:text-ink"
               >
                 <FaPlus aria-hidden="true" />
                 {t('refinance.addProposal')}
@@ -854,6 +906,7 @@ export function RefinancePage({
               <SaveRefinanceButton
                 {...saveProps}
                 onSaved={handleSaved}
+                saveRequest={saveRequest}
                 iconOnly
               />
             </div>
@@ -1344,26 +1397,6 @@ export function RefinancePage({
                 {t('refinance.feeInvalid')}
               </p>
             )}
-            {activeProjection?.ready && (
-              <dl className="mt-4 space-y-2 text-sm">
-                <div className="flex justify-between gap-3">
-                  <dt className="text-ink-muted">{t('refinance.totalBalance')}</dt>
-                  <dd className="font-semibold text-ink">
-                    {formatCurrency(activeProjection.totalBalance)}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-ink-muted">{t('refinance.proposedPrincipal')}</dt>
-                  <dd
-                    className="font-semibold text-ink"
-                    data-testid="refinance-proposed-principal"
-                  >
-                    {formatCurrency(activeProjection.proposedPrincipal)}
-                  </dd>
-                </div>
-              </dl>
-            )}
-
             {globalProposedMissing.length > 0 && (
               <p className="mt-3 text-xs text-danger" role="status">
                 {t('refinance.missingLine', {
@@ -1378,7 +1411,10 @@ export function RefinancePage({
         {showResults && existing ? (
           <section className="mt-6" data-testid="refinance-results">
             <div className="grid gap-5 lg:grid-cols-2">
-              <article className="refinance-result-card rounded-2xl border border-line-soft bg-surface-card p-5">
+              <article
+                className="refinance-result-card rounded-2xl border border-line-soft bg-surface-card p-5"
+                style={{ '--result-index': 0 } as CSSProperties}
+              >
                 <h2 className="text-base font-semibold text-ink">{t('refinance.existingLabel')}</h2>
                 <dl className="mt-3 space-y-2 text-sm">
                   <div className="flex justify-between gap-3">
@@ -1397,6 +1433,15 @@ export function RefinancePage({
                     <dt className="text-ink-muted">{t('refinance.termLabel')}</dt>
                     <dd className="font-semibold text-ink">
                       {t('refinance.monthsValue', { months: existing.termMonths })}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ink-muted">{t('refinance.totalBalance')}</dt>
+                    <dd
+                      className="font-semibold text-ink"
+                      data-testid="refinance-existing-total-balance"
+                    >
+                      {formatCurrency(projectionSet.totalBalance)}
                     </dd>
                   </div>
                   {existing.balloonDue > 0 && (
@@ -1428,6 +1473,7 @@ export function RefinancePage({
                   }`}
                   data-testid="refinance-active-proposal-result"
                   data-best-proposal={bestProposalIds.has(active.id) ? 'true' : undefined}
+                  style={{ '--result-index': 1 } as CSSProperties}
                 >
                   <h2 className="flex flex-wrap items-center gap-2 text-base font-semibold text-ink">
                     <span>{proposalLabel(active)}</span>
@@ -1468,6 +1514,15 @@ export function RefinancePage({
                         })}
                       </dd>
                     </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-ink-muted">{t('refinance.proposedPrincipal')}</dt>
+                      <dd
+                        className="font-semibold text-ink"
+                        data-testid="refinance-proposed-principal"
+                      >
+                        {formatCurrency(activeProjection.proposedPrincipal)}
+                      </dd>
+                    </div>
                     {activeProjection.proposed.balloonDue > 0 && (
                       <div className="flex justify-between gap-3">
                         <dt className="text-ink-muted">{t('refinance.balloonDue')}</dt>
@@ -1491,7 +1546,10 @@ export function RefinancePage({
                   )}
                 </article>
               ) : (
-                <article className="refinance-result-card rounded-2xl border border-line-soft bg-surface-card p-5">
+                <article
+                  className="refinance-result-card rounded-2xl border border-line-soft bg-surface-card p-5"
+                  style={{ '--result-index': 1 } as CSSProperties}
+                >
                   <h2 className="text-base font-semibold text-ink">{proposalLabel(active)}</h2>
                   <p className="mt-3 text-sm text-ink-muted">
                     {t('refinance.activeProposalIncomplete')}
@@ -1509,10 +1567,11 @@ export function RefinancePage({
               <p className="mt-1 text-sm text-ink-muted">
                 {t('refinance.proposalComparisonLead')}
               </p>
-              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {/* Up to four ready offers share one desktop row; two per row on
+                  narrow screens. */}
+              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {readyProposals.map((proposal) => {
                   const index = proposals.findIndex((item) => item.id === proposal.id)
-                  const proposalState = proposals[index]
                   const comparison = proposal.comparison
                   if (!comparison) return null
                   const isBest = bestProposalIds.has(proposal.id)
@@ -1524,6 +1583,7 @@ export function RefinancePage({
                       }`}
                       data-testid={`refinance-proposal-result-${index + 1}`}
                       data-best-proposal={isBest ? 'true' : undefined}
+                      style={{ '--result-index': index } as CSSProperties}
                     >
                       <h3 className="flex flex-wrap items-center gap-2 text-base font-semibold text-ink">
                         <span>{proposalLabel(proposal)}</span>
@@ -1557,19 +1617,15 @@ export function RefinancePage({
                           </dd>
                         </div>
                         <div className="flex justify-between gap-3">
-                          <dt className="text-ink-muted">{t('compare.cashFlowFees')}</dt>
-                          <dd
-                            className={`refinance-metric ${
-                              comparison.feesDelta > 0
-                                ? 'is-positive'
-                                : comparison.feesDelta < 0
-                                  ? 'is-negative'
-                                  : 'is-even'
-                            }`}
-                          >
-                            {signedCurrency(comparison.feesDelta)}
+                          <dt className="text-ink-muted">{t('refinance.proposedPrincipal')}</dt>
+                          <dd className="font-semibold text-ink">
+                            {formatCurrency(proposal.proposedPrincipal)}
                           </dd>
                         </div>
+                      </dl>
+                      {/* The upper block describes the offer itself; the lower
+                          block is its difference from the existing mortgage. */}
+                      <dl className="mt-3 space-y-2 border-t border-line-soft pt-3 text-sm">
                         <div className="flex justify-between gap-3">
                           <dt className="text-ink-muted">{t('compare.cashFlowNet')}</dt>
                           <dd
@@ -1581,21 +1637,27 @@ export function RefinancePage({
                                   : 'is-even'
                             }`}
                           >
-                            {signedCurrency(comparison.netCashFlowDelta)}
+                            {formatSignedCurrency(comparison.netCashFlowDelta)}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-ink-muted">{t('compare.cashFlowFees')}</dt>
+                          <dd
+                            className={`refinance-metric ${
+                              comparison.feesDelta > 0
+                                ? 'is-positive'
+                                : comparison.feesDelta < 0
+                                  ? 'is-negative'
+                                  : 'is-even'
+                            }`}
+                          >
+                            {formatSignedCurrency(comparison.feesDelta)}
                           </dd>
                         </div>
                       </dl>
-                      <p className="mt-3 text-sm font-medium text-ink">
-                        {breakEvenText(comparison)}
-                      </p>
                       {proposal.hasBalloon && (
                         <p className="mt-1 text-xs text-ink-muted">
                           {t('refinance.balloonComparisonNote')}
-                        </p>
-                      )}
-                      {proposalState && proposalFee(proposalState) === 0 && (
-                        <p className="mt-1 text-xs text-ink-muted">
-                          {t('refinance.noFeeNote')}
                         </p>
                       )}
                     </article>
@@ -1619,7 +1681,7 @@ export function RefinancePage({
                         }
                         data-testid={`refinance-cashflow-${row.key}`}
                       >
-                        {signedCurrency(row.value)}
+                        {formatSignedCurrency(row.value)}
                       </dd>
                     </div>
                   ))}
@@ -1660,11 +1722,31 @@ export function RefinancePage({
           {t('refinance.unsavedTitle')}
         </h3>
         <p className="text-[15px] leading-relaxed text-ink">{t('refinance.unsavedBody')}</p>
-        <div className="mt-6 modal-actions">
+        <div className="mt-6 modal-actions flex-wrap">
+          {signedIn ? (
+            <button
+              type="button"
+              data-testid="unsaved-refinance-save"
+              disabled={!canSavePlan}
+              className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)] disabled:cursor-not-allowed disabled:opacity-70"
+              onClick={saveFromUnsaved}
+            >
+              {t('refinance.unsavedSave')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              data-testid="unsaved-refinance-sign-in"
+              className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
+              onClick={signInToSave}
+            >
+              {t('refinance.unsavedSignIn')}
+            </button>
+          )}
           <button
             type="button"
             data-testid="unsaved-refinance-stay"
-            className="rounded-[5px] bg-[var(--calc-teal)] px-5 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--calc-teal-deep)]"
+            className="rounded-[5px] border border-[var(--calc-line)] px-5 py-2 text-[15px] font-medium text-[var(--calc-muted)] transition-colors hover:text-[var(--calc-teal-dark)]"
             onClick={stayOnPage}
           >
             {t('refinance.unsavedStay')}

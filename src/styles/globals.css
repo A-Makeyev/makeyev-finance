@@ -6022,6 +6022,20 @@ input[type='number']::-webkit-outer-spin-button {
   box-shadow: 0 0 0 2px var(--calc-teal-dark);
 }
 
+/* The refinance results enter like the calculator's results cards: a short
+   fade and rise, each card 70ms after its predecessor via --result-index.
+   "both" holds the first frame through the delay and the last frame after. */
+.refinance-result-card {
+  animation: results-card-in 0.45s ease-out both;
+  animation-delay: calc(var(--result-index, 0) * 70ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refinance-result-card {
+    animation: none;
+  }
+}
+
 /* Proposal metrics are signed from the refinance page's point of view: lower
    payments and less interest than the existing mortgage are the good case.
    The tokens flip with the theme, like every other result colour. */
@@ -11479,6 +11493,16 @@ html[dir='rtl'] .comment-text {
   translate: -3px 0;
 }
 
+/* A back link whose arrow LEADS the label points away from the copy on hover
+   (left in LTR, right under RTL), not into it like the trailing arrow above. */
+.compare-back:hover .compare-back-icon-leading {
+  translate: -3px 0;
+}
+
+:root[dir='rtl'] .compare-back:hover .compare-back-icon-leading {
+  translate: 3px 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
 
   .compare-back,
@@ -11489,7 +11513,9 @@ html[dir='rtl'] .comment-text {
   /* Match the RTL hover rule's specificity so the nudge really dies in
      Hebrew too, not just in LTR. */
   .compare-back:hover .compare-back-icon,
-  :root[dir='rtl'] .compare-back:hover .compare-back-icon {
+  :root[dir='rtl'] .compare-back:hover .compare-back-icon,
+  .compare-back:hover .compare-back-icon-leading,
+  :root[dir='rtl'] .compare-back:hover .compare-back-icon-leading {
     translate: none;
   }
 }
@@ -12439,6 +12465,17 @@ html[dir='rtl'] .comment-text {
   color: var(--calc-teal-dark);
 }
 
+/* The baseline card states the current mix's own figures, while the other
+   cards carry deltas. The dashed frame marks that difference without
+   introducing a second accent color. */
+.compare-cashflow-card-baseline {
+  border-style: dashed;
+}
+
+.compare-cashflow-card-baseline .compare-cashflow-metrics dd {
+  color: var(--calc-ink);
+}
+
 .compare-cashflow-metrics {
   margin: 0;
 }
@@ -12666,6 +12703,21 @@ html[dir='rtl'] .comment-text {
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* A gallery card with nothing to plot keeps its place and explains why, so a
+   mix change never makes the chart grid silently rearrange itself. */
+.compare-trend-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  margin: 0;
+  padding: 0 18px;
+  color: var(--calc-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  text-align: center;
 }
 
 .compare-trend-gridline {
@@ -13668,26 +13720,37 @@ html[dir='rtl'] .comment-text {
 /* Calculator navigation shares the account popover's surface without moving
    the surrounding links when the disclosure opens. */
 nav#navbar .nav-calculators { position: relative; }
-/* The label is the disclosure trigger, so it keeps the shared nav-link box
-   (padding, margin and font come from `#nav-list a`) and the chevron simply
-   rides its text line - no separate control beside it to skew the row. */
-nav#navbar #nav-list a.nav-calculators-trigger { cursor: pointer; }
-nav#navbar #nav-list a.nav-calculators-trigger:focus-visible {
-  outline: 2px solid var(--soft-blue);
-  outline-offset: 2px;
-  border-radius: 6px;
+
+/* The whole label is the trigger now (a <button>), so it mirrors the
+   `#nav-list a` type scale itself instead of inheriting it. The underline is
+   the same `::after` block, which is why the button is a block box and the
+   word + chevron sit in an inline-flex label. */
+nav#navbar #nav-list .nav-calculators-trigger {
+  display: block;
+  padding: 10px;
+  padding-inline-end: 0;
+  margin-block-start: 10px;
+  font-size: 18px;
+  font-weight: bold;
+  text-transform: capitalize;
+  white-space: nowrap;
+  transition: all 0.5s;
 }
-nav#navbar #nav-list .nav-calculators-chevron {
-  display: inline-block;
-  inline-size: 11px;
-  block-size: 11px;
-  margin-inline-start: 6px;
-  vertical-align: -1px;
-  transition: transform 150ms ease;
+nav#navbar #nav-list .nav-calculators-trigger::after {
+  content: '';
+  width: 0;
+  height: 2px;
+  display: block;
+  margin: 4px auto;
+  transition: all 0.5s;
+  background: var(--soft-white);
 }
-nav#navbar #nav-list a.nav-calculators-trigger[aria-expanded='true'] .nav-calculators-chevron {
-  transform: rotate(180deg);
-}
+nav#navbar #nav-list .nav-calculators-trigger:hover::after { width: 100%; }
+nav#navbar.links-dark #nav-list .nav-calculators-trigger::after { background: var(--ink); }
+nav#navbar .nav-calculators-label { display: inline-flex; align-items: center; gap: 4px; }
+nav#navbar .nav-calculators-chevron { inline-size: 11px; position: relative; inset-block-start: 2px; transition: transform 150ms ease; }
+nav#navbar .nav-calculators-trigger[aria-expanded='true'] .nav-calculators-chevron { transform: rotate(180deg); }
+nav#navbar .nav-calculators-trigger:focus-visible { outline: 2px solid var(--soft-blue); outline-offset: 2px; border-radius: 6px; }
 nav#navbar .nav-calculators-menu { inset-inline-start: 0; inset-inline-end: auto; min-inline-size: 220px; }
 nav#navbar #nav-list .nav-calculators-menu a {
   display: flex;
@@ -13702,9 +13765,55 @@ nav#navbar #nav-list .nav-calculators-menu a {
 }
 nav#navbar #nav-list .nav-calculators-menu a::after { display: none; }
 nav#navbar #nav-list .nav-calculators-menu a[aria-current='page'] { background: var(--surface-soft); font-weight: 600; }
+
+/* Wide-screen type scale, matching the `#nav-list a` rules above. */
+@media screen and (max-width: 1600px) and (min-width: 1201px) {
+  nav#navbar #nav-list .nav-calculators-trigger { padding: 8px 4px; font-size: 18px; white-space: nowrap; }
+}
+@media screen and (max-width: 1250px) and (min-width: 1201px) {
+  nav#navbar #nav-list .nav-calculators-trigger { font-size: 16px; }
+}
+
 @media (max-width: 1200px) {
-  nav#navbar .nav-calculators-menu { inset-inline-start: 50%; transform: translateX(-50%); }
-  html[dir='rtl'] nav#navbar .nav-calculators-menu { transform: translateX(50%); }
+  /* Inside the hamburger sheet the submenu is an inline accordion: it opens
+     in the sheet's flow and pushes the rows below it instead of floating a
+     card over them. display (not opacity/visibility) keeps the closed rows
+     from reserving height. */
+  nav#navbar #nav-list .nav-calculators-trigger {
+    color: var(--ink);
+    font-size: 21px;
+    white-space: normal;
+    text-align: center;
+    word-break: break-word;
+  }
+  nav#navbar #nav-list .nav-calculators-trigger::after { background: var(--ink); }
+  nav#navbar .nav-calculators-menu {
+    position: static;
+    inset: auto;
+    transform: none;
+    display: none;
+    width: 100%;
+    min-width: 0;
+    min-inline-size: 0;
+    margin-block-start: 6px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    opacity: 1;
+    visibility: visible;
+    transition: none;
+  }
+  nav#navbar .nav-calculators-menu.open { display: block; }
+  nav#navbar #nav-list .nav-calculators-menu a {
+    justify-content: center;
+    font-size: 18px;
+    padding: 8px 10px;
+  }
+}
+@media (max-width: 500px) {
+  nav#navbar #nav-list .nav-calculators-trigger { font-size: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
   nav#navbar .nav-calculators-chevron,

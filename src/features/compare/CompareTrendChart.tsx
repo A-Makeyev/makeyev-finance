@@ -40,8 +40,10 @@ import {
  * panel (the calculator's base / +step / -step payment paths) is a peer of
  * those line panels, next to the fee curve rather than a section of its own:
  * one card, one mix color, a no-change line and a shaded step range.
- * Indexation is optional (hidden when no mix is indexed), and so is the fee
- * (hidden when no mix owes anything). The rate panel stays for every priced
+ * Indexation is optional (hidden when no mix is indexed). The fee card always
+ * stays: when no compared mix owes a fee it explains that instead of
+ * disappearing, so the gallery's shape never depends on which tracks a mix
+ * happens to use. The rate panel stays for every priced
  * mix: a mix with no contractual reset draws its no-change path alone, so a
  * fixed-only mix or a term shorter than the first reset still has a card. On
  * the cumulative-
@@ -199,6 +201,7 @@ function TrendPanel({
   maxYear,
   testIdPrefix,
   wide = false,
+  emptyNote,
 }: {
   metric: PanelMetric
   lines: TrendLine[]
@@ -208,6 +211,8 @@ function TrendPanel({
   testIdPrefix: string
   /** Spans the full grid row (the composition panel leads the gallery). */
   wide?: boolean
+  /** Shown in place of the plot when there is nothing to draw for this metric. */
+  emptyNote?: string
 }) {
   const { t } = useTranslation()
   const plotRef = useRef<HTMLDivElement | null>(null)
@@ -416,7 +421,11 @@ function TrendPanel({
         )}
       </div>
       <div className="compare-trend-plot" ref={attachPlot} data-testid={`${testIdPrefix}-plot`}>
-        {geometry && layout && (
+        {emptyNote ? (
+          <p className="compare-trend-note" data-testid={`${testIdPrefix}-empty`}>
+            {emptyNote}
+          </p>
+        ) : geometry && layout ? (
           <svg
             ref={svgRef}
             width={width}
@@ -762,9 +771,9 @@ function TrendPanel({
               </text>
             )}
           </svg>
-        )}
+        ) : null}
 
-        {activeYear !== null && layout && geometry && (
+        {!emptyNote && activeYear !== null && layout && geometry && (
           <div
             ref={tooltipRef}
             className={`compare-trend-tooltip${bars ? ' compare-trend-tooltip-composition' : ''}`}
@@ -839,7 +848,11 @@ function TrendPanel({
           panels repeat the annual bar and its running total; the remaining
           line panels keep their from-to summary. */}
       <h4 className="sr-only">{title}</h4>
-      {bars ? (
+      {emptyNote ? (
+        <p className="sr-only" data-testid={`${testIdPrefix}-summary`}>
+          {emptyNote}
+        </p>
+      ) : bars ? (
         <div className="sr-only" data-testid={`${testIdPrefix}-summary`}>
           {bars.map((bar, index) => (
             <table
@@ -953,14 +966,15 @@ export function CompareTrendChart({
   const hasIndexation = series.some((entry) =>
     entry.schedule.some((row) => row.indexation > 0),
   )
-  // Same rule for the fee: when no mix owes anything at any year end the panel
-  // would be a flat line on the axis, so it is left out entirely.
+  // The fee card stays in the gallery even when no mix owes anything at any
+  // year end: a card that vanishes depending on the mix made the page's shape
+  // change for no visible reason, so the panel explains the zero instead of
+  // being hidden.
   const hasPrepayment = series.some((entry) =>
     entry.schedule.some((row) => (row.prepaymentFee ?? 0) > 0),
   )
   const lineMetrics = LINE_METRICS.filter(
-    (metric) =>
-      (metric !== 'indexation' || hasIndexation) && (metric !== 'prepayment' || hasPrepayment),
+    (metric) => metric !== 'indexation' || hasIndexation,
   )
 
   /** One mix's per-year series for a metric. */
@@ -1026,6 +1040,11 @@ export function CompareTrendChart({
           maxYear={maxYear}
           testIdPrefix={`${testIdPrefix}-${metric}`}
           lines={series.map((entry, index) => lineFor(entry, index, metric))}
+          emptyNote={
+            metric === 'prepayment' && !hasPrepayment
+              ? t('compare.prepaymentFeeEmpty')
+              : undefined
+          }
         />
       ))}
       {/* Same card, same width, directly after the fee curve: the rate paths

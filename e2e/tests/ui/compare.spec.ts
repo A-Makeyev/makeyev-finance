@@ -116,13 +116,46 @@ test.describe('mortgage comparison - /compare', () => {
     await expect(compare.cashFlowSection).toBeVisible()
     await expect(compare.cashFlowSection).toContainText('השוואת תזרים מול הבסיס')
 
+    // The baseline card shows the current mix's own figures beside the
+    // deltas, so the reader can see what the differences are measured against.
+    await expect(page.getByTestId('compare-cashflow-baseline')).toBeVisible()
+    await expect(page.getByTestId('compare-cashflow-baseline-firstPayment')).toContainText('₪')
+    await expect(page.getByTestId('compare-cashflow-baseline-firstPayment')).not.toContainText('+')
+    await expect(page.getByTestId('compare-cashflow-baseline-outlay')).toContainText('₪')
+
     // The 30-year mix pays less each month, so the cash-flow delta is positive.
     await expect(compare.cashFlowFirstPayment).toContainText('+')
     // ...but it still owes principal when the 15-year baseline is paid off, and
     // that debt is reported separately instead of being counted as savings.
     await expect(compare.cashFlowBalance).toContainText('-')
+    // A signed amount keeps its sign at the start of an LTR-isolated run, so an
+    // RTL line cannot flip "-184,322 ₪" into "184,322 ₪-".
+    await expect(compare.cashFlowBalance).toHaveText(/^\u2066-/)
     await expect(compare.cashFlowBreakEven).toContainText('החודש הראשון')
     await expect(compare.cashFlowSection).toContainText('יתרת הקרן מוצגת בנפרד')
+  })
+
+  test('the early-repayment fee card stays and explains a zero fee', async ({ page }) => {
+    await page.goto('/compare')
+    await expect(page.getByTestId('compare-shell')).toBeVisible()
+
+    // A mix priced well below the comparison rate owes no early-repayment fee.
+    const rates = page.locator('[data-testid^="compare-track-rate-1-"]')
+    const count = await rates.count()
+    for (let index = 0; index < count; index++) {
+      await rates.nth(index).fill('1')
+      await rates.nth(index).blur()
+    }
+
+    // The card no longer disappears with the data: it keeps the gallery's
+    // shape and says why there is nothing to plot.
+    const panel = page.getByTestId('compare-trend-prepayment')
+    await expect(panel).toBeVisible()
+    await expect(panel).toContainText('עמלת פירעון מוקדם לאורך זמן')
+    await expect(page.getByTestId('compare-trend-prepayment-empty')).toBeVisible()
+    await expect(page.getByTestId('compare-trend-prepayment-empty')).toContainText(
+      'אין עמלה להציג',
+    )
   })
 
   test('the cheapest compliant mix is marked as the best-value mix', async ({ page }) => {

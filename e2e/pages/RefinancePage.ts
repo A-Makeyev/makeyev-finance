@@ -40,6 +40,8 @@ export class RefinancePage {
     this.loadRefinanceConfirm = page.getByTestId('load-refinance-confirm-yes')
     this.loadRefinanceCancel = page.getByTestId('load-refinance-confirm-cancel')
     this.unsavedDialog = page.getByTestId('unsaved-refinance-confirm')
+    this.unsavedSave = page.getByTestId('unsaved-refinance-save')
+    this.unsavedSignIn = page.getByTestId('unsaved-refinance-sign-in')
     this.unsavedStay = page.getByTestId('unsaved-refinance-stay')
     this.unsavedLeave = page.getByTestId('unsaved-refinance-leave')
     this.removeOfferDialog = page.getByTestId('remove-refinance-offer-confirm')
@@ -84,6 +86,8 @@ export class RefinancePage {
   get saveModal() { return this.page.getByTestId('save-refinance-modal') }
   get saveSignIn() { return this.page.getByTestId('save-refinance-sign-in') }
   readonly unsavedDialog: Locator
+  readonly unsavedSave: Locator
+  readonly unsavedSignIn: Locator
   readonly unsavedStay: Locator
   readonly unsavedLeave: Locator
   readonly removeOfferDialog: Locator
@@ -106,6 +110,35 @@ export class RefinancePage {
   get addExistingTrack() { return this.page.getByTestId('refinance-add-track') }
   get addProposed() { return this.page.getByTestId('refinance-add-proposed-track') }
   get addProposalPlan() { return this.page.getByTestId('refinance-add-proposal') }
+  /** The proposed-side editor panel, shared by every offer. */
+  get proposedPanel() { return this.page.locator('#refinance-proposal-panel') }
+  /** The comparison grid's cards, one per ready offer. */
+  get proposalResults() { return this.page.locator('[data-testid^="refinance-proposal-result-"]') }
+  /** Cards currently carrying the best-value marker (the attribute is on the card). */
+  get proposalBestBadges() {
+    return this.page.locator('[data-testid^="refinance-proposal-result-"][data-best-proposal="true"]')
+  }
+  get existingTotalBalance() { return this.page.getByTestId('refinance-existing-total-balance') }
+  get activeProposalResult() { return this.page.getByTestId('refinance-active-proposal-result') }
+  /** Wait for the staggered card entrance, so geometry is measured settled. */
+  async waitForResultMotion() {
+    await this.page.getByTestId('refinance-proposal-comparison').evaluate(async (section) => {
+      await Promise.all(
+        section
+          .getAnimations({ subtree: true })
+          .map((animation) => animation.finished.catch(() => undefined)),
+      )
+    })
+  }
+
+  async proposalResultBoxes() {
+    return this.proposalResults.evaluateAll((elements) =>
+      elements.map((element) => {
+        const box = element.getBoundingClientRect()
+        return { x: Math.round(box.x), y: Math.round(box.y), width: Math.round(box.width) }
+      }),
+    )
+  }
   proposalTabName(index: number) { return this.page.getByTestId(`refinance-proposal-name-${index}`) }
   proposalTabDate(index: number) { return this.page.getByTestId(`refinance-proposal-date-${index}`) }
   get proposalTabs() { return this.page.getByTestId('refinance-proposal-tabs') }

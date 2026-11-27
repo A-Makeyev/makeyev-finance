@@ -34,6 +34,22 @@ export function formatCurrency(value: number): string {
 }
 
 /**
+ * Signed currency for a delta, kept readable in a right-to-left line.
+ *
+ * The Intl currency formatter carries its own directional marks, which place a
+ * leading minus at the visual END of an RTL line ("-184,322 ₪" reads as
+ * "184,322 ₪-"). The amount is stripped of those marks and wrapped in an
+ * explicit left-to-right isolate, so the sign stays at the start of the number
+ * in both directions. A plus sign gets the same treatment.
+ */
+export function formatSignedCurrency(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return formatCurrency(0)
+  const sign = value > 0 ? '+' : '-'
+  const amount = formatCurrency(Math.abs(value)).replace(/[\u200e\u200f]/g, '')
+  return `\u2066${sign}${amount}\u2069`
+}
+
+/**
  * Legacy inputs displayed amounts with en-US grouping (comma separators),
  * deliberately different from the he-IL currency formatter.
  */

@@ -6,6 +6,7 @@ import {
   formatGroupedNumber,
   formatRatePercent,
   formatRatio,
+  formatSignedCurrency,
   isFeeAboveNorm,
   parseAmountText,
 } from '@/lib/format'
@@ -55,6 +56,16 @@ describe('number formatting parity with legacy', () => {
     expect(formatCurrency(NaN)).toBe(formatCurrency(0))
     expect(formatCurrency(Infinity)).toBe(formatCurrency(0))
     expect(formatCurrency(-Infinity)).toBe(formatCurrency(0))
+  })
+
+  it('keeps a delta sign at the start of an LTR-isolated amount', () => {
+    // Without the isolate, an RTL line puts the sign at the visual end, so
+    // -184,322 ₪ reads as 184,322 ₪-.
+    const amount = formatCurrency(184_322).replace(/[\u200e\u200f]/g, '')
+    expect(formatSignedCurrency(-184_322)).toBe(`\u2066-${amount}\u2069`)
+    expect(formatSignedCurrency(184_322)).toBe(`\u2066+${amount}\u2069`)
+    expect(formatSignedCurrency(0)).toBe(formatCurrency(0))
+    expect(formatSignedCurrency(NaN)).toBe(formatCurrency(0))
   })
   it('uses en-US grouping inside inputs (legacy convention)', () => {
     expect(formatGroupedNumber(1234567)).toBe('1,234,567')

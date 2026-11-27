@@ -22,7 +22,7 @@ for (const language of ['hebrew', 'english'] as const) {
         await mockedPage.setViewportSize({ width, height: 1000 })
         await new ComparePage(mockedPage).goto()
         const terms = new TrackTermsPage(mockedPage, 1)
-        await terms.verifyOverrides()
+        await terms.verifySharedTerm()
         await terms.expectNoOverflow()
       })
     }

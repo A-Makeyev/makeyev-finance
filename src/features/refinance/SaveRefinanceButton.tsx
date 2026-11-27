@@ -71,6 +71,7 @@ export function SaveRefinanceButton({
   actionLabel,
   actionTestId = 'save-refinance',
   onPendingChange,
+  saveRequest = 0,
 }: {
   existingTracks: ExistingMortgageTrack[]
   proposals: SaveProposalInput[]
@@ -86,6 +87,12 @@ export function SaveRefinanceButton({
   actionLabel?: string
   actionTestId?: string
   onPendingChange?: (pending: boolean) => void
+  /**
+   * Increment to open this save flow from outside the control - currently the
+   * page's unsaved-changes dialog, which uses one save surface like the
+   * calculator and compare pages do.
+   */
+  saveRequest?: number
 }) {
   const { t, i18n } = useTranslation()
   const router = useRouter()
@@ -122,6 +129,14 @@ export function SaveRefinanceButton({
     },
     [],
   )
+
+  const handledSaveRequest = useRef(saveRequest)
+  useEffect(() => {
+    if (saveRequest <= handledSaveRequest.current) return
+    handledSaveRequest.current = saveRequest
+    if (!signedIn || sessionPending || !canSave || saveRefinance.isPending) return
+    handleSaveClick()
+  })
 
   const savedPlans = list.data?.refinances ?? []
   const manyOffers = proposals.length > 1
